@@ -112,3 +112,18 @@ Der reguläre Abruf verwendet jetzt den vollständigen, nicht paginierten Mannsc
 ```
 
 `match-type/1` begrenzt weiterhin ausschließlich auf Heimspiele. Die Spielstätten bleiben über `show-venues/true` enthalten. Durch das Entfernen von `mode/PAGE` werden alle im gewählten Saisonzeitraum veröffentlichten Heimspiele einer Mannschaft in derselben Antwort verarbeitet. Die Anzahl der Requests bleibt unverändert bei genau einem Spielplanabruf je konfigurierter Mannschaft.
+
+
+## Strenge Zuordnungs- und Vollständigkeitsprüfung in Version 8
+
+Version 8 ordnet Datum, Uhrzeit, Gegner, Spiel-Link und Spielstätte ausschließlich innerhalb desselben Spielblocks zu. Der senkrechte Strich in kompakten FUSSBALL.DE-Datumsangaben wie `Fr, 21.08.26 | 19:00` wird ausdrücklich unterstützt. Eine Datumszeile des Folgespiels beendet den aktuellen Block und kann nicht mehr auf das vorherige Spiel übergreifen.
+
+Vor einer Veröffentlichung gelten zusätzlich harte Qualitätsregeln:
+
+- jeder in der Antwort vorhandene stabile Spiel-Link muss verarbeitet worden sein,
+- keine doppelte technische Spiel-ID,
+- jedes aufzunehmende Spiel braucht Anstoßzeit, Start, Ende, Gegner, Spielstätte und stabile Spiel-ID,
+- kein Spiel darf ungeklärt in `review` verbleiben,
+- im aktuellen PoC werden mindestens **17 Rasen-Spiele** erwartet.
+
+Wird eine dieser Bedingungen verletzt, bleibt `public/matches.json` unverändert und der Workflow endet rot. Unter dem fehlgeschlagenen Lauf steht dann ein Download-Artefakt `dfbnet-diagnose-...` mit `quality_report.json`, `summary.json` und der vollständigen Kontroll-CSV bereit. Die Mindestzahl 17 ist eine vorübergehende PoC-Sicherheitsgrenze für den aktuell bekannten Spielplan und muss bei späteren Absetzungen oder Saisonänderungen bewusst angepasst werden.

@@ -19,6 +19,7 @@ from poc_scraper import (
     Team,
     VenueRule,
     apply_venue_rules,
+    evaluate_quality,
     parse_matchplan,
 )
 
@@ -77,7 +78,52 @@ class PocParserTest(unittest.TestCase):
             "031C84AB5K000000VS5489BUVUR5FS5A",
             by_number["710029006"].external_id,
         )
-        self.assertTrue(by_number["710029006"].kickoff.endswith("+02:00"))
+        self.assertEqual(
+            "2026-08-21T19:00+02:00",
+            by_number["710029006"].kickoff,
+        )
+        self.assertEqual(
+            "2026-08-05T19:00+02:00",
+            by_number["810005035"].kickoff,
+        )
+        self.assertEqual(
+            "2026-08-22T10:00+02:00",
+            by_number["610000001"].kickoff,
+        )
+
+
+    def test_unparsed_detail_link_aborts_instead_of_silently_losing_a_game(self):
+        fixture = (ROOT / "tests" / "fixture_matchplan.html").read_text(encoding="utf-8")
+        fixture = fixture.replace(
+            "</table>",
+            '<tr class="unexpected"><td><a href="/spiel/x-y/-/spiel/MISSINGGAME123456789">Zum Spiel</a></td></tr></table>',
+        )
+        with self.assertRaises(ScrapeError):
+            parse_matchplan(fixture, Team(name="Test", team_id="TEAM"), "fixture://matchplan")
+
+    def test_quality_guard_rejects_too_few_rasen_matches(self):
+        fixture = (ROOT / "tests" / "fixture_matchplan.html").read_text(encoding="utf-8")
+        team = Team(name="Test", team_id="TEAM")
+        audit = {}
+        matches = parse_matchplan(fixture, team, "fixture://matchplan", audit=audit)
+        rules_data = json.loads(
+            (ROOT / "config.example.json").read_text(encoding="utf-8")
+        )["venue_rules"]
+        rules = [VenueRule(**item) for item in rules_data]
+        for match in matches:
+            apply_venue_rules(match, rules, "review")
+        report = evaluate_quality(
+            matches,
+            [audit],
+            {
+                "quality_guard": {
+                    "require_no_review": True,
+                    "minimum_included_by_calendar": {"Rasen": 2},
+                }
+            },
+        )
+        self.assertFalse(report["publishable"])
+        self.assertTrue(any("Rasen" in error for error in report["errors"]))
 
     def test_spielfrei_is_excluded_without_venue_review(self):
         from poc_scraper import Match

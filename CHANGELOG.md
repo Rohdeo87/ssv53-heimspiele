@@ -1,3 +1,17 @@
+# Version 8
+
+- Datum und Uhrzeit werden zuerst aus der eigenen Spielzeile gelesen; `|` wird als Trenner unterstützt
+- ausführliche Datumszeile wird nur rückwärts dem eigenen Spiel zugeordnet
+- Datumszeile des Folgespiels ist eine harte Blockgrenze
+- Abgleich aller stabilen Spiel-Links mit den tatsächlich geparsten Spielen
+- Abbruch bei fehlenden oder doppelten Spiel-IDs
+- Abbruch bei unvollständigen aufzunehmenden Spielen
+- vorübergehende PoC-Mindestgrenze von 17 Rasen-Spielen
+- `quality_report.json` mit Zählung je Mannschaft und Diagnose ergänzt
+- GitHub-Actions-Artefakt für Diagnose auch bei fehlgeschlagenem Lauf ergänzt
+- alter veröffentlichter Feed bleibt bei jeder Qualitätsabweichung unverändert
+- 17 automatisierte Tests erfolgreich
+
 # Version 7
 
 - paginierten Zusatz `mode/PAGE` aus dem regulären Spielplan-Endpunkt entfernt

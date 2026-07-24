@@ -31,8 +31,10 @@ from bs4 import BeautifulSoup, Tag
 LOG = logging.getLogger("ssv53-dfbnet-poc")
 BASE_URL = "https://www.fussball.de"
 DATE_TIME_PATTERNS = (
-    re.compile(r"(?P<date>\d{2}\.\d{2}\.\d{4})\s*(?:-|,)?\s*(?P<time>\d{2}:\d{2})"),
-    re.compile(r"(?P<date>\d{2}\.\d{2}\.\d{2})\s*(?:-|,)?\s*(?P<time>\d{2}:\d{2})"),
+    # FUSSBALL.DE verwendet je nach Ansicht zwischen Datum und Uhrzeit
+    # einen Bindestrich, ein Komma oder einen senkrechten Strich.
+    re.compile(r"(?P<date>\d{2}\.\d{2}\.\d{4})\s*(?:-|,|\|)?\s*(?P<time>\d{2}:\d{2})"),
+    re.compile(r"(?P<date>\d{2}\.\d{2}\.\d{2})\s*(?:-|,|\|)?\s*(?P<time>\d{2}:\d{2})"),
 )
 STATUS_TERMS = (
     "Absetzung",
@@ -163,7 +165,7 @@ class Client:
         self.session.headers.update({
             "User-Agent": request_cfg.get(
                 "user_agent",
-                "SSV53-Belegungsplan-PoC/7.0 "
+                "SSV53-Belegungsplan-PoC/8.0 "
                 "(+https://www.ssv53.de; mailto:thomas.rohde@ssv53.de)",
             ),
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -564,13 +566,81 @@ def row_classes(row: Tag) -> set[str]:
     return {str(item) for item in value}
 
 
+def row_text(row: Tag) -> str:
+    return normalize_space(row.get_text(" ", strip=True))
+
+
+def is_next_match_header(row: Tag) -> bool:
+    """Erkennt die Datumszeile des folgenden Spiels als harte Blockgrenze."""
+    if "row-competition" in row_classes(row):
+        return True
+    text = row_text(row)
+    if parse_datetime(text) is None:
+        return False
+    # Eine echte Spielzeile kann selbst Datum/Uhrzeit enthalten. Als Grenze
+    # zählen hier nur reine Kopfzeilen ohne Vereine, Spiel-Link und Spielstätte.
+    if row.select_one('.club-name, a[href*="/spiel/"], [class*="venue"], [class*="location"]'):
+        return False
+    return True
+
+
 def block_rows(start_row: Tag) -> list[Tag]:
+    """Liefert ausschließlich Zeilen, die zum aktuellen Spiel gehören."""
     rows = [start_row]
     sibling = start_row.find_next_sibling("tr")
-    while sibling is not None and "row-competition" not in row_classes(sibling):
+    while sibling is not None:
+        if is_next_match_header(sibling):
+            break
         rows.append(sibling)
         sibling = sibling.find_next_sibling("tr")
     return rows
+
+
+def kickoff_for_competition_row(competition_row: Tag, rows: list[Tag]) -> datetime | None:
+    # Maßgeblich ist zuerst die kompakte Spielzeile selbst, z. B.
+    # "Fr, 21.08.26 | 19:00". So kann niemals das Datum des Folgespiels
+    # übernommen werden.
+    kickoff = parse_datetime(row_text(competition_row))
+    if kickoff is not None:
+        return kickoff
+
+    # Manche Darstellungen setzen die ausführliche Datumszeile unmittelbar
+    # vor die Spielzeile. Rückwärts suchen, aber niemals über die vorherige
+    # Spielzeile hinweg.
+    sibling = competition_row.find_previous_sibling("tr")
+    while sibling is not None and "row-competition" not in row_classes(sibling):
+        kickoff = parse_datetime(row_text(sibling))
+        if kickoff is not None:
+            return kickoff
+        sibling = sibling.find_previous_sibling("tr")
+
+    # Letzter, nun sicher begrenzter Fallback innerhalb des aktuellen Blocks.
+    return parse_datetime(" ".join(row_text(row) for row in rows))
+
+
+def extract_detail_id(detail_url: str) -> str:
+    id_match = re.search(
+        r"/-/spiel/([A-Z0-9]+)(?:[/?#]|$)",
+        detail_url,
+        re.IGNORECASE,
+    )
+    if id_match:
+        return id_match.group(1)
+    id_candidates = re.findall(
+        r"/spiel/([A-Z0-9]+)(?:[/?#]|$)",
+        detail_url,
+        re.IGNORECASE,
+    )
+    return id_candidates[-1] if id_candidates else ""
+
+
+def source_detail_ids(soup: BeautifulSoup) -> set[str]:
+    result: set[str] = set()
+    for link in soup.select('a[href*="/spiel/"]'):
+        detail_id = extract_detail_id(urljoin(BASE_URL, str(link.get("href") or "")))
+        if detail_id:
+            result.add(detail_id)
+    return result
 
 
 def select_from_rows(rows: Iterable[Tag], selector: str) -> list[Tag]:
@@ -643,7 +713,12 @@ def extract_status(block_text: str) -> str:
     return ""
 
 
-def parse_matchplan(html_text: str, team: Team, source_url: str) -> list[Match]:
+def parse_matchplan(
+    html_text: str,
+    team: Team,
+    source_url: str,
+    audit: dict[str, Any] | None = None,
+) -> list[Match]:
     soup = BeautifulSoup(html_text, "lxml")
     competition_rows = soup.select("tr.row-competition")
     if not competition_rows:
@@ -652,8 +727,8 @@ def parse_matchplan(html_text: str, team: Team, source_url: str) -> list[Match]:
     matches: list[Match] = []
     for competition_row in competition_rows:
         rows = block_rows(competition_row)
-        block_text = normalize_space(" ".join(row.get_text(" ", strip=True) for row in rows))
-        kickoff = parse_datetime(block_text)
+        block_text = normalize_space(" ".join(row_text(row) for row in rows))
+        kickoff = kickoff_for_competition_row(competition_row, rows)
         warnings: list[str] = []
         if kickoff is None:
             warnings.append("Datum oder Anstoßzeit nicht eindeutig lesbar")
@@ -676,23 +751,9 @@ def parse_matchplan(html_text: str, team: Team, source_url: str) -> list[Match]:
                 detail_url = urljoin(BASE_URL, href)
                 break
 
-        # FUSSBALL.DE-Links enthalten zweimal "/spiel/": zuerst den lesbaren
-        # Slug und nach "/-/spiel/" die stabile technische Spiel-ID. Nur
-        # diese letzte ID darf als externer Schlüssel verwendet werden.
-        id_match = re.search(
-            r"/-/spiel/([A-Z0-9]+)(?:[/?#]|$)",
-            detail_url,
-            re.IGNORECASE,
-        )
-        if id_match:
-            detail_id = id_match.group(1)
-        else:
-            id_candidates = re.findall(
-                r"/spiel/([A-Z0-9]+)(?:[/?#]|$)",
-                detail_url,
-                re.IGNORECASE,
-            )
-            detail_id = id_candidates[-1] if id_candidates else ""
+        # FUSSBALL.DE-Links enthalten nach "/-/spiel/" die stabile
+        # technische Spiel-ID.
+        detail_id = extract_detail_id(detail_url)
         number_match = re.search(r"\b(\d{9})\b", block_text)
         match_number = number_match.group(1) if number_match else ""
         external_id = detail_id or match_number
@@ -727,6 +788,40 @@ def parse_matchplan(html_text: str, team: Team, source_url: str) -> list[Match]:
             match.event_start = (kickoff - timedelta(minutes=team.lead_minutes)).isoformat(timespec="minutes")
             match.event_end = (kickoff + timedelta(minutes=team.post_kickoff_minutes)).isoformat(timespec="minutes")
         matches.append(match)
+
+    source_ids = source_detail_ids(soup)
+    parsed_ids = {
+        extract_detail_id(match.detail_url)
+        for match in matches
+        if extract_detail_id(match.detail_url)
+    }
+    missing_ids = sorted(source_ids - parsed_ids)
+    duplicate_ids = sorted({
+        value for value in parsed_ids
+        if sum(1 for match in matches if extract_detail_id(match.detail_url) == value) > 1
+    })
+    if audit is not None:
+        audit.update({
+            "team": team.name,
+            "team_id": team.team_id,
+            "source_url": source_url,
+            "competition_rows": len(competition_rows),
+            "source_detail_ids": len(source_ids),
+            "parsed_matches": len(matches),
+            "parsed_detail_ids": len(parsed_ids),
+            "missing_detail_ids": missing_ids,
+            "duplicate_detail_ids": duplicate_ids,
+        })
+    if missing_ids:
+        raise ScrapeError(
+            f"Unvollständiger Parser für {team.name}: "
+            f"{len(missing_ids)} Spiel-Link(s) nicht verarbeitet: "
+            + ", ".join(missing_ids)
+        )
+    if duplicate_ids:
+        raise ScrapeError(
+            f"Doppelte Spiel-IDs bei {team.name}: " + ", ".join(duplicate_ids)
+        )
     return matches
 
 
@@ -825,7 +920,11 @@ def write_ics(path: Path, matches: list[Match], calendar_name: str) -> None:
     path.write_text("\r\n".join(line for line in lines if line) + "\r\n", encoding="utf-8")
 
 
-def write_outputs(output_dir: Path, matches: list[Match]) -> None:
+def write_outputs(
+    output_dir: Path,
+    matches: list[Match],
+    quality_report: dict[str, Any] | None = None,
+) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     groups = {
         "all_matches": matches,
@@ -862,8 +961,101 @@ def write_outputs(output_dir: Path, matches: list[Match]) -> None:
             "Rasen": sum(1 for m in matches if m.calendar == "Rasen" and m.decision == "include"),
             "Kunstrasen": sum(1 for m in matches if m.calendar == "Kunstrasen" and m.decision == "include"),
         },
+        "by_team": {
+            team: {
+                "total": sum(1 for m in matches if m.team_name == team),
+                "included": sum(1 for m in matches if m.team_name == team and m.decision == "include"),
+                "excluded": sum(1 for m in matches if m.team_name == team and m.decision == "exclude"),
+                "review": sum(1 for m in matches if m.team_name == team and m.decision == "review"),
+            }
+            for team in sorted({m.team_name for m in matches})
+        },
+        "publishable": bool((quality_report or {}).get("publishable", False)),
+        "quality_errors": list((quality_report or {}).get("errors", [])),
     }
     (output_dir / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+    if quality_report is not None:
+        (output_dir / "quality_report.json").write_text(
+            json.dumps(quality_report, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+
+
+def evaluate_quality(
+    matches: list[Match],
+    team_audits: list[dict[str, Any]],
+    config: dict[str, Any],
+) -> dict[str, Any]:
+    guard = config.get("quality_guard", {})
+    errors: list[str] = []
+    invalid_included: list[dict[str, Any]] = []
+
+    for match in matches:
+        if match.decision != "include":
+            continue
+        missing = []
+        if not match.kickoff:
+            missing.append("kickoff")
+        if not match.event_start:
+            missing.append("event_start")
+        if not match.event_end:
+            missing.append("event_end")
+        if not match.detail_url or not extract_detail_id(match.detail_url):
+            missing.append("detail_id")
+        if not match.home_team:
+            missing.append("home_team")
+        if not match.away_team:
+            missing.append("away_team")
+        if not match.venue_raw:
+            missing.append("venue")
+        if missing:
+            invalid_included.append({
+                "external_id": match.external_id,
+                "team": match.team_name,
+                "missing": missing,
+            })
+
+    if invalid_included:
+        errors.append(
+            f"{len(invalid_included)} aufzunehmende Spiele sind unvollständig."
+        )
+
+    if bool(guard.get("require_no_review", True)):
+        review_count = sum(1 for match in matches if match.decision == "review")
+        if review_count:
+            errors.append(f"{review_count} Spiele benötigen noch eine Platzprüfung.")
+
+    by_calendar = {
+        "Rasen": sum(1 for m in matches if m.decision == "include" and m.calendar == "Rasen"),
+        "Kunstrasen": sum(1 for m in matches if m.decision == "include" and m.calendar == "Kunstrasen"),
+    }
+    minimums = guard.get("minimum_included_by_calendar", {})
+    for calendar, minimum in minimums.items():
+        actual = int(by_calendar.get(str(calendar), 0))
+        required = int(minimum)
+        if actual < required:
+            errors.append(
+                f"{calendar}: nur {actual} statt mindestens {required} erwarteten Spielen."
+            )
+
+    for audit in team_audits:
+        if audit.get("missing_detail_ids"):
+            errors.append(
+                f"{audit.get('team')}: nicht verarbeitete Spiel-IDs vorhanden."
+            )
+        if audit.get("duplicate_detail_ids"):
+            errors.append(
+                f"{audit.get('team')}: doppelte Spiel-IDs vorhanden."
+            )
+
+    return {
+        "publishable": not errors,
+        "errors": errors,
+        "invalid_included": invalid_included,
+        "by_calendar": by_calendar,
+        "minimum_included_by_calendar": minimums,
+        "team_audits": team_audits,
+    }
 
 
 def load_config(path: Path) -> dict[str, Any]:
@@ -907,6 +1099,7 @@ def run(
     client = Client(config, state_path=state_path)
     all_matches: list[Match] = []
     failed_teams: list[dict[str, str]] = []
+    team_audits: list[dict[str, Any]] = []
     run_status = "failed"
 
     try:
@@ -933,7 +1126,8 @@ def run(
                     date_to,
                     diagnostic_endpoints=diagnostic_endpoints,
                 )
-                matches = parse_matchplan(body, team, source_url)
+                audit: dict[str, Any] = {}
+                matches = parse_matchplan(body, team, source_url, audit=audit)
                 for match in matches:
                     if match.kickoff and not (
                         date_from <= match.kickoff[:10] <= date_to
@@ -941,6 +1135,12 @@ def run(
                         continue
                     apply_venue_rules(match, rules, default_decision)
                     all_matches.append(match)
+                audit.update({
+                    "included": sum(1 for m in matches if m.decision == "include"),
+                    "excluded": sum(1 for m in matches if m.decision == "exclude"),
+                    "review": sum(1 for m in matches if m.decision == "review"),
+                })
+                team_audits.append(audit)
             except (RateLimitError, SecurityLockError, RequestBudgetExceeded) as exc:
                 LOG.error("Gesamter Lauf wird zum Schutz des Servers beendet: %s", exc)
                 failed_teams.append({
@@ -964,7 +1164,8 @@ def run(
                 })
 
         matches = deduplicate(all_matches)
-        write_outputs(output_dir, matches)
+        quality_report = evaluate_quality(matches, team_audits, config)
+        write_outputs(output_dir, matches, quality_report=quality_report)
         write_failed_teams(output_dir, failed_teams)
 
         if failed_teams:
@@ -972,6 +1173,14 @@ def run(
                 run_status = "partial_failure"
             LOG.error(
                 "Kein neuer Feed wird veröffentlicht: %s Teamfehler", len(failed_teams)
+            )
+            return 2
+
+        if not quality_report["publishable"]:
+            run_status = "quality_failed"
+            LOG.error(
+                "Kein neuer Feed wird veröffentlicht: %s",
+                " | ".join(quality_report["errors"]),
             )
             return 2
 
@@ -984,7 +1193,7 @@ def run(
     except (RateLimitError, SecurityLockError, RequestBudgetExceeded) as exc:
         LOG.error("Lauf vor dem Teamabruf beendet: %s", exc)
         failed_teams.append({"team": "", "team_id": "", "error": str(exc)})
-        write_outputs(output_dir, [])
+        write_outputs(output_dir, [], quality_report={"publishable": False, "errors": [str(exc)], "team_audits": []})
         write_failed_teams(output_dir, failed_teams)
         if isinstance(exc, RateLimitError):
             run_status = "rate_limited"

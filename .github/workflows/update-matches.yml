@@ -75,6 +75,15 @@ jobs:
         if: steps.scrape.outcome == 'success'
         run: python create_feed.py --input generated --output public
 
+      - name: Diagnoseergebnis bereitstellen
+        if: ${{ always() && steps.timing_confirm.outputs.should_run == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: dfbnet-diagnose-${{ github.run_number }}
+          path: generated
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Daten und Schutzstatus speichern
         if: ${{ always() && steps.timing_confirm.outputs.should_run == 'true' }}
         shell: bash

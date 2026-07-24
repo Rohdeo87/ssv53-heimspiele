@@ -26,6 +26,7 @@ def main() -> int:
     included = load_json(source / "included_matches.json")
     summary = load_json(source / "summary.json")
     failed = load_json(source / "failed_teams.json")
+    quality = load_json(source / "quality_report.json")
 
     if failed:
         raise SystemExit(
@@ -33,7 +34,15 @@ def main() -> int:
             "Der bisherige veröffentlichte Stand bleibt unverändert."
         )
 
+    if not quality.get("publishable"):
+        raise SystemExit(
+            "Die Qualitätsprüfung ist fehlgeschlagen. "
+            "Der bisherige veröffentlichte Stand bleibt unverändert: "
+            + " | ".join(quality.get("errors", []))
+        )
+
     matches = []
+    invalid = []
     for item in included:
         calendar = str(item.get("calendar") or "")
         if calendar not in {"Rasen", "Kunstrasen"}:
@@ -42,6 +51,7 @@ def main() -> int:
         start = str(item.get("event_start") or "").strip()
         end = str(item.get("event_end") or "").strip()
         if not external_id or not start or not end:
+            invalid.append(str(item.get("external_id") or "unbekannt"))
             continue
         team = str(item.get("team_name") or "").strip()
         home = str(item.get("home_team") or "").strip()
@@ -65,6 +75,16 @@ def main() -> int:
             "checksum": item.get("checksum", ""),
         })
 
+    if invalid:
+        raise SystemExit(
+            "Unvollständige aufzunehmende Spiele: " + ", ".join(invalid)
+        )
+
+    if len(matches) != len(included):
+        raise SystemExit(
+            "Nicht alle geprüften Spiele wurden in den Feed übernommen."
+        )
+
     matches.sort(key=lambda value: (value.get("start", ""), value.get("id", "")))
     generated_at = summary.get("generated_at") or datetime.now(timezone.utc).isoformat()
     feed = {
@@ -87,6 +107,7 @@ def main() -> int:
         "appack_preview.csv",
         "rasen.ics",
         "kunstrasen.ics",
+        "quality_report.json",
     ):
         src = source / name
         if src.exists():
