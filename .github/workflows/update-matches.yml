@@ -26,6 +26,8 @@ jobs:
     steps:
       - name: Dateien laden
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Python einrichten
         uses: actions/setup-python@v5
@@ -84,18 +86,44 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-      - name: Daten und Schutzstatus speichern
+      - name: Daten und Schutzstatus konfliktfrei speichern
         if: ${{ always() && steps.timing_confirm.outputs.should_run == 'true' }}
         shell: bash
         run: |
+          set -euo pipefail
+          TEMP_DIR="$(mktemp -d)"
+          mkdir -p "$TEMP_DIR/state"
+          cp state/request_state.json "$TEMP_DIR/state/request_state.json"
+
+          SAVE_PUBLIC=false
+          if [ "${{ steps.feed.outcome }}" = "success" ]; then
+            cp -a public "$TEMP_DIR/public"
+            SAVE_PUBLIC=true
+          fi
+
+          # Während des zufällig verzögerten Laufs kann der Nutzer neuen Code
+          # pushen. Deshalb zuerst auf den neuesten main-Stand wechseln und
+          # anschließend ausschließlich die erzeugten Daten zurückkopieren.
+          git fetch origin main
+          git reset --hard origin/main
+
+          mkdir -p state
+          cp "$TEMP_DIR/state/request_state.json" state/request_state.json
+          git add state/request_state.json
+
+          if [ "$SAVE_PUBLIC" = "true" ]; then
+            rm -rf public
+            cp -a "$TEMP_DIR/public" public
+            git add public
+          fi
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add public state/request_state.json
           if git diff --cached --quiet; then
             echo "Keine Änderungen vorhanden."
           else
-            git commit -m "Heimspiele und Abrufschutz aktualisiert"
-            git push
+            git commit -m "Platzspiele und Abrufschutz aktualisiert"
+            git push origin HEAD:main
           fi
 
       - name: Laufstatus abschließend prüfen

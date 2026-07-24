@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SSV53 PoC: FUSSBALL.DE/DFBnet-Heimspiele mit Spielstätte auslesen.
+"""SSV53 PoC: FUSSBALL.DE/DFBnet-Spiele anhand der Spielstätte auslesen.
 
 Der PoC schreibt bewusst noch nicht in Appack. Er erzeugt stattdessen eine
 prüfbare Vorschau als JSON/CSV sowie getrennte ICS-Dateien für Rasen und
@@ -97,6 +97,7 @@ class Match:
     match_number: str
     team_id: str
     team_name: str
+    team_role: str
     kickoff: str
     home_team: str
     away_team: str
@@ -165,7 +166,7 @@ class Client:
         self.session.headers.update({
             "User-Agent": request_cfg.get(
                 "user_agent",
-                "SSV53-Belegungsplan-PoC/8.0 "
+                "SSV53-Belegungsplan-PoC/9.0 "
                 "(+https://www.ssv53.de; mailto:thomas.rohde@ssv53.de)",
             ),
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -504,7 +505,7 @@ def primary_matchplan_url(
             "matchplan_endpoint_template",
             BASE_URL
             + "/ajax.team.matchplan/-/"
-            + "mime-type/HTML/show-venues/true/match-type/1/"
+            + "mime-type/HTML/show-venues/true/"
             + "datum-von/{date_from}/datum-bis/{date_to}/team-id/{team_id}",
         )
     )
@@ -519,7 +520,7 @@ def primary_matchplan_url(
 def diagnostic_endpoint_candidates(
     team_id: str, date_from: str, date_to: str
 ) -> list[str]:
-    common = "mime-type/HTML/show-venues/true/match-type/1"
+    common = "mime-type/HTML/show-venues/true"
     return [
         f"{BASE_URL}/ajax.team.matchplan/-/mode/PAGE/{common}/datum-von/{date_from}/datum-bis/{date_to}/team-id/{team_id}",
         f"{BASE_URL}/ajax.team.matchplan/-/{common}/datum-von/{date_from}/datum-bis/{date_to}/team-id/{team_id}",
@@ -713,6 +714,26 @@ def extract_status(block_text: str) -> str:
     return ""
 
 
+def determine_team_role(team: Team, home_team: str, away_team: str) -> str:
+    """Bestimmt, ob das konfigurierte Team formal Heim- oder Gastteam ist.
+
+    Für die Platzbelegung ist die Rolle nicht ausschlaggebend. Sie wird aber
+    protokolliert, damit Spiele auf Platz 1 auch dann nachvollziehbar bleiben,
+    wenn das SSV-Team in DFBnet formal als Gast geführt wird.
+    """
+    aliases = [value for value in team.home_aliases if normalize_match_text(value)]
+    if not aliases:
+        return "unknown"
+    normalized_home = normalize_match_text(home_team)
+    normalized_away = normalize_match_text(away_team)
+    normalized_aliases = {normalize_match_text(value) for value in aliases}
+    if normalized_home in normalized_aliases:
+        return "home"
+    if normalized_away in normalized_aliases:
+        return "away"
+    return "unknown"
+
+
 def parse_matchplan(
     html_text: str,
     team: Team,
@@ -773,6 +794,7 @@ def parse_matchplan(
             match_number=match_number,
             team_id=team.team_id,
             team_name=team.name,
+            team_role=determine_team_role(team, home_team, away_team),
             kickoff=kickoff.isoformat(timespec="minutes") if kickoff else "",
             home_team=home_team,
             away_team=away_team,
@@ -805,6 +827,7 @@ def parse_matchplan(
             "team": team.name,
             "team_id": team.team_id,
             "source_url": source_url,
+            "source_scope": "all_team_matches; inclusion decided only by venue",
             "competition_rows": len(competition_rows),
             "source_detail_ids": len(source_ids),
             "parsed_matches": len(matches),
@@ -897,11 +920,11 @@ def write_ics(path: Path, matches: list[Match], calendar_name: str) -> None:
         "CALSCALE:GREGORIAN",
         f"X-WR-CALNAME:{ics_escape(calendar_name)}",
     ]
-    now = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+    now = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     for match in matches:
         if not match.event_start or not match.event_end:
             continue
-        title = f"Heimspiel {match.team_name}: {match.home_team} – {match.away_team}"
+        title = f"Spiel {match.team_name}: {match.home_team} – {match.away_team}"
         description_parts = [match.competition, f"Spielnummer: {match.match_number}" if match.match_number else ""]
         if match.detail_url:
             description_parts.append(match.detail_url)
@@ -949,10 +972,11 @@ def write_outputs(
 
     for calendar in ("Rasen", "Kunstrasen"):
         items = [m for m in matches if m.decision == "include" and m.calendar == calendar]
-        write_ics(output_dir / f"{calendar.lower()}.ics", items, f"SSV53 {calendar} – Heimspiele")
+        write_ics(output_dir / f"{calendar.lower()}.ics", items, f"SSV53 {calendar} – Spiele")
 
     summary = {
         "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "selection_mode": "venue",
         "total": len(matches),
         "included": len(groups["included_matches"]),
         "review": len(groups["review_matches"]),
@@ -960,6 +984,11 @@ def write_outputs(
         "by_calendar": {
             "Rasen": sum(1 for m in matches if m.calendar == "Rasen" and m.decision == "include"),
             "Kunstrasen": sum(1 for m in matches if m.calendar == "Kunstrasen" and m.decision == "include"),
+        },
+        "included_by_formal_role": {
+            "home": sum(1 for m in matches if m.decision == "include" and m.team_role == "home"),
+            "away": sum(1 for m in matches if m.decision == "include" and m.team_role == "away"),
+            "unknown": sum(1 for m in matches if m.decision == "include" and m.team_role == "unknown"),
         },
         "by_team": {
             team: {
@@ -1006,6 +1035,8 @@ def evaluate_quality(
             missing.append("home_team")
         if not match.away_team:
             missing.append("away_team")
+        if match.team_role not in {"home", "away"}:
+            missing.append("team_role")
         if not match.venue_raw:
             missing.append("venue")
         if missing:

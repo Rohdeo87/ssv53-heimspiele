@@ -21,6 +21,7 @@ from poc_scraper import (
     apply_venue_rules,
     evaluate_quality,
     parse_matchplan,
+    primary_matchplan_url,
 )
 
 
@@ -133,6 +134,7 @@ class PocParserTest(unittest.TestCase):
             match_number="610436029",
             team_id="TEAM",
             team_name="Herren Ü40",
+            team_role="home",
             kickoff="2027-04-09T19:00+02:00",
             home_team="Schönwalder SV (Ü40)",
             away_team="spielfrei",
@@ -148,6 +150,43 @@ class PocParserTest(unittest.TestCase):
         self.assertEqual("exclude", match.decision)
         self.assertEqual("Spielfrei", match.venue_rule)
         self.assertNotIn("Spielstätte fehlt", match.warnings)
+
+    def test_regular_endpoint_loads_all_matches_not_only_formal_home_games(self):
+        cfg = {"request": {
+            "matchplan_endpoint_template":
+                "https://www.fussball.de/ajax.team.matchplan/-/mime-type/HTML/"
+                "show-venues/true/datum-von/{date_from}/datum-bis/{date_to}/"
+                "team-id/{team_id}"
+        }}
+        url = primary_matchplan_url(cfg, "TEAM", "2026-07-01", "2027-06-30")
+        self.assertNotIn("match-type/1", url)
+        self.assertIn("show-venues/true", url)
+
+    def test_formal_away_game_on_platz_1_is_included(self):
+        fixture = """
+        <div class='club-matchplan-table'><table>
+          <tr class='row-headline'><td>Freitag, 12.03.2027 - 19:00 Uhr | Kreisliga</td></tr>
+          <tr class='row-competition'><td class='column-date'>Fr, 12.03.27 | 19:00</td>
+            <td class='column-competition'>Kreisliga ME | 610000099</td></tr>
+          <tr class='row-game'><td><div class='club-name'>Testverein</div></td>
+            <td><div class='club-name'>Schönwalder SV (Ü40)</div></td>
+            <td><a href='/spiel/a-b/-/spiel/AWAYATPLATZ100000000000000000'>Zum Spiel</a></td></tr>
+          <tr><td class='location'>Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2</td></tr>
+        </table></div>
+        """
+        team = Team(
+            name="Herren Ü40",
+            team_id="TEAM",
+            home_aliases=["Schönwalder SV (Ü40)"],
+        )
+        matches = parse_matchplan(fixture, team, "fixture://all-matches")
+        self.assertEqual(1, len(matches))
+        rules_data = json.loads(
+            (ROOT / "config.example.json").read_text(encoding="utf-8")
+        )["venue_rules"]
+        apply_venue_rules(matches[0], [VenueRule(**item) for item in rules_data], "review")
+        self.assertEqual("away", matches[0].team_role)
+        self.assertEqual(("include", "Rasen"), (matches[0].decision, matches[0].calendar))
 
 
 class RequestProtectionTest(unittest.TestCase):
@@ -347,6 +386,6 @@ class EndpointCompletenessTest(unittest.TestCase):
             "2027-06-30",
         )
         self.assertNotIn("/mode/PAGE/", url)
-        self.assertIn("/match-type/1/", url)
+        self.assertNotIn("/match-type/1/", url)
         self.assertIn("/show-venues/true/", url)
         self.assertTrue(url.endswith("/team-id/TEAMID"))

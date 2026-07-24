@@ -11,27 +11,38 @@
     "delay_seconds": 3.0,
     "jitter_seconds": 1.0,
     "max_requests_per_run": 10,
-    "matchplan_endpoint_template": "https://www.fussball.de/ajax.team.matchplan/-/mime-type/HTML/show-venues/true/match-type/1/datum-von/{date_from}/datum-bis/{date_to}/team-id/{team_id}",
-    "user_agent": "SSV53-Belegungsplan-PoC/8.0 (+https://www.ssv53.de; mailto:thomas.rohde@ssv53.de)"
+    "matchplan_endpoint_template": "https://www.fussball.de/ajax.team.matchplan/-/mime-type/HTML/show-venues/true/datum-von/{date_from}/datum-bis/{date_to}/team-id/{team_id}",
+    "user_agent": "SSV53-Belegungsplan-PoC/9.0 (+https://www.ssv53.de; mailto:thomas.rohde@ssv53.de)"
   },
   "teams": [
     {
       "name": "Herren Ü50",
       "team_id": "02PKT2MAOC000000VS5489B2VT4FEOV2",
       "lead_minutes": 90,
-      "post_kickoff_minutes": 150
+      "post_kickoff_minutes": 150,
+      "home_aliases": [
+        "SpG Perwenitz/Schönwalde Ü50",
+        "SpG Perwenitz Schönwalde Ü50"
+      ]
     },
     {
       "name": "Herren Ü40",
       "team_id": "02PKVQDTEK000000VS5489B2VT4FEOV2",
       "lead_minutes": 90,
-      "post_kickoff_minutes": 150
+      "post_kickoff_minutes": 150,
+      "home_aliases": [
+        "Schönwalder SV (Ü40)",
+        "Schönwalder SV Ü40"
+      ]
     },
     {
       "name": "Herren",
       "team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
       "lead_minutes": 90,
-      "post_kickoff_minutes": 150
+      "post_kickoff_minutes": 150,
+      "home_aliases": [
+        "Spielgemeinschaft Schönwalde-Perwenitz-Paaren"
+      ]
     }
   ],
   "venue_rules": [
@@ -74,5 +85,6 @@
       "Rasen": 17,
       "Kunstrasen": 0
     }
-  }
+  },
+  "selection_mode": "venue"
 }

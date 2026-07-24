@@ -1,129 +1,56 @@
-# SSV53 Heimspiele – geschützter GitHub-PoC
+# SSV53 – FUSSBALL.DE-Platzbelegung PoC Version 9
 
-Dieser PoC ruft die konfigurierten Heimspiele zurückhaltend ab, ordnet sie Rasen oder Kunstrasen zu und veröffentlicht die geprüften Ergebnisse in `public/matches.json`.
+Diese Version behebt zwei Probleme aus dem Diagnoselauf 4:
 
-## Eingebaute Schutzregeln
+1. Der Abruf lädt nun **alle Spiele der drei Mannschaften** statt nur die formal als Heimspiele geführten Begegnungen. Entscheidend für den Belegungsplan ist ausschließlich die veröffentlichte Spielstätte. Ein Spiel wird deshalb auch dann übernommen, wenn das SSV-Team in DFBnet formal als Gast geführt wird, das Spiel aber auf dem **Sportplatz Schönwalde Strandbad, Platz 1 oder Platz 2** angesetzt ist.
+2. Der GitHub-Workflow speichert Ergebnisse jetzt konfliktfrei, auch wenn während der zufälligen Wartezeit neuer Code in `main` hochgeladen wurde.
 
-- Automatische Datenabrufe finden ausschließlich zwischen **06:00 und 22:00 Uhr in der Zeitzone Europe/Berlin** statt.
-- Vier vorsichtige Startfenster pro Tag. Die UTC-Cronzeiten sind so gewählt, dass sie sowohl während der Sommer- als auch während der Winterzeit innerhalb des erlaubten Berliner Zeitfensters liegen.
-- Vor jedem Abruf wird eine zufällige Wartezeit von **2 bis 12 Minuten** eingefügt. Dadurch verschiebt sich der tatsächliche Abrufzeitpunkt leicht.
-- Nach der Wartezeit wird das Berliner Zeitfenster erneut geprüft. Ein verspäteter GitHub-Lauf wird außerhalb des Fensters ohne Netzabruf beendet.
-- Regulär genau ein fest konfigurierter Spielplan-Endpunkt je Mannschaft.
-- Mindestens drei Sekunden Abstand zwischen zwei HTTP-Anfragen, zusätzlich 0–1 Sekunde Zufallsabstand.
-- Höchstens zehn HTTP-Anfragen pro vollständigem Lauf. Diese Grenze ist zusätzlich fest im Programm verankert.
-- Höchstens ein Wiederholungsversuch.
-- Wiederholung nur bei Timeout oder HTTP 502, 503 beziehungsweise 504.
-- HTTP 404 und andere normale Clientfehler werden nicht wiederholt.
-- Bei HTTP 403 oder 406 wird der gesamte Lauf sofort beendet und eine **dauerhafte globale Sicherheitssperre** gespeichert.
-- Typische Challenge-, Bot-Schutz-, CAPTCHA- und Sicherheitsseiten werden auch bei HTTP 200 erkannt. Sie lösen dieselbe globale Sperre aus; die Seite wird nicht umgangen oder erneut angefragt.
-- Solange die globale Sicherheitssperre aktiv ist, beendet sich jeder spätere Lauf **vor dem ersten Netzrequest**. Die Sperre wird ausschließlich nach manueller Prüfung aufgehoben.
-- Bei HTTP 429 wird der gesamte Lauf sofort beendet. `Retry-After` wird gespeichert und bis zum Ablauf werden keine neuen Requests ausgeführt.
-- Es laufen niemals zwei Aktualisierungen gleichzeitig.
-- Bei jedem unvollständigen oder fehlerhaften Lauf bleibt der letzte erfolgreich veröffentlichte Feed unverändert.
-- Der User-Agent nennt den SSV53, die Website und eine Kontaktadresse.
+## Warum diese Änderung nötig ist
 
-Mit den aktuell drei Mannschaften entstehen im Normalbetrieb höchstens zwölf reguläre HTTP-Anfragen pro Tag. Durch verspätete oder übersprungene Läufe kann die tatsächliche Zahl niedriger sein.
+Der bisherige Endpunkt enthielt `match-type/1`. Dadurch wurden nur formal als Heimspiele geführte Begegnungen geladen. Für eine Platzbelegung ist diese Sicht zu eng: Maßgeblich ist der tatsächliche Austragungsort. Version 9 entfernt den Filter, lädt den vollständigen Mannschaftsspielplan und filtert danach streng nach Spielstätte.
 
-## Geplante Abruffenster
+Die Zahl der Requests bleibt unverändert: ein Spielplanabruf je Mannschaft, derzeit also drei Requests pro Lauf. Die Antworten sind lediglich etwas größer. Alle bisherigen Schutzregeln bleiben aktiv.
 
-GitHub führt Cron-Ausdrücke in UTC aus. Geplant sind vier Kandidaten pro Tag:
+## Auswahlregeln
 
-- 05:20 UTC
-- 10:20 UTC
-- 15:20 UTC
-- 19:20 UTC
+- Schönwalde Strandbad, Platz 1 → `Rasen`
+- Schönwalde Strandbad, Platz 2 / Kunstrasen / KR → `Kunstrasen`
+- Perwenitz → ausgeschlossen
+- Paaren → ausgeschlossen
+- unbekannte Spielstätte → keine Veröffentlichung, Diagnose erforderlich
+- spielfrei → ausgeschlossen
 
-Das entspricht je nach Sommer- oder Winterzeit ungefähr **06:20 bis 21:20 Uhr Berliner Zeit**. Danach kommt jeweils die zufällige Verzögerung von 2 bis 12 Minuten. Falls GitHub einen Lauf so stark verspätet startet, dass 22:00 Uhr nicht mehr sicher eingehalten werden kann, wird kein Request an FUSSBALL.DE gesendet.
+## Installation
 
-## Globale Sicherheitssperre bei 403, 406 oder Challenge
+1. ZIP entpacken.
+2. Den gesamten Inhalt in den lokalen Ordner `ssv53-heimspiele` kopieren und vorhandene Dateien ersetzen.
+3. GitHub Desktop öffnen.
+4. Summary: `Platzbasierter Abruf Version 9`
+5. **Commit to main**.
+6. **Push origin**.
+7. Auf GitHub unter **Actions → SSV53 Heimspiele aktualisieren → Run workflow** einmal manuell starten.
 
-Wird eine serverseitige Sicherheitsreaktion erkannt, schreibt der PoC unter anderem folgende Werte in `state/request_state.json`:
+## Prüfung
 
-```json
-{
-  "security_lock": true,
-  "security_lock_reason": "HTTP 403 oder erkannte Challenge",
-  "manual_unlock_required": true
-}
-```
+Nach einem grünen Lauf `public/summary.json` öffnen. Erwartet werden:
 
-Ab diesem Zeitpunkt werden auch bei späteren automatischen oder manuellen Läufen **keine weiteren Requests an FUSSBALL.DE** gesendet. Der letzte erfolgreich veröffentlichte Feed bleibt unverändert.
+- `selection_mode`: `venue`
+- `by_calendar.Rasen`: mindestens 17
+- `included_by_formal_role.away`: zeigt, wie viele Spiele trotz formaler Gastrolle wegen des tatsächlichen Platzes aufgenommen wurden
+- `review`: 0
 
-Die Sperre darf erst nach Prüfung der Ursache und gegebenenfalls Abstimmung mit FUSSBALL.DE/DFB aufgehoben werden. Dazu in GitHub die Datei `state/request_state.json` bearbeiten und ausschließlich diese Felder zurücksetzen:
+## Schutzmaßnahmen
 
-```json
-"security_lock": false,
-"security_lock_reason": "",
-"security_lock_at": "",
-"security_lock_url": "",
-"security_lock_http_status": null,
-"manual_unlock_required": false
-```
+- Abrufe nur zwischen 06:00 und 22:00 Uhr Europe/Berlin
+- zufällige Verzögerung 2–12 Minuten
+- mindestens 3 Sekunden Abstand
+- maximal 10 Requests je Lauf
+- maximal ein Retry nur bei 502/503/504 oder Timeout
+- globale dauerhafte Sperre bei 403, 406 oder Challenge-Seite
+- Sperre bei 429 gemäß `Retry-After`
+- keine parallelen Läufe
+- bei Qualitätsfehlern bleibt der letzte veröffentlichte Feed unverändert
 
-Andere Statusfelder bitte nicht verändern. Anschließend kann der Workflow einmal manuell innerhalb des Zeitfensters gestartet werden.
+## Hinweis zur Mindestzahl 17
 
-## Einmalige Einrichtung
-
-1. Öffentliches GitHub-Repository `ssv53-heimspiele` anlegen.
-2. Den vollständigen Inhalt dieses Ordners hochladen – einschließlich `.github` und `state`.
-3. Im Repository `Actions` öffnen und Workflows freigeben, falls GitHub danach fragt.
-4. Workflow **SSV53 Heimspiele aktualisieren** öffnen.
-5. Zwischen 06:00 und 22:00 Uhr auf **Run workflow** und anschließend erneut **Run workflow** klicken.
-6. Warten, bis der Lauf grün ist.
-
-Danach ist der Feed normalerweise unter folgender Adresse erreichbar:
-
-`https://raw.githubusercontent.com/DEIN-GITHUB-NAME/ssv53-heimspiele/main/public/matches.json`
-
-`DEIN-GITHUB-NAME` muss durch den eigenen GitHub-Benutzernamen ersetzt werden.
-
-## Wichtige Dateien
-
-- `config.json`: Mannschaften, Saisonzeitraum, Platzzuordnung, Zeitfenster und konservative Request-Einstellungen
-- `schedule_guard.py`: prüft das Berliner Abruffenster und erzeugt die zufällige Startverschiebung
-- `state/request_state.json`: persistenter Schutzstatus für `Retry-After` sowie die globale 403/406/Challenge-Sperre
-- `public/matches.json`: Feed für den Appack-Belegungsplan
-- `public/appack_preview.csv`: gut lesbare Kontrollliste
-- `public/review_matches.json`: Spiele mit ungeklärter Spielstätte
-- `public/rasen.ics` und `public/kunstrasen.ics`: optionale iCal-Feeds
-
-## Diagnosemodus
-
-Alternative URL-Varianten werden im automatischen Workflow ausdrücklich **nicht** getestet. Nur für eine manuelle technische Diagnose kann lokal folgender Befehl verwendet werden:
-
-```bash
-python poc_scraper.py --config config.json --output generated --state state/request_state.json --diagnostic-endpoints --verbose
-```
-
-Auch im Diagnosemodus bleibt die harte Obergrenze von zehn Requests bestehen.
-
-
-## Datenqualitätskorrekturen in Version 6
-
-Die technische Spiel-ID wird aus dem stabilen letzten `/-/spiel/<ID>`-Segment der FUSSBALL.DE-URL übernommen. Einträge mit dem Gegner oder Heimteam `spielfrei` werden automatisch ausgeschlossen. Datumswerte enthalten den Berliner UTC-Offset.
-
-
-## Vollständigkeitskorrektur in Version 7
-
-Der reguläre Abruf verwendet jetzt den vollständigen, nicht paginierten Mannschaftsspielplan-Endpunkt ohne `mode/PAGE`:
-
-```text
-/ajax.team.matchplan/-/mime-type/HTML/show-venues/true/match-type/1/...
-```
-
-`match-type/1` begrenzt weiterhin ausschließlich auf Heimspiele. Die Spielstätten bleiben über `show-venues/true` enthalten. Durch das Entfernen von `mode/PAGE` werden alle im gewählten Saisonzeitraum veröffentlichten Heimspiele einer Mannschaft in derselben Antwort verarbeitet. Die Anzahl der Requests bleibt unverändert bei genau einem Spielplanabruf je konfigurierter Mannschaft.
-
-
-## Strenge Zuordnungs- und Vollständigkeitsprüfung in Version 8
-
-Version 8 ordnet Datum, Uhrzeit, Gegner, Spiel-Link und Spielstätte ausschließlich innerhalb desselben Spielblocks zu. Der senkrechte Strich in kompakten FUSSBALL.DE-Datumsangaben wie `Fr, 21.08.26 | 19:00` wird ausdrücklich unterstützt. Eine Datumszeile des Folgespiels beendet den aktuellen Block und kann nicht mehr auf das vorherige Spiel übergreifen.
-
-Vor einer Veröffentlichung gelten zusätzlich harte Qualitätsregeln:
-
-- jeder in der Antwort vorhandene stabile Spiel-Link muss verarbeitet worden sein,
-- keine doppelte technische Spiel-ID,
-- jedes aufzunehmende Spiel braucht Anstoßzeit, Start, Ende, Gegner, Spielstätte und stabile Spiel-ID,
-- kein Spiel darf ungeklärt in `review` verbleiben,
-- im aktuellen PoC werden mindestens **17 Rasen-Spiele** erwartet.
-
-Wird eine dieser Bedingungen verletzt, bleibt `public/matches.json` unverändert und der Workflow endet rot. Unter dem fehlgeschlagenen Lauf steht dann ein Download-Artefakt `dfbnet-diagnose-...` mit `quality_report.json`, `summary.json` und der vollständigen Kontroll-CSV bereit. Die Mindestzahl 17 ist eine vorübergehende PoC-Sicherheitsgrenze für den aktuell bekannten Spielplan und muss bei späteren Absetzungen oder Saisonänderungen bewusst angepasst werden.
+Die Mindestzahl 17 ist für die aktuelle PoC-Abnahme bewusst noch aktiv. Nach dem ersten bestätigten vollständigen Lauf sollte sie durch eine dynamische Änderungsprüfung ersetzt werden, damit eine spätere legitime Verlegung oder Absetzung den Feed nicht dauerhaft blockiert.

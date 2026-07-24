@@ -56,7 +56,7 @@ def main() -> int:
         team = str(item.get("team_name") or "").strip()
         home = str(item.get("home_team") or "").strip()
         away = str(item.get("away_team") or "").strip()
-        title = f"Heimspiel {team}: {home} – {away}" if team else f"Heimspiel: {home} – {away}"
+        title = f"Spiel {team}: {home} – {away}" if team else f"Spiel: {home} – {away}"
         matches.append({
             "id": "dfb:" + external_id,
             "title": title,
@@ -66,6 +66,7 @@ def main() -> int:
             "place": "rasen" if calendar == "Rasen" else "kunstrasen",
             "calendar": calendar,
             "team": team,
+            "teamRole": item.get("team_role", "unknown"),
             "homeTeam": home,
             "awayTeam": away,
             "competition": item.get("competition", ""),
