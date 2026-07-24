@@ -73,6 +73,35 @@ class PocParserTest(unittest.TestCase):
                 "031C84AB5K000000VS5489BUVUR5FS5A"
             )
         )
+        self.assertEqual(
+            "031C84AB5K000000VS5489BUVUR5FS5A",
+            by_number["710029006"].external_id,
+        )
+        self.assertTrue(by_number["710029006"].kickoff.endswith("+02:00"))
+
+    def test_spielfrei_is_excluded_without_venue_review(self):
+        from poc_scraper import Match
+
+        match = Match(
+            external_id="610436029",
+            match_number="610436029",
+            team_id="TEAM",
+            team_name="Herren Ü40",
+            kickoff="2027-04-09T19:00+02:00",
+            home_team="Schönwalder SV (Ü40)",
+            away_team="spielfrei",
+            competition="Kreisliga",
+            match_type="ME",
+            status="",
+            venue_raw="",
+            detail_url="",
+            source_url="fixture://matchplan",
+            warnings=["Spielstätte fehlt"],
+        )
+        apply_venue_rules(match, [], "review")
+        self.assertEqual("exclude", match.decision)
+        self.assertEqual("Spielfrei", match.venue_rule)
+        self.assertNotIn("Spielstätte fehlt", match.warnings)
 
 
 class RequestProtectionTest(unittest.TestCase):
@@ -258,3 +287,20 @@ class ScheduleProtectionTest(unittest.TestCase):
                 self.settings,
             )
         )
+
+
+class EndpointCompletenessTest(unittest.TestCase):
+    def test_primary_endpoint_requests_complete_non_paginated_matchplan(self):
+        from poc_scraper import primary_matchplan_url
+
+        config = json.loads((ROOT / "config.json").read_text(encoding="utf-8"))
+        url = primary_matchplan_url(
+            config,
+            "TEAMID",
+            "2026-07-01",
+            "2027-06-30",
+        )
+        self.assertNotIn("/mode/PAGE/", url)
+        self.assertIn("/match-type/1/", url)
+        self.assertIn("/show-venues/true/", url)
+        self.assertTrue(url.endswith("/team-id/TEAMID"))

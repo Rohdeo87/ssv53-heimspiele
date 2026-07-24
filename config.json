@@ -11,8 +11,8 @@
     "delay_seconds": 3.0,
     "jitter_seconds": 1.0,
     "max_requests_per_run": 10,
-    "matchplan_endpoint_template": "https://www.fussball.de/ajax.team.matchplan/-/mode/PAGE/mime-type/HTML/show-venues/true/match-type/1/datum-von/{date_from}/datum-bis/{date_to}/team-id/{team_id}",
-    "user_agent": "SSV53-Belegungsplan-PoC/5.0 (+https://www.ssv53.de; mailto:thomas.rohde@ssv53.de)"
+    "matchplan_endpoint_template": "https://www.fussball.de/ajax.team.matchplan/-/mime-type/HTML/show-venues/true/match-type/1/datum-von/{date_from}/datum-bis/{date_to}/team-id/{team_id}",
+    "user_agent": "SSV53-Belegungsplan-PoC/7.0 (+https://www.ssv53.de; mailto:thomas.rohde@ssv53.de)"
   },
   "teams": [
     {

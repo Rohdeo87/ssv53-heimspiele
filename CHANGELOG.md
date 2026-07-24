@@ -1,3 +1,19 @@
+# Version 7
+
+- paginierten Zusatz `mode/PAGE` aus dem regulären Spielplan-Endpunkt entfernt
+- vollständiger Mannschaftsspielplan je Team wird nun in einer Antwort angefordert
+- Heimspielfilter `match-type/1` und Spielstättenabfrage `show-venues/true` bleiben erhalten
+- Request-Anzahl und alle Sicherheitssperren bleiben unverändert
+- Regressionstest gegen eine versehentliche Rückkehr zum paginierten Endpunkt ergänzt
+
+# Version 6
+
+- stabile FUSSBALL.DE-Spiel-ID aus dem letzten `/-/spiel/<ID>`-Segment
+- `spielfrei` wird automatisch ausgeschlossen und nicht mehr zur Platzprüfung gemeldet
+- Zeitwerte enthalten den Offset für `Europe/Berlin`
+- ICS-Ausgabe verwendet `TZID=Europe/Berlin`
+- Wettbewerbsname wird ohne vorangestellten Wochentag ausgegeben
+
 # Änderungen in Version 5
 
 - HTTP 403 und 406 lösen jetzt sofort einen globalen Abbruch des gesamten Laufs aus.

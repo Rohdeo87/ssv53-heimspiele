@@ -96,3 +96,19 @@ python poc_scraper.py --config config.json --output generated --state state/requ
 ```
 
 Auch im Diagnosemodus bleibt die harte Obergrenze von zehn Requests bestehen.
+
+
+## Datenqualitätskorrekturen in Version 6
+
+Die technische Spiel-ID wird aus dem stabilen letzten `/-/spiel/<ID>`-Segment der FUSSBALL.DE-URL übernommen. Einträge mit dem Gegner oder Heimteam `spielfrei` werden automatisch ausgeschlossen. Datumswerte enthalten den Berliner UTC-Offset.
+
+
+## Vollständigkeitskorrektur in Version 7
+
+Der reguläre Abruf verwendet jetzt den vollständigen, nicht paginierten Mannschaftsspielplan-Endpunkt ohne `mode/PAGE`:
+
+```text
+/ajax.team.matchplan/-/mime-type/HTML/show-venues/true/match-type/1/...
+```
+
+`match-type/1` begrenzt weiterhin ausschließlich auf Heimspiele. Die Spielstätten bleiben über `show-venues/true` enthalten. Durch das Entfernen von `mode/PAGE` werden alle im gewählten Saisonzeitraum veröffentlichten Heimspiele einer Mannschaft in derselben Antwort verarbeitet. Die Anzahl der Requests bleibt unverändert bei genau einem Spielplanabruf je konfigurierter Mannschaft.

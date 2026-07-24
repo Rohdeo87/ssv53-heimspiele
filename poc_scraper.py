@@ -19,6 +19,7 @@ import sys
 import time
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import Any, Iterable
@@ -162,7 +163,7 @@ class Client:
         self.session.headers.update({
             "User-Agent": request_cfg.get(
                 "user_agent",
-                "SSV53-Belegungsplan-PoC/5.0 "
+                "SSV53-Belegungsplan-PoC/7.0 "
                 "(+https://www.ssv53.de; mailto:thomas.rohde@ssv53.de)",
             ),
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -463,7 +464,7 @@ def parse_datetime(text: str) -> datetime | None:
         raw_date = match.group("date")
         fmt = "%d.%m.%Y %H:%M" if len(raw_date.split(".")[-1]) == 4 else "%d.%m.%y %H:%M"
         try:
-            return datetime.strptime(f"{raw_date} {match.group('time')}", fmt)
+            return datetime.strptime(f"{raw_date} {match.group('time')}", fmt).replace(tzinfo=ZoneInfo("Europe/Berlin"))
         except ValueError:
             continue
     return None
@@ -500,7 +501,7 @@ def primary_matchplan_url(
         config.get("request", {}).get(
             "matchplan_endpoint_template",
             BASE_URL
-            + "/ajax.team.matchplan/-/mode/PAGE/"
+            + "/ajax.team.matchplan/-/"
             + "mime-type/HTML/show-venues/true/match-type/1/"
             + "datum-von/{date_from}/datum-bis/{date_to}/team-id/{team_id}",
         )
@@ -630,6 +631,7 @@ def extract_competition(row: Tag) -> str:
     text = re.sub(r"\b\d{2}:\d{2}\b", " ", text)
     text = re.sub(r"\b\d{9}\b", " ", text)
     text = re.sub(r"\b(?:ME|PO|FS|FR|TU|PR)\b", " ", text)
+    text = re.sub(r"^(?:Mo|Di|Mi|Do|Fr|Sa|So),?\s*\|\s*", "", text, flags=re.IGNORECASE)
     return normalize_space(text.strip(" -|"))
 
 
@@ -674,8 +676,23 @@ def parse_matchplan(html_text: str, team: Team, source_url: str) -> list[Match]:
                 detail_url = urljoin(BASE_URL, href)
                 break
 
-        id_match = re.search(r"/spiel/([A-Z0-9]+)", detail_url, re.IGNORECASE)
-        detail_id = id_match.group(1) if id_match else ""
+        # FUSSBALL.DE-Links enthalten zweimal "/spiel/": zuerst den lesbaren
+        # Slug und nach "/-/spiel/" die stabile technische Spiel-ID. Nur
+        # diese letzte ID darf als externer Schlüssel verwendet werden.
+        id_match = re.search(
+            r"/-/spiel/([A-Z0-9]+)(?:[/?#]|$)",
+            detail_url,
+            re.IGNORECASE,
+        )
+        if id_match:
+            detail_id = id_match.group(1)
+        else:
+            id_candidates = re.findall(
+                r"/spiel/([A-Z0-9]+)(?:[/?#]|$)",
+                detail_url,
+                re.IGNORECASE,
+            )
+            detail_id = id_candidates[-1] if id_candidates else ""
         number_match = re.search(r"\b(\d{9})\b", block_text)
         match_number = number_match.group(1) if number_match else ""
         external_id = detail_id or match_number
@@ -714,19 +731,30 @@ def parse_matchplan(html_text: str, team: Team, source_url: str) -> list[Match]:
 
 
 def apply_venue_rules(match: Match, rules: list[VenueRule], default_decision: str) -> None:
-    normalized_venue = normalize_space(match.venue_raw)
-    for rule in rules:
-        if rule.compiled().search(normalized_venue):
-            match.decision = rule.decision
-            match.calendar = rule.calendar
-            match.venue_rule = rule.name
-            break
+    # "spielfrei" ist keine Platzbelegung und darf weder veröffentlicht noch
+    # zur manuellen Platzprüfung vorgeschlagen werden.
+    if "spielfrei" in normalize_match_text(match.home_team + " " + match.away_team):
+        match.decision = "exclude"
+        match.calendar = ""
+        match.venue_rule = "Spielfrei"
+        match.warnings = [
+            warning for warning in match.warnings
+            if warning != "Spielstätte fehlt"
+        ]
     else:
-        match.decision = default_decision
-        if not match.venue_raw:
-            match.warnings.append("Keine automatische Platzzuordnung möglich")
+        normalized_venue = normalize_space(match.venue_raw)
+        for rule in rules:
+            if rule.compiled().search(normalized_venue):
+                match.decision = rule.decision
+                match.calendar = rule.calendar
+                match.venue_rule = rule.name
+                break
         else:
-            match.warnings.append("Unbekannte Spielstätte; manuelle Prüfung erforderlich")
+            match.decision = default_decision
+            if not match.venue_raw:
+                match.warnings.append("Keine automatische Platzzuordnung möglich")
+            else:
+                match.warnings.append("Unbekannte Spielstätte; manuelle Prüfung erforderlich")
 
     checksum_payload = {
         "kickoff": match.kickoff,
@@ -786,8 +814,8 @@ def write_ics(path: Path, matches: list[Match], calendar_name: str) -> None:
             "BEGIN:VEVENT",
             f"UID:fussball-{ics_escape(match.external_id)}@ssv53.de",
             f"DTSTAMP:{now}",
-            f"DTSTART:{iso_to_ics(match.event_start)}",
-            f"DTEND:{iso_to_ics(match.event_end)}",
+            f"DTSTART;TZID=Europe/Berlin:{iso_to_ics(match.event_start)}",
+            f"DTEND;TZID=Europe/Berlin:{iso_to_ics(match.event_end)}",
             f"SUMMARY:{ics_escape(title)}",
             f"DESCRIPTION:{ics_escape(' | '.join(filter(None, description_parts)))}",
             f"URL:{match.detail_url}" if match.detail_url else "",
