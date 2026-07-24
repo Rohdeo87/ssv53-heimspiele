@@ -1,0 +1,111 @@
+name: SSV53 Heimspiele aktualisieren
+
+on:
+  workflow_dispatch:
+  schedule:
+    # GitHub-Cron läuft in UTC. Diese vier Startpunkte liegen sowohl bei
+    # Winter- als auch Sommerzeit sicher zwischen 06:00 und 22:00 Uhr Berlin.
+    # Vor dem eigentlichen Abruf folgt zusätzlich eine zufällige Wartezeit.
+    - cron: "20 5 * * *"
+    - cron: "20 10 * * *"
+    - cron: "20 15 * * *"
+    - cron: "20 19 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ssv53-match-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Dateien laden
+        uses: actions/checkout@v4
+
+      - name: Python einrichten
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Berliner Abruffenster prüfen
+        id: timing
+        shell: bash
+        run: python schedule_guard.py prepare --config config.json
+
+      - name: Startzeit zufällig verschieben
+        if: steps.timing.outputs.should_run == 'true'
+        shell: bash
+        run: |
+          echo "Der Abruf startet nach ${{ steps.timing.outputs.delay_seconds }} Sekunden."
+          sleep "${{ steps.timing.outputs.delay_seconds }}"
+
+      - name: Abruffenster nach Wartezeit erneut prüfen
+        id: timing_confirm
+        if: steps.timing.outputs.should_run == 'true'
+        shell: bash
+        run: python schedule_guard.py confirm --config config.json
+
+      - name: Abhängigkeiten installieren
+        if: steps.timing_confirm.outputs.should_run == 'true'
+        run: pip install -r requirements.txt
+
+      - name: Tests ausführen
+        if: steps.timing_confirm.outputs.should_run == 'true'
+        run: python -m unittest discover -s tests -v
+
+      - name: Heimspiele zurückhaltend abrufen
+        id: scrape
+        if: steps.timing_confirm.outputs.should_run == 'true'
+        continue-on-error: true
+        run: >-
+          python poc_scraper.py
+          --config config.json
+          --output generated
+          --state state/request_state.json
+          --verbose
+
+      - name: Veröffentlichbaren Feed erstellen
+        id: feed
+        if: steps.scrape.outcome == 'success'
+        run: python create_feed.py --input generated --output public
+
+      - name: Daten und Schutzstatus speichern
+        if: ${{ always() && steps.timing_confirm.outputs.should_run == 'true' }}
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public state/request_state.json
+          if git diff --cached --quiet; then
+            echo "Keine Änderungen vorhanden."
+          else
+            git commit -m "Heimspiele und Abrufschutz aktualisiert"
+            git push
+          fi
+
+      - name: Laufstatus abschließend prüfen
+        if: always()
+        shell: bash
+        run: |
+          if [ "${{ steps.timing.outputs.should_run }}" != "true" ]; then
+            echo "Kein Abruf: außerhalb des erlaubten Zeitfensters oder zu nah an 22:00 Uhr."
+            exit 0
+          fi
+          if [ "${{ steps.timing_confirm.outputs.should_run }}" != "true" ]; then
+            echo "Kein Abruf: Das Zeitfenster endete während der zufälligen Wartezeit."
+            exit 0
+          fi
+          if [ "${{ steps.scrape.outcome }}" != "success" ]; then
+            echo "Der Abruf ist fehlgeschlagen. Der letzte veröffentlichte Feed bleibt unverändert."
+            exit 1
+          fi
+          if [ "${{ steps.feed.outcome }}" != "success" ]; then
+            echo "Der Feed konnte nicht sicher veröffentlicht werden."
+            exit 1
+          fi
