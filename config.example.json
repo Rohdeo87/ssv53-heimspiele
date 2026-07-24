@@ -1,0 +1,71 @@
+{
+  "club_url": "https://www.fussball.de/verein/schoenwalder-sv-53-brandenburg/-/id/00ES8GNBL0000049VV0AG08LVUPGND5I",
+  "season_code": "2627",
+  "date_from": "2026-07-01",
+  "date_to": "2027-06-30",
+  "discover_teams": false,
+  "default_decision": "review",
+  "request": {
+    "timeout_seconds": 25,
+    "max_retries": 1,
+    "delay_seconds": 3.0,
+    "jitter_seconds": 1.0,
+    "max_requests_per_run": 10,
+    "matchplan_endpoint_template": "https://www.fussball.de/ajax.team.matchplan/-/mode/PAGE/mime-type/HTML/show-venues/true/match-type/1/datum-von/{date_from}/datum-bis/{date_to}/team-id/{team_id}",
+    "user_agent": "SSV53-Belegungsplan-PoC/5.0 (+https://www.ssv53.de; mailto:thomas.rohde@ssv53.de)"
+  },
+  "teams": [
+    {
+      "name": "Herren Ü50",
+      "team_id": "02PKT2MAOC000000VS5489B2VT4FEOV2",
+      "lead_minutes": 90,
+      "post_kickoff_minutes": 150
+    },
+    {
+      "name": "Herren Ü40",
+      "team_id": "02PKVQDTEK000000VS5489B2VT4FEOV2",
+      "lead_minutes": 90,
+      "post_kickoff_minutes": 150
+    },
+    {
+      "name": "Herren",
+      "team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
+      "lead_minutes": 90,
+      "post_kickoff_minutes": 150
+    }
+  ],
+  "venue_rules": [
+    {
+      "name": "Kunstrasen Schönwalde",
+      "pattern": "sportplatz\\s+sch[oö]nwalde\\s+strandbad.*(?:platz\\s*2|kunstrasen|\\bkr\\b)",
+      "decision": "include",
+      "calendar": "Kunstrasen"
+    },
+    {
+      "name": "Rasen Schönwalde",
+      "pattern": "sportplatz\\s+sch[oö]nwalde\\s+strandbad.*platz\\s*1",
+      "decision": "include",
+      "calendar": "Rasen"
+    },
+    {
+      "name": "Perwenitz",
+      "pattern": "sportplatz\\s+perwenitz",
+      "decision": "exclude",
+      "calendar": ""
+    },
+    {
+      "name": "Paaren",
+      "pattern": "sportplatz\\s+paaren",
+      "decision": "exclude",
+      "calendar": ""
+    }
+  ],
+  "schedule_protection": {
+    "timezone": "Europe/Berlin",
+    "window_start": "06:00",
+    "window_end": "22:00",
+    "random_delay_min_seconds": 120,
+    "random_delay_max_seconds": 720,
+    "closing_margin_seconds": 60
+  }
+}
