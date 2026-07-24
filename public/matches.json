@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-07-24T15:06:49",
+  "status": "ok",
+  "matches": [
+    {
+      "id": "dfb:schoenwalder",
+      "title": "Heimspiel Herren Ü40: Schönwalder SV (Ü40) – SG Bornim Ü40",
+      "start": "2026-09-04T17:30",
+      "end": "2026-09-04T21:30",
+      "kickoff": "2026-09-04T19:00",
+      "place": "rasen",
+      "calendar": "Rasen",
+      "team": "Herren Ü40",
+      "homeTeam": "Schönwalder SV (Ü40)",
+      "awayTeam": "SG Bornim Ü40",
+      "competition": "Fr, | Kreispokal",
+      "status": "",
+      "detailLink": "https://www.fussball.de/spiel/schoenwalder-sv-ue40-sg-bornim-ue40/-/spiel/031C84AB5K000000VS5489BUVUR5FS5A",
+      "source": "fussball.de",
+      "checksum": "362ae2aca237bbd4c114190a513fc9156fffe30054ec17461d372e36df617732"
+    }
+  ]
+}
