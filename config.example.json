@@ -4,7 +4,7 @@
   "date_from": "2026-07-01",
   "date_to": "2027-06-30",
   "discover_teams": false,
-  "default_decision": "review",
+  "default_decision": "exclude",
   "request": {
     "timeout_seconds": 25,
     "max_retries": 1,
@@ -12,7 +12,7 @@
     "jitter_seconds": 1.0,
     "max_requests_per_run": 10,
     "matchplan_endpoint_template": "https://www.fussball.de/ajax.team.matchplan/-/mime-type/HTML/show-venues/true/datum-von/{date_from}/datum-bis/{date_to}/team-id/{team_id}",
-    "user_agent": "SSV53-Belegungsplan-PoC/9.0 (+https://www.ssv53.de; mailto:thomas.rohde@ssv53.de)"
+    "user_agent": "SSV53-Belegungsplan-PoC/10.0 (+https://www.ssv53.de; mailto:thomas.rohde@ssv53.de)"
   },
   "teams": [
     {
@@ -81,10 +81,22 @@
   },
   "quality_guard": {
     "require_no_review": true,
-    "minimum_included_by_calendar": {
-      "Rasen": 17,
-      "Kunstrasen": 0
-    }
+    "response_row_limit": 10
   },
-  "selection_mode": "venue"
+  "selection_mode": "venue",
+  "local_venue_pattern": "(?:sportplatz\\s+sch[oö]nwalde\\s+strandbad|kurm[aä]rkische\\s+str(?:aße|\\.)?\\s*2)",
+  "request_windows": [
+    {
+      "date_from": "2026-07-01",
+      "date_to": "2026-10-31"
+    },
+    {
+      "date_from": "2026-11-01",
+      "date_to": "2027-02-28"
+    },
+    {
+      "date_from": "2027-03-01",
+      "date_to": "2027-06-30"
+    }
+  ]
 }

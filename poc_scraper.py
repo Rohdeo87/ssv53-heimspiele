@@ -166,7 +166,7 @@ class Client:
         self.session.headers.update({
             "User-Agent": request_cfg.get(
                 "user_agent",
-                "SSV53-Belegungsplan-PoC/9.0 "
+                "SSV53-Belegungsplan-PoC/10.0 "
                 "(+https://www.ssv53.de; mailto:thomas.rohde@ssv53.de)",
             ),
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -517,6 +517,41 @@ def primary_matchplan_url(
     )
 
 
+def build_request_windows(
+    config: dict[str, Any], date_from: str, date_to: str
+) -> list[tuple[str, str]]:
+    """Liefert nicht überlappende Abruffenster innerhalb des Saisonzeitraums.
+
+    Der FUSSBALL.DE-Endpunkt liefert in der Praxis höchstens zehn Tabellenzeilen
+    pro Antwort. Deshalb wird die Saison in wenige größere Fenster geteilt.
+    Die Konfiguration ist so gewählt, dass drei Teams mit drei Fenstern genau
+    neun Requests benötigen und damit unter dem absoluten Limit von zehn bleiben.
+    """
+    configured = config.get("request_windows") or []
+    windows: list[tuple[str, str]] = []
+    for item in configured:
+        start = str(item.get("date_from") or "")
+        end = str(item.get("date_to") or "")
+        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", start) or not re.fullmatch(
+            r"\d{4}-\d{2}-\d{2}", end
+        ):
+            raise SystemExit("request_windows müssen YYYY-MM-DD verwenden")
+        if start > end or start < date_from or end > date_to:
+            raise SystemExit("request_windows liegen außerhalb des Saisonzeitraums")
+        windows.append((start, end))
+
+    if not windows:
+        return [(date_from, date_to)]
+
+    windows.sort()
+    previous_end = ""
+    for start, end in windows:
+        if previous_end and start <= previous_end:
+            raise SystemExit("request_windows dürfen sich nicht überschneiden")
+        previous_end = end
+    return windows
+
+
 def diagnostic_endpoint_candidates(
     team_id: str, date_from: str, date_to: str
 ) -> list[str]:
@@ -848,7 +883,12 @@ def parse_matchplan(
     return matches
 
 
-def apply_venue_rules(match: Match, rules: list[VenueRule], default_decision: str) -> None:
+def apply_venue_rules(
+    match: Match,
+    rules: list[VenueRule],
+    default_decision: str,
+    local_venue_pattern: str = "",
+) -> None:
     # "spielfrei" ist keine Platzbelegung und darf weder veröffentlicht noch
     # zur manuellen Platzprüfung vorgeschlagen werden.
     if "spielfrei" in normalize_match_text(match.home_team + " " + match.away_team):
@@ -868,11 +908,32 @@ def apply_venue_rules(match: Match, rules: list[VenueRule], default_decision: st
                 match.venue_rule = rule.name
                 break
         else:
-            match.decision = default_decision
+            # Für den Belegungsplan sind nur die eigenen Plätze relevant. Eine
+            # vollständig benannte auswärtige Spielstätte wird deshalb sicher
+            # ausgeschlossen. Nur fehlende Angaben oder eine lokale, aber noch
+            # nicht eindeutig Platz 1/2 zuordenbare Schreibweise bleiben offen.
             if not match.venue_raw:
+                match.decision = "review"
+                match.calendar = ""
+                match.venue_rule = "Spielstätte fehlt"
                 match.warnings.append("Keine automatische Platzzuordnung möglich")
+            elif local_venue_pattern and re.search(
+                local_venue_pattern, normalized_venue, re.IGNORECASE
+            ):
+                match.decision = "review"
+                match.calendar = ""
+                match.venue_rule = "Lokale Spielstätte unklar"
+                match.warnings.append(
+                    "Schönwalder Spielstätte erkannt, Platz 1/2 aber nicht eindeutig"
+                )
             else:
-                match.warnings.append("Unbekannte Spielstätte; manuelle Prüfung erforderlich")
+                match.decision = "exclude"
+                match.calendar = ""
+                match.venue_rule = "Auswärtige Spielstätte"
+                match.warnings = [
+                    warning for warning in match.warnings
+                    if warning != "Unbekannte Spielstätte; manuelle Prüfung erforderlich"
+                ]
 
     checksum_payload = {
         "kickoff": match.kickoff,
@@ -1060,31 +1121,31 @@ def evaluate_quality(
         "Rasen": sum(1 for m in matches if m.decision == "include" and m.calendar == "Rasen"),
         "Kunstrasen": sum(1 for m in matches if m.decision == "include" and m.calendar == "Kunstrasen"),
     }
-    minimums = guard.get("minimum_included_by_calendar", {})
-    for calendar, minimum in minimums.items():
-        actual = int(by_calendar.get(str(calendar), 0))
-        required = int(minimum)
-        if actual < required:
-            errors.append(
-                f"{calendar}: nur {actual} statt mindestens {required} erwarteten Spielen."
-            )
-
+    response_row_limit = int(guard.get("response_row_limit", 10))
     for audit in team_audits:
-        if audit.get("missing_detail_ids"):
-            errors.append(
-                f"{audit.get('team')}: nicht verarbeitete Spiel-IDs vorhanden."
-            )
-        if audit.get("duplicate_detail_ids"):
-            errors.append(
-                f"{audit.get('team')}: doppelte Spiel-IDs vorhanden."
-            )
+        for window in audit.get("windows", []):
+            if window.get("missing_detail_ids"):
+                errors.append(
+                    f"{audit.get('team')} {window.get('date_from')}–{window.get('date_to')}: "
+                    "nicht verarbeitete Spiel-IDs vorhanden."
+                )
+            if window.get("duplicate_detail_ids"):
+                errors.append(
+                    f"{audit.get('team')} {window.get('date_from')}–{window.get('date_to')}: "
+                    "doppelte Spiel-IDs vorhanden."
+                )
+            if int(window.get("competition_rows", 0)) >= response_row_limit:
+                errors.append(
+                    f"{audit.get('team')} {window.get('date_from')}–{window.get('date_to')}: "
+                    f"Antwort enthält {window.get('competition_rows')} Zeilen und könnte gekürzt sein."
+                )
 
     return {
         "publishable": not errors,
         "errors": errors,
         "invalid_included": invalid_included,
         "by_calendar": by_calendar,
-        "minimum_included_by_calendar": minimums,
+        "response_row_limit": response_row_limit,
         "team_audits": team_audits,
     }
 
@@ -1144,34 +1205,64 @@ def run(
             raise SystemExit("date_from und date_to müssen YYYY-MM-DD verwenden")
 
         rules = [VenueRule(**item) for item in config.get("venue_rules", [])]
-        default_decision = str(config.get("default_decision", "review"))
+        default_decision = str(config.get("default_decision", "exclude"))
+        local_venue_pattern = str(config.get("local_venue_pattern") or "")
+        request_windows = build_request_windows(config, date_from, date_to)
+        required_requests = len(teams) * len(request_windows)
+        if required_requests > client.max_requests:
+            raise SystemExit(
+                f"Konfiguration benötigt {required_requests} Requests, erlaubt sind höchstens "
+                f"{client.max_requests}."
+            )
 
         for team in teams:
-            LOG.info("Lade %s (%s)", team.name, team.team_id)
+            LOG.info("Lade %s (%s) in %s Zeitfenstern", team.name, team.team_id, len(request_windows))
             try:
-                body, source_url = fetch_matchplan(
-                    client,
-                    config,
-                    team,
-                    date_from,
-                    date_to,
-                    diagnostic_endpoints=diagnostic_endpoints,
-                )
-                audit: dict[str, Any] = {}
-                matches = parse_matchplan(body, team, source_url, audit=audit)
-                for match in matches:
-                    if match.kickoff and not (
-                        date_from <= match.kickoff[:10] <= date_to
-                    ):
-                        continue
-                    apply_venue_rules(match, rules, default_decision)
-                    all_matches.append(match)
-                audit.update({
-                    "included": sum(1 for m in matches if m.decision == "include"),
-                    "excluded": sum(1 for m in matches if m.decision == "exclude"),
-                    "review": sum(1 for m in matches if m.decision == "review"),
+                team_matches: list[Match] = []
+                window_audits: list[dict[str, Any]] = []
+                for window_from, window_to in request_windows:
+                    LOG.info("  Zeitraum %s bis %s", window_from, window_to)
+                    body, source_url = fetch_matchplan(
+                        client,
+                        config,
+                        team,
+                        window_from,
+                        window_to,
+                        diagnostic_endpoints=diagnostic_endpoints,
+                    )
+                    window_audit: dict[str, Any] = {
+                        "date_from": window_from,
+                        "date_to": window_to,
+                    }
+                    window_matches = parse_matchplan(
+                        body, team, source_url, audit=window_audit
+                    )
+                    for match in window_matches:
+                        if match.kickoff and not (
+                            window_from <= match.kickoff[:10] <= window_to
+                        ):
+                            continue
+                        apply_venue_rules(
+                            match,
+                            rules,
+                            default_decision,
+                            local_venue_pattern=local_venue_pattern,
+                        )
+                        team_matches.append(match)
+                    window_audits.append(window_audit)
+
+                team_matches = deduplicate(team_matches)
+                all_matches.extend(team_matches)
+                team_audits.append({
+                    "team": team.name,
+                    "team_id": team.team_id,
+                    "source_scope": "all_team_matches split into bounded date windows; inclusion by venue",
+                    "windows": window_audits,
+                    "parsed_matches": len(team_matches),
+                    "included": sum(1 for m in team_matches if m.decision == "include"),
+                    "excluded": sum(1 for m in team_matches if m.decision == "exclude"),
+                    "review": sum(1 for m in team_matches if m.decision == "review"),
                 })
-                team_audits.append(audit)
             except (RateLimitError, SecurityLockError, RequestBudgetExceeded) as exc:
                 LOG.error("Gesamter Lauf wird zum Schutz des Servers beendet: %s", exc)
                 failed_teams.append({

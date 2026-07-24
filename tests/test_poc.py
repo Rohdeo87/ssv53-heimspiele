@@ -22,6 +22,7 @@ from poc_scraper import (
     evaluate_quality,
     parse_matchplan,
     primary_matchplan_url,
+    build_request_windows,
 )
 
 
@@ -102,29 +103,40 @@ class PocParserTest(unittest.TestCase):
         with self.assertRaises(ScrapeError):
             parse_matchplan(fixture, Team(name="Test", team_id="TEAM"), "fixture://matchplan")
 
-    def test_quality_guard_rejects_too_few_rasen_matches(self):
-        fixture = (ROOT / "tests" / "fixture_matchplan.html").read_text(encoding="utf-8")
-        team = Team(name="Test", team_id="TEAM")
-        audit = {}
-        matches = parse_matchplan(fixture, team, "fixture://matchplan", audit=audit)
-        rules_data = json.loads(
-            (ROOT / "config.example.json").read_text(encoding="utf-8")
-        )["venue_rules"]
-        rules = [VenueRule(**item) for item in rules_data]
-        for match in matches:
-            apply_venue_rules(match, rules, "review")
+    def test_quality_guard_rejects_a_possibly_truncated_window(self):
         report = evaluate_quality(
-            matches,
-            [audit],
-            {
-                "quality_guard": {
-                    "require_no_review": True,
-                    "minimum_included_by_calendar": {"Rasen": 2},
-                }
-            },
+            [],
+            [{
+                "team": "Test",
+                "windows": [{
+                    "date_from": "2026-07-01",
+                    "date_to": "2026-10-31",
+                    "competition_rows": 10,
+                    "missing_detail_ids": [],
+                    "duplicate_detail_ids": [],
+                }],
+            }],
+            {"quality_guard": {"require_no_review": True, "response_row_limit": 10}},
         )
         self.assertFalse(report["publishable"])
-        self.assertTrue(any("Rasen" in error for error in report["errors"]))
+        self.assertTrue(any("gekürzt" in error for error in report["errors"]))
+
+    def test_quality_guard_does_not_require_an_arbitrary_match_count(self):
+        report = evaluate_quality(
+            [],
+            [{
+                "team": "Test",
+                "windows": [{
+                    "date_from": "2026-07-01",
+                    "date_to": "2026-10-31",
+                    "competition_rows": 9,
+                    "missing_detail_ids": [],
+                    "duplicate_detail_ids": [],
+                }],
+            }],
+            {"quality_guard": {"require_no_review": True, "response_row_limit": 10}},
+        )
+        self.assertTrue(report["publishable"])
 
     def test_spielfrei_is_excluded_without_venue_review(self):
         from poc_scraper import Match
@@ -161,6 +173,50 @@ class PocParserTest(unittest.TestCase):
         url = primary_matchplan_url(cfg, "TEAM", "2026-07-01", "2027-06-30")
         self.assertNotIn("match-type/1", url)
         self.assertIn("show-venues/true", url)
+
+
+    def test_non_local_venue_is_excluded_not_reviewed(self):
+        from poc_scraper import Match
+        match = Match(
+            external_id="X", match_number="1", team_id="T", team_name="Test",
+            team_role="away", kickoff="2026-08-30T15:00+02:00",
+            home_team="FC Deetz", away_team="SSV", competition="Kreisliga",
+            match_type="ME", status="",
+            venue_raw="Rasenplatz, Deetzer Parkstadion, Hauptplatz",
+            detail_url="https://www.fussball.de/spiel/a-b/-/spiel/X",
+            source_url="fixture://matchplan",
+        )
+        apply_venue_rules(
+            match, [], "exclude",
+            local_venue_pattern=r"sportplatz\s+schoenwalde\s+strandbad",
+        )
+        self.assertEqual("exclude", match.decision)
+        self.assertEqual("Auswärtige Spielstätte", match.venue_rule)
+
+    def test_local_but_ambiguous_venue_remains_review(self):
+        from poc_scraper import Match
+        match = Match(
+            external_id="X", match_number="1", team_id="T", team_name="Test",
+            team_role="home", kickoff="2026-08-30T15:00+02:00",
+            home_team="SSV", away_team="Gast", competition="Kreisliga",
+            match_type="ME", status="",
+            venue_raw="Sportplatz Schönwalde Strandbad",
+            detail_url="https://www.fussball.de/spiel/a-b/-/spiel/X",
+            source_url="fixture://matchplan",
+        )
+        apply_venue_rules(
+            match, [], "exclude",
+            local_venue_pattern=r"sportplatz\s+sch[oö]nwalde\s+strandbad",
+        )
+        self.assertEqual("review", match.decision)
+        self.assertEqual("Lokale Spielstätte unklar", match.venue_rule)
+
+    def test_configured_request_windows_are_non_overlapping(self):
+        cfg = json.loads((ROOT / "config.json").read_text(encoding="utf-8"))
+        windows = build_request_windows(cfg, cfg["date_from"], cfg["date_to"])
+        self.assertEqual(3, len(windows))
+        self.assertEqual(("2026-07-01", "2026-10-31"), windows[0])
+        self.assertEqual(("2027-03-01", "2027-06-30"), windows[-1])
 
     def test_formal_away_game_on_platz_1_is_included(self):
         fixture = """

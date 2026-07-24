@@ -1,16 +1,11 @@
 # Changelog
 
-## Version 9
+## Version 10
 
-- Auswahl vollständig auf den tatsächlichen Austragungsort umgestellt.
-- `match-type/1` entfernt; alle Mannschaftsspiele werden geladen.
-- Formal als Gast geführte Spiele auf Platz 1/2 werden jetzt berücksichtigt.
-- Teamrolle `home`, `away` oder `unknown` wird protokolliert.
-- Feed- und ICS-Titel von „Heimspiel“ auf „Spiel“ umgestellt.
-- GitHub-Push gegen parallele Nutzeränderungen konfliktfest gemacht.
-- veralteten `datetime.utcnow()`-Aufruf ersetzt.
-- zusätzliche Tests für Endpunkt und formales Auswärtsspiel auf Platz 1.
-
-## Version 8
-
-- Blockbasierter Parser und Mindestprüfung für 17 Rasen-Spiele.
+- Saisonabruf in drei nicht überlappende Zeitfenster geteilt.
+- Neun Requests pro Lauf statt eines möglicherweise auf zehn Zeilen begrenzten Abrufs je Team.
+- Antworten mit zehn oder mehr Spielzeilen werden vorsorglich als möglicherweise gekürzt abgelehnt.
+- Auswärtige Spielstätten werden automatisch ausgeschlossen.
+- Nur fehlende oder lokal uneindeutige Schönwalder Spielstätten landen in der Prüfung.
+- Starre Mindestzahl von 17 Spielen entfernt; Vollständigkeit wird strukturell geprüft.
+- Alle bisherigen Server-, Zeitfenster- und Sicherheitssperren bleiben aktiv.
