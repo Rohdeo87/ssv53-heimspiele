@@ -81,8 +81,8 @@ Es gibt weiterhin keine starre Mindestzahl an Spielen.
 ## Installation
 
 1. ZIP vollständig entpacken.
-2. Den Inhalt des Ordners `poc_v12_1` in das lokale Repository `ssv53-heimspiele` kopieren. Die vorhandenen Dateien `state/request_state.json` und `state/team_registry.json` bleiben dabei erhalten; sie sind bewusst nicht im Update-Paket enthalten.
-3. Vorhandene Dateien ersetzen.
+2. Den vollständigen Inhalt des Ordners `ssv53-heimspiele` in das lokale Repository `ssv53-heimspiele` kopieren. Dieses Wiederherstellungspaket enthält auch `.github`, `state`, `public`, Tests und sämtliche Programmdateien.
+3. Vorhandene Dateien ersetzen. Bei Konflikten in `state/request_state.json` oder `state/team_registry.json` grundsätzlich den aktuelleren Stand aus `main/origin` behalten.
 4. Bei einem Konflikt in `state/request_state.json` die Version `from main/origin` behalten.
 5. Bei Konflikten in Version-12-Dateien wie `poc_scraper.py`, `config.json` oder der Workflow-Datei die lokale Version `from main` behalten.
 6. Commit-Text: `Dublettenprüfung Version 12.1`
