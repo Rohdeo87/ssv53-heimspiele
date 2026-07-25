@@ -1,19 +1,22 @@
 # Changelog
 
+## Version 12
+
+- Feste Mannschaftsliste durch den vereinsweiten FUSSBALL.DE-Spielplan ersetzt.
+- Neue Vereinsmannschaften und deren Spiele werden automatisch erkannt.
+- Vereinsspielplan wird in vier anfänglichen Quartalsfenstern abgerufen.
+- Betroffene Zeitfenster werden bei `Mehr laden` oder erreichter Antwortgrenze automatisch geteilt.
+- Harte Obergrenze von zehn Requests bleibt bestehen.
+- Lückenlose Saisonabdeckung wird vor der Veröffentlichung geprüft.
+- Persistentes Mannschaftsregister `state/team_registry.json` ergänzt.
+- Neue, bekannte und im Lauf nicht gesehene Mannschaften werden protokolliert.
+- Belegungspuffer auf 60 Minuten vor dem Anstoß und 60 Minuten nach dem Spiel gesetzt.
+- Konservative Standardspieldauer bleibt zunächst 90 Minuten; Dauerregeln sind konfigurierbar.
+- Feed enthält zusätzlich `teamCategory`.
+- Bestehende Server-, Zeitfenster-, Sicherheits- und Konfliktschutzmaßnahmen bleiben aktiv.
+
 ## Version 11
 
-- Diagnose 8 ausgewertet: 21 sichere Rasenbelegungen, 0 Prüfspiele, aber zwei Herren-Antworten mit exakt zehn Zeilen.
-- Teambezogene Abruffenster eingeführt.
-- Herren werden in fünf kleinere Fenster aufgeteilt; Ü40 und Ü50 jeweils in zwei Halbjahresfenster.
-- Gesamtzahl bleibt bei neun Requests pro Lauf.
-- Zehn-Zeilen-Schutz, Platzlogik und alle Server-Schutzmaßnahmen bleiben unverändert aktiv.
-
-## Version 10
-
-- Saisonabruf in drei nicht überlappende Zeitfenster geteilt.
-- Neun Requests pro Lauf statt eines möglicherweise auf zehn Zeilen begrenzten Abrufs je Team.
-- Antworten mit zehn oder mehr Spielzeilen werden vorsorglich als möglicherweise gekürzt abgelehnt.
-- Auswärtige Spielstätten werden automatisch ausgeschlossen.
-- Nur fehlende oder lokal uneindeutige Schönwalder Spielstätten landen in der Prüfung.
-- Starre Mindestzahl von 17 Spielen entfernt; Vollständigkeit wird strukturell geprüft.
-- Alle bisherigen Server-, Zeitfenster- und Sicherheitssperren bleiben aktiv.
+- Teambezogene Zeitfenster für Herren, Ü40 und Ü50.
+- Neun Requests pro Lauf.
+- Erfolgreicher produktiver GitHub-Actions-Lauf als bisherige stabile Ausgangsbasis.

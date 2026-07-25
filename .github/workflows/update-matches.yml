@@ -70,6 +70,7 @@ jobs:
           --config config.json
           --output generated
           --state state/request_state.json
+          --team-registry state/team_registry.json
           --verbose
 
       - name: Veröffentlichbaren Feed erstellen
@@ -96,9 +97,14 @@ jobs:
           cp state/request_state.json "$TEMP_DIR/state/request_state.json"
 
           SAVE_PUBLIC=false
+          SAVE_REGISTRY=false
           if [ "${{ steps.feed.outcome }}" = "success" ]; then
             cp -a public "$TEMP_DIR/public"
             SAVE_PUBLIC=true
+          fi
+          if [ "${{ steps.scrape.outcome }}" = "success" ] && [ -f generated/team_registry.json ]; then
+            cp generated/team_registry.json "$TEMP_DIR/state/team_registry.json"
+            SAVE_REGISTRY=true
           fi
 
           # Während des zufällig verzögerten Laufs kann der Nutzer neuen Code
@@ -110,6 +116,11 @@ jobs:
           mkdir -p state
           cp "$TEMP_DIR/state/request_state.json" state/request_state.json
           git add state/request_state.json
+
+          if [ "$SAVE_REGISTRY" = "true" ]; then
+            cp "$TEMP_DIR/state/team_registry.json" state/team_registry.json
+            git add state/team_registry.json
+          fi
 
           if [ "$SAVE_PUBLIC" = "true" ]; then
             rm -rf public

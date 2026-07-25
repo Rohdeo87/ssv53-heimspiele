@@ -66,6 +66,7 @@ def main() -> int:
             "place": "rasen" if calendar == "Rasen" else "kunstrasen",
             "calendar": calendar,
             "team": team,
+            "teamCategory": item.get("team_category", ""),
             "teamRole": item.get("team_role", "unknown"),
             "homeTeam": home,
             "awayTeam": away,
@@ -109,6 +110,7 @@ def main() -> int:
         "rasen.ics",
         "kunstrasen.ics",
         "quality_report.json",
+        "team_registry.json",
     ):
         src = source / name
         if src.exists():

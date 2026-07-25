@@ -8,6 +8,7 @@ Kunstrasen.
 from __future__ import annotations
 
 import argparse
+import calendar
 import csv
 import hashlib
 import html
@@ -18,7 +19,7 @@ import re
 import sys
 import time
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 from email.utils import parsedate_to_datetime
 from pathlib import Path
@@ -72,16 +73,6 @@ class RequestBudgetExceeded(GlobalAbortError):
 
 
 @dataclass
-class Team:
-    name: str
-    team_id: str
-    lead_minutes: int = 90
-    post_kickoff_minutes: int = 150
-    home_aliases: list[str] = field(default_factory=list)
-    request_windows: list[dict[str, str]] = field(default_factory=list)
-
-
-@dataclass
 class VenueRule:
     name: str
     pattern: str
@@ -98,6 +89,7 @@ class Match:
     match_number: str
     team_id: str
     team_name: str
+    team_category: str
     team_role: str
     kickoff: str
     home_team: str
@@ -167,7 +159,7 @@ class Client:
         self.session.headers.update({
             "User-Agent": request_cfg.get(
                 "user_agent",
-                "SSV53-Belegungsplan-PoC/11.0 "
+                "SSV53-Belegungsplan-PoC/12.0 "
                 "(+https://www.ssv53.de; mailto:thomas.rohde@ssv53.de)",
             ),
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -449,6 +441,7 @@ class Client:
         self._save_state()
 
 
+
 def normalize_space(value: str) -> str:
     return re.sub(r"\s+", " ", html.unescape(value or "")).strip()
 
@@ -468,10 +461,21 @@ def parse_datetime(text: str) -> datetime | None:
         raw_date = match.group("date")
         fmt = "%d.%m.%Y %H:%M" if len(raw_date.split(".")[-1]) == 4 else "%d.%m.%y %H:%M"
         try:
-            return datetime.strptime(f"{raw_date} {match.group('time')}", fmt).replace(tzinfo=ZoneInfo("Europe/Berlin"))
+            return datetime.strptime(
+                f"{raw_date} {match.group('time')}", fmt
+            ).replace(tzinfo=ZoneInfo("Europe/Berlin"))
         except ValueError:
             continue
     return None
+
+
+def extract_club_id(config: dict[str, Any]) -> str:
+    explicit = str(config.get("club_id") or "").strip()
+    if explicit:
+        return explicit
+    club_url = str(config.get("club_url") or "")
+    match = re.search(r"/-/id/([A-Z0-9]+)", club_url, re.IGNORECASE)
+    return match.group(1) if match else ""
 
 
 def extract_team_id(url: str) -> str:
@@ -479,134 +483,92 @@ def extract_team_id(url: str) -> str:
     return match.group(1) if match else ""
 
 
-def discover_teams(html_text: str, season_code: str) -> list[Team]:
-    soup = BeautifulSoup(html_text, "lxml")
-    found: dict[str, Team] = {}
-    season_fragment = f"/saison/{season_code}/"
-    for link in soup.select('a[href*="/mannschaft/"][href*="/team-id/"]'):
-        href = str(link.get("href") or "")
-        if season_fragment not in href:
-            continue
-        team_id = extract_team_id(href)
-        if not team_id:
-            continue
-        name = normalize_space(link.get_text(" ", strip=True))
-        if not name:
-            container = link.find_parent(["h3", "h4", "div", "article"])
-            name = normalize_space(container.get_text(" ", strip=True)) if container else team_id
-        found.setdefault(team_id, Team(name=name or team_id, team_id=team_id))
-    return list(found.values())
-
-
-def primary_matchplan_url(
-    config: dict[str, Any], team_id: str, date_from: str, date_to: str
+def club_matchplan_url(
+    config: dict[str, Any], date_from: str, date_to: str
 ) -> str:
+    club_id = extract_club_id(config)
+    if not club_id:
+        raise SystemExit("club_id oder eine club_url mit Vereins-ID ist erforderlich")
+    request_cfg = config.get("request", {})
+    max_rows = max(int(request_cfg.get("max_rows_per_response", 50)), 10)
     template = str(
-        config.get("request", {}).get(
-            "matchplan_endpoint_template",
+        request_cfg.get(
+            "club_matchplan_endpoint_template",
             BASE_URL
-            + "/ajax.team.matchplan/-/"
-            + "mime-type/HTML/show-venues/true/"
-            + "datum-von/{date_from}/datum-bis/{date_to}/team-id/{team_id}",
+            + "/ajax.club.matchplan/-/id/{club_id}/mode/PAGE/"
+            + "show-filter/false/show-venues/true/mime-type/HTML/"
+            + "datum-von/{date_from}/datum-bis/{date_to}/max/{max_rows}",
         )
     )
     return template.format(
         base_url=BASE_URL,
-        team_id=team_id,
+        club_id=club_id,
         date_from=date_from,
         date_to=date_to,
+        max_rows=max_rows,
     )
 
 
-def build_request_windows(
-    config: dict[str, Any], date_from: str, date_to: str
+def parse_iso_date(value: str, field_name: str) -> date:
+    try:
+        return datetime.strptime(value, "%Y-%m-%d").date()
+    except ValueError as exc:
+        raise SystemExit(f"{field_name} muss YYYY-MM-DD verwenden") from exc
+
+
+def add_months(value: date, months: int) -> date:
+    month_index = value.year * 12 + (value.month - 1) + months
+    year, month_zero = divmod(month_index, 12)
+    month = month_zero + 1
+    day = min(value.day, calendar.monthrange(year, month)[1])
+    return date(year, month, day)
+
+
+def build_initial_windows(
+    date_from: str, date_to: str, months_per_window: int = 3
 ) -> list[tuple[str, str]]:
-    """Liefert nicht überlappende Abruffenster innerhalb des Saisonzeitraums.
+    start = parse_iso_date(date_from, "date_from")
+    end = parse_iso_date(date_to, "date_to")
+    if start > end:
+        raise SystemExit("date_from darf nicht nach date_to liegen")
+    if months_per_window < 1:
+        raise SystemExit("initial_window_months muss mindestens 1 sein")
 
-    Der FUSSBALL.DE-Endpunkt liefert in der Praxis höchstens zehn Tabellenzeilen
-    pro Antwort. Deshalb wird die Saison in begrenzte Fenster geteilt. Teams mit
-    vielen Spielen können eigene, engere request_windows erhalten; für alle
-    übrigen Teams gelten die globalen Fenster.
-    """
-    configured = config.get("request_windows") or []
     windows: list[tuple[str, str]] = []
-    for item in configured:
-        start = str(item.get("date_from") or "")
-        end = str(item.get("date_to") or "")
-        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", start) or not re.fullmatch(
-            r"\d{4}-\d{2}-\d{2}", end
-        ):
-            raise SystemExit("request_windows müssen YYYY-MM-DD verwenden")
-        if start > end or start < date_from or end > date_to:
-            raise SystemExit("request_windows liegen außerhalb des Saisonzeitraums")
-        windows.append((start, end))
-
-    if not windows:
-        return [(date_from, date_to)]
-
-    windows.sort()
-    previous_end = ""
-    for start, end in windows:
-        if previous_end and start <= previous_end:
-            raise SystemExit("request_windows dürfen sich nicht überschneiden")
-        previous_end = end
+    current = start
+    while current <= end:
+        next_start = add_months(current, months_per_window)
+        window_end = min(end, next_start - timedelta(days=1))
+        windows.append((current.isoformat(), window_end.isoformat()))
+        current = window_end + timedelta(days=1)
     return windows
 
 
-def request_windows_for_team(
-    config: dict[str, Any], team: Team, date_from: str, date_to: str
-) -> list[tuple[str, str]]:
-    """Liefert teambezogene Fenster oder fällt auf die globalen Fenster zurück."""
-    if team.request_windows:
-        return build_request_windows(
-            {"request_windows": team.request_windows}, date_from, date_to
-        )
-    return build_request_windows(config, date_from, date_to)
-
-
-def diagnostic_endpoint_candidates(
-    team_id: str, date_from: str, date_to: str
-) -> list[str]:
-    common = "mime-type/HTML/show-venues/true"
+def split_window(date_from: str, date_to: str) -> list[tuple[str, str]]:
+    start = parse_iso_date(date_from, "date_from")
+    end = parse_iso_date(date_to, "date_to")
+    if start >= end:
+        return []
+    midpoint = start + timedelta(days=(end - start).days // 2)
     return [
-        f"{BASE_URL}/ajax.team.matchplan/-/mode/PAGE/{common}/datum-von/{date_from}/datum-bis/{date_to}/team-id/{team_id}",
-        f"{BASE_URL}/ajax.team.matchplan/-/{common}/datum-von/{date_from}/datum-bis/{date_to}/team-id/{team_id}",
-        f"{BASE_URL}/ajax.team.matchplan/-/mode/PAGE/{common}/team-id/{team_id}",
-        f"{BASE_URL}/ajax.team.matchplan/-/{common}/team-id/{team_id}",
-        f"{BASE_URL}/ajax.team.matchplan/-/mime-type/HTML/show-venues/true/team-id/{team_id}",
+        (start.isoformat(), midpoint.isoformat()),
+        ((midpoint + timedelta(days=1)).isoformat(), end.isoformat()),
     ]
 
 
-def fetch_matchplan(
+def fetch_club_matchplan(
     client: Client,
     config: dict[str, Any],
-    team: Team,
     date_from: str,
     date_to: str,
-    diagnostic_endpoints: bool = False,
 ) -> tuple[str, str]:
-    urls = (
-        diagnostic_endpoint_candidates(team.team_id, date_from, date_to)
-        if diagnostic_endpoints
-        else [primary_matchplan_url(config, team.team_id, date_from, date_to)]
-    )
-    errors: list[str] = []
-    for url in urls:
-        try:
-            body = client.get_text(url)
-            if "row-competition" in body or "club-matchplan-table" in body:
-                return body, url
-            errors.append(f"{url}: erwartete Spielplanstruktur fehlt")
-            if not diagnostic_endpoints:
-                break
-        except (RateLimitError, RequestBudgetExceeded):
-            raise
-        except ScrapeError as exc:
-            errors.append(str(exc))
-            if not diagnostic_endpoints:
-                break
-    mode = "Diagnose" if diagnostic_endpoints else "regulärer Endpunkt"
-    raise ScrapeError(f"Kein funktionierender {mode}. " + " | ".join(errors))
+    url = club_matchplan_url(config, date_from, date_to)
+    body = client.get_text(url)
+    if "row-competition" not in body and "club-matchplan-table" not in body:
+        raise ScrapeError(
+            f"Vereinsspielplan {date_from}–{date_to}: erwartete Struktur fehlt"
+        )
+    return body, url
 
 
 def row_classes(row: Tag) -> set[str]:
@@ -619,21 +581,18 @@ def row_text(row: Tag) -> str:
 
 
 def is_next_match_header(row: Tag) -> bool:
-    """Erkennt die Datumszeile des folgenden Spiels als harte Blockgrenze."""
-    if "row-competition" in row_classes(row):
+    classes = row_classes(row)
+    if "row-competition" in classes or "row-headline" in classes:
         return True
     text = row_text(row)
     if parse_datetime(text) is None:
         return False
-    # Eine echte Spielzeile kann selbst Datum/Uhrzeit enthalten. Als Grenze
-    # zählen hier nur reine Kopfzeilen ohne Vereine, Spiel-Link und Spielstätte.
     if row.select_one('.club-name, a[href*="/spiel/"], [class*="venue"], [class*="location"]'):
         return False
     return True
 
 
 def block_rows(start_row: Tag) -> list[Tag]:
-    """Liefert ausschließlich Zeilen, die zum aktuellen Spiel gehören."""
     rows = [start_row]
     sibling = start_row.find_next_sibling("tr")
     while sibling is not None:
@@ -644,42 +603,27 @@ def block_rows(start_row: Tag) -> list[Tag]:
     return rows
 
 
-def kickoff_for_competition_row(competition_row: Tag, rows: list[Tag]) -> datetime | None:
-    # Maßgeblich ist zuerst die kompakte Spielzeile selbst, z. B.
-    # "Fr, 21.08.26 | 19:00". So kann niemals das Datum des Folgespiels
-    # übernommen werden.
+def kickoff_for_competition_row(
+    competition_row: Tag, rows: list[Tag]
+) -> datetime | None:
     kickoff = parse_datetime(row_text(competition_row))
     if kickoff is not None:
         return kickoff
-
-    # Manche Darstellungen setzen die ausführliche Datumszeile unmittelbar
-    # vor die Spielzeile. Rückwärts suchen, aber niemals über die vorherige
-    # Spielzeile hinweg.
     sibling = competition_row.find_previous_sibling("tr")
     while sibling is not None and "row-competition" not in row_classes(sibling):
         kickoff = parse_datetime(row_text(sibling))
         if kickoff is not None:
             return kickoff
         sibling = sibling.find_previous_sibling("tr")
-
-    # Letzter, nun sicher begrenzter Fallback innerhalb des aktuellen Blocks.
     return parse_datetime(" ".join(row_text(row) for row in rows))
 
 
 def extract_detail_id(detail_url: str) -> str:
-    id_match = re.search(
-        r"/-/spiel/([A-Z0-9]+)(?:[/?#]|$)",
-        detail_url,
-        re.IGNORECASE,
-    )
+    id_match = re.search(r"/-/spiel/([A-Z0-9]+)(?:[/?#]|$)", detail_url, re.IGNORECASE)
     if id_match:
         return id_match.group(1)
-    id_candidates = re.findall(
-        r"/spiel/([A-Z0-9]+)(?:[/?#]|$)",
-        detail_url,
-        re.IGNORECASE,
-    )
-    return id_candidates[-1] if id_candidates else ""
+    candidates = re.findall(r"/spiel/([A-Z0-9]+)(?:[/?#]|$)", detail_url, re.IGNORECASE)
+    return candidates[-1] if candidates else ""
 
 
 def source_detail_ids(soup: BeautifulSoup) -> set[str]:
@@ -722,18 +666,14 @@ def extract_venue(rows: list[Tag]) -> str:
     )
     for selector in selectors:
         candidates.extend(unique_texts(select_from_rows(rows, selector)))
-
-    # Robuster Fallback: einzelne Zellen nach typischen Spielstättenbegriffen prüfen.
     for cell in select_from_rows(rows, "td, div"):
         text = normalize_space(cell.get_text(" ", strip=True))
         normalized = normalize_match_text(text)
         if any(token in normalized for token in ("sportplatz", "rasenplatz", "kunstrasen", "stadion")):
             if 5 <= len(text) <= 300:
                 candidates.append(text)
-
     if not candidates:
         return ""
-    # Der spezifischste, aber nicht ausufernde Kandidat gewinnt.
     candidates = sorted(set(candidates), key=lambda item: (len(item), item))
     for candidate in candidates:
         normalized = normalize_match_text(candidate)
@@ -744,13 +684,39 @@ def extract_venue(rows: list[Tag]) -> str:
 
 def extract_competition(row: Tag) -> str:
     explicit = row.select_one('[class*="competition"], .column-competition')
-    text = normalize_space(explicit.get_text(" ", strip=True)) if explicit else normalize_space(row.get_text(" ", strip=True))
+    text = normalize_space(explicit.get_text(" ", strip=True)) if explicit else row_text(row)
     text = re.sub(r"\b\d{2}\.\d{2}\.\d{2,4}\b", " ", text)
     text = re.sub(r"\b\d{2}:\d{2}\b", " ", text)
     text = re.sub(r"\b\d{9}\b", " ", text)
     text = re.sub(r"\b(?:ME|PO|FS|FR|TU|PR)\b", " ", text)
-    text = re.sub(r"^(?:Mo|Di|Mi|Do|Fr|Sa|So),?\s*\|\s*", "", text, flags=re.IGNORECASE)
     return normalize_space(text.strip(" -|"))
+
+
+def extract_team_category(competition_row: Tag) -> str:
+    selectors = (
+        ".column-team",
+        '[class*="team-type"]',
+        '[class*="team-category"]',
+        '[class*="team"]:not(.club-name)',
+    )
+    for selector in selectors:
+        element = competition_row.select_one(selector)
+        if element:
+            value = normalize_space(element.get_text(" ", strip=True))
+            if value:
+                return value
+
+    cells = [normalize_space(cell.get_text(" ", strip=True)) for cell in competition_row.find_all("td", recursive=False)]
+    for value in cells:
+        normalized = normalize_match_text(value)
+        if not value or parse_datetime(value):
+            continue
+        if re.search(r"\b\d{9}\b", value) or re.search(r"\b(?:ME|PO|FS|FR|TU|PR)\b", value):
+            continue
+        if any(token in normalized for token in ("liga", "pokal", "freundschaft", "turnier")):
+            continue
+        return value
+    return ""
 
 
 def extract_status(block_text: str) -> str:
@@ -761,36 +727,95 @@ def extract_status(block_text: str) -> str:
     return ""
 
 
-def determine_team_role(team: Team, home_team: str, away_team: str) -> str:
-    """Bestimmt, ob das konfigurierte Team formal Heim- oder Gastteam ist.
-
-    Für die Platzbelegung ist die Rolle nicht ausschlaggebend. Sie wird aber
-    protokolliert, damit Spiele auf Platz 1 auch dann nachvollziehbar bleiben,
-    wenn das SSV-Team in DFBnet formal als Gast geführt wird.
-    """
-    aliases = [value for value in team.home_aliases if normalize_match_text(value)]
-    if not aliases:
-        return "unknown"
-    normalized_home = normalize_match_text(home_team)
-    normalized_away = normalize_match_text(away_team)
-    normalized_aliases = {normalize_match_text(value) for value in aliases}
-    if normalized_home in normalized_aliases:
-        return "home"
-    if normalized_away in normalized_aliases:
-        return "away"
-    return "unknown"
+def club_name_match(value: str, pattern: str) -> bool:
+    if not pattern:
+        return False
+    return bool(re.search(pattern, normalize_space(value), re.IGNORECASE))
 
 
-def parse_matchplan(
+def team_id_for_club_element(element: Tag | None) -> str:
+    if element is None:
+        return ""
+    link = element if element.name == "a" else element.find_parent("a") or element.find("a")
+    if not isinstance(link, Tag):
+        return ""
+    return extract_team_id(urljoin(BASE_URL, str(link.get("href") or "")))
+
+
+def determine_club_team(
+    club_elements: list[Tag],
+    home_team: str,
+    away_team: str,
+    team_category: str,
+    club_team_pattern: str,
+) -> tuple[str, str, str]:
+    home_match = club_name_match(home_team, club_team_pattern)
+    away_match = club_name_match(away_team, club_team_pattern)
+    if home_match and not away_match:
+        element = club_elements[0] if club_elements else None
+        team_id = team_id_for_club_element(element)
+        return home_team, team_id, "home"
+    if away_match and not home_match:
+        element = club_elements[1] if len(club_elements) > 1 else None
+        team_id = team_id_for_club_element(element)
+        return away_team, team_id, "away"
+
+    fallback = team_category or "Vereinsmannschaft"
+    stable = hashlib.sha256(normalize_match_text(fallback).encode("utf-8")).hexdigest()[:16]
+    return fallback, f"auto-{stable}", "unknown"
+
+
+def has_more_results(html_text: str) -> bool:
+    soup = BeautifulSoup(html_text, "lxml")
+    for element in soup.select(
+        '.load-more, [class*="load-more"], [data-action*="load"], a, button'
+    ):
+        text = normalize_match_text(element.get_text(" ", strip=True))
+        if text in {"mehr laden", "weitere laden", "mehr anzeigen"}:
+            return True
+    return bool(re.search(r">\s*Mehr\s+laden\s*<", html_text, re.IGNORECASE))
+
+
+def match_duration_minutes(
+    team_name: str, team_category: str, config: dict[str, Any]
+) -> int:
+    timing = config.get("event_timing", {})
+    combined = normalize_space(f"{team_category} {team_name}")
+    for rule in timing.get("duration_rules", []) or []:
+        pattern = str(rule.get("pattern") or "")
+        if pattern and re.search(pattern, combined, re.IGNORECASE):
+            return max(int(rule.get("minutes", 90)), 1)
+    return max(int(timing.get("default_match_duration_minutes", 90)), 1)
+
+
+def parse_club_matchplan(
     html_text: str,
-    team: Team,
     source_url: str,
+    config: dict[str, Any],
     audit: dict[str, Any] | None = None,
 ) -> list[Match]:
     soup = BeautifulSoup(html_text, "lxml")
     competition_rows = soup.select("tr.row-competition")
     if not competition_rows:
-        raise ScrapeError(f"Keine Spielzeilen für {team.name} gefunden")
+        # Leere Zeitfenster sind zulässig, solange eine Spielplantabelle vorhanden ist.
+        if "club-matchplan-table" in html_text or soup.select_one(".club-matchplan-table"):
+            if audit is not None:
+                audit.update({
+                    "source_url": source_url,
+                    "competition_rows": 0,
+                    "source_detail_ids": 0,
+                    "parsed_matches": 0,
+                    "parsed_detail_ids": 0,
+                    "missing_detail_ids": [],
+                    "duplicate_detail_ids": [],
+                    "has_more": has_more_results(html_text),
+                })
+            return []
+        raise ScrapeError("Keine Vereinsspielplan-Tabelle gefunden")
+
+    default_lead = int(config.get("event_timing", {}).get("before_minutes", 60))
+    default_after = int(config.get("event_timing", {}).get("after_minutes", 60))
+    club_team_pattern = str(config.get("club_team_pattern") or "")
 
     matches: list[Match] = []
     for competition_row in competition_rows:
@@ -801,13 +826,16 @@ def parse_matchplan(
         if kickoff is None:
             warnings.append("Datum oder Anstoßzeit nicht eindeutig lesbar")
 
-        clubs = unique_texts(select_from_rows(rows, ".club-name"))
+        club_elements = select_from_rows(rows, ".club-name")
+        clubs = unique_texts(club_elements)
         if len(clubs) < 2:
-            # Fallback für geänderte Klassen: kurze Texte aus Club-Spalten.
-            clubs = unique_texts(select_from_rows(rows, '[class*="club"]'))
-            clubs = [value for value in clubs if len(value) <= 120][:2]
+            fallback_elements = select_from_rows(rows, '[class*="club"]')
+            clubs = [value for value in unique_texts(fallback_elements) if len(value) <= 120][:2]
+            club_elements = fallback_elements[:2]
         home_team = clubs[0] if clubs else ""
         away_team = clubs[1] if len(clubs) > 1 else ""
+        if len(clubs) == 1 and "spielfrei" in normalize_match_text(block_text):
+            away_team = "spielfrei"
         if not home_team or not away_team:
             warnings.append("Heim- oder Gastmannschaft fehlt")
 
@@ -819,16 +847,25 @@ def parse_matchplan(
                 detail_url = urljoin(BASE_URL, href)
                 break
 
-        # FUSSBALL.DE-Links enthalten nach "/-/spiel/" die stabile
-        # technische Spiel-ID.
         detail_id = extract_detail_id(detail_url)
         number_match = re.search(r"\b(\d{9})\b", block_text)
         match_number = number_match.group(1) if number_match else ""
         external_id = detail_id or match_number
         if not external_id:
-            seed = f"{team.team_id}|{kickoff}|{home_team}|{away_team}"
+            seed = f"{kickoff}|{home_team}|{away_team}"
             external_id = hashlib.sha256(seed.encode("utf-8")).hexdigest()[:24]
             warnings.append("Keine offizielle Spiel-ID gefunden; Ersatz-ID gebildet")
+
+        team_category = extract_team_category(competition_row)
+        team_name, team_id, team_role = determine_club_team(
+            club_elements,
+            home_team,
+            away_team,
+            team_category,
+            club_team_pattern,
+        )
+        if team_role == "unknown":
+            warnings.append("Vereinsmannschaft formal nicht eindeutig zugeordnet")
 
         code_match = re.search(r"\b(ME|PO|FS|FR|TU|PR)\b", block_text)
         match_type = code_match.group(1) if code_match else ""
@@ -839,9 +876,10 @@ def parse_matchplan(
         match = Match(
             external_id=external_id,
             match_number=match_number,
-            team_id=team.team_id,
-            team_name=team.name,
-            team_role=determine_team_role(team, home_team, away_team),
+            team_id=team_id,
+            team_name=team_name,
+            team_category=team_category,
+            team_role=team_role,
             kickoff=kickoff.isoformat(timespec="minutes") if kickoff else "",
             home_team=home_team,
             away_team=away_team,
@@ -854,8 +892,13 @@ def parse_matchplan(
             warnings=warnings,
         )
         if kickoff:
-            match.event_start = (kickoff - timedelta(minutes=team.lead_minutes)).isoformat(timespec="minutes")
-            match.event_end = (kickoff + timedelta(minutes=team.post_kickoff_minutes)).isoformat(timespec="minutes")
+            match.event_start = (
+                kickoff - timedelta(minutes=default_lead)
+            ).isoformat(timespec="minutes")
+            duration = match_duration_minutes(team_name, team_category, config)
+            match.event_end = (
+                kickoff + timedelta(minutes=duration + default_after)
+            ).isoformat(timespec="minutes")
         matches.append(match)
 
     source_ids = source_detail_ids(soup)
@@ -866,32 +909,29 @@ def parse_matchplan(
     }
     missing_ids = sorted(source_ids - parsed_ids)
     duplicate_ids = sorted({
-        value for value in parsed_ids
+        value
+        for value in parsed_ids
         if sum(1 for match in matches if extract_detail_id(match.detail_url) == value) > 1
     })
     if audit is not None:
         audit.update({
-            "team": team.name,
-            "team_id": team.team_id,
             "source_url": source_url,
-            "source_scope": "all_team_matches; inclusion decided only by venue",
+            "source_scope": "all club teams; inclusion decided only by venue",
             "competition_rows": len(competition_rows),
             "source_detail_ids": len(source_ids),
             "parsed_matches": len(matches),
             "parsed_detail_ids": len(parsed_ids),
             "missing_detail_ids": missing_ids,
             "duplicate_detail_ids": duplicate_ids,
+            "has_more": has_more_results(html_text),
         })
     if missing_ids:
         raise ScrapeError(
-            f"Unvollständiger Parser für {team.name}: "
-            f"{len(missing_ids)} Spiel-Link(s) nicht verarbeitet: "
+            f"Unvollständiger Vereinsspielplan-Parser: {len(missing_ids)} Spiel-Link(s) nicht verarbeitet: "
             + ", ".join(missing_ids)
         )
     if duplicate_ids:
-        raise ScrapeError(
-            f"Doppelte Spiel-IDs bei {team.name}: " + ", ".join(duplicate_ids)
-        )
+        raise ScrapeError("Doppelte Spiel-IDs: " + ", ".join(duplicate_ids))
     return matches
 
 
@@ -901,16 +941,11 @@ def apply_venue_rules(
     default_decision: str,
     local_venue_pattern: str = "",
 ) -> None:
-    # "spielfrei" ist keine Platzbelegung und darf weder veröffentlicht noch
-    # zur manuellen Platzprüfung vorgeschlagen werden.
     if "spielfrei" in normalize_match_text(match.home_team + " " + match.away_team):
         match.decision = "exclude"
         match.calendar = ""
         match.venue_rule = "Spielfrei"
-        match.warnings = [
-            warning for warning in match.warnings
-            if warning != "Spielstätte fehlt"
-        ]
+        match.warnings = [warning for warning in match.warnings if warning != "Spielstätte fehlt"]
     else:
         normalized_venue = normalize_space(match.venue_raw)
         for rule in rules:
@@ -920,32 +955,20 @@ def apply_venue_rules(
                 match.venue_rule = rule.name
                 break
         else:
-            # Für den Belegungsplan sind nur die eigenen Plätze relevant. Eine
-            # vollständig benannte auswärtige Spielstätte wird deshalb sicher
-            # ausgeschlossen. Nur fehlende Angaben oder eine lokale, aber noch
-            # nicht eindeutig Platz 1/2 zuordenbare Schreibweise bleiben offen.
             if not match.venue_raw:
                 match.decision = "review"
                 match.calendar = ""
                 match.venue_rule = "Spielstätte fehlt"
                 match.warnings.append("Keine automatische Platzzuordnung möglich")
-            elif local_venue_pattern and re.search(
-                local_venue_pattern, normalized_venue, re.IGNORECASE
-            ):
+            elif local_venue_pattern and re.search(local_venue_pattern, normalized_venue, re.IGNORECASE):
                 match.decision = "review"
                 match.calendar = ""
                 match.venue_rule = "Lokale Spielstätte unklar"
-                match.warnings.append(
-                    "Schönwalder Spielstätte erkannt, Platz 1/2 aber nicht eindeutig"
-                )
+                match.warnings.append("Schönwalder Spielstätte erkannt, Platz 1/2 aber nicht eindeutig")
             else:
                 match.decision = "exclude"
                 match.calendar = ""
                 match.venue_rule = "Auswärtige Spielstätte"
-                match.warnings = [
-                    warning for warning in match.warnings
-                    if warning != "Unbekannte Spielstätte; manuelle Prüfung erforderlich"
-                ]
 
     checksum_payload = {
         "kickoff": match.kickoff,
@@ -968,7 +991,6 @@ def deduplicate(matches: list[Match]) -> list[Match]:
         if existing is None:
             result[match.external_id] = match
             continue
-        # Der Datensatz mit besserer Spielstätten-/Linkinformation gewinnt.
         current_score = bool(match.venue_raw) + bool(match.detail_url) + bool(match.kickoff)
         existing_score = bool(existing.venue_raw) + bool(existing.detail_url) + bool(existing.kickoff)
         if current_score > existing_score:
@@ -982,7 +1004,7 @@ def iso_to_ics(value: str) -> str:
 
 
 def ics_escape(value: str) -> str:
-    return value.replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,").replace("\n", "\\n")
+    return str(value or "").replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,").replace("\n", "\\n")
 
 
 def write_ics(path: Path, matches: list[Match], calendar_name: str) -> None:
@@ -991,35 +1013,98 @@ def write_ics(path: Path, matches: list[Match], calendar_name: str) -> None:
         "VERSION:2.0",
         "PRODID:-//SSV53//DFBnet PoC//DE",
         "CALSCALE:GREGORIAN",
+        "METHOD:PUBLISH",
         f"X-WR-CALNAME:{ics_escape(calendar_name)}",
+        "X-WR-TIMEZONE:Europe/Berlin",
     ]
-    now = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     for match in matches:
         if not match.event_start or not match.event_end:
             continue
-        title = f"Spiel {match.team_name}: {match.home_team} – {match.away_team}"
-        description_parts = [match.competition, f"Spielnummer: {match.match_number}" if match.match_number else ""]
-        if match.detail_url:
-            description_parts.append(match.detail_url)
         lines.extend([
             "BEGIN:VEVENT",
-            f"UID:fussball-{ics_escape(match.external_id)}@ssv53.de",
-            f"DTSTAMP:{now}",
+            f"UID:dfb-{ics_escape(match.external_id)}@ssv53.de",
+            f"DTSTAMP:{stamp}",
             f"DTSTART;TZID=Europe/Berlin:{iso_to_ics(match.event_start)}",
             f"DTEND;TZID=Europe/Berlin:{iso_to_ics(match.event_end)}",
-            f"SUMMARY:{ics_escape(title)}",
-            f"DESCRIPTION:{ics_escape(' | '.join(filter(None, description_parts)))}",
-            f"URL:{match.detail_url}" if match.detail_url else "",
+            f"SUMMARY:{ics_escape(match.team_name + ': ' + match.home_team + ' – ' + match.away_team)}",
+            f"LOCATION:{ics_escape(match.venue_raw)}",
+            f"DESCRIPTION:{ics_escape(match.competition + ' | ' + match.detail_url)}",
             "END:VEVENT",
         ])
     lines.append("END:VCALENDAR")
-    path.write_text("\r\n".join(line for line in lines if line) + "\r\n", encoding="utf-8")
+    path.write_text("\r\n".join(lines) + "\r\n", encoding="utf-8")
+
+
+def load_previous_registry(path: Path | None) -> dict[str, Any]:
+    if path is None or not path.exists():
+        return {"teams": []}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {"teams": []}
+    except (OSError, json.JSONDecodeError):
+        return {"teams": []}
+
+
+def registry_key(team_id: str, team_name: str, team_category: str) -> str:
+    if team_id and not team_id.startswith("auto-"):
+        return team_id
+    basis = normalize_match_text(team_name or team_category or team_id)
+    return "auto-" + hashlib.sha256(basis.encode("utf-8")).hexdigest()[:16]
+
+
+def build_team_registry(
+    matches: list[Match],
+    previous: dict[str, Any],
+    club_id: str,
+) -> dict[str, Any]:
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    previous_items = {
+        str(item.get("key") or registry_key(str(item.get("team_id") or ""), str(item.get("name") or ""), str(item.get("category") or ""))): item
+        for item in previous.get("teams", [])
+        if isinstance(item, dict)
+    }
+    current: dict[str, dict[str, str]] = {}
+    for match in matches:
+        key = registry_key(match.team_id, match.team_name, match.team_category)
+        current[key] = {
+            "key": key,
+            "team_id": match.team_id,
+            "name": match.team_name,
+            "category": match.team_category,
+        }
+
+    merged: dict[str, dict[str, Any]] = {}
+    for key, old in previous_items.items():
+        merged[key] = dict(old)
+    for key, item in current.items():
+        old = previous_items.get(key, {})
+        merged[key] = {
+            **item,
+            "first_seen_at": str(old.get("first_seen_at") or now),
+            "last_seen_at": now,
+        }
+
+    new_keys = sorted(set(current) - set(previous_items))
+    known_keys = sorted(set(current) & set(previous_items))
+    not_seen_keys = sorted(set(previous_items) - set(current))
+    return {
+        "updated_at": now,
+        "club_id": club_id,
+        "teams": sorted(merged.values(), key=lambda item: (normalize_match_text(str(item.get("name") or "")), str(item.get("key") or ""))),
+        "changes": {
+            "new": [current[key]["name"] for key in new_keys],
+            "known": [current[key]["name"] for key in known_keys],
+            "not_seen_in_current_run": [str(previous_items[key].get("name") or key) for key in not_seen_keys],
+        },
+    }
 
 
 def write_outputs(
     output_dir: Path,
     matches: list[Match],
-    quality_report: dict[str, Any] | None = None,
+    quality_report: dict[str, Any],
+    registry: dict[str, Any],
 ) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     groups = {
@@ -1043,13 +1128,23 @@ def write_outputs(
             row["warnings"] = " | ".join(match.warnings)
             writer.writerow(row)
 
-    for calendar in ("Rasen", "Kunstrasen"):
-        items = [m for m in matches if m.decision == "include" and m.calendar == calendar]
-        write_ics(output_dir / f"{calendar.lower()}.ics", items, f"SSV53 {calendar} – Spiele")
+    for calendar_name in ("Rasen", "Kunstrasen"):
+        items = [m for m in matches if m.decision == "include" and m.calendar == calendar_name]
+        write_ics(output_dir / f"{calendar_name.lower()}.ics", items, f"SSV53 {calendar_name} – Spiele")
 
+    by_team = {
+        team: {
+            "total": sum(1 for m in matches if m.team_name == team),
+            "included": sum(1 for m in matches if m.team_name == team and m.decision == "include"),
+            "excluded": sum(1 for m in matches if m.team_name == team and m.decision == "exclude"),
+            "review": sum(1 for m in matches if m.team_name == team and m.decision == "review"),
+        }
+        for team in sorted({m.team_name for m in matches})
+    }
     summary = {
-        "generated_at": datetime.now().isoformat(timespec="seconds"),
-        "selection_mode": "venue",
+        "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "selection_mode": "club-wide venue",
+        "event_timing": quality_report.get("event_timing", {}),
         "total": len(matches),
         "included": len(groups["included_matches"]),
         "review": len(groups["review_matches"]),
@@ -1058,35 +1153,43 @@ def write_outputs(
             "Rasen": sum(1 for m in matches if m.calendar == "Rasen" and m.decision == "include"),
             "Kunstrasen": sum(1 for m in matches if m.calendar == "Kunstrasen" and m.decision == "include"),
         },
-        "included_by_formal_role": {
-            "home": sum(1 for m in matches if m.decision == "include" and m.team_role == "home"),
-            "away": sum(1 for m in matches if m.decision == "include" and m.team_role == "away"),
-            "unknown": sum(1 for m in matches if m.decision == "include" and m.team_role == "unknown"),
-        },
-        "by_team": {
-            team: {
-                "total": sum(1 for m in matches if m.team_name == team),
-                "included": sum(1 for m in matches if m.team_name == team and m.decision == "include"),
-                "excluded": sum(1 for m in matches if m.team_name == team and m.decision == "exclude"),
-                "review": sum(1 for m in matches if m.team_name == team and m.decision == "review"),
-            }
-            for team in sorted({m.team_name for m in matches})
-        },
-        "publishable": bool((quality_report or {}).get("publishable", False)),
-        "quality_errors": list((quality_report or {}).get("errors", [])),
+        "by_team": by_team,
+        "teams_discovered": sorted({m.team_name for m in matches}),
+        "team_registry_changes": registry.get("changes", {}),
+        "publishable": bool(quality_report.get("publishable")),
+        "quality_errors": list(quality_report.get("errors", [])),
+        "request_count": quality_report.get("request_count", 0),
+        "accepted_windows": quality_report.get("accepted_windows", []),
     }
     (output_dir / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
-    if quality_report is not None:
-        (output_dir / "quality_report.json").write_text(
-            json.dumps(quality_report, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
+    (output_dir / "quality_report.json").write_text(json.dumps(quality_report, ensure_ascii=False, indent=2), encoding="utf-8")
+    (output_dir / "team_registry.json").write_text(json.dumps(registry, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def windows_cover_range(
+    windows: list[dict[str, Any]], date_from: str, date_to: str
+) -> bool:
+    accepted = sorted(
+        (parse_iso_date(str(item["date_from"]), "date_from"), parse_iso_date(str(item["date_to"]), "date_to"))
+        for item in windows
+        if item.get("accepted")
+    )
+    if not accepted:
+        return False
+    expected = parse_iso_date(date_from, "date_from")
+    final = parse_iso_date(date_to, "date_to")
+    for start, end in accepted:
+        if start != expected or end < start:
+            return False
+        expected = end + timedelta(days=1)
+    return expected == final + timedelta(days=1)
 
 
 def evaluate_quality(
     matches: list[Match],
-    team_audits: list[dict[str, Any]],
+    window_audits: list[dict[str, Any]],
     config: dict[str, Any],
+    request_count: int,
 ) -> dict[str, Any]:
     guard = config.get("quality_guard", {})
     errors: list[str] = []
@@ -1096,69 +1199,59 @@ def evaluate_quality(
         if match.decision != "include":
             continue
         missing = []
-        if not match.kickoff:
-            missing.append("kickoff")
-        if not match.event_start:
-            missing.append("event_start")
-        if not match.event_end:
-            missing.append("event_end")
+        for field_name in ("kickoff", "event_start", "event_end", "home_team", "away_team", "venue_raw", "team_name"):
+            if not getattr(match, field_name):
+                missing.append(field_name)
         if not match.detail_url or not extract_detail_id(match.detail_url):
             missing.append("detail_id")
-        if not match.home_team:
-            missing.append("home_team")
-        if not match.away_team:
-            missing.append("away_team")
-        if match.team_role not in {"home", "away"}:
-            missing.append("team_role")
-        if not match.venue_raw:
-            missing.append("venue")
         if missing:
             invalid_included.append({
                 "external_id": match.external_id,
                 "team": match.team_name,
                 "missing": missing,
             })
-
     if invalid_included:
-        errors.append(
-            f"{len(invalid_included)} aufzunehmende Spiele sind unvollständig."
-        )
+        errors.append(f"{len(invalid_included)} aufzunehmende Spiele sind unvollständig.")
 
     if bool(guard.get("require_no_review", True)):
         review_count = sum(1 for match in matches if match.decision == "review")
         if review_count:
             errors.append(f"{review_count} Spiele benötigen noch eine Platzprüfung.")
 
-    by_calendar = {
-        "Rasen": sum(1 for m in matches if m.decision == "include" and m.calendar == "Rasen"),
-        "Kunstrasen": sum(1 for m in matches if m.decision == "include" and m.calendar == "Kunstrasen"),
-    }
-    response_row_limit = int(guard.get("response_row_limit", 10))
-    for audit in team_audits:
-        for window in audit.get("windows", []):
-            if window.get("missing_detail_ids"):
-                errors.append(
-                    f"{audit.get('team')} {window.get('date_from')}–{window.get('date_to')}: "
-                    "nicht verarbeitete Spiel-IDs vorhanden."
-                )
-            if window.get("duplicate_detail_ids"):
-                errors.append(
-                    f"{audit.get('team')} {window.get('date_from')}–{window.get('date_to')}: "
-                    "doppelte Spiel-IDs vorhanden."
-                )
-            if int(window.get("competition_rows", 0)) >= response_row_limit:
-                errors.append(
-                    f"{audit.get('team')} {window.get('date_from')}–{window.get('date_to')}: "
-                    f"Antwort enthält {window.get('competition_rows')} Zeilen und könnte gekürzt sein."
-                )
+    for audit in window_audits:
+        label = f"{audit.get('date_from')}–{audit.get('date_to')}"
+        if audit.get("missing_detail_ids"):
+            errors.append(f"{label}: nicht verarbeitete Spiel-IDs vorhanden.")
+        if audit.get("duplicate_detail_ids"):
+            errors.append(f"{label}: doppelte Spiel-IDs vorhanden.")
+        if audit.get("accepted") and audit.get("truncated"):
+            errors.append(f"{label}: möglicherweise gekürzte Antwort wurde fälschlich akzeptiert.")
+
+    date_from = str(config.get("date_from") or "")
+    date_to = str(config.get("date_to") or "")
+    if not windows_cover_range(window_audits, date_from, date_to):
+        errors.append("Die akzeptierten Zeitfenster decken den Saisonzeitraum nicht lückenlos ab.")
 
     return {
         "publishable": not errors,
         "errors": errors,
         "invalid_included": invalid_included,
-        "by_calendar": by_calendar,
-        "response_row_limit": response_row_limit,
-        "team_audits": team_audits,
+        "by_calendar": {
+            "Rasen": sum(1 for m in matches if m.decision == "include" and m.calendar == "Rasen"),
+            "Kunstrasen": sum(1 for m in matches if m.decision == "include" and m.calendar == "Kunstrasen"),
+        },
+        "event_timing": {
+            "before_minutes": int(config.get("event_timing", {}).get("before_minutes", 60)),
+            "after_minutes": int(config.get("event_timing", {}).get("after_minutes", 60)),
+            "default_match_duration_minutes": int(config.get("event_timing", {}).get("default_match_duration_minutes", 90)),
+        },
+        "request_count": request_count,
+        "accepted_windows": [
+            {"date_from": item.get("date_from"), "date_to": item.get("date_to"), "competition_rows": item.get("competition_rows", 0)}
+            for item in window_audits
+            if item.get("accepted")
+        ],
+        "window_audits": window_audits,
     }
 
 
@@ -1169,27 +1262,10 @@ def load_config(path: Path) -> dict[str, Any]:
         raise SystemExit(f"Konfiguration kann nicht gelesen werden: {exc}") from exc
 
 
-def build_teams(config: dict[str, Any], client: Client) -> list[Team]:
-    configured = [Team(**item) for item in config.get("teams", [])]
-    if configured:
-        return configured
-    if not config.get("discover_teams", True):
-        raise SystemExit("Keine Teams konfiguriert und automatische Erkennung deaktiviert")
-    club_url = str(config.get("club_url") or "")
-    season_code = str(config.get("season_code") or "")
-    if not club_url or not season_code:
-        raise SystemExit("club_url und season_code sind für die Team-Erkennung erforderlich")
-    html_text = client.get_text(club_url)
-    teams = discover_teams(html_text, season_code)
-    if not teams:
-        raise SystemExit("Keine Teams auf der Vereinsseite gefunden")
-    return teams
-
-
-def write_failed_teams(output_dir: Path, failed_teams: list[dict[str, str]]) -> None:
+def write_failed_teams(output_dir: Path, failed: list[dict[str, str]]) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     (output_dir / "failed_teams.json").write_text(
-        json.dumps(failed_teams, ensure_ascii=False, indent=2), encoding="utf-8"
+        json.dumps(failed, ensure_ascii=False, indent=2), encoding="utf-8"
     )
 
 
@@ -1197,156 +1273,125 @@ def run(
     config_path: Path,
     output_dir: Path,
     state_path: Path | None = None,
-    diagnostic_endpoints: bool = False,
+    registry_path: Path | None = None,
 ) -> int:
     config = load_config(config_path)
     client = Client(config, state_path=state_path)
-    all_matches: list[Match] = []
-    failed_teams: list[dict[str, str]] = []
-    team_audits: list[dict[str, Any]] = []
     run_status = "failed"
+    failed: list[dict[str, str]] = []
+    accepted_matches: list[Match] = []
+    window_audits: list[dict[str, Any]] = []
 
     try:
         client.assert_not_blocked()
-        teams = build_teams(config, client)
-        date_from = str(config.get("date_from"))
-        date_to = str(config.get("date_to"))
-        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", date_from) or not re.fullmatch(
-            r"\d{4}-\d{2}-\d{2}", date_to
-        ):
-            raise SystemExit("date_from und date_to müssen YYYY-MM-DD verwenden")
+        date_from = str(config.get("date_from") or "")
+        date_to = str(config.get("date_to") or "")
+        parse_iso_date(date_from, "date_from")
+        parse_iso_date(date_to, "date_to")
+
+        months = int(config.get("adaptive_windows", {}).get("initial_window_months", 3))
+        queue = build_initial_windows(date_from, date_to, months)
+        response_limit = int(config.get("request", {}).get("max_rows_per_response", 50))
+        max_depth = int(config.get("adaptive_windows", {}).get("max_split_depth", 8))
+        work_queue: list[tuple[str, str, int]] = [(start, end, 0) for start, end in queue]
 
         rules = [VenueRule(**item) for item in config.get("venue_rules", [])]
         default_decision = str(config.get("default_decision", "exclude"))
         local_venue_pattern = str(config.get("local_venue_pattern") or "")
-        team_request_windows = {
-            team.team_id: request_windows_for_team(config, team, date_from, date_to)
-            for team in teams
-        }
 
-        required_requests = sum(len(team_request_windows[team.team_id]) for team in teams)
-        if required_requests > client.max_requests:
-            raise SystemExit(
-                f"Konfiguration benötigt {required_requests} Requests, erlaubt sind höchstens "
-                f"{client.max_requests}."
-            )
+        while work_queue:
+            window_from, window_to, depth = work_queue.pop(0)
+            LOG.info("Lade Vereinsspielplan %s bis %s", window_from, window_to)
+            body, source_url = fetch_club_matchplan(client, config, window_from, window_to)
+            audit: dict[str, Any] = {
+                "date_from": window_from,
+                "date_to": window_to,
+                "depth": depth,
+            }
+            window_matches = parse_club_matchplan(body, source_url, config, audit=audit)
+            truncated = bool(audit.get("has_more")) or int(audit.get("competition_rows", 0)) >= response_limit
+            audit["truncated"] = truncated
 
-        for team in teams:
-            request_windows = team_request_windows[team.team_id]
-            LOG.info("Lade %s (%s) in %s Zeitfenstern", team.name, team.team_id, len(request_windows))
-            try:
-                team_matches: list[Match] = []
-                window_audits: list[dict[str, Any]] = []
-                for window_from, window_to in request_windows:
-                    LOG.info("  Zeitraum %s bis %s", window_from, window_to)
-                    body, source_url = fetch_matchplan(
-                        client,
-                        config,
-                        team,
-                        window_from,
-                        window_to,
-                        diagnostic_endpoints=diagnostic_endpoints,
+            if truncated:
+                children = split_window(window_from, window_to)
+                if not children or depth >= max_depth:
+                    audit["accepted"] = False
+                    window_audits.append(audit)
+                    raise ScrapeError(
+                        f"Zeitfenster {window_from}–{window_to} bleibt trotz Teilung möglicherweise gekürzt."
                     )
-                    window_audit: dict[str, Any] = {
-                        "date_from": window_from,
-                        "date_to": window_to,
-                    }
-                    window_matches = parse_matchplan(
-                        body, team, source_url, audit=window_audit
+                if client.request_count + len(work_queue) + 2 > client.max_requests:
+                    audit["accepted"] = False
+                    window_audits.append(audit)
+                    raise RequestBudgetExceeded(
+                        "Die automatische Zeitfensterteilung würde die harte Obergrenze von "
+                        f"{client.max_requests} Requests überschreiten."
                     )
-                    for match in window_matches:
-                        if match.kickoff and not (
-                            window_from <= match.kickoff[:10] <= window_to
-                        ):
-                            continue
-                        apply_venue_rules(
-                            match,
-                            rules,
-                            default_decision,
-                            local_venue_pattern=local_venue_pattern,
-                        )
-                        team_matches.append(match)
-                    window_audits.append(window_audit)
+                audit["accepted"] = False
+                audit["split_into"] = [
+                    {"date_from": start, "date_to": end} for start, end in children
+                ]
+                window_audits.append(audit)
+                work_queue = [(start, end, depth + 1) for start, end in children] + work_queue
+                continue
 
-                team_matches = deduplicate(team_matches)
-                all_matches.extend(team_matches)
-                team_audits.append({
-                    "team": team.name,
-                    "team_id": team.team_id,
-                    "source_scope": "all_team_matches split into bounded date windows; inclusion by venue",
-                    "windows": window_audits,
-                    "parsed_matches": len(team_matches),
-                    "included": sum(1 for m in team_matches if m.decision == "include"),
-                    "excluded": sum(1 for m in team_matches if m.decision == "exclude"),
-                    "review": sum(1 for m in team_matches if m.decision == "review"),
-                })
-            except (RateLimitError, SecurityLockError, RequestBudgetExceeded) as exc:
-                LOG.error("Gesamter Lauf wird zum Schutz des Servers beendet: %s", exc)
-                failed_teams.append({
-                    "team": team.name,
-                    "team_id": team.team_id,
-                    "error": str(exc),
-                })
-                if isinstance(exc, RateLimitError):
-                    run_status = "rate_limited"
-                elif isinstance(exc, SecurityLockError):
-                    run_status = "security_locked"
-                else:
-                    run_status = "request_budget_exceeded"
-                break
-            except ScrapeError as exc:
-                LOG.error("Team fehlgeschlagen: %s", exc)
-                failed_teams.append({
-                    "team": team.name,
-                    "team_id": team.team_id,
-                    "error": str(exc),
-                })
+            for match in window_matches:
+                if match.kickoff and not (window_from <= match.kickoff[:10] <= window_to):
+                    continue
+                apply_venue_rules(match, rules, default_decision, local_venue_pattern)
+                accepted_matches.append(match)
+            audit["accepted"] = True
+            window_audits.append(audit)
 
-        matches = deduplicate(all_matches)
-        quality_report = evaluate_quality(matches, team_audits, config)
-        write_outputs(output_dir, matches, quality_report=quality_report)
-        write_failed_teams(output_dir, failed_teams)
+        matches = deduplicate(accepted_matches)
+        previous_registry = load_previous_registry(registry_path)
+        registry = build_team_registry(matches, previous_registry, extract_club_id(config))
+        quality = evaluate_quality(matches, window_audits, config, client.request_count)
+        write_outputs(output_dir, matches, quality, registry)
+        write_failed_teams(output_dir, failed)
 
-        if failed_teams:
-            if run_status == "failed":
-                run_status = "partial_failure"
-            LOG.error(
-                "Kein neuer Feed wird veröffentlicht: %s Teamfehler", len(failed_teams)
-            )
-            return 2
-
-        if not quality_report["publishable"]:
+        if not quality["publishable"]:
             run_status = "quality_failed"
-            LOG.error(
-                "Kein neuer Feed wird veröffentlicht: %s",
-                " | ".join(quality_report["errors"]),
-            )
+            LOG.error("Kein neuer Feed wird veröffentlicht: %s", " | ".join(quality["errors"]))
             return 2
 
         run_status = "success"
         LOG.info(
-            "Fertig: %s Spiele, %s HTTP-Abrufe", len(matches), client.request_count
+            "Fertig: %s Spiele aus %s Mannschaften, %s HTTP-Abrufe",
+            len(matches),
+            len(registry.get("changes", {}).get("new", [])) + len(registry.get("changes", {}).get("known", [])),
+            client.request_count,
         )
         return 0
 
-    except (RateLimitError, SecurityLockError, RequestBudgetExceeded) as exc:
-        LOG.error("Lauf vor dem Teamabruf beendet: %s", exc)
-        failed_teams.append({"team": "", "team_id": "", "error": str(exc)})
-        write_outputs(output_dir, [], quality_report={"publishable": False, "errors": [str(exc)], "team_audits": []})
-        write_failed_teams(output_dir, failed_teams)
+    except (RateLimitError, SecurityLockError, RequestBudgetExceeded, ScrapeError) as exc:
+        LOG.error("Lauf beendet: %s", exc)
+        failed.append({"team": "Vereinsspielplan", "team_id": extract_club_id(config), "error": str(exc)})
+        quality = {
+            "publishable": False,
+            "errors": [str(exc)],
+            "request_count": client.request_count,
+            "window_audits": window_audits,
+            "event_timing": config.get("event_timing", {}),
+        }
+        registry = build_team_registry([], load_previous_registry(registry_path), extract_club_id(config))
+        write_outputs(output_dir, deduplicate(accepted_matches), quality, registry)
+        write_failed_teams(output_dir, failed)
         if isinstance(exc, RateLimitError):
             run_status = "rate_limited"
         elif isinstance(exc, SecurityLockError):
             run_status = "security_locked"
-        else:
+        elif isinstance(exc, RequestBudgetExceeded):
             run_status = "request_budget_exceeded"
+        else:
+            run_status = "failed"
         return 2
     finally:
         client.finish_run(run_status)
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="SSV53 DFBnet/FUSSBALL.DE PoC")
+    parser = argparse.ArgumentParser(description="SSV53 FUSSBALL.DE Vereinsspielplan PoC")
     parser.add_argument("--config", default="config.json", type=Path)
     parser.add_argument("--output", default=Path("output"), type=Path)
     parser.add_argument(
@@ -1356,9 +1401,10 @@ def main() -> int:
         help="Persistenter Schutzstatus für 429 sowie 403/406/Challenge-Sperren",
     )
     parser.add_argument(
-        "--diagnostic-endpoints",
-        action="store_true",
-        help="Nur manuell verwenden: alternative Endpunkte bis zum Request-Limit testen",
+        "--team-registry",
+        default=Path("state/team_registry.json"),
+        type=Path,
+        help="Bisher erkannte Vereinsmannschaften",
     )
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args()
@@ -1366,12 +1412,7 @@ def main() -> int:
         level=logging.DEBUG if args.verbose else logging.INFO,
         format="%(asctime)s %(levelname)s %(message)s",
     )
-    return run(
-        args.config,
-        args.output,
-        state_path=args.state,
-        diagnostic_endpoints=args.diagnostic_endpoints,
-    )
+    return run(args.config, args.output, state_path=args.state, registry_path=args.team_registry)
 
 
 if __name__ == "__main__":

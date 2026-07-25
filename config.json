@@ -1,92 +1,31 @@
 {
   "club_url": "https://www.fussball.de/verein/schoenwalder-sv-53-brandenburg/-/id/00ES8GNBL0000049VV0AG08LVUPGND5I",
+  "club_id": "00ES8GNBL0000049VV0AG08LVUPGND5I",
   "season_code": "2627",
   "date_from": "2026-07-01",
   "date_to": "2027-06-30",
-  "discover_teams": false,
   "default_decision": "exclude",
+  "club_team_pattern": "(?:sch[oö]nwalder|sch[oö]nwalde)",
+  "event_timing": {
+    "before_minutes": 60,
+    "after_minutes": 60,
+    "default_match_duration_minutes": 90,
+    "duration_rules": []
+  },
+  "adaptive_windows": {
+    "initial_window_months": 3,
+    "max_split_depth": 8
+  },
   "request": {
     "timeout_seconds": 25,
     "max_retries": 1,
     "delay_seconds": 3.0,
     "jitter_seconds": 1.0,
     "max_requests_per_run": 10,
-    "matchplan_endpoint_template": "https://www.fussball.de/ajax.team.matchplan/-/mime-type/HTML/show-venues/true/datum-von/{date_from}/datum-bis/{date_to}/team-id/{team_id}",
-    "user_agent": "SSV53-Belegungsplan-PoC/11.0 (+https://www.ssv53.de; mailto:thomas.rohde@ssv53.de)"
+    "max_rows_per_response": 50,
+    "club_matchplan_endpoint_template": "https://www.fussball.de/ajax.club.matchplan/-/id/{club_id}/mode/PAGE/show-filter/false/show-venues/true/mime-type/HTML/datum-von/{date_from}/datum-bis/{date_to}/max/{max_rows}",
+    "user_agent": "SSV53-Belegungsplan-PoC/12.0 (+https://www.ssv53.de; mailto:thomas.rohde@ssv53.de)"
   },
-  "teams": [
-    {
-      "name": "Herren Ü50",
-      "team_id": "02PKT2MAOC000000VS5489B2VT4FEOV2",
-      "lead_minutes": 90,
-      "post_kickoff_minutes": 150,
-      "home_aliases": [
-        "SpG Perwenitz/Schönwalde Ü50",
-        "SpG Perwenitz Schönwalde Ü50"
-      ],
-      "request_windows": [
-        {
-          "date_from": "2026-07-01",
-          "date_to": "2026-12-31"
-        },
-        {
-          "date_from": "2027-01-01",
-          "date_to": "2027-06-30"
-        }
-      ]
-    },
-    {
-      "name": "Herren Ü40",
-      "team_id": "02PKVQDTEK000000VS5489B2VT4FEOV2",
-      "lead_minutes": 90,
-      "post_kickoff_minutes": 150,
-      "home_aliases": [
-        "Schönwalder SV (Ü40)",
-        "Schönwalder SV Ü40"
-      ],
-      "request_windows": [
-        {
-          "date_from": "2026-07-01",
-          "date_to": "2026-12-31"
-        },
-        {
-          "date_from": "2027-01-01",
-          "date_to": "2027-06-30"
-        }
-      ]
-    },
-    {
-      "name": "Herren",
-      "team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
-      "lead_minutes": 90,
-      "post_kickoff_minutes": 150,
-      "home_aliases": [
-        "Spielgemeinschaft Schönwalde-Perwenitz-Paaren"
-      ],
-      "request_windows": [
-        {
-          "date_from": "2026-07-01",
-          "date_to": "2026-08-31"
-        },
-        {
-          "date_from": "2026-09-01",
-          "date_to": "2026-10-31"
-        },
-        {
-          "date_from": "2026-11-01",
-          "date_to": "2027-02-28"
-        },
-        {
-          "date_from": "2027-03-01",
-          "date_to": "2027-04-30"
-        },
-        {
-          "date_from": "2027-05-01",
-          "date_to": "2027-06-30"
-        }
-      ]
-    }
-  ],
   "venue_rules": [
     {
       "name": "Kunstrasen Schönwalde",
@@ -122,23 +61,8 @@
     "closing_margin_seconds": 60
   },
   "quality_guard": {
-    "require_no_review": true,
-    "response_row_limit": 10
+    "require_no_review": true
   },
-  "selection_mode": "venue",
-  "local_venue_pattern": "(?:sportplatz\\s+sch[oö]nwalde\\s+strandbad|kurm[aä]rkische\\s+str(?:aße|\\.)?\\s*2)",
-  "request_windows": [
-    {
-      "date_from": "2026-07-01",
-      "date_to": "2026-10-31"
-    },
-    {
-      "date_from": "2026-11-01",
-      "date_to": "2027-02-28"
-    },
-    {
-      "date_from": "2027-03-01",
-      "date_to": "2027-06-30"
-    }
-  ]
+  "selection_mode": "club-wide venue",
+  "local_venue_pattern": "(?:sportplatz\\s+sch[oö]nwalde\\s+strandbad|kurm[aä]rkische\\s+str(?:aße|\\.)?\\s*2)"
 }

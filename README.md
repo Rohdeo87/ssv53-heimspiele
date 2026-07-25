@@ -1,89 +1,103 @@
-# SSV53 – FUSSBALL.DE-Platzbelegung PoC Version 11
+# SSV53 – FUSSBALL.DE-Platzbelegung PoC Version 12
 
-Version 11 basiert auf Version 10 und behebt den in `dfbnet-diagnose-8.zip` nachgewiesenen Restfehler: Der Abruf war inhaltlich plausibel, aber zwei Herren-Zeitfenster enthielten exakt zehn Tabellenzeilen. Die Qualitätskontrolle stufte diese Antworten deshalb vorsorglich als möglicherweise gekürzt ein und veröffentlichte den Feed nicht.
+Version 12 löst die feste Mannschaftsliste aus Version 11 ab. Der Abruf erfolgt jetzt über den vereinsweiten Spielplan des Schönwalder SV 53. Dadurch werden auch Spiele von später neu hinzukommenden Vereinsmannschaften automatisch berücksichtigt, ohne dass ihre Mannschafts-ID vorher in `config.json` eingetragen werden muss.
 
-## Ergebnis der Diagnose 8
+## Was Version 12 automatisch erkennt
 
-- 57 Datensätze verarbeitet
-- 21 Spiele sicher auf `Sportplatz Schönwalde Strandbad, Platz 1`
-- 0 Spiele zur manuellen Platzprüfung
-- 36 Spiele korrekt ausgeschlossen
-- keine fehlgeschlagenen Mannschaften
-- keine fehlenden oder doppelten Spiel-IDs innerhalb der Antworten
-- Veröffentlichung nur wegen zwei Antworten mit jeweils zehn Tabellenzeilen blockiert
+Aus jeder Spielzeile werden – soweit FUSSBALL.DE die Angaben bereitstellt – insbesondere gelesen:
 
-## Neue Abruffenster
+- Vereinsmannschaft und Mannschaftsart
+- Mannschafts-ID
+- Heim- und Gastmannschaft
+- formale Heim-/Gastrolle
+- Datum und Anstoßzeit
+- Wettbewerb, Spielart und Spielnummer
+- technische Spiel-ID und Detail-Link
+- tatsächliche Spielstätte
 
-Die Zeitfenster sind nun abhängig vom Spielaufkommen der Mannschaft:
-
-### Herren Ü50 – 2 Requests
-
-- 01.07.2026–31.12.2026
-- 01.01.2027–30.06.2027
-
-### Herren Ü40 – 2 Requests
-
-- 01.07.2026–31.12.2026
-- 01.01.2027–30.06.2027
-
-### Herren – 5 Requests
-
-- 01.07.2026–31.08.2026
-- 01.09.2026–31.10.2026
-- 01.11.2026–28.02.2027
-- 01.03.2027–30.04.2027
-- 01.05.2027–30.06.2027
-
-Damit werden weiterhin nur neun Requests pro Lauf ausgeführt. Die anhand der Diagnose 8 rekonstruierten Zeilenzahlen liegen in allen neuen Fenstern klar unter der Zehn-Zeilen-Grenze.
+Entscheidend für den Belegungsplan bleibt ausschließlich die Spielstätte. Ein formal als Auswärtsspiel geführtes Spiel wird aufgenommen, wenn es tatsächlich auf einem Schönwalder Platz stattfindet.
 
 ## Platzlogik
 
-- Sportplatz Schönwalde Strandbad, Platz 1 → `Rasen`
-- Sportplatz Schönwalde Strandbad, Platz 2 / Kunstrasen / KR → `Kunstrasen`
-- Sportplatz Perwenitz oder Paaren → ausgeschlossen
-- andere eindeutig fremde Spielstätte → ausgeschlossen
+- `Sportplatz Schönwalde Strandbad, Platz 1` → `Rasen`
+- `Sportplatz Schönwalde Strandbad, Platz 2`, `Kunstrasen` oder `KR` → `Kunstrasen`
+- `Sportplatz Perwenitz`, `Sportplatz Paaren` und eindeutig fremde Spielstätten → ausgeschlossen
+- lokale Schönwalder Spielstätte ohne eindeutige Platznummer → Prüfung
 - fehlende Spielstätte → Prüfung
-- Strandbad ohne eindeutige Platznummer → Prüfung
-- spielfrei → ausgeschlossen
+- `spielfrei` → ausgeschlossen
 
-Die formale Heim-/Gastrolle ist nicht entscheidend; maßgeblich ist ausschließlich die tatsächliche Spielstätte.
+Der Feed wird nicht veröffentlicht, solange ein Spiel noch eine manuelle Platzprüfung benötigt.
 
-## Vollständigkeitsprüfung
+## Zeiträume der Belegung
 
-Der Feed wird nur veröffentlicht, wenn:
+Der gewünschte Puffer beträgt nun:
 
-- alle konfigurierten Zeitfenster verarbeitet wurden,
-- kein Zeitfenster zehn oder mehr Tabellenzeilen enthält,
+- **60 Minuten vor dem Anstoß**
+- **60 Minuten nach dem Spiel**
+
+Da FUSSBALL.DE keine verlässliche Endzeit liefert, setzt Version 12 zunächst eine konservative Standardspieldauer von 90 Minuten an. Ein Spiel mit Anstoß um 10:00 Uhr blockiert den Platz daher von 09:00 bis 12:30 Uhr.
+
+Die Standardspieldauer kann später in `event_timing.duration_rules` für bestimmte Mannschaftsarten angepasst werden. Neue Mannschaften bleiben bis zu einer solchen Anpassung mit 90 Minuten sicher abgedeckt.
+
+## Vereinsweiter und skalierbarer Abruf
+
+Version 12 verwendet `ajax.club.matchplan` statt einzelner Mannschaftsabrufe. Die Saison wird zunächst in vier Quartalsfenster aufgeteilt. Jede Antwort fordert bis zu 50 Zeilen an.
+
+Falls FUSSBALL.DE trotzdem eine gekürzte Antwort oder einen sichtbaren Hinweis `Mehr laden` liefert, wird nur das betroffene Zeitfenster automatisch halbiert. Dabei gelten weiterhin:
+
+- maximal 10 Requests pro Lauf
+- mindestens 3 Sekunden Abstand zwischen Requests
+- maximal ein Retry nur bei Timeout oder HTTP 502/503/504
+- sofortiger Abbruch bei HTTP 429
+- dauerhafte Sicherheitssperre bei HTTP 403, 406 oder erkannter Challenge-Seite
+- keine parallelen Läufe
+- letzter erfolgreicher Feed bleibt bei Fehlern unverändert
+
+Kann die Saison innerhalb von 10 Requests nicht vollständig und lückenlos erfasst werden, wird nichts veröffentlicht.
+
+## Mannschaftsregister
+
+Erkannte Mannschaften werden in `state/team_registry.json` gespeichert. Die Diagnose und `public/summary.json` weisen aus:
+
+- neu erkannte Mannschaften
+- bereits bekannte Mannschaften
+- früher bekannte Mannschaften, die im aktuellen Lauf kein Spiel hatten
+
+Das Fehlen einer Mannschaft in einem einzelnen Lauf wird nicht automatisch als Abmeldung interpretiert.
+
+## Qualitätsprüfung
+
+Eine Veröffentlichung erfolgt nur, wenn:
+
+- die akzeptierten Zeitfenster den gesamten Saisonzeitraum lückenlos abdecken,
+- keine akzeptierte Antwort möglicherweise gekürzt ist,
 - alle vorhandenen Spiel-Links verarbeitet wurden,
 - keine Spiel-ID innerhalb einer Antwort doppelt ist,
 - alle aufzunehmenden Spiele vollständig sind,
-- kein lokales Spiel ungeklärt bleibt.
+- keine lokale Spielstätte ungeklärt bleibt.
 
-Es gibt keine starre Mindestzahl an Spielen.
-
-## Schutzmaßnahmen
-
-- Abrufe nur zwischen 06:00 und 22:00 Uhr Europe/Berlin
-- zufällige Verzögerung von 2–12 Minuten
-- mindestens 3 Sekunden Abstand zwischen Requests
-- maximal 10 Requests je Lauf
-- maximal ein Retry nur bei Timeout oder 502/503/504
-- sofortiger Abbruch und dauerhafte Sperre bei 403, 406 oder Challenge-Seite
-- Sperre bei 429 gemäß `Retry-After`
-- keine parallelen Läufe
-- letzter erfolgreicher Feed bleibt bei Fehlern erhalten
+Es gibt weiterhin keine starre Mindestzahl an Spielen.
 
 ## Installation
 
 1. ZIP vollständig entpacken.
-2. Den Inhalt des Ordners `poc_v11` in das lokale Repository `ssv53-heimspiele` kopieren.
+2. Den Inhalt des Ordners `poc_v12` in das lokale Repository `ssv53-heimspiele` kopieren.
 3. Vorhandene Dateien ersetzen.
-4. In GitHub Desktop zuerst **Pull origin**, falls angeboten.
-5. Bei einem Konflikt in `state/request_state.json` die Version von `main/origin` behalten; bei den Version-11-Dateien die lokale Version von `main` behalten.
-6. Commit-Text: `Teambezogene Zeitfenster Version 11`
-7. **Commit to main** und danach **Push origin**.
-8. Unter **Actions → SSV53 Heimspiele aktualisieren → Run workflow** einmal manuell starten.
+4. Bei einem Konflikt in `state/request_state.json` die Version `from main/origin` behalten.
+5. Bei Konflikten in Version-12-Dateien wie `poc_scraper.py`, `config.json` oder der Workflow-Datei die lokale Version `from main` behalten.
+6. Commit-Text: `Vereinsweiter Abruf Version 12`
+7. `Push origin` ausführen.
+8. Unter GitHub Actions den Workflow `SSV53 Heimspiele aktualisieren` starten.
 
-## Ergebnis prüfen
+## Kontrolle nach dem ersten Lauf
 
-Ein erfolgreicher Lauf sollte `publishable: true`, `review: 0` und voraussichtlich 21 Rasen-Spiele ausweisen. Die Zahl 21 ist das Ergebnis der Diagnose 8, keine fest eingebaute Vorgabe.
+In `public/summary.json` sollten insbesondere stehen:
+
+- `publishable: true`
+- `review: 0`
+- plausible Werte unter `by_calendar`
+- alle erkannten Mannschaften unter `teams_discovered`
+- höchstens 10 unter `request_count`
+- lückenlose Einträge unter `accepted_windows`
+
+Das Diagnose-Artefakt enthält zusätzlich `team_registry.json`, `quality_report.json`, alle gelesenen Spiele und die CSV-Vorschau.
