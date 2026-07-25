@@ -107,6 +107,43 @@ class ClubParserTest(unittest.TestCase):
         self.assertEqual("2026-08-22T09:00+02:00", item.event_start)
         self.assertEqual("2026-08-22T12:30+02:00", item.event_end)
 
+    def test_identical_duplicate_detail_id_is_collapsed_safely(self):
+        fixture = self.fixture()
+        start = fixture.index('<tr class="row-headline">')
+        end_marker = '</tr>\n\n<tr class="row-headline">'
+        end = fixture.index(end_marker, start) + len('</tr>')
+        duplicate_block = fixture[start:end]
+        fixture = fixture.replace('</table>', duplicate_block + '\n</table>')
+        audit = {}
+        matches = parse_club_matchplan(fixture, "fixture://duplicate", config(), audit)
+        self.assertEqual(5, len(matches))
+        self.assertEqual(
+            ["031C84AB5K000000VS5489BUVUR5FS5A"],
+            audit["collapsed_duplicate_detail_ids"],
+        )
+        self.assertEqual([], audit["duplicate_detail_ids"])
+        merged = next(
+            item for item in matches
+            if item.external_id == "031C84AB5K000000VS5489BUVUR5FS5A"
+        )
+        self.assertTrue(any("Mehrfachdarstellung" in warning for warning in merged.warnings))
+
+    def test_conflicting_duplicate_detail_id_still_aborts(self):
+        fixture = self.fixture()
+        start = fixture.index('<tr class="row-headline">')
+        end_marker = '</tr>\n\n<tr class="row-headline">'
+        end = fixture.index(end_marker, start) + len('</tr>')
+        duplicate_block = fixture[start:end].replace(
+            'Fr, 21.08.26 | 19:00',
+            'Fr, 21.08.26 | 20:00',
+        ).replace(
+            'Freitag, 21.08.2026 - 19:00 Uhr',
+            'Freitag, 21.08.2026 - 20:00 Uhr',
+        )
+        fixture = fixture.replace('</table>', duplicate_block + '\n</table>')
+        with self.assertRaisesRegex(ScrapeError, "Widersprüchliche Mehrfachdarstellungen"):
+            parse_club_matchplan(fixture, "fixture://conflict", config())
+
     def test_unparsed_detail_link_aborts(self):
         fixture = self.fixture().replace(
             "</div>",

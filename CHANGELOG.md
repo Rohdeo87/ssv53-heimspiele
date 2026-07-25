@@ -1,5 +1,12 @@
 # Changelog
 
+## Version 12.1
+
+- Identische oder nur ergänzende Mehrfachdarstellungen derselben Spiel-ID werden sicher zusammengeführt.
+- Widersprüchliche Mehrfachdarstellungen bleiben ein harter Qualitätsfehler.
+- Die Diagnose nennt zusammengeführte IDs und Konfliktfelder getrennt.
+- Abruflimit, Schutzlogik, Platzregeln und die 60-Minuten-Puffer bleiben unverändert.
+
 ## Version 12
 
 - Feste Mannschaftsliste durch den vereinsweiten FUSSBALL.DE-Spielplan ersetzt.

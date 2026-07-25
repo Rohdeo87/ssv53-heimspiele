@@ -24,7 +24,7 @@
     "max_requests_per_run": 10,
     "max_rows_per_response": 50,
     "club_matchplan_endpoint_template": "https://www.fussball.de/ajax.club.matchplan/-/id/{club_id}/mode/PAGE/show-filter/false/show-venues/true/mime-type/HTML/datum-von/{date_from}/datum-bis/{date_to}/max/{max_rows}",
-    "user_agent": "SSV53-Belegungsplan-PoC/12.0 (+https://www.ssv53.de; mailto:thomas.rohde@ssv53.de)"
+    "user_agent": "SSV53-Belegungsplan-PoC/12.1 (+https://www.ssv53.de; mailto:thomas.rohde@ssv53.de)"
   },
   "venue_rules": [
     {

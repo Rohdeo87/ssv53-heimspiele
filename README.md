@@ -1,8 +1,8 @@
-# SSV53 – FUSSBALL.DE-Platzbelegung PoC Version 12
+# SSV53 – FUSSBALL.DE-Platzbelegung PoC Version 12.1
 
-Version 12 löst die feste Mannschaftsliste aus Version 11 ab. Der Abruf erfolgt jetzt über den vereinsweiten Spielplan des Schönwalder SV 53. Dadurch werden auch Spiele von später neu hinzukommenden Vereinsmannschaften automatisch berücksichtigt, ohne dass ihre Mannschafts-ID vorher in `config.json` eingetragen werden muss.
+Version 12.1 basiert auf Version 12 und löst die feste Mannschaftsliste aus Version 11 ab. Der Abruf erfolgt jetzt über den vereinsweiten Spielplan des Schönwalder SV 53. Dadurch werden auch Spiele von später neu hinzukommenden Vereinsmannschaften automatisch berücksichtigt, ohne dass ihre Mannschafts-ID vorher in `config.json` eingetragen werden muss.
 
-## Was Version 12 automatisch erkennt
+## Was Version 12.1 automatisch erkennt
 
 Aus jeder Spielzeile werden – soweit FUSSBALL.DE die Angaben bereitstellt – insbesondere gelesen:
 
@@ -35,13 +35,13 @@ Der gewünschte Puffer beträgt nun:
 - **60 Minuten vor dem Anstoß**
 - **60 Minuten nach dem Spiel**
 
-Da FUSSBALL.DE keine verlässliche Endzeit liefert, setzt Version 12 zunächst eine konservative Standardspieldauer von 90 Minuten an. Ein Spiel mit Anstoß um 10:00 Uhr blockiert den Platz daher von 09:00 bis 12:30 Uhr.
+Da FUSSBALL.DE keine verlässliche Endzeit liefert, setzt Version 12.1 zunächst eine konservative Standardspieldauer von 90 Minuten an. Ein Spiel mit Anstoß um 10:00 Uhr blockiert den Platz daher von 09:00 bis 12:30 Uhr.
 
 Die Standardspieldauer kann später in `event_timing.duration_rules` für bestimmte Mannschaftsarten angepasst werden. Neue Mannschaften bleiben bis zu einer solchen Anpassung mit 90 Minuten sicher abgedeckt.
 
 ## Vereinsweiter und skalierbarer Abruf
 
-Version 12 verwendet `ajax.club.matchplan` statt einzelner Mannschaftsabrufe. Die Saison wird zunächst in vier Quartalsfenster aufgeteilt. Jede Antwort fordert bis zu 50 Zeilen an.
+Version 12.1 verwendet `ajax.club.matchplan` statt einzelner Mannschaftsabrufe. Die Saison wird zunächst in vier Quartalsfenster aufgeteilt. Jede Antwort fordert bis zu 50 Zeilen an.
 
 Falls FUSSBALL.DE trotzdem eine gekürzte Antwort oder einen sichtbaren Hinweis `Mehr laden` liefert, wird nur das betroffene Zeitfenster automatisch halbiert. Dabei gelten weiterhin:
 
@@ -81,11 +81,11 @@ Es gibt weiterhin keine starre Mindestzahl an Spielen.
 ## Installation
 
 1. ZIP vollständig entpacken.
-2. Den Inhalt des Ordners `poc_v12` in das lokale Repository `ssv53-heimspiele` kopieren.
+2. Den Inhalt des Ordners `poc_v12_1` in das lokale Repository `ssv53-heimspiele` kopieren. Die vorhandenen Dateien `state/request_state.json` und `state/team_registry.json` bleiben dabei erhalten; sie sind bewusst nicht im Update-Paket enthalten.
 3. Vorhandene Dateien ersetzen.
 4. Bei einem Konflikt in `state/request_state.json` die Version `from main/origin` behalten.
 5. Bei Konflikten in Version-12-Dateien wie `poc_scraper.py`, `config.json` oder der Workflow-Datei die lokale Version `from main` behalten.
-6. Commit-Text: `Vereinsweiter Abruf Version 12`
+6. Commit-Text: `Dublettenprüfung Version 12.1`
 7. `Push origin` ausführen.
 8. Unter GitHub Actions den Workflow `SSV53 Heimspiele aktualisieren` starten.
 

@@ -159,7 +159,7 @@ class Client:
         self.session.headers.update({
             "User-Agent": request_cfg.get(
                 "user_agent",
-                "SSV53-Belegungsplan-PoC/12.0 "
+                "SSV53-Belegungsplan-PoC/12.1 "
                 "(+https://www.ssv53.de; mailto:thomas.rohde@ssv53.de)",
             ),
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -788,6 +788,119 @@ def match_duration_minutes(
     return max(int(timing.get("default_match_duration_minutes", 90)), 1)
 
 
+
+def _normalized_duplicate_value(field_name: str, value: str) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    if field_name in {"home_team", "away_team", "venue_raw", "status"}:
+        return normalize_match_text(text)
+    return text
+
+
+def _merge_duplicate_match_group(detail_id: str, group: list[Match]) -> tuple[Match | None, dict[str, Any]]:
+    """Führt harmlose Mehrfachdarstellungen desselben Spiels zusammen.
+
+    FUSSBALL.DE kann denselben Spiel-Link innerhalb eines Vereinsspielplans
+    mehrfach ausgeben. Das ist nur dann unkritisch, wenn sich die für Termin
+    und Platz entscheidenden Angaben nicht widersprechen. Fehlende Angaben
+    dürfen sich ergänzen; widersprüchliche Angaben führen weiterhin zu einem
+    harten Abbruch.
+    """
+    critical_fields = (
+        "match_number",
+        "kickoff",
+        "home_team",
+        "away_team",
+        "venue_raw",
+        "status",
+    )
+    conflicts: dict[str, list[str]] = {}
+    for field_name in critical_fields:
+        values: dict[str, str] = {}
+        for item in group:
+            raw = str(getattr(item, field_name) or "").strip()
+            normalized = _normalized_duplicate_value(field_name, raw)
+            if normalized and normalized not in values:
+                values[normalized] = raw
+        if len(values) > 1:
+            conflicts[field_name] = sorted(values.values())
+
+    detail = {
+        "detail_id": detail_id,
+        "occurrences": len(group),
+        "conflicts": conflicts,
+    }
+    if conflicts:
+        return None, detail
+
+    def score(item: Match) -> tuple[int, int]:
+        populated = sum(
+            bool(str(getattr(item, field_name) or "").strip())
+            for field_name in (
+                "match_number", "team_id", "team_name", "team_category",
+                "team_role", "kickoff", "home_team", "away_team",
+                "competition", "match_type", "status", "venue_raw",
+                "detail_url", "event_start", "event_end",
+            )
+        )
+        warning_penalty = -len(item.warnings)
+        return populated, warning_penalty
+
+    merged = max(group, key=score)
+    fields_to_fill = (
+        "match_number", "team_id", "team_name", "team_category",
+        "team_role", "kickoff", "home_team", "away_team",
+        "competition", "match_type", "status", "venue_raw",
+        "detail_url", "source_url", "event_start", "event_end",
+    )
+    for item in group:
+        if item is merged:
+            continue
+        for field_name in fields_to_fill:
+            if not str(getattr(merged, field_name) or "").strip():
+                value = getattr(item, field_name)
+                if str(value or "").strip():
+                    setattr(merged, field_name, value)
+        for warning in item.warnings:
+            if warning not in merged.warnings:
+                merged.warnings.append(warning)
+
+    note = "Mehrfachdarstellung im Vereinsspielplan automatisch zusammengeführt"
+    if note not in merged.warnings:
+        merged.warnings.append(note)
+    detail["merged_external_id"] = merged.external_id
+    return merged, detail
+
+
+def collapse_duplicate_detail_ids(matches: list[Match]) -> tuple[list[Match], list[str], list[dict[str, Any]]]:
+    grouped: dict[str, list[Match]] = {}
+    without_detail_id: list[Match] = []
+    for item in matches:
+        detail_id = extract_detail_id(item.detail_url)
+        if detail_id:
+            grouped.setdefault(detail_id, []).append(item)
+        else:
+            without_detail_id.append(item)
+
+    collapsed_ids: list[str] = []
+    conflict_details: list[dict[str, Any]] = []
+    result = list(without_detail_id)
+    for detail_id, group in grouped.items():
+        if len(group) == 1:
+            result.append(group[0])
+            continue
+        merged, detail = _merge_duplicate_match_group(detail_id, group)
+        if merged is None:
+            conflict_details.append(detail)
+            continue
+        collapsed_ids.append(detail_id)
+        result.append(merged)
+
+    return result, sorted(collapsed_ids), sorted(
+        conflict_details, key=lambda item: str(item.get("detail_id") or "")
+    )
+
 def parse_club_matchplan(
     html_text: str,
     source_url: str,
@@ -902,27 +1015,38 @@ def parse_club_matchplan(
         matches.append(match)
 
     source_ids = source_detail_ids(soup)
-    parsed_ids = {
+    parsed_ids_before_merge = {
         extract_detail_id(match.detail_url)
         for match in matches
         if extract_detail_id(match.detail_url)
     }
-    missing_ids = sorted(source_ids - parsed_ids)
-    duplicate_ids = sorted({
-        value
-        for value in parsed_ids
-        if sum(1 for match in matches if extract_detail_id(match.detail_url) == value) > 1
-    })
+    missing_ids = sorted(source_ids - parsed_ids_before_merge)
+    merged_matches, collapsed_duplicate_ids, duplicate_conflicts = (
+        collapse_duplicate_detail_ids(matches)
+    )
+    conflicting_duplicate_ids = sorted(
+        str(item.get("detail_id") or "")
+        for item in duplicate_conflicts
+        if item.get("detail_id")
+    )
+    parsed_ids_after_merge = {
+        extract_detail_id(match.detail_url)
+        for match in merged_matches
+        if extract_detail_id(match.detail_url)
+    }
     if audit is not None:
         audit.update({
             "source_url": source_url,
             "source_scope": "all club teams; inclusion decided only by venue",
             "competition_rows": len(competition_rows),
             "source_detail_ids": len(source_ids),
-            "parsed_matches": len(matches),
-            "parsed_detail_ids": len(parsed_ids),
+            "parsed_matches_before_duplicate_merge": len(matches),
+            "parsed_matches": len(merged_matches),
+            "parsed_detail_ids": len(parsed_ids_after_merge),
             "missing_detail_ids": missing_ids,
-            "duplicate_detail_ids": duplicate_ids,
+            "duplicate_detail_ids": conflicting_duplicate_ids,
+            "collapsed_duplicate_detail_ids": collapsed_duplicate_ids,
+            "duplicate_conflicts": duplicate_conflicts,
             "has_more": has_more_results(html_text),
         })
     if missing_ids:
@@ -930,9 +1054,16 @@ def parse_club_matchplan(
             f"Unvollständiger Vereinsspielplan-Parser: {len(missing_ids)} Spiel-Link(s) nicht verarbeitet: "
             + ", ".join(missing_ids)
         )
-    if duplicate_ids:
-        raise ScrapeError("Doppelte Spiel-IDs: " + ", ".join(duplicate_ids))
-    return matches
+    if duplicate_conflicts:
+        descriptions = []
+        for item in duplicate_conflicts:
+            fields = ", ".join(sorted((item.get("conflicts") or {}).keys()))
+            descriptions.append(f"{item.get('detail_id')} ({fields})")
+        raise ScrapeError(
+            "Widersprüchliche Mehrfachdarstellungen derselben Spiel-ID: "
+            + "; ".join(descriptions)
+        )
+    return merged_matches
 
 
 def apply_venue_rules(
