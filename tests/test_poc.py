@@ -23,6 +23,7 @@ from poc_scraper import (
     parse_matchplan,
     primary_matchplan_url,
     build_request_windows,
+    request_windows_for_team,
 )
 
 
@@ -217,6 +218,21 @@ class PocParserTest(unittest.TestCase):
         self.assertEqual(3, len(windows))
         self.assertEqual(("2026-07-01", "2026-10-31"), windows[0])
         self.assertEqual(("2027-03-01", "2027-06-30"), windows[-1])
+
+
+    def test_team_specific_windows_keep_request_budget_at_nine(self):
+        cfg = json.loads((ROOT / "config.json").read_text(encoding="utf-8"))
+        teams = [Team(**item) for item in cfg["teams"]]
+        window_counts = {
+            team.name: len(
+                request_windows_for_team(
+                    cfg, team, cfg["date_from"], cfg["date_to"]
+                )
+            )
+            for team in teams
+        }
+        self.assertEqual({"Herren Ü50": 2, "Herren Ü40": 2, "Herren": 5}, window_counts)
+        self.assertEqual(9, sum(window_counts.values()))
 
     def test_formal_away_game_on_platz_1_is_included(self):
         fixture = """

@@ -78,6 +78,7 @@ class Team:
     lead_minutes: int = 90
     post_kickoff_minutes: int = 150
     home_aliases: list[str] = field(default_factory=list)
+    request_windows: list[dict[str, str]] = field(default_factory=list)
 
 
 @dataclass
@@ -166,7 +167,7 @@ class Client:
         self.session.headers.update({
             "User-Agent": request_cfg.get(
                 "user_agent",
-                "SSV53-Belegungsplan-PoC/10.0 "
+                "SSV53-Belegungsplan-PoC/11.0 "
                 "(+https://www.ssv53.de; mailto:thomas.rohde@ssv53.de)",
             ),
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -523,9 +524,9 @@ def build_request_windows(
     """Liefert nicht überlappende Abruffenster innerhalb des Saisonzeitraums.
 
     Der FUSSBALL.DE-Endpunkt liefert in der Praxis höchstens zehn Tabellenzeilen
-    pro Antwort. Deshalb wird die Saison in wenige größere Fenster geteilt.
-    Die Konfiguration ist so gewählt, dass drei Teams mit drei Fenstern genau
-    neun Requests benötigen und damit unter dem absoluten Limit von zehn bleiben.
+    pro Antwort. Deshalb wird die Saison in begrenzte Fenster geteilt. Teams mit
+    vielen Spielen können eigene, engere request_windows erhalten; für alle
+    übrigen Teams gelten die globalen Fenster.
     """
     configured = config.get("request_windows") or []
     windows: list[tuple[str, str]] = []
@@ -550,6 +551,17 @@ def build_request_windows(
             raise SystemExit("request_windows dürfen sich nicht überschneiden")
         previous_end = end
     return windows
+
+
+def request_windows_for_team(
+    config: dict[str, Any], team: Team, date_from: str, date_to: str
+) -> list[tuple[str, str]]:
+    """Liefert teambezogene Fenster oder fällt auf die globalen Fenster zurück."""
+    if team.request_windows:
+        return build_request_windows(
+            {"request_windows": team.request_windows}, date_from, date_to
+        )
+    return build_request_windows(config, date_from, date_to)
 
 
 def diagnostic_endpoint_candidates(
@@ -1207,8 +1219,12 @@ def run(
         rules = [VenueRule(**item) for item in config.get("venue_rules", [])]
         default_decision = str(config.get("default_decision", "exclude"))
         local_venue_pattern = str(config.get("local_venue_pattern") or "")
-        request_windows = build_request_windows(config, date_from, date_to)
-        required_requests = len(teams) * len(request_windows)
+        team_request_windows = {
+            team.team_id: request_windows_for_team(config, team, date_from, date_to)
+            for team in teams
+        }
+
+        required_requests = sum(len(team_request_windows[team.team_id]) for team in teams)
         if required_requests > client.max_requests:
             raise SystemExit(
                 f"Konfiguration benötigt {required_requests} Requests, erlaubt sind höchstens "
@@ -1216,6 +1232,7 @@ def run(
             )
 
         for team in teams:
+            request_windows = team_request_windows[team.team_id]
             LOG.info("Lade %s (%s) in %s Zeitfenstern", team.name, team.team_id, len(request_windows))
             try:
                 team_matches: list[Match] = []

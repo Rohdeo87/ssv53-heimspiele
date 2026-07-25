@@ -1,47 +1,67 @@
-# SSV53 – FUSSBALL.DE-Platzbelegung PoC Version 10
+# SSV53 – FUSSBALL.DE-Platzbelegung PoC Version 11
 
-Version 10 behebt die beiden in `dfbnet-diagnose-5.zip` nachgewiesenen Probleme:
+Version 11 basiert auf Version 10 und behebt den in `dfbnet-diagnose-8.zip` nachgewiesenen Restfehler: Der Abruf war inhaltlich plausibel, aber zwei Herren-Zeitfenster enthielten exakt zehn Tabellenzeilen. Die Qualitätskontrolle stufte diese Antworten deshalb vorsorglich als möglicherweise gekürzt ein und veröffentlichte den Feed nicht.
 
-1. Der bisherige Saisonabruf lieferte pro Mannschaft exakt zehn Tabellenzeilen und war damit sehr wahrscheinlich gekürzt.
-2. Auswärtige Spielstätten wurden unnötig als „zu prüfen“ behandelt, obwohl sie für den Schönwalder Belegungsplan sicher ausgeschlossen werden können.
+## Ergebnis der Diagnose 8
 
-## Neue Abruflogik
+- 57 Datensätze verarbeitet
+- 21 Spiele sicher auf `Sportplatz Schönwalde Strandbad, Platz 1`
+- 0 Spiele zur manuellen Platzprüfung
+- 36 Spiele korrekt ausgeschlossen
+- keine fehlgeschlagenen Mannschaften
+- keine fehlenden oder doppelten Spiel-IDs innerhalb der Antworten
+- Veröffentlichung nur wegen zwei Antworten mit jeweils zehn Tabellenzeilen blockiert
 
-Die Saison wird je Mannschaft in drei nicht überlappende Zeitfenster aufgeteilt:
+## Neue Abruffenster
 
-- 01.07.2026–31.10.2026
+Die Zeitfenster sind nun abhängig vom Spielaufkommen der Mannschaft:
+
+### Herren Ü50 – 2 Requests
+
+- 01.07.2026–31.12.2026
+- 01.01.2027–30.06.2027
+
+### Herren Ü40 – 2 Requests
+
+- 01.07.2026–31.12.2026
+- 01.01.2027–30.06.2027
+
+### Herren – 5 Requests
+
+- 01.07.2026–31.08.2026
+- 01.09.2026–31.10.2026
 - 01.11.2026–28.02.2027
-- 01.03.2027–30.06.2027
+- 01.03.2027–30.04.2027
+- 01.05.2027–30.06.2027
 
-Bei drei Mannschaften entstehen damit neun streng nacheinander ausgeführte Requests pro Lauf. Das bleibt unter der unveränderlichen Obergrenze von zehn Requests.
-
-Enthält ein einzelnes Zeitfenster zehn oder mehr Spielzeilen, wird der Feed vorsorglich nicht veröffentlicht, weil die Antwort erneut gekürzt sein könnte.
+Damit werden weiterhin nur neun Requests pro Lauf ausgeführt. Die anhand der Diagnose 8 rekonstruierten Zeilenzahlen liegen in allen neuen Fenstern klar unter der Zehn-Zeilen-Grenze.
 
 ## Platzlogik
 
 - Sportplatz Schönwalde Strandbad, Platz 1 → `Rasen`
 - Sportplatz Schönwalde Strandbad, Platz 2 / Kunstrasen / KR → `Kunstrasen`
-- andere vollständig benannte Spielstätte → ausgeschlossen
+- Sportplatz Perwenitz oder Paaren → ausgeschlossen
+- andere eindeutig fremde Spielstätte → ausgeschlossen
 - fehlende Spielstätte → Prüfung
-- Schönwalder Strandbad ohne eindeutige Platznummer → Prüfung
+- Strandbad ohne eindeutige Platznummer → Prüfung
 - spielfrei → ausgeschlossen
 
-Die formale Heim-/Gastrolle ist nicht entscheidend. Ein formal als Auswärtsspiel geführtes Spiel wird übernommen, wenn es tatsächlich auf Platz 1 oder Platz 2 am Strandbad angesetzt ist.
+Die formale Heim-/Gastrolle ist nicht entscheidend; maßgeblich ist ausschließlich die tatsächliche Spielstätte.
 
 ## Vollständigkeitsprüfung
 
-Es gibt keine fest eingebaute Mindestzahl von 17 Spielen mehr. Stattdessen wird strukturell geprüft:
+Der Feed wird nur veröffentlicht, wenn:
 
-- alle drei Zeitfenster wurden pro Mannschaft verarbeitet,
-- kein Zeitfenster erreicht die vermutete Zehn-Zeilen-Grenze,
-- jeder vorhandene Spiel-Link wurde geparst,
-- keine Spiel-ID ist innerhalb einer Antwort doppelt,
-- alle aufzunehmenden Spiele besitzen Datum, Uhrzeit, Gegner, Spiel-ID und Spielstätte,
-- kein lokaler Platz bleibt ungeklärt.
+- alle konfigurierten Zeitfenster verarbeitet wurden,
+- kein Zeitfenster zehn oder mehr Tabellenzeilen enthält,
+- alle vorhandenen Spiel-Links verarbeitet wurden,
+- keine Spiel-ID innerhalb einer Antwort doppelt ist,
+- alle aufzunehmenden Spiele vollständig sind,
+- kein lokales Spiel ungeklärt bleibt.
 
-Bei einem Fehler bleibt der bisher veröffentlichte Feed unverändert.
+Es gibt keine starre Mindestzahl an Spielen.
 
-## Schutzmaßnahmen für FUSSBALL.DE
+## Schutzmaßnahmen
 
 - Abrufe nur zwischen 06:00 und 22:00 Uhr Europe/Berlin
 - zufällige Verzögerung von 2–12 Minuten
@@ -51,30 +71,19 @@ Bei einem Fehler bleibt der bisher veröffentlichte Feed unverändert.
 - sofortiger Abbruch und dauerhafte Sperre bei 403, 406 oder Challenge-Seite
 - Sperre bei 429 gemäß `Retry-After`
 - keine parallelen Läufe
-- letzter erfolgreicher Feed bleibt bei jedem Fehler erhalten
-
-Bei vier Läufen pro Tag entstehen im Normalfall 36 Requests pro Tag.
+- letzter erfolgreicher Feed bleibt bei Fehlern erhalten
 
 ## Installation
 
 1. ZIP vollständig entpacken.
-2. Den gesamten Inhalt in den lokalen Ordner `ssv53-heimspiele` kopieren.
+2. Den Inhalt des Ordners `poc_v11` in das lokale Repository `ssv53-heimspiele` kopieren.
 3. Vorhandene Dateien ersetzen.
-4. GitHub Desktop öffnen.
-5. Falls **Pull origin** angezeigt wird, zuerst ziehen und bei einem Konflikt in `state/request_state.json` die Version von GitHub behalten.
-6. Summary eintragen: `Vollständiger Zeitfensterabruf Version 10`
-7. **Commit to main** anklicken.
-8. **Push origin** anklicken.
-9. Im Browser unter **Actions → SSV53 Heimspiele aktualisieren → Run workflow** einmal manuell starten.
+4. In GitHub Desktop zuerst **Pull origin**, falls angeboten.
+5. Bei einem Konflikt in `state/request_state.json` die Version von `main/origin` behalten; bei den Version-11-Dateien die lokale Version von `main` behalten.
+6. Commit-Text: `Teambezogene Zeitfenster Version 11`
+7. **Commit to main** und danach **Push origin**.
+8. Unter **Actions → SSV53 Heimspiele aktualisieren → Run workflow** einmal manuell starten.
 
 ## Ergebnis prüfen
 
-Nach einem grünen Lauf:
-
-1. `public/summary.json` öffnen.
-2. `review` muss `0` sein.
-3. Unter `team_audits` müssen pro Mannschaft drei Fenster stehen.
-4. Kein Fenster darf zehn Spielzeilen enthalten.
-5. Die tatsächliche Zahl bei `by_calendar.Rasen` ist das Ergebnis des vollständigen Abrufs und keine vorgegebene Mindestzahl.
-
-Bei einem roten Lauf das neue Artefakt `dfbnet-diagnose-...` herunterladen und unverändert zur Analyse bereitstellen.
+Ein erfolgreicher Lauf sollte `publishable: true`, `review: 0` und voraussichtlich 21 Rasen-Spiele ausweisen. Die Zahl 21 ist das Ergebnis der Diagnose 8, keine fest eingebaute Vorgabe.
