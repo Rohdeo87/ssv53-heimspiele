@@ -1,8 +1,8 @@
 {
   "blocked_until": "",
-  "last_run_at": "2026-07-24T18:19:59.189230+00:00",
+  "last_run_at": "2026-07-25T07:18:19.363340+00:00",
   "last_status": "quality_failed",
-  "last_request_count": 3,
+  "last_request_count": 9,
   "last_http_status": 200,
   "last_retry_after_seconds": null,
   "security_lock": false,
