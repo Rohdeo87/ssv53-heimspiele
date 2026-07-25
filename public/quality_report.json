@@ -6,166 +6,98 @@
     "Rasen": 23,
     "Kunstrasen": 0
   },
-  "response_row_limit": 10,
-  "team_audits": [
+  "event_timing": {
+    "before_minutes": 60,
+    "after_minutes": 60,
+    "default_match_duration_minutes": 90
+  },
+  "request_count": 4,
+  "accepted_windows": [
     {
-      "team": "Herren Ü50",
-      "team_id": "02PKT2MAOC000000VS5489B2VT4FEOV2",
-      "source_scope": "all_team_matches split into bounded date windows; inclusion by venue",
-      "windows": [
-        {
-          "date_from": "2026-07-01",
-          "date_to": "2026-12-31",
-          "team": "Herren Ü50",
-          "team_id": "02PKT2MAOC000000VS5489B2VT4FEOV2",
-          "source_url": "https://www.fussball.de/ajax.team.matchplan/-/mime-type/HTML/show-venues/true/datum-von/2026-07-01/datum-bis/2026-12-31/team-id/02PKT2MAOC000000VS5489B2VT4FEOV2",
-          "source_scope": "all_team_matches; inclusion decided only by venue",
-          "competition_rows": 7,
-          "source_detail_ids": 6,
-          "parsed_matches": 7,
-          "parsed_detail_ids": 6,
-          "missing_detail_ids": [],
-          "duplicate_detail_ids": []
-        },
-        {
-          "date_from": "2027-01-01",
-          "date_to": "2027-06-30",
-          "team": "Herren Ü50",
-          "team_id": "02PKT2MAOC000000VS5489B2VT4FEOV2",
-          "source_url": "https://www.fussball.de/ajax.team.matchplan/-/mime-type/HTML/show-venues/true/datum-von/2027-01-01/datum-bis/2027-06-30/team-id/02PKT2MAOC000000VS5489B2VT4FEOV2",
-          "source_scope": "all_team_matches; inclusion decided only by venue",
-          "competition_rows": 7,
-          "source_detail_ids": 6,
-          "parsed_matches": 7,
-          "parsed_detail_ids": 6,
-          "missing_detail_ids": [],
-          "duplicate_detail_ids": []
-        }
-      ],
-      "parsed_matches": 14,
-      "included": 3,
-      "excluded": 11,
-      "review": 0
+      "date_from": "2026-07-01",
+      "date_to": "2026-09-30",
+      "competition_rows": 16
     },
     {
-      "team": "Herren Ü40",
-      "team_id": "02PKVQDTEK000000VS5489B2VT4FEOV2",
-      "source_scope": "all_team_matches split into bounded date windows; inclusion by venue",
-      "windows": [
-        {
-          "date_from": "2026-07-01",
-          "date_to": "2026-12-31",
-          "team": "Herren Ü40",
-          "team_id": "02PKVQDTEK000000VS5489B2VT4FEOV2",
-          "source_url": "https://www.fussball.de/ajax.team.matchplan/-/mime-type/HTML/show-venues/true/datum-von/2026-07-01/datum-bis/2026-12-31/team-id/02PKVQDTEK000000VS5489B2VT4FEOV2",
-          "source_scope": "all_team_matches; inclusion decided only by venue",
-          "competition_rows": 8,
-          "source_detail_ids": 7,
-          "parsed_matches": 8,
-          "parsed_detail_ids": 7,
-          "missing_detail_ids": [],
-          "duplicate_detail_ids": []
-        },
-        {
-          "date_from": "2027-01-01",
-          "date_to": "2027-06-30",
-          "team": "Herren Ü40",
-          "team_id": "02PKVQDTEK000000VS5489B2VT4FEOV2",
-          "source_url": "https://www.fussball.de/ajax.team.matchplan/-/mime-type/HTML/show-venues/true/datum-von/2027-01-01/datum-bis/2027-06-30/team-id/02PKVQDTEK000000VS5489B2VT4FEOV2",
-          "source_scope": "all_team_matches; inclusion decided only by venue",
-          "competition_rows": 7,
-          "source_detail_ids": 6,
-          "parsed_matches": 7,
-          "parsed_detail_ids": 6,
-          "missing_detail_ids": [],
-          "duplicate_detail_ids": []
-        }
-      ],
-      "parsed_matches": 15,
-      "included": 7,
-      "excluded": 8,
-      "review": 0
+      "date_from": "2026-10-01",
+      "date_to": "2026-12-31",
+      "competition_rows": 18
     },
     {
-      "team": "Herren",
-      "team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
-      "source_scope": "all_team_matches split into bounded date windows; inclusion by venue",
-      "windows": [
-        {
-          "date_from": "2026-07-01",
-          "date_to": "2026-08-31",
-          "team": "Herren",
-          "team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
-          "source_url": "https://www.fussball.de/ajax.team.matchplan/-/mime-type/HTML/show-venues/true/datum-von/2026-07-01/datum-bis/2026-08-31/team-id/011MIARJNS000000VTVG0001VTR8C1K7",
-          "source_scope": "all_team_matches; inclusion decided only by venue",
-          "competition_rows": 5,
-          "source_detail_ids": 5,
-          "parsed_matches": 5,
-          "parsed_detail_ids": 5,
-          "missing_detail_ids": [],
-          "duplicate_detail_ids": []
-        },
-        {
-          "date_from": "2026-09-01",
-          "date_to": "2026-10-31",
-          "team": "Herren",
-          "team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
-          "source_url": "https://www.fussball.de/ajax.team.matchplan/-/mime-type/HTML/show-venues/true/datum-von/2026-09-01/datum-bis/2026-10-31/team-id/011MIARJNS000000VTVG0001VTR8C1K7",
-          "source_scope": "all_team_matches; inclusion decided only by venue",
-          "competition_rows": 8,
-          "source_detail_ids": 7,
-          "parsed_matches": 8,
-          "parsed_detail_ids": 7,
-          "missing_detail_ids": [],
-          "duplicate_detail_ids": []
-        },
-        {
-          "date_from": "2026-11-01",
-          "date_to": "2027-02-28",
-          "team": "Herren",
-          "team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
-          "source_url": "https://www.fussball.de/ajax.team.matchplan/-/mime-type/HTML/show-venues/true/datum-von/2026-11-01/datum-bis/2027-02-28/team-id/011MIARJNS000000VTVG0001VTR8C1K7",
-          "source_scope": "all_team_matches; inclusion decided only by venue",
-          "competition_rows": 8,
-          "source_detail_ids": 7,
-          "parsed_matches": 8,
-          "parsed_detail_ids": 7,
-          "missing_detail_ids": [],
-          "duplicate_detail_ids": []
-        },
-        {
-          "date_from": "2027-03-01",
-          "date_to": "2027-04-30",
-          "team": "Herren",
-          "team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
-          "source_url": "https://www.fussball.de/ajax.team.matchplan/-/mime-type/HTML/show-venues/true/datum-von/2027-03-01/datum-bis/2027-04-30/team-id/011MIARJNS000000VTVG0001VTR8C1K7",
-          "source_scope": "all_team_matches; inclusion decided only by venue",
-          "competition_rows": 7,
-          "source_detail_ids": 6,
-          "parsed_matches": 7,
-          "parsed_detail_ids": 6,
-          "missing_detail_ids": [],
-          "duplicate_detail_ids": []
-        },
-        {
-          "date_from": "2027-05-01",
-          "date_to": "2027-06-30",
-          "team": "Herren",
-          "team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
-          "source_url": "https://www.fussball.de/ajax.team.matchplan/-/mime-type/HTML/show-venues/true/datum-von/2027-05-01/datum-bis/2027-06-30/team-id/011MIARJNS000000VTVG0001VTR8C1K7",
-          "source_scope": "all_team_matches; inclusion decided only by venue",
-          "competition_rows": 6,
-          "source_detail_ids": 5,
-          "parsed_matches": 6,
-          "parsed_detail_ids": 5,
-          "missing_detail_ids": [],
-          "duplicate_detail_ids": []
-        }
-      ],
-      "parsed_matches": 34,
-      "included": 13,
-      "excluded": 21,
-      "review": 0
+      "date_from": "2027-01-01",
+      "date_to": "2027-03-31",
+      "competition_rows": 9
+    },
+    {
+      "date_from": "2027-04-01",
+      "date_to": "2027-06-30",
+      "competition_rows": 20
+    }
+  ],
+  "window_audits": [
+    {
+      "date_from": "2026-07-01",
+      "date_to": "2026-09-30",
+      "depth": 0,
+      "source_url": "https://www.fussball.de/ajax.club.matchplan/-/id/00ES8GNBL0000049VV0AG08LVUPGND5I/mode/PAGE/show-filter/false/show-venues/true/mime-type/HTML/datum-von/2026-07-01/datum-bis/2026-09-30/max/50",
+      "source_scope": "all club teams; inclusion decided only by venue",
+      "competition_rows": 16,
+      "source_detail_ids": 13,
+      "parsed_matches": 16,
+      "parsed_detail_ids": 13,
+      "missing_detail_ids": [],
+      "duplicate_detail_ids": [],
+      "has_more": false,
+      "truncated": false,
+      "accepted": true
+    },
+    {
+      "date_from": "2026-10-01",
+      "date_to": "2026-12-31",
+      "depth": 0,
+      "source_url": "https://www.fussball.de/ajax.club.matchplan/-/id/00ES8GNBL0000049VV0AG08LVUPGND5I/mode/PAGE/show-filter/false/show-venues/true/mime-type/HTML/datum-von/2026-10-01/datum-bis/2026-12-31/max/50",
+      "source_scope": "all club teams; inclusion decided only by venue",
+      "competition_rows": 18,
+      "source_detail_ids": 17,
+      "parsed_matches": 18,
+      "parsed_detail_ids": 17,
+      "missing_detail_ids": [],
+      "duplicate_detail_ids": [],
+      "has_more": false,
+      "truncated": false,
+      "accepted": true
+    },
+    {
+      "date_from": "2027-01-01",
+      "date_to": "2027-03-31",
+      "depth": 0,
+      "source_url": "https://www.fussball.de/ajax.club.matchplan/-/id/00ES8GNBL0000049VV0AG08LVUPGND5I/mode/PAGE/show-filter/false/show-venues/true/mime-type/HTML/datum-von/2027-01-01/datum-bis/2027-03-31/max/50",
+      "source_scope": "all club teams; inclusion decided only by venue",
+      "competition_rows": 9,
+      "source_detail_ids": 6,
+      "parsed_matches": 9,
+      "parsed_detail_ids": 6,
+      "missing_detail_ids": [],
+      "duplicate_detail_ids": [],
+      "has_more": false,
+      "truncated": false,
+      "accepted": true
+    },
+    {
+      "date_from": "2027-04-01",
+      "date_to": "2027-06-30",
+      "depth": 0,
+      "source_url": "https://www.fussball.de/ajax.club.matchplan/-/id/00ES8GNBL0000049VV0AG08LVUPGND5I/mode/PAGE/show-filter/false/show-venues/true/mime-type/HTML/datum-von/2027-04-01/datum-bis/2027-06-30/max/50",
+      "source_scope": "all club teams; inclusion decided only by venue",
+      "competition_rows": 20,
+      "source_detail_ids": 19,
+      "parsed_matches": 20,
+      "parsed_detail_ids": 19,
+      "missing_detail_ids": [],
+      "duplicate_detail_ids": [],
+      "has_more": false,
+      "truncated": false,
+      "accepted": true
     }
   ]
 }
