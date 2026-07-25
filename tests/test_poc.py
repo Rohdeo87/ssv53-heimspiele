@@ -19,12 +19,14 @@ from poc_scraper import (
     SecurityLockError,
     VenueRule,
     apply_venue_rules,
+    build_duplicate_detail_resolver,
     build_initial_windows,
     build_team_registry,
     club_matchplan_url,
     evaluate_quality,
     has_more_results,
     parse_club_matchplan,
+    parse_detail_page_reference,
     run,
     split_window,
 )
@@ -143,6 +145,51 @@ class ClubParserTest(unittest.TestCase):
         fixture = fixture.replace('</table>', duplicate_block + '\n</table>')
         with self.assertRaisesRegex(ScrapeError, "Widersprüchliche Mehrfachdarstellungen"):
             parse_club_matchplan(fixture, "fixture://conflict", config())
+
+    def test_detail_page_title_provides_canonical_date(self):
+        reference = parse_detail_page_reference(
+            "<html><head><title>Spiel A - Spiel B - 04.09.2026</title></head></html>"
+        )
+        self.assertEqual(["2026-09-04"], reference["dates"])
+        self.assertEqual([], reference["exact_kickoffs"])
+
+    def test_kickoff_conflict_is_resolved_by_official_detail_page(self):
+        fixture = self.fixture()
+        start = fixture.index('<tr class="row-headline">')
+        end_marker = '</tr>\n\n<tr class="row-headline">'
+        end = fixture.index(end_marker, start) + len('</tr>')
+        duplicate_block = fixture[start:end].replace(
+            'Fr, 21.08.26 | 19:00',
+            'Sa, 22.08.26 | 20:00',
+        ).replace(
+            'Freitag, 21.08.2026 - 19:00 Uhr',
+            'Samstag, 22.08.2026 - 20:00 Uhr',
+        )
+        fixture = fixture.replace('</table>', duplicate_block + '\n</table>')
+        client = Mock()
+        client.get_text.return_value = (
+            '<html><head><title>Schönwalder SV - SG Bornim - 21.08.2026</title></head></html>'
+        )
+        audit = {}
+        resolver = build_duplicate_detail_resolver(client, config())
+        matches = parse_club_matchplan(
+            fixture,
+            "fixture://resolved-conflict",
+            config(),
+            audit=audit,
+            duplicate_resolver=resolver,
+        )
+        item = next(
+            match for match in matches
+            if match.external_id == "031C84AB5K000000VS5489BUVUR5FS5A"
+        )
+        self.assertEqual("2026-08-21T19:00+02:00", item.kickoff)
+        self.assertEqual("2026-08-21T18:00+02:00", item.event_start)
+        self.assertEqual("2026-08-21T21:30+02:00", item.event_end)
+        self.assertEqual([], audit["duplicate_detail_ids"])
+        self.assertEqual(1, len(audit["duplicate_resolutions"]))
+        self.assertTrue(audit["duplicate_resolutions"][0]["resolution_attempt"]["resolved"])
+        client.get_text.assert_called_once()
 
     def test_unparsed_detail_link_aborts(self):
         fixture = self.fixture().replace(

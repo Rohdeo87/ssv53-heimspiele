@@ -1,5 +1,14 @@
 # Changelog
 
+## Version 12.2
+
+- Reine Anstoß-Konflikte bei derselben Spiel-ID werden über die offizielle Spiel-Detailseite aufgelöst.
+- Terminverschiebungen können dadurch sicher den alten, noch zwischengespeicherten Termin ersetzen.
+- Die Datumserkennung übernimmt keine Werte mehr aus benachbarten Spielblöcken.
+- Öffentliche Rohantworten werden im Diagnose-Artefakt unter `raw/` mitgespeichert.
+- Widersprüche bei Spielnummer, Mannschaften, Spielstätte oder Status bleiben harte Qualitätsfehler.
+- Abruflimit, Schutzlogik, Platzregeln und 60-Minuten-Puffer bleiben unverändert.
+
 ## Version 12.1
 
 - Identische oder nur ergänzende Mehrfachdarstellungen derselben Spiel-ID werden sicher zusammengeführt.

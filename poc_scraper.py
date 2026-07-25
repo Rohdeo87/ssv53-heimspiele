@@ -23,7 +23,7 @@ from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 from email.utils import parsedate_to_datetime
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Callable, Iterable
 from urllib.parse import urljoin
 
 import requests
@@ -159,7 +159,7 @@ class Client:
         self.session.headers.update({
             "User-Agent": request_cfg.get(
                 "user_agent",
-                "SSV53-Belegungsplan-PoC/12.1 "
+                "SSV53-Belegungsplan-PoC/12.2 "
                 "(+https://www.ssv53.de; mailto:thomas.rohde@ssv53.de)",
             ),
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -606,16 +606,49 @@ def block_rows(start_row: Tag) -> list[Tag]:
 def kickoff_for_competition_row(
     competition_row: Tag, rows: list[Tag]
 ) -> datetime | None:
+    """Ermittelt den Anstoß ausschließlich aus dem zugehörigen Spielblock.
+
+    FUSSBALL.DE rendert Vereinsspielpläne teilweise doppelt (Desktop/Mobil)
+    und kann zwischen diesen Darstellungen zusätzliche Tabellenzeilen
+    einschieben. Die frühere breite Rückwärtssuche konnte dadurch das Datum
+    des benachbarten Spiels übernehmen. Diese Fassung akzeptiert nur:
+
+    1. ein Datum direkt in der Wettbewerbszeile,
+    2. die unmittelbar zugehörige vorherige Überschriftszeile oder
+    3. genau einen eindeutigen Datumswert innerhalb des aktuellen Blocks.
+
+    Bei Mehrdeutigkeit wird bewusst kein Anstoß geraten. Eine zweite
+    Darstellung desselben Spiels darf die fehlende Angabe später ergänzen.
+    """
     kickoff = parse_datetime(row_text(competition_row))
     if kickoff is not None:
         return kickoff
+
     sibling = competition_row.find_previous_sibling("tr")
-    while sibling is not None and "row-competition" not in row_classes(sibling):
-        kickoff = parse_datetime(row_text(sibling))
-        if kickoff is not None:
-            return kickoff
+    while sibling is not None:
+        classes = row_classes(sibling)
+        if "row-competition" in classes:
+            break
+        if "row-headline" in classes or is_next_match_header(sibling):
+            return parse_datetime(row_text(sibling))
         sibling = sibling.find_previous_sibling("tr")
-    return parse_datetime(" ".join(row_text(row) for row in rows))
+
+    candidates: dict[str, datetime] = {}
+    for row in rows[1:]:
+        elements = row.select(
+            '.column-date, [class*="date"], [class*="kickoff"], time[datetime]'
+        )
+        texts = [row_text(element) for element in elements]
+        if row.has_attr("datetime"):
+            texts.append(str(row.get("datetime") or ""))
+        for text in texts:
+            parsed = parse_datetime(text)
+            if parsed is not None:
+                candidates[parsed.isoformat(timespec="minutes")] = parsed
+
+    if len(candidates) == 1:
+        return next(iter(candidates.values()))
+    return None
 
 
 def extract_detail_id(detail_url: str) -> str:
@@ -789,6 +822,190 @@ def match_duration_minutes(
 
 
 
+def parse_detail_page_reference(html_text: str) -> dict[str, Any]:
+    """Liest kanonische Datums-/Zeitangaben aus einer Spiel-Detailseite.
+
+    Die Spielseite ist bei widersprüchlichen Mehrfachdarstellungen die
+    maßgebliche Referenz. Exakte Zeitangaben werden bevorzugt; ist nur das
+    Datum im Seitentitel vorhanden, reicht dieses zur Auswahl zwischen
+    unterschiedlichen Tagen.
+    """
+    soup = BeautifulSoup(html_text, "lxml")
+    exact: dict[str, str] = {}
+    dates: set[str] = set()
+
+    def add_datetime_text(value: str, source: str) -> None:
+        raw = normalize_space(value)
+        if not raw:
+            return
+        parsed = parse_datetime(raw)
+        if parsed is not None:
+            key = parsed.isoformat(timespec="minutes")
+            exact[key] = source
+            dates.add(key[:10])
+            return
+
+        iso_value = raw.replace("Z", "+00:00")
+        try:
+            parsed_iso = datetime.fromisoformat(iso_value)
+        except ValueError:
+            parsed_iso = None
+        if parsed_iso is not None:
+            if parsed_iso.tzinfo is None:
+                parsed_iso = parsed_iso.replace(tzinfo=ZoneInfo("Europe/Berlin"))
+            else:
+                parsed_iso = parsed_iso.astimezone(ZoneInfo("Europe/Berlin"))
+            key = parsed_iso.isoformat(timespec="minutes")
+            exact[key] = source
+            dates.add(key[:10])
+            return
+
+        for match in re.finditer(r"\b(\d{2})\.(\d{2})\.(\d{4})\b", raw):
+            day, month, year = match.groups()
+            try:
+                dates.add(date(int(year), int(month), int(day)).isoformat())
+            except ValueError:
+                continue
+
+    for element in soup.select(
+        'meta[itemprop="startDate"][content], '
+        'meta[property*="start"][content], '
+        'meta[name*="start"][content], '
+        'time[datetime], [itemprop="startDate"], '
+        '[data-kickoff], [data-start-date], [data-start]'
+    ):
+        value = (
+            element.get("content")
+            or element.get("datetime")
+            or element.get("data-start")
+            or element.get("data-date")
+            or element.get_text(" ", strip=True)
+        )
+        add_datetime_text(str(value or ""), "structured")
+
+    for script in soup.select('script[type="application/ld+json"]'):
+        try:
+            payload = json.loads(script.string or script.get_text() or "null")
+        except json.JSONDecodeError:
+            continue
+
+        def walk(value: Any) -> None:
+            if isinstance(value, dict):
+                for key, child in value.items():
+                    if str(key).casefold() in {"startdate", "start_date", "kickoff"}:
+                        add_datetime_text(str(child or ""), "json-ld")
+                    walk(child)
+            elif isinstance(value, list):
+                for child in value:
+                    walk(child)
+
+        walk(payload)
+
+    for pattern in (
+        r'"startDate"\s*:\s*"([^"]+)"',
+        r'"start_date"\s*:\s*"([^"]+)"',
+        r'"kickoff"\s*:\s*"([^"]+)"',
+    ):
+        for match in re.finditer(pattern, html_text, re.IGNORECASE):
+            add_datetime_text(match.group(1), "embedded-json")
+
+    title = soup.title.get_text(" ", strip=True) if soup.title else ""
+    add_datetime_text(title, "title")
+    for heading in soup.select("h1, h2, .headline, .match-date, .date, .kickoff"):
+        add_datetime_text(heading.get_text(" ", strip=True), "visible")
+
+    return {
+        "exact_kickoffs": sorted(exact),
+        "dates": sorted(dates),
+        "sources": exact,
+        "title": title,
+    }
+
+
+def recalculate_event_times(match: Match, config: dict[str, Any]) -> None:
+    if not match.kickoff:
+        match.event_start = ""
+        match.event_end = ""
+        return
+    try:
+        kickoff = datetime.fromisoformat(match.kickoff)
+    except ValueError:
+        match.event_start = ""
+        match.event_end = ""
+        return
+    timing = config.get("event_timing", {})
+    before = int(timing.get("before_minutes", 60))
+    after = int(timing.get("after_minutes", 60))
+    duration = match_duration_minutes(match.team_name, match.team_category, config)
+    match.event_start = (kickoff - timedelta(minutes=before)).isoformat(timespec="minutes")
+    match.event_end = (kickoff + timedelta(minutes=duration + after)).isoformat(timespec="minutes")
+
+
+def build_duplicate_detail_resolver(
+    client: Client,
+    config: dict[str, Any],
+    raw_output_dir: Path | None = None,
+) -> Callable[[str, list[Match], dict[str, Any]], Match | None]:
+    """Erzeugt einen konservativen Resolver für Terminverschiebungen.
+
+    Nur ein reiner Anstoß-Konflikt wird über die offizielle Spielseite
+    aufgelöst. Widersprüche bei Mannschaften, Spielnummer oder Spielstätte
+    bleiben harte Fehler.
+    """
+    def resolve(
+        detail_id: str, group: list[Match], detail: dict[str, Any]
+    ) -> Match | None:
+        if set((detail.get("conflicts") or {}).keys()) != {"kickoff"}:
+            return None
+        detail_urls = [item.detail_url for item in group if item.detail_url]
+        if not detail_urls:
+            return None
+        detail_url = detail_urls[0]
+        body = client.get_text(detail_url)
+        if raw_output_dir is not None:
+            raw_output_dir.mkdir(parents=True, exist_ok=True)
+            (raw_output_dir / f"detail_{detail_id}.html").write_text(
+                body, encoding="utf-8"
+            )
+        reference = parse_detail_page_reference(body)
+        exact = set(reference.get("exact_kickoffs") or [])
+        dates = set(reference.get("dates") or [])
+
+        exact_matches = [item for item in group if item.kickoff in exact]
+        candidates = exact_matches
+        resolution = "detail_exact_datetime"
+        if len(candidates) != 1:
+            candidates = [
+                item for item in group
+                if item.kickoff and item.kickoff[:10] in dates
+            ]
+            resolution = "detail_date"
+        if len(candidates) != 1:
+            detail["resolution_attempt"] = {
+                "method": resolution,
+                "reference": reference,
+                "candidate_kickoffs": sorted({item.kickoff for item in group}),
+                "resolved": False,
+            }
+            return None
+
+        chosen = candidates[0]
+        note = "Terminverschiebung anhand der offiziellen Spielseite aufgelöst"
+        if note not in chosen.warnings:
+            chosen.warnings.append(note)
+        recalculate_event_times(chosen, config)
+        detail["resolution_attempt"] = {
+            "method": resolution,
+            "reference": reference,
+            "candidate_kickoffs": sorted({item.kickoff for item in group}),
+            "selected_kickoff": chosen.kickoff,
+            "resolved": True,
+        }
+        return chosen
+
+    return resolve
+
+
 def _normalized_duplicate_value(field_name: str, value: str) -> str:
     text = str(value or "").strip()
     if not text:
@@ -798,7 +1015,11 @@ def _normalized_duplicate_value(field_name: str, value: str) -> str:
     return text
 
 
-def _merge_duplicate_match_group(detail_id: str, group: list[Match]) -> tuple[Match | None, dict[str, Any]]:
+def _merge_duplicate_match_group(
+    detail_id: str,
+    group: list[Match],
+    resolver: Callable[[str, list[Match], dict[str, Any]], Match | None] | None = None,
+) -> tuple[Match | None, dict[str, Any]]:
     """Führt harmlose Mehrfachdarstellungen desselben Spiels zusammen.
 
     FUSSBALL.DE kann denselben Spiel-Link innerhalb eines Vereinsspielplans
@@ -832,7 +1053,12 @@ def _merge_duplicate_match_group(detail_id: str, group: list[Match]) -> tuple[Ma
         "conflicts": conflicts,
     }
     if conflicts:
-        return None, detail
+        resolved = resolver(detail_id, group, detail) if resolver else None
+        if resolved is None:
+            return None, detail
+        detail["resolved"] = True
+        detail["merged_external_id"] = resolved.external_id
+        return resolved, detail
 
     def score(item: Match) -> tuple[int, int]:
         populated = sum(
@@ -873,7 +1099,10 @@ def _merge_duplicate_match_group(detail_id: str, group: list[Match]) -> tuple[Ma
     return merged, detail
 
 
-def collapse_duplicate_detail_ids(matches: list[Match]) -> tuple[list[Match], list[str], list[dict[str, Any]]]:
+def collapse_duplicate_detail_ids(
+    matches: list[Match],
+    resolver: Callable[[str, list[Match], dict[str, Any]], Match | None] | None = None,
+) -> tuple[list[Match], list[str], list[dict[str, Any]], list[dict[str, Any]]]:
     grouped: dict[str, list[Match]] = {}
     without_detail_id: list[Match] = []
     for item in matches:
@@ -885,20 +1114,26 @@ def collapse_duplicate_detail_ids(matches: list[Match]) -> tuple[list[Match], li
 
     collapsed_ids: list[str] = []
     conflict_details: list[dict[str, Any]] = []
+    resolution_details: list[dict[str, Any]] = []
     result = list(without_detail_id)
     for detail_id, group in grouped.items():
         if len(group) == 1:
             result.append(group[0])
             continue
-        merged, detail = _merge_duplicate_match_group(detail_id, group)
+        merged, detail = _merge_duplicate_match_group(detail_id, group, resolver)
         if merged is None:
             conflict_details.append(detail)
             continue
         collapsed_ids.append(detail_id)
+        if detail.get("resolved"):
+            resolution_details.append(detail)
         result.append(merged)
 
-    return result, sorted(collapsed_ids), sorted(
-        conflict_details, key=lambda item: str(item.get("detail_id") or "")
+    return (
+        result,
+        sorted(collapsed_ids),
+        sorted(conflict_details, key=lambda item: str(item.get("detail_id") or "")),
+        sorted(resolution_details, key=lambda item: str(item.get("detail_id") or "")),
     )
 
 def parse_club_matchplan(
@@ -906,6 +1141,7 @@ def parse_club_matchplan(
     source_url: str,
     config: dict[str, Any],
     audit: dict[str, Any] | None = None,
+    duplicate_resolver: Callable[[str, list[Match], dict[str, Any]], Match | None] | None = None,
 ) -> list[Match]:
     soup = BeautifulSoup(html_text, "lxml")
     competition_rows = soup.select("tr.row-competition")
@@ -1021,9 +1257,12 @@ def parse_club_matchplan(
         if extract_detail_id(match.detail_url)
     }
     missing_ids = sorted(source_ids - parsed_ids_before_merge)
-    merged_matches, collapsed_duplicate_ids, duplicate_conflicts = (
-        collapse_duplicate_detail_ids(matches)
-    )
+    (
+        merged_matches,
+        collapsed_duplicate_ids,
+        duplicate_conflicts,
+        duplicate_resolutions,
+    ) = collapse_duplicate_detail_ids(matches, duplicate_resolver)
     conflicting_duplicate_ids = sorted(
         str(item.get("detail_id") or "")
         for item in duplicate_conflicts
@@ -1047,6 +1286,7 @@ def parse_club_matchplan(
             "duplicate_detail_ids": conflicting_duplicate_ids,
             "collapsed_duplicate_detail_ids": collapsed_duplicate_ids,
             "duplicate_conflicts": duplicate_conflicts,
+            "duplicate_resolutions": duplicate_resolutions,
             "has_more": has_more_results(html_text),
         })
     if missing_ids:
@@ -1429,17 +1669,34 @@ def run(
         rules = [VenueRule(**item) for item in config.get("venue_rules", [])]
         default_decision = str(config.get("default_decision", "exclude"))
         local_venue_pattern = str(config.get("local_venue_pattern") or "")
+        save_raw = bool(config.get("diagnostics", {}).get("save_raw_responses", True))
+        raw_output_dir = output_dir / "raw" if save_raw else None
+        duplicate_resolver = build_duplicate_detail_resolver(
+            client, config, raw_output_dir
+        )
 
         while work_queue:
             window_from, window_to, depth = work_queue.pop(0)
             LOG.info("Lade Vereinsspielplan %s bis %s", window_from, window_to)
             body, source_url = fetch_club_matchplan(client, config, window_from, window_to)
+            if raw_output_dir is not None:
+                raw_output_dir.mkdir(parents=True, exist_ok=True)
+                (raw_output_dir / f"club_{window_from}_{window_to}.html").write_text(
+                    body, encoding="utf-8"
+                )
             audit: dict[str, Any] = {
                 "date_from": window_from,
                 "date_to": window_to,
                 "depth": depth,
             }
-            window_matches = parse_club_matchplan(body, source_url, config, audit=audit)
+            window_matches = parse_club_matchplan(
+                body,
+                source_url,
+                config,
+                audit=audit,
+                duplicate_resolver=duplicate_resolver,
+            )
+            audit["request_count_after_parse"] = client.request_count
             truncated = bool(audit.get("has_more")) or int(audit.get("competition_rows", 0)) >= response_limit
             audit["truncated"] = truncated
 
