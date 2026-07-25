@@ -1,0 +1,17 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//SSV53//DFBnet PoC//DE
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:SSV53 Kunstrasen – Spiele
+X-WR-TIMEZONE:Europe/Berlin
+BEGIN:VEVENT
+UID:dfb-031DB86VLC000000VS5489BUVUR5FS5A@ssv53.de
+DTSTAMP:20260725T155349Z
+DTSTART;TZID=Europe/Berlin:20260904T180000
+DTEND;TZID=Europe/Berlin:20260904T213000
+SUMMARY:Schönwalder SV (Ü40): Schönwalder SV (Ü40) – SV Grün-Weiss Brieselang Ü40
+LOCATION:Kunstrasenplatz\, Sportplatz Schönwalde Strandbad\, Platz 2\, KR\, Kurmärkische Str. 2\, 14621 Schönwalde-Glien
+DESCRIPTION:Fr\, | Herren Ü40 | Kreisliga | https://www.fussball.de/spiel/schoenwalder-sv-ue40-sv-gruen-weiss-brieselang-ue40/-/spiel/031DB86VLC000000VS5489BUVUR5FS5A
+END:VEVENT
+END:VCALENDAR

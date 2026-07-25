@@ -1,0 +1,163 @@
+{
+  "publishable": true,
+  "errors": [],
+  "invalid_included": [],
+  "by_calendar": {
+    "Rasen": 21,
+    "Kunstrasen": 1
+  },
+  "event_timing": {
+    "before_minutes": 60,
+    "after_minutes": 60,
+    "default_match_duration_minutes": 90
+  },
+  "request_count": 5,
+  "accepted_windows": [
+    {
+      "date_from": "2026-07-01",
+      "date_to": "2026-09-30",
+      "competition_rows": 17
+    },
+    {
+      "date_from": "2026-10-01",
+      "date_to": "2026-12-31",
+      "competition_rows": 18
+    },
+    {
+      "date_from": "2027-01-01",
+      "date_to": "2027-03-31",
+      "competition_rows": 9
+    },
+    {
+      "date_from": "2027-04-01",
+      "date_to": "2027-06-30",
+      "competition_rows": 20
+    }
+  ],
+  "window_audits": [
+    {
+      "date_from": "2026-07-01",
+      "date_to": "2026-09-30",
+      "depth": 0,
+      "source_url": "https://www.fussball.de/ajax.club.matchplan/-/id/00ES8GNBL0000049VV0AG08LVUPGND5I/mode/PAGE/show-filter/false/show-venues/true/mime-type/HTML/datum-von/2026-07-01/datum-bis/2026-09-30/max/50",
+      "source_scope": "all club teams; inclusion decided only by venue",
+      "competition_rows": 17,
+      "source_detail_ids": 13,
+      "parsed_matches_before_duplicate_merge": 17,
+      "parsed_matches": 16,
+      "parsed_detail_ids": 13,
+      "missing_detail_ids": [],
+      "duplicate_detail_ids": [],
+      "collapsed_duplicate_detail_ids": [
+        "031DP96C58000000VS5489BUVUR5FS5A"
+      ],
+      "duplicate_conflicts": [],
+      "duplicate_resolutions": [
+        {
+          "detail_id": "031DP96C58000000VS5489BUVUR5FS5A",
+          "occurrences": 2,
+          "conflicts": {
+            "kickoff": [
+              "2026-09-04T19:30+02:00",
+              "2026-09-06T14:00+02:00"
+            ]
+          },
+          "resolution_attempt": {
+            "method": "detail_date",
+            "reference": {
+              "exact_kickoffs": [
+                "2024-07-16T10:20+02:00",
+                "2024-09-22T12:30+02:00"
+              ],
+              "dates": [
+                "2024-07-16",
+                "2024-09-22",
+                "2026-09-04"
+              ],
+              "sources": {
+                "2024-09-22T12:30+02:00": "visible",
+                "2024-07-16T10:20+02:00": "visible"
+              },
+              "title": "Spielgemeinschaft Schönwalde-Perwenitz-Paaren - VfL Nauen II Ergebnis: Kreisliga - Herren - 04.09.2026"
+            },
+            "candidate_kickoffs": [
+              "2026-09-04T19:30+02:00",
+              "2026-09-06T14:00+02:00"
+            ],
+            "selected_kickoff": "2026-09-04T19:30+02:00",
+            "resolved": true
+          },
+          "resolved": true,
+          "merged_external_id": "031DP96C58000000VS5489BUVUR5FS5A"
+        }
+      ],
+      "has_more": false,
+      "request_count_after_parse": 2,
+      "truncated": false,
+      "accepted": true
+    },
+    {
+      "date_from": "2026-10-01",
+      "date_to": "2026-12-31",
+      "depth": 0,
+      "source_url": "https://www.fussball.de/ajax.club.matchplan/-/id/00ES8GNBL0000049VV0AG08LVUPGND5I/mode/PAGE/show-filter/false/show-venues/true/mime-type/HTML/datum-von/2026-10-01/datum-bis/2026-12-31/max/50",
+      "source_scope": "all club teams; inclusion decided only by venue",
+      "competition_rows": 18,
+      "source_detail_ids": 17,
+      "parsed_matches_before_duplicate_merge": 18,
+      "parsed_matches": 18,
+      "parsed_detail_ids": 17,
+      "missing_detail_ids": [],
+      "duplicate_detail_ids": [],
+      "collapsed_duplicate_detail_ids": [],
+      "duplicate_conflicts": [],
+      "duplicate_resolutions": [],
+      "has_more": false,
+      "request_count_after_parse": 3,
+      "truncated": false,
+      "accepted": true
+    },
+    {
+      "date_from": "2027-01-01",
+      "date_to": "2027-03-31",
+      "depth": 0,
+      "source_url": "https://www.fussball.de/ajax.club.matchplan/-/id/00ES8GNBL0000049VV0AG08LVUPGND5I/mode/PAGE/show-filter/false/show-venues/true/mime-type/HTML/datum-von/2027-01-01/datum-bis/2027-03-31/max/50",
+      "source_scope": "all club teams; inclusion decided only by venue",
+      "competition_rows": 9,
+      "source_detail_ids": 6,
+      "parsed_matches_before_duplicate_merge": 9,
+      "parsed_matches": 9,
+      "parsed_detail_ids": 6,
+      "missing_detail_ids": [],
+      "duplicate_detail_ids": [],
+      "collapsed_duplicate_detail_ids": [],
+      "duplicate_conflicts": [],
+      "duplicate_resolutions": [],
+      "has_more": false,
+      "request_count_after_parse": 4,
+      "truncated": false,
+      "accepted": true
+    },
+    {
+      "date_from": "2027-04-01",
+      "date_to": "2027-06-30",
+      "depth": 0,
+      "source_url": "https://www.fussball.de/ajax.club.matchplan/-/id/00ES8GNBL0000049VV0AG08LVUPGND5I/mode/PAGE/show-filter/false/show-venues/true/mime-type/HTML/datum-von/2027-04-01/datum-bis/2027-06-30/max/50",
+      "source_scope": "all club teams; inclusion decided only by venue",
+      "competition_rows": 20,
+      "source_detail_ids": 19,
+      "parsed_matches_before_duplicate_merge": 20,
+      "parsed_matches": 20,
+      "parsed_detail_ids": 19,
+      "missing_detail_ids": [],
+      "duplicate_detail_ids": [],
+      "collapsed_duplicate_detail_ids": [],
+      "duplicate_conflicts": [],
+      "duplicate_resolutions": [],
+      "has_more": false,
+      "request_count_after_parse": 5,
+      "truncated": false,
+      "accepted": true
+    }
+  ]
+}
