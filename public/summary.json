@@ -1,0 +1,39 @@
+{
+  "generated_at": "2026-07-25T07:56:43",
+  "selection_mode": "venue",
+  "total": 63,
+  "included": 23,
+  "review": 0,
+  "excluded": 40,
+  "by_calendar": {
+    "Rasen": 23,
+    "Kunstrasen": 0
+  },
+  "included_by_formal_role": {
+    "home": 23,
+    "away": 0,
+    "unknown": 0
+  },
+  "by_team": {
+    "Herren": {
+      "total": 34,
+      "included": 13,
+      "excluded": 21,
+      "review": 0
+    },
+    "Herren Ü40": {
+      "total": 15,
+      "included": 7,
+      "excluded": 8,
+      "review": 0
+    },
+    "Herren Ü50": {
+      "total": 14,
+      "included": 3,
+      "excluded": 11,
+      "review": 0
+    }
+  },
+  "publishable": true,
+  "quality_errors": []
+}
