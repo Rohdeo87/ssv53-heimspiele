@@ -1,14 +1,22 @@
 {
-  "updated_at": "2026-07-26T16:26:21+00:00",
+  "updated_at": "2026-07-27T08:57:58+00:00",
   "club_id": "00ES8GNBL0000049VV0AG08LVUPGND5I",
   "teams": [
+    {
+      "key": "031A57Q7PG000000VS5489BSVU0ORN69",
+      "team_id": "031A57Q7PG000000VS5489BSVU0ORN69",
+      "name": "Schönwalder SV (9er)",
+      "category": "C-Junioren | Kreisfreundschaftsspiele",
+      "first_seen_at": "2026-07-27T08:57:58+00:00",
+      "last_seen_at": "2026-07-27T08:57:58+00:00"
+    },
     {
       "key": "02PKVQDTEK000000VS5489B2VT4FEOV2",
       "team_id": "02PKVQDTEK000000VS5489B2VT4FEOV2",
       "name": "Schönwalder SV (Ü40)",
       "category": "Herren Ü40 | Kreisliga",
       "first_seen_at": "2026-07-25T08:38:22+00:00",
-      "last_seen_at": "2026-07-26T16:26:21+00:00"
+      "last_seen_at": "2026-07-27T08:57:58+00:00"
     },
     {
       "key": "02PKT2MAOC000000VS5489B2VT4FEOV2",
@@ -16,7 +24,7 @@
       "name": "SpG Perwenitz/​Schönwalde Ü50",
       "category": "Herren Ü50 | Kreisliga",
       "first_seen_at": "2026-07-25T08:38:22+00:00",
-      "last_seen_at": "2026-07-26T16:26:21+00:00"
+      "last_seen_at": "2026-07-27T08:57:58+00:00"
     },
     {
       "key": "011MIARJNS000000VTVG0001VTR8C1K7",
@@ -24,11 +32,13 @@
       "name": "Spielgemeinschaft Schönwalde-Perwenitz-Paaren",
       "category": "Herren | Kreisliga",
       "first_seen_at": "2026-07-25T08:38:22+00:00",
-      "last_seen_at": "2026-07-26T16:26:21+00:00"
+      "last_seen_at": "2026-07-27T08:57:58+00:00"
     }
   ],
   "changes": {
-    "new": [],
+    "new": [
+      "Schönwalder SV (9er)"
+    ],
     "known": [
       "Spielgemeinschaft Schönwalde-Perwenitz-Paaren",
       "SpG Perwenitz/​Schönwalde Ü50",

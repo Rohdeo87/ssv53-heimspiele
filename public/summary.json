@@ -1,20 +1,26 @@
 {
-  "generated_at": "2026-07-26T16:26:21+00:00",
+  "generated_at": "2026-07-27T08:57:58+00:00",
   "selection_mode": "club-wide venue",
   "event_timing": {
     "before_minutes": 60,
     "after_minutes": 60,
     "default_match_duration_minutes": 90
   },
-  "total": 63,
+  "total": 64,
   "included": 22,
   "review": 0,
-  "excluded": 41,
+  "excluded": 42,
   "by_calendar": {
     "Rasen": 21,
     "Kunstrasen": 1
   },
   "by_team": {
+    "Schönwalder SV (9er)": {
+      "total": 1,
+      "included": 0,
+      "excluded": 1,
+      "review": 0
+    },
     "Schönwalder SV (Ü40)": {
       "total": 15,
       "included": 7,
@@ -35,12 +41,15 @@
     }
   },
   "teams_discovered": [
+    "Schönwalder SV (9er)",
     "Schönwalder SV (Ü40)",
     "SpG Perwenitz/​Schönwalde Ü50",
     "Spielgemeinschaft Schönwalde-Perwenitz-Paaren"
   ],
   "team_registry_changes": {
-    "new": [],
+    "new": [
+      "Schönwalder SV (9er)"
+    ],
     "known": [
       "Spielgemeinschaft Schönwalde-Perwenitz-Paaren",
       "SpG Perwenitz/​Schönwalde Ü50",
@@ -55,7 +64,7 @@
     {
       "date_from": "2026-07-01",
       "date_to": "2026-09-30",
-      "competition_rows": 17
+      "competition_rows": 18
     },
     {
       "date_from": "2026-10-01",
