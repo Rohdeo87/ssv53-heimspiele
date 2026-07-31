@@ -43,3 +43,14 @@ Der letzte erfolgreiche Stand bleibt dann unverändert. Eine solche Änderung da
 - Zeitgesteuerte Läufe auf `main` veröffentlichen weiterhin automatisch.
 - Manuelle Läufe auf `main` veröffentlichen ebenfalls automatisch.
 - Läufe auf Test-Branches veröffentlichen standardmäßig nicht.
+## Automatische Benachrichtigungen
+
+Auf `main` erzeugt der Spielabruf automatisch ein GitHub-Issue und weist es dem Repository-Inhaber zu, wenn:
+
+- neue, geänderte oder entfernte Spiele erkannt werden,
+- die Sicherheitsprüfung eine Veröffentlichung blockiert oder
+- der Abruf beziehungsweise die Feed-Erstellung technisch fehlschlägt.
+
+Erfolgreiche Läufe ohne fachliche Änderungen bleiben still. Eine identische offene Warnung wird nicht erneut erstellt. Nach einem später wieder erfolgreichen Abruf werden offene technische Fehlerwarnungen automatisch geschlossen. Issues mit echten Spieländerungen bleiben offen, bis sie manuell geprüft und geschlossen werden.
+
+Zum Funktionstest steht unter **Actions** der Workflow **SSV53 Benachrichtigung testen** bereit. Er erzeugt ein entsprechend gekennzeichnetes Test-Issue. Für Push-Mitteilungen muss die GitHub-App auf dem Handy Benachrichtigungen senden dürfen.

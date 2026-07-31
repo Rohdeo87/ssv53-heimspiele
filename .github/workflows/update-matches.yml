@@ -29,6 +29,7 @@ on:
 
 permissions:
   contents: write
+  issues: write
 
 concurrency:
   group: ssv53-match-update
@@ -155,6 +156,7 @@ jobs:
           retention-days: 7
 
       - name: Daten und Schutzstatus konfliktfrei speichern
+        id: persist
         if: ${{ always() && steps.timing_confirm.outputs.should_run == 'true' && (github.ref_name == github.event.repository.default_branch || inputs.persist_test_results == true) }}
         shell: bash
         run: |
@@ -205,6 +207,33 @@ jobs:
             git push origin "HEAD:$TARGET_BRANCH"
           fi
 
+      - name: Bei Handlungsbedarf GitHub-Issue erzeugen
+        id: notify
+        if: ${{ always() && steps.timing_confirm.outputs.should_run == 'true' && github.ref_name == github.event.repository.default_branch }}
+        continue-on-error: true
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SCRAPE_OUTCOME: ${{ steps.scrape.outcome }}
+          FEED_OUTCOME: ${{ steps.feed.outcome }}
+          CHANGES_OUTCOME: ${{ steps.changes.outcome }}
+          PERSIST_OUTCOME: ${{ steps.persist.outcome }}
+        run: |
+          set -euo pipefail
+          ARGS=(
+            --repository "${{ github.repository }}"
+            --run-url "$RUN_URL"
+            --scrape-outcome "$SCRAPE_OUTCOME"
+            --feed-outcome "$FEED_OUTCOME"
+            --changes-outcome "$CHANGES_OUTCOME"
+            --persist-outcome "$PERSIST_OUTCOME"
+          )
+          if [ -f generated/change_report.json ]; then
+            ARGS+=(--report generated/change_report.json)
+          fi
+          python notify_changes.py "${ARGS[@]}"
+
       - name: Laufstatus abschließend prüfen
         if: always()
         shell: bash
@@ -227,5 +256,13 @@ jobs:
           fi
           if [ "${{ steps.changes.outcome }}" != "success" ]; then
             echo "Die Änderungskontrolle hat die Veröffentlichung blockiert. Der letzte veröffentlichte Feed bleibt unverändert." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          if { [ "$GITHUB_REF_NAME" = "${{ github.event.repository.default_branch }}" ] || [ "${{ inputs.persist_test_results }}" = "true" ]; } && [ "${{ steps.persist.outcome }}" != "success" ]; then
+            echo "Die geprüften Daten konnten nicht sicher gespeichert oder veröffentlicht werden." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          if [ "$GITHUB_REF_NAME" = "${{ github.event.repository.default_branch }}" ] && [ "${{ steps.notify.outcome }}" != "success" ]; then
+            echo "Der Spielabruf wurde verarbeitet, aber die GitHub-Benachrichtigung ist fehlgeschlagen." | tee -a "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
