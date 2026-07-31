@@ -1,0 +1,225 @@
+name: "Einmalig: Stable Release 12.3 veröffentlichen"
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ssv53-publish-release-12-3
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    env:
+      VERSION: "12.3"
+      EXPECTED_RELEASE_SHA: "9a0934cb5902d7fab9bfa76d7750eed44c4cfc72"
+      SELF_PATH: ".github/workflows/publish-release-12.3.yml"
+
+    steps:
+      - name: Automatisierungstoken prüfen
+        shell: bash
+        env:
+          AUTOMATION_TOKEN: ${{ secrets.SSV53_AUTOMATION_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "$AUTOMATION_TOKEN" ]; then
+            echo "Das Repository-Secret SSV53_AUTOMATION_TOKEN fehlt."
+            exit 1
+          fi
+
+      - name: Repository vollständig laden
+        uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 0
+          fetch-tags: true
+          token: ${{ secrets.SSV53_AUTOMATION_TOKEN }}
+
+      - name: Release-Commit und Inhalt prüfen
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git fetch origin main --tags
+          git cat-file -e "${EXPECTED_RELEASE_SHA}^{commit}"
+
+          if ! git merge-base --is-ancestor "$EXPECTED_RELEASE_SHA" origin/main; then
+            echo "Der geprüfte Release-Commit liegt nicht auf dem aktuellen main-Branch."
+            exit 1
+          fi
+
+          README_AT_RELEASE="$(git show "${EXPECTED_RELEASE_SHA}:README.md")"
+          if ! grep -Fq "PoC Version 12.3" <<<"$README_AT_RELEASE"; then
+            echo "README am Release-Commit enthält nicht die erwartete Version 12.3."
+            exit 1
+          fi
+
+          git cat-file -e "${EXPECTED_RELEASE_SHA}:RELEASE_NOTES_12.3.md"
+          git show "${EXPECTED_RELEASE_SHA}:RELEASE_NOTES_12.3.md" > /tmp/RELEASE_NOTES_12.3.md
+
+          CONFIG_AT_RELEASE="$(git show "${EXPECTED_RELEASE_SHA}:config.json")"
+          if ! grep -Fq "SSV53-Belegungsplan-PoC/12.3" <<<"$CONFIG_AT_RELEASE"; then
+            echo "config.json am Release-Commit enthält nicht die erwartete Version 12.3."
+            exit 1
+          fi
+
+      - name: Tag-Namenskonvention bestimmen
+        id: naming
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.SSV53_AUTOMATION_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          PREVIOUS_TAG="$(
+            gh release list \
+              --repo "$GITHUB_REPOSITORY" \
+              --limit 100 \
+              --json tagName,name \
+              --jq '.[] | select((.tagName | test("(^|[^0-9])12\\.2([^0-9]|$)")) or (.name | test("(^|[^0-9])12\\.2([^0-9]|$)"))) | .tagName' \
+              | head -n 1
+          )"
+
+          if [ -n "$PREVIOUS_TAG" ]; then
+            TAG_NAME="$(python - "$PREVIOUS_TAG" <<'PY'
+          import re
+          import sys
+
+          previous = sys.argv[1]
+          updated, count = re.subn(r"12\.2(?!\d)", "12.3", previous, count=1)
+          print(updated if count else "12.3")
+          PY
+          )"
+          elif git show-ref --verify --quiet refs/tags/v12.2; then
+            TAG_NAME="v12.3"
+          else
+            TAG_NAME="12.3"
+          fi
+
+          if [ "$TAG_NAME" = "$PREVIOUS_TAG" ] || [ -z "$TAG_NAME" ]; then
+            echo "Der Tagname konnte nicht sicher bestimmt werden."
+            exit 1
+          fi
+
+          echo "tag_name=$TAG_NAME" >> "$GITHUB_OUTPUT"
+          echo "Verwendeter Release-Tag: $TAG_NAME"
+
+      - name: Tag sicher erstellen
+        shell: bash
+        env:
+          TAG_NAME: ${{ steps.naming.outputs.tag_name }}
+        run: |
+          set -euo pipefail
+
+          git fetch origin "refs/tags/$TAG_NAME:refs/tags/$TAG_NAME" 2>/dev/null || true
+
+          if git show-ref --verify --quiet "refs/tags/$TAG_NAME"; then
+            EXISTING_SHA="$(git rev-list -n 1 "$TAG_NAME")"
+            if [ "$EXISTING_SHA" != "$EXPECTED_RELEASE_SHA" ]; then
+              echo "Tag $TAG_NAME existiert bereits auf einem anderen Commit: $EXISTING_SHA"
+              exit 1
+            fi
+            echo "Tag $TAG_NAME existiert bereits korrekt."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git tag -a "$TAG_NAME" "$EXPECTED_RELEASE_SHA" -m "Stable Release 12.3"
+            git push origin "refs/tags/$TAG_NAME"
+          fi
+
+      - name: GitHub-Release erstellen oder aktualisieren
+        id: release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.SSV53_AUTOMATION_TOKEN }}
+          TAG_NAME: ${{ steps.naming.outputs.tag_name }}
+        run: |
+          set -euo pipefail
+
+          if gh release view "$TAG_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release edit "$TAG_NAME" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "Stable Release 12.3" \
+              --notes-file /tmp/RELEASE_NOTES_12.3.md \
+              --latest
+          else
+            gh release create "$TAG_NAME" \
+              --repo "$GITHUB_REPOSITORY" \
+              --target "$EXPECTED_RELEASE_SHA" \
+              --title "Stable Release 12.3" \
+              --notes-file /tmp/RELEASE_NOTES_12.3.md \
+              --latest
+          fi
+
+          RELEASE_URL="$(
+            gh release view "$TAG_NAME" \
+              --repo "$GITHUB_REPOSITORY" \
+              --json url \
+              --jq '.url'
+          )"
+          IS_PRERELEASE="$(
+            gh release view "$TAG_NAME" \
+              --repo "$GITHUB_REPOSITORY" \
+              --json isPrerelease \
+              --jq '.isPrerelease'
+          )"
+          IS_DRAFT="$(
+            gh release view "$TAG_NAME" \
+              --repo "$GITHUB_REPOSITORY" \
+              --json isDraft \
+              --jq '.isDraft'
+          )"
+
+          if [ "$IS_PRERELEASE" != "false" ] || [ "$IS_DRAFT" != "false" ]; then
+            echo "Der Release wurde unerwartet als Draft oder Pre-Release angelegt."
+            exit 1
+          fi
+
+          echo "release_url=$RELEASE_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Zusammenfassung schreiben
+        if: always()
+        shell: bash
+        env:
+          TAG_NAME: ${{ steps.naming.outputs.tag_name }}
+          RELEASE_URL: ${{ steps.release.outputs.release_url }}
+        run: |
+          {
+            echo "## Stable Release 12.3"
+            echo ""
+            if [ "${{ job.status }}" = "success" ]; then
+              echo "✅ Version 12.3 wurde offiziell veröffentlicht."
+              echo ""
+              echo "- Tag: \`$TAG_NAME\`"
+              echo "- Release-Commit: \`$EXPECTED_RELEASE_SHA\`"
+              echo "- GitHub-Release: $RELEASE_URL"
+              echo "- Status: neuester stabiler Release"
+            else
+              echo "❌ Die Veröffentlichung von Version 12.3 ist fehlgeschlagen."
+              echo "- Ein bestehender abweichender Tag wurde nicht überschrieben."
+              echo "- Der produktive Spielabruf wurde nicht verändert."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Einmal-Workflow aus main entfernen
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git fetch origin main
+          git checkout -B main origin/main
+
+          if [ -f "$SELF_PATH" ]; then
+            rm "$SELF_PATH"
+            git add "$SELF_PATH"
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "Einmalige Release-Veröffentlichung entfernen"
+            git push origin main
+          fi
