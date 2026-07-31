@@ -1,8 +1,18 @@
-# SSV53 – FUSSBALL.DE-Platzbelegung PoC Version 12.2
+# SSV53 – FUSSBALL.DE-Platzbelegung PoC Version 12.3
 
-Version 12.2 basiert auf Version 12 und löst die feste Mannschaftsliste aus Version 11 ab. Der Abruf erfolgt jetzt über den vereinsweiten Spielplan des Schönwalder SV 53. Dadurch werden auch Spiele von später neu hinzukommenden Vereinsmannschaften automatisch berücksichtigt, ohne dass ihre Mannschafts-ID vorher in `config.json` eingetragen werden muss.
+Version 12.3 ist der stabile Stand nach Version 12.2. Sie ergänzt den vereinsweiten, platzbasierten Abruf um einen mobilen Änderungsbericht, zusätzlichen Veröffentlichungsschutz und automatische GitHub-Issue-Benachrichtigungen. Abrufgrenzen, Terminauflösung, Platzregeln und 60-Minuten-Puffer aus Version 12.2 bleiben unverändert.
 
-## Was Version 12.1 automatisch erkennt
+## Neu in Version 12.3
+
+- Neue, geänderte und entfernte Spiele erscheinen in der GitHub-Actions-Summary.
+- Unplausible Datenverluste blockieren die Veröffentlichung.
+- Branch-Testläufe veröffentlichen standardmäßig keine Daten.
+- Bei Spieländerungen, Blockierungen oder technischen Fehlern entstehen GitHub-Issues.
+- Identische Warnungen werden nicht mehrfach erstellt.
+- Technische Warnungen schließen sich nach erfolgreicher Erholung automatisch.
+- Erfolgreiche unveränderte Abrufe bleiben ohne Benachrichtigung.
+
+## Welche Spieldaten automatisch erkannt werden
 
 Aus jeder Spielzeile werden – soweit FUSSBALL.DE die Angaben bereitstellt – insbesondere gelesen:
 

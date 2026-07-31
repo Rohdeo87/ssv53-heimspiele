@@ -1,5 +1,15 @@
 # Changelog
 
+## Version 12.3
+
+- Mobiler Änderungsbericht in der GitHub-Actions-Summary.
+- Veröffentlichungsschutz bei leerem Folgefeed oder massivem Spielverlust.
+- Sichere, standardmäßig nicht veröffentlichende Branch-Testläufe.
+- GitHub-Issue-Benachrichtigungen bei Änderungen, Blockierungen und Fehlern.
+- Deduplizierung identischer Warnungen und automatische Erholung technischer Warnungen.
+- Separater Workflow für echte Testbenachrichtigungen.
+- Erweiterte Tests für Änderungsbericht und Benachrichtigungslogik.
+
 ## Version 12.2
 
 - Reine Anstoß-Konflikte bei derselben Spiel-ID werden über die offizielle Spiel-Detailseite aufgelöst.
