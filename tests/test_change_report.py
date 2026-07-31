@@ -1,4 +1,5 @@
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -93,6 +94,7 @@ class ChangeReportTests(unittest.TestCase):
             after.write_text(json.dumps({"matches": [match("dfb:1"), match("dfb:2")]}), encoding="utf-8")
 
             old_argv = report_changes.os.sys.argv
+            old_summary = os.environ.pop("GITHUB_STEP_SUMMARY", None)
             report_changes.os.sys.argv = [
                 "report_changes.py",
                 "--before", str(before),
@@ -105,6 +107,8 @@ class ChangeReportTests(unittest.TestCase):
                 result = report_changes.main()
             finally:
                 report_changes.os.sys.argv = old_argv
+                if old_summary is not None:
+                    os.environ["GITHUB_STEP_SUMMARY"] = old_summary
 
             self.assertEqual(result, 0)
             payload = json.loads(output_json.read_text(encoding="utf-8"))
