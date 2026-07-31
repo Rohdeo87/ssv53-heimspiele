@@ -2,6 +2,22 @@ name: SSV53 Heimspiele aktualisieren
 
 on:
   workflow_dispatch:
+    inputs:
+      skip_start_delay:
+        description: "Zufällige Startwartezeit bei diesem manuellen Lauf überspringen"
+        required: false
+        type: boolean
+        default: true
+      allow_destructive_change:
+        description: "Massiven Spielverlust nach eigener Prüfung ausnahmsweise freigeben"
+        required: false
+        type: boolean
+        default: false
+      persist_test_results:
+        description: "Ergebnisse auch speichern, wenn der Lauf nicht auf main gestartet wurde"
+        required: false
+        type: boolean
+        default: false
   schedule:
     # GitHub-Cron läuft in UTC. Diese vier Startpunkte liegen sowohl bei
     # Winter- als auch Sommerzeit sicher zwischen 06:00 und 22:00 Uhr Berlin.
@@ -40,12 +56,18 @@ jobs:
         shell: bash
         run: python schedule_guard.py prepare --config config.json
 
-      - name: Startzeit zufällig verschieben
+      - name: Startzeit gegebenenfalls zufällig verschieben
         if: steps.timing.outputs.should_run == 'true'
         shell: bash
+        env:
+          SKIP_START_DELAY: ${{ github.event_name == 'workflow_dispatch' && inputs.skip_start_delay }}
         run: |
-          echo "Der Abruf startet nach ${{ steps.timing.outputs.delay_seconds }} Sekunden."
-          sleep "${{ steps.timing.outputs.delay_seconds }}"
+          if [ "$SKIP_START_DELAY" = "true" ]; then
+            echo "Manueller Testlauf: zufällige Startwartezeit wird übersprungen."
+          else
+            echo "Der Abruf startet nach ${{ steps.timing.outputs.delay_seconds }} Sekunden."
+            sleep "${{ steps.timing.outputs.delay_seconds }}"
+          fi
 
       - name: Abruffenster nach Wartezeit erneut prüfen
         id: timing_confirm
@@ -60,6 +82,17 @@ jobs:
       - name: Tests ausführen
         if: steps.timing_confirm.outputs.should_run == 'true'
         run: python -m unittest discover -s tests -v
+
+      - name: Letzten veröffentlichten Stand sichern
+        if: steps.timing_confirm.outputs.should_run == 'true'
+        shell: bash
+        run: |
+          mkdir -p .run-state
+          if [ -f public/matches.json ]; then
+            cp public/matches.json .run-state/previous-matches.json
+          else
+            echo '{"matches": []}' > .run-state/previous-matches.json
+          fi
 
       - name: Heimspiele zurückhaltend abrufen
         id: scrape
@@ -78,6 +111,40 @@ jobs:
         if: steps.scrape.outcome == 'success'
         run: python create_feed.py --input generated --output public
 
+      - name: Änderungen auswerten und Sicherheitsgrenze prüfen
+        id: changes
+        if: steps.feed.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        env:
+          ALLOW_DESTRUCTIVE_CHANGE: ${{ github.event_name == 'workflow_dispatch' && inputs.allow_destructive_change }}
+        run: |
+          ARGS=(
+            --before .run-state/previous-matches.json
+            --after public/matches.json
+            --json generated/change_report.json
+            --markdown generated/change_report.md
+            --public-json public/change_report.json
+          )
+          if [ "$ALLOW_DESTRUCTIVE_CHANGE" = "true" ]; then
+            ARGS+=(--allow-destructive)
+          fi
+          python report_changes.py "${ARGS[@]}"
+
+      - name: Testlauf in der Zusammenfassung kennzeichnen
+        if: ${{ always() && steps.timing_confirm.outputs.should_run == 'true' && github.ref_name != github.event.repository.default_branch }}
+        shell: bash
+        run: |
+          {
+            echo ""
+            echo "> Dieser Lauf wurde auf Branch \`${GITHUB_REF_NAME}\` ausgeführt."
+            if [ "${{ inputs.persist_test_results }}" = "true" ]; then
+              echo "> Die erzeugten Daten werden auf diesem Test-Branch gespeichert."
+            else
+              echo "> Reiner Testlauf: Es werden keine erzeugten Daten committed oder veröffentlicht."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Diagnoseergebnis bereitstellen
         if: ${{ always() && steps.timing_confirm.outputs.should_run == 'true' }}
         uses: actions/upload-artifact@v4
@@ -88,17 +155,18 @@ jobs:
           retention-days: 7
 
       - name: Daten und Schutzstatus konfliktfrei speichern
-        if: ${{ always() && steps.timing_confirm.outputs.should_run == 'true' }}
+        if: ${{ always() && steps.timing_confirm.outputs.should_run == 'true' && (github.ref_name == github.event.repository.default_branch || inputs.persist_test_results == true) }}
         shell: bash
         run: |
           set -euo pipefail
+          TARGET_BRANCH="$GITHUB_REF_NAME"
           TEMP_DIR="$(mktemp -d)"
           mkdir -p "$TEMP_DIR/state"
           cp state/request_state.json "$TEMP_DIR/state/request_state.json"
 
           SAVE_PUBLIC=false
           SAVE_REGISTRY=false
-          if [ "${{ steps.feed.outcome }}" = "success" ]; then
+          if [ "${{ steps.feed.outcome }}" = "success" ] && [ "${{ steps.changes.outcome }}" = "success" ]; then
             cp -a public "$TEMP_DIR/public"
             SAVE_PUBLIC=true
           fi
@@ -107,11 +175,11 @@ jobs:
             SAVE_REGISTRY=true
           fi
 
-          # Während des zufällig verzögerten Laufs kann der Nutzer neuen Code
-          # pushen. Deshalb zuerst auf den neuesten main-Stand wechseln und
-          # anschließend ausschließlich die erzeugten Daten zurückkopieren.
-          git fetch origin main
-          git reset --hard origin/main
+          # Während des Laufs kann neuer Code auf denselben Branch gelangen.
+          # Deshalb zuerst auf den neuesten Branch-Stand wechseln und danach
+          # ausschließlich die erzeugten Daten zurückkopieren.
+          git fetch origin "$TARGET_BRANCH"
+          git reset --hard "origin/$TARGET_BRANCH"
 
           mkdir -p state
           cp "$TEMP_DIR/state/request_state.json" state/request_state.json
@@ -133,8 +201,8 @@ jobs:
           if git diff --cached --quiet; then
             echo "Keine Änderungen vorhanden."
           else
-            git commit -m "Platzspiele und Abrufschutz aktualisiert"
-            git push origin HEAD:main
+            git commit -m "Platzspiele, Änderungsbericht und Abrufschutz aktualisiert"
+            git push origin "HEAD:$TARGET_BRANCH"
           fi
 
       - name: Laufstatus abschließend prüfen
@@ -150,10 +218,14 @@ jobs:
             exit 0
           fi
           if [ "${{ steps.scrape.outcome }}" != "success" ]; then
-            echo "Der Abruf ist fehlgeschlagen. Der letzte veröffentlichte Feed bleibt unverändert."
+            echo "Der Abruf ist fehlgeschlagen. Der letzte veröffentlichte Feed bleibt unverändert." | tee -a "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
           if [ "${{ steps.feed.outcome }}" != "success" ]; then
-            echo "Der Feed konnte nicht sicher veröffentlicht werden."
+            echo "Der Feed konnte nicht sicher erstellt werden. Der letzte veröffentlichte Feed bleibt unverändert." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          if [ "${{ steps.changes.outcome }}" != "success" ]; then
+            echo "Die Änderungskontrolle hat die Veröffentlichung blockiert. Der letzte veröffentlichte Feed bleibt unverändert." | tee -a "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
