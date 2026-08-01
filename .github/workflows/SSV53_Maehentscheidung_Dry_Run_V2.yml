@@ -1,0 +1,697 @@
+name: SSV53 Mähentscheidung Dry Run V2
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "7,22,37,52 * * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ssv53-maehentscheidung-dry-run
+  cancel-in-progress: true
+
+jobs:
+  decide:
+    name: Aktuelle Mähentscheidung ausschließlich berechnen
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+
+    steps:
+      - name: Repository laden
+        uses: actions/checkout@v4
+
+      - name: Python einrichten
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Aktuelle Mähentscheidung berechnen
+        shell: bash
+        env:
+          HUSQVARNA_CLIENT_ID: ${{ secrets.HUSQVARNA_CLIENT_ID }}
+          HUSQVARNA_CLIENT_SECRET: ${{ secrets.HUSQVARNA_CLIENT_SECRET }}
+          HYDRAWISE_API_KEY: ${{ secrets.HYDRAWISE_API_KEY }}
+          HYDRAWISE_CONTROLLER_ID: ${{ secrets.HYDRAWISE_CONTROLLER_ID }}
+        run: |
+          set -euo pipefail
+          mkdir -p generated/mower-decision
+
+          python - <<'PY'
+          from __future__ import annotations
+
+          import json
+          import os
+          from dataclasses import asdict, dataclass
+          from datetime import date, datetime, timedelta, timezone
+          from pathlib import Path
+          from typing import Any
+          from urllib.error import HTTPError, URLError
+          from urllib.parse import urlencode
+          from urllib.request import Request, urlopen
+          from zoneinfo import ZoneInfo
+
+          from mower.hydrawise import HydrawiseError, fetch_status
+          from mower.planner import create_plan, load_json, read_match_blocks
+
+          AUTH_URL = "https://api.authentication.husqvarnagroup.dev/v1/oauth2/token"
+          MOWERS_URL = "https://api.amc.husqvarna.dev/v1/mowers/"
+          TZ = ZoneInfo("Europe/Berlin")
+          OUTPUT = Path("generated/mower-decision/decision.json")
+          SUMMARY = os.environ.get("GITHUB_STEP_SUMMARY", "")
+
+          MOWING_ACTIVITIES = {"MOWING", "LEAVING"}
+          SAFE_PARK_ACTIVITIES = {"PARKED_IN_CS", "CHARGING", "GOING_HOME"}
+          MANUAL_ACTIVITIES = {"STOPPED_IN_GARDEN", "NOT_APPLICABLE"}
+          MANUAL_STATES = {"PAUSED", "STOPPED", "OFF", "NOT_APPLICABLE"}
+          ERROR_STATES = {
+              "ERROR",
+              "FATAL_ERROR",
+              "ERROR_AT_POWER_UP",
+              "WAIT_UPDATING",
+              "WAIT_POWER_UP",
+          }
+          NO_OVERRIDE = {"", "NOT_ACTIVE", "NONE", "null", "None"}
+
+          @dataclass(frozen=True)
+          class Decision:
+              code: str
+              title: str
+              reason: str
+              hypothetical_command: str | None = None
+              hypothetical_duration_minutes: int | None = None
+
+          def as_dict(value: Any) -> dict[str, Any]:
+              return value if isinstance(value, dict) else {}
+
+          def request_json(request: Request, label: str) -> dict[str, Any]:
+              try:
+                  with urlopen(request, timeout=30) as response:  # noqa: S310
+                      payload = response.read().decode("utf-8")
+              except HTTPError as exc:
+                  body = exc.read().decode("utf-8", errors="replace")
+                  raise SystemExit(
+                      f"{label} fehlgeschlagen: HTTP {exc.code}. "
+                      f"Antwort: {body[:500]}"
+                  ) from exc
+              except URLError as exc:
+                  raise SystemExit(f"{label} fehlgeschlagen: {exc.reason}") from exc
+
+              try:
+                  parsed = json.loads(payload)
+              except json.JSONDecodeError as exc:
+                  raise SystemExit(
+                      f"{label} lieferte keine gültige JSON-Antwort."
+                  ) from exc
+              if not isinstance(parsed, dict):
+                  raise SystemExit(
+                      f"{label} lieferte ein unerwartetes Datenformat."
+                  )
+              return parsed
+
+          def fetch_mowers(client_id: str, client_secret: str) -> list[dict[str, Any]]:
+              token_body = urlencode(
+                  {
+                      "grant_type": "client_credentials",
+                      "client_id": client_id,
+                      "client_secret": client_secret,
+                  }
+              ).encode("utf-8")
+              token_request = Request(
+                  AUTH_URL,
+                  data=token_body,
+                  method="POST",
+                  headers={
+                      "Accept": "application/json",
+                      "Content-Type": "application/x-www-form-urlencoded",
+                      "User-Agent": "SSV53-Maehentscheidung/1.0",
+                  },
+              )
+              token_data = request_json(token_request, "Husqvarna-Anmeldung")
+              token = str(token_data.get("access_token", "")).strip()
+              if not token:
+                  raise SystemExit("Husqvarna lieferte kein Zugriffstoken.")
+
+              mower_request = Request(
+                  MOWERS_URL,
+                  method="GET",
+                  headers={
+                      "Accept": "application/vnd.api+json",
+                      "Authorization": f"Bearer {token}",
+                      "Authorization-Provider": "husqvarna",
+                      "Content-Type": "application/vnd.api+json",
+                      "X-Api-Key": client_id,
+                      "User-Agent": "SSV53-Maehentscheidung/1.0",
+                  },
+              )
+              mower_data = request_json(mower_request, "Husqvarna-Mäherabruf")
+              items = mower_data.get("data", [])
+              if not isinstance(items, list):
+                  raise SystemExit("Husqvarna lieferte keine gültige Mäherliste.")
+              return [item for item in items if isinstance(item, dict)]
+
+          def select_mower(items: list[dict[str, Any]]) -> dict[str, Any]:
+              if len(items) == 1:
+                  return items[0]
+              matches: list[dict[str, Any]] = []
+              for item in items:
+                  system = as_dict(as_dict(item.get("attributes")).get("system"))
+                  name = str(system.get("name", "")).casefold()
+                  model = str(system.get("model", "")).casefold()
+                  if name == "schaf" or "580 epos" in model:
+                      matches.append(item)
+              if len(matches) == 1:
+                  return matches[0]
+              raise SystemExit(
+                  "Der Mäher konnte nicht eindeutig ausgewählt werden. "
+                  f"Gefundene Mäher: {len(items)}, passende Mäher: {len(matches)}."
+              )
+
+          def local_wall_clock_from_husqvarna_ms(value: Any) -> str | None:
+              """Husqvarna liefert nextStartTimestamp als Epoch-Millisekunden lokaler Uhrzeit."""
+              try:
+                  milliseconds = int(value)
+              except (TypeError, ValueError):
+                  return None
+              if milliseconds <= 0:
+                  return None
+              wall_clock = datetime.fromtimestamp(
+                  milliseconds / 1000,
+                  tz=timezone.utc,
+              ).replace(tzinfo=TZ)
+              return wall_clock.isoformat()
+
+          def current_context(day_plans: list[Any], now: datetime) -> tuple[Any | None, Any | None]:
+              active_block = next(
+                  (
+                      block
+                      for plan in day_plans
+                      for block in plan.blocked
+                      if block.start <= now < block.end
+                  ),
+                  None,
+              )
+              active_window = next(
+                  (
+                      window
+                      for plan in day_plans
+                      for window in plan.mowing_windows
+                      if window.start <= now < window.end
+                  ),
+                  None,
+              )
+              if active_window is None:
+                  return active_block, None
+
+              # Tagespläne enden technisch um 00:00 Uhr. Direkt angrenzende
+              # freie Fenster des Folgetags gehören fachlich zum selben
+              # ununterbrochenen Mähfenster und werden deshalb verbunden.
+              extended_end = active_window.end
+              all_windows = sorted(
+                  (
+                      window
+                      for plan in day_plans
+                      for window in plan.mowing_windows
+                  ),
+                  key=lambda window: (window.start, window.end),
+              )
+              while True:
+                  adjacent = next(
+                      (
+                          window
+                          for window in all_windows
+                          if window.start == extended_end
+                      ),
+                      None,
+                  )
+                  if adjacent is None:
+                      break
+                  extended_end = adjacent.end
+
+              if extended_end != active_window.end:
+                  active_window = type(active_window)(
+                      start=active_window.start,
+                      end=extended_end,
+                  )
+              return active_block, active_window
+
+          def next_block_after(day_plans: list[Any], now: datetime) -> Any | None:
+              candidates = [
+                  block
+                  for plan in day_plans
+                  for block in plan.blocked
+                  if block.start > now
+              ]
+              return min(candidates, key=lambda block: block.start, default=None)
+
+          def classify_decision(
+              *,
+              now: datetime,
+              active_block: Any | None,
+              active_window: Any | None,
+              next_block: Any | None,
+              activity: str,
+              state: str,
+              error_code: int,
+              override_action: str,
+              battery: int,
+              minimum_remaining_minutes: int,
+          ) -> Decision:
+              manual_lock = (
+                  activity in MANUAL_ACTIVITIES
+                  or state in MANUAL_STATES
+              )
+              error_or_maintenance = error_code != 0 or state in ERROR_STATES
+              override_active = override_action not in NO_OVERRIDE
+
+              if error_or_maintenance:
+                  return Decision(
+                      code="MANUAL_ATTENTION",
+                      title="Manuelle Prüfung erforderlich",
+                      reason=(
+                          f"Zustand {state}, Aktivität {activity}, "
+                          f"Fehlercode {error_code}. Automatischer Start wäre verboten."
+                      ),
+                  )
+
+              if active_block is not None:
+                  if manual_lock:
+                      return Decision(
+                          code="MANUAL_STOP_DURING_BLOCK",
+                          title="Manuellen Stopp respektieren und Standort prüfen",
+                          reason=(
+                              f"Der Platz ist wegen „{active_block.title}“ gesperrt. "
+                              "Der Mäher meldet einen Zustand, der einen manuellen "
+                              "Eingriff erfordert. Kein automatischer Neustart."
+                          ),
+                      )
+                  if activity in SAFE_PARK_ACTIVITIES:
+                      return Decision(
+                          code="ALREADY_SAFE",
+                          title="Keine Aktion erforderlich",
+                          reason=(
+                              f"Der Platz ist wegen „{active_block.title}“ gesperrt "
+                              f"und der Mäher ist bereits sicher ({activity})."
+                          ),
+                      )
+                  return Decision(
+                      code="WOULD_PARK",
+                      title="Mäher müsste geparkt werden",
+                      reason=(
+                          f"Der Platz ist bis {active_block.end.strftime('%H:%M')} "
+                          f"wegen „{active_block.title}“ gesperrt; "
+                          f"aktuelle Aktivität: {activity}."
+                      ),
+                      hypothetical_command="PARK_UNTIL_FURTHER_NOTICE",
+                  )
+
+              if manual_lock:
+                  return Decision(
+                      code="MANUAL_LOCK",
+                      title="Manuellen Stopp respektieren",
+                      reason=(
+                          f"Der Platz ist frei, aber der Mäher meldet {state}/{activity}. "
+                          "Ein automatischer Neustart wäre ausdrücklich verboten."
+                      ),
+                  )
+
+              if override_active:
+                  return Decision(
+                      code="EXTERNAL_OVERRIDE",
+                      title="Vorhandene Übersteuerung nicht automatisch aufheben",
+                      reason=(
+                          f"Planner-Override „{override_action}“ ist aktiv. "
+                          "Im Dry Run wird er als manuelle oder externe Bedienung behandelt."
+                      ),
+                  )
+
+              if active_window is None:
+                  return Decision(
+                      code="NO_VALID_WINDOW",
+                      title="Nicht starten",
+                      reason=(
+                          "Aktuell liegt kein freies Mähfenster von mindestens "
+                          "der konfigurierten Mindestdauer vor."
+                      ),
+                  )
+
+              remaining = int((active_window.end - now).total_seconds() // 60)
+              if remaining < minimum_remaining_minutes:
+                  return Decision(
+                      code="WINDOW_TOO_SHORT",
+                      title="Nicht mehr neu starten",
+                      reason=(
+                          f"Bis zum Ende des freien Fensters verbleiben nur "
+                          f"{remaining} Minuten."
+                      ),
+                  )
+
+              if activity in MOWING_ACTIVITIES:
+                  return Decision(
+                      code="ALREADY_MOWING",
+                      title="Keine Aktion erforderlich",
+                      reason=(
+                          f"Der Mäher nutzt das freie Fenster bereits ({activity}); "
+                          f"noch rund {remaining} Minuten verfügbar."
+                      ),
+                  )
+
+              if activity == "GOING_HOME":
+                  return Decision(
+                      code="LET_RETURN_HOME",
+                      title="Rückfahrt nicht unterbrechen",
+                      reason=(
+                          "Der Mäher fährt bereits zur Station. "
+                          "Die Automatik würde diesen Vorgang nicht umkehren."
+                      ),
+                  )
+
+              if battery < 90:
+                  return Decision(
+                      code="LET_CHARGE",
+                      title="Zunächst weiter laden",
+                      reason=(
+                          f"Der Platz ist frei, der Akku liegt aber erst bei {battery} %. "
+                          "Kein Start während des Ladebedarfs."
+                      ),
+                  )
+
+              safe_duration = max(0, remaining - 5)
+              if safe_duration < minimum_remaining_minutes:
+                  return Decision(
+                      code="WINDOW_TOO_SHORT_AFTER_MARGIN",
+                      title="Nicht mehr neu starten",
+                      reason=(
+                          "Nach dem technischen Fünf-Minuten-Puffer bleibt kein "
+                          "ausreichendes Mähfenster."
+                      ),
+                  )
+
+              return Decision(
+                  code="WOULD_START_WORK_AREA",
+                  title="Mäher könnte im Arbeitsbereich gestartet werden",
+                  reason=(
+                      f"Der Platz ist frei, der Akku liegt bei {battery} %, "
+                      f"und bis zum nächsten Sperrfenster verbleiben rund {remaining} Minuten."
+                  ),
+                  hypothetical_command="START_IN_WORK_AREA",
+                  hypothetical_duration_minutes=safe_duration,
+              )
+
+          client_id = os.environ.get("HUSQVARNA_CLIENT_ID", "").strip()
+          client_secret = os.environ.get("HUSQVARNA_CLIENT_SECRET", "").strip()
+          if not client_id or not client_secret:
+              raise SystemExit(
+                  "HUSQVARNA_CLIENT_ID oder HUSQVARNA_CLIENT_SECRET fehlt."
+              )
+
+          config = load_json("mower/config.json")
+          now = datetime.now(TZ)
+          planning = as_dict(config.get("planning"))
+          minimum_remaining = int(
+              planning.get("minimum_mowing_window_minutes", 30)
+          )
+
+          hydrawise_status: dict[str, Any] | None = None
+          hydrawise_label = "nicht verbunden"
+          hydrawise_error: str | None = None
+          hydrawise_key = os.environ.get("HYDRAWISE_API_KEY", "").strip()
+          if hydrawise_key:
+              try:
+                  hydrawise_status = fetch_status(
+                      hydrawise_key,
+                      os.environ.get("HYDRAWISE_CONTROLLER_ID", "").strip() or None,
+                  )
+                  hydrawise_label = (
+                      f"live ({len(hydrawise_status.get('relays', []))} Zonen)"
+                  )
+              except HydrawiseError as exc:
+                  hydrawise_label = "Abruf fehlgeschlagen"
+                  hydrawise_error = str(exc)
+
+          match_blocks = read_match_blocks("public/rasen.ics", TZ)
+          plans, merged = create_plan(
+              config,
+              match_blocks,
+              hydrawise_status,
+              now.date(),
+              2,
+          )
+          active_block, active_window = current_context(plans, now)
+          next_block = next_block_after(plans, now)
+
+          mower_item = select_mower(fetch_mowers(client_id, client_secret))
+          attributes = as_dict(mower_item.get("attributes"))
+          system = as_dict(attributes.get("system"))
+          battery_data = as_dict(attributes.get("battery"))
+          mower_data = as_dict(attributes.get("mower"))
+          planner_data = as_dict(attributes.get("planner"))
+          override_data = as_dict(planner_data.get("override"))
+
+          activity = str(mower_data.get("activity") or "UNKNOWN")
+          state = str(mower_data.get("state") or "UNKNOWN")
+          mode = str(mower_data.get("mode") or "UNKNOWN")
+          error_code = int(mower_data.get("errorCode") or 0)
+          battery = int(battery_data.get("batteryPercent") or 0)
+          override_action = str(override_data.get("action") or "NOT_ACTIVE")
+          restricted_reason = str(
+              planner_data.get("restrictedReason") or "NONE"
+          )
+
+          work_areas_raw = attributes.get("workAreas")
+          work_areas: list[dict[str, Any]] = []
+          if isinstance(work_areas_raw, list):
+              for area in work_areas_raw:
+                  if not isinstance(area, dict):
+                      continue
+                  area_attributes = as_dict(area.get("attributes"))
+                  source = area_attributes or area
+                  work_areas.append(
+                      {
+                          "id": area.get("id", source.get("workAreaId")),
+                          "name": source.get("name"),
+                          "enabled": source.get(
+                              "enable",
+                              source.get("enabled"),
+                          ),
+                      }
+                  )
+          elif isinstance(work_areas_raw, dict):
+              candidates = work_areas_raw.get("workAreas", [])
+              if isinstance(candidates, list):
+                  for area in candidates:
+                      if not isinstance(area, dict):
+                          continue
+                      source = as_dict(area.get("attributes")) or area
+                      work_areas.append(
+                          {
+                              "id": area.get("id", source.get("workAreaId")),
+                              "name": source.get("name"),
+                              "enabled": source.get(
+                                  "enable",
+                                  source.get("enabled"),
+                              ),
+                          }
+                      )
+
+          target_area = next(
+              (
+                  area
+                  for area in work_areas
+                  if str(area.get("name", "")).casefold() == "rasenfläche"
+              ),
+              work_areas[0] if len(work_areas) == 1 else None,
+          )
+
+          decision = classify_decision(
+              now=now,
+              active_block=active_block,
+              active_window=active_window,
+              next_block=next_block,
+              activity=activity,
+              state=state,
+              error_code=error_code,
+              override_action=override_action,
+              battery=battery,
+              minimum_remaining_minutes=minimum_remaining,
+          )
+
+          result = {
+              "generated_at": now.isoformat(),
+              "mode": "decision_dry_run",
+              "commands_sent": [],
+              "decision": asdict(decision),
+              "current_plan": {
+                  "blocked_now": (
+                      {
+                          "start": active_block.start.isoformat(),
+                          "end": active_block.end.isoformat(),
+                          "title": active_block.title,
+                          "source": active_block.source,
+                      }
+                      if active_block
+                      else None
+                  ),
+                  "mowing_window_now": (
+                      {
+                          "start": active_window.start.isoformat(),
+                          "end": active_window.end.isoformat(),
+                          "remaining_minutes": int(
+                              (active_window.end - now).total_seconds() // 60
+                          ),
+                      }
+                      if active_window
+                      else None
+                  ),
+                  "next_block": (
+                      {
+                          "start": next_block.start.isoformat(),
+                          "end": next_block.end.isoformat(),
+                          "title": next_block.title,
+                          "source": next_block.source,
+                      }
+                      if next_block
+                      else None
+                  ),
+              },
+              "hydrawise": {
+                  "status": hydrawise_label,
+                  "error": hydrawise_error,
+              },
+              "mower": {
+                  "name": system.get("name"),
+                  "model": system.get("model"),
+                  "battery_percent": battery,
+                  "activity": activity,
+                  "state": state,
+                  "mode": mode,
+                  "error_code": error_code,
+                  "override_action": override_action,
+                  "restricted_reason": restricted_reason,
+                  "next_start_local_wall_clock": (
+                      local_wall_clock_from_husqvarna_ms(
+                          planner_data.get("nextStartTimestamp")
+                      )
+                  ),
+                  "target_work_area": target_area,
+              },
+          }
+          OUTPUT.write_text(
+              json.dumps(result, ensure_ascii=False, indent=2) + "\n",
+              encoding="utf-8",
+          )
+
+          icon = {
+              "WOULD_START_WORK_AREA": "🟢",
+              "ALREADY_MOWING": "🟢",
+              "ALREADY_SAFE": "✅",
+              "WOULD_PARK": "🟠",
+              "MANUAL_LOCK": "🛑",
+              "MANUAL_STOP_DURING_BLOCK": "🛑",
+              "MANUAL_ATTENTION": "🚨",
+              "EXTERNAL_OVERRIDE": "✋",
+          }.get(decision.code, "ℹ️")
+
+          lines = [
+              "# Aktuelle Mähentscheidung – Dry Run V2",
+              "",
+              "Logikversion: **V2 – freie Fenster werden über Mitternacht verbunden**  ",
+              f"Zeitpunkt: **{now.strftime('%d.%m.%Y %H:%M:%S')} Uhr**  ",
+              f"Hydrawise: **{hydrawise_label}**  ",
+              "Gesendete Mäherbefehle: **keine**",
+              "",
+              f"## {icon} {decision.title}",
+              "",
+              decision.reason,
+              "",
+              f"- Entscheidungscode: `{decision.code}`",
+              f"- Hypothetischer Befehl: `{decision.hypothetical_command or 'KEINER'}`",
+          ]
+          if decision.hypothetical_duration_minutes is not None:
+              lines.append(
+                  "- Hypothetische Dauer: "
+                  f"**{decision.hypothetical_duration_minutes} Minuten**"
+              )
+          if target_area:
+              lines.append(
+                  f"- Ziel-Arbeitsbereich: **{target_area.get('name')}** "
+                  f"(ID `{target_area.get('id')}`)"
+              )
+
+          lines.extend(
+              [
+                  "",
+                  "## Aktueller Mäherstatus",
+                  "",
+                  f"- Name: **{system.get('name')}**",
+                  f"- Modell: **{system.get('model')}**",
+                  f"- Akku: **{battery} %**",
+                  f"- Aktivität: **{activity}**",
+                  f"- Zustand: **{state}**",
+                  f"- Modus: **{mode}**",
+                  f"- Fehlercode: **{error_code}**",
+                  f"- Planner-Override: **{override_action}**",
+                  f"- Einschränkungsgrund: **{restricted_reason}**",
+                  (
+                      "- Nächster Husqvarna-Start (lokale Mäherzeit): "
+                      f"**{result['mower']['next_start_local_wall_clock']}**"
+                  ),
+                  "",
+                  "## Aktueller Belegungsstatus",
+                  "",
+              ]
+          )
+
+          if active_block:
+              lines.append(
+                  f"- Gesperrt bis **{active_block.end.strftime('%H:%M')} Uhr**: "
+                  f"{active_block.title}"
+              )
+          elif active_window:
+              remaining = int(
+                  (active_window.end - now).total_seconds() // 60
+              )
+              lines.append(
+                  f"- Frei bis **{active_window.end.strftime('%H:%M')} Uhr** "
+                  f"(noch ca. {remaining} Minuten)"
+              )
+          else:
+              lines.append("- Aktuell kein gültiges Mähfenster")
+
+          if next_block:
+              lines.append(
+                  f"- Nächste Sperre: **{next_block.start.strftime('%d.%m. %H:%M')}–"
+                  f"{next_block.end.strftime('%H:%M')} Uhr** – {next_block.title}"
+              )
+
+          lines.extend(
+              [
+                  "",
+                  "## Sicherheitsregeln dieses Dry Runs",
+                  "",
+                  "- `PAUSED`, `STOPPED`, `OFF`, `STOPPED_IN_GARDEN` und "
+                  "`NOT_APPLICABLE` werden als manueller Eingriff behandelt.",
+                  "- Ein manueller Stopp führt niemals zu einer automatischen "
+                  "Startempfehlung.",
+                  "- Ein vorhandener Planner-Override wird nicht automatisch aufgehoben.",
+                  "- Fehler- und Wartungszustände sperren jeden automatischen Start.",
+                  "- Diese Version besitzt keine Mäher-Schreibaufrufe.",
+                  "",
+              ]
+          )
+
+          markdown = "\n".join(lines)
+          print(markdown)
+          if SUMMARY:
+              with Path(SUMMARY).open("a", encoding="utf-8") as handle:
+                  handle.write(markdown + "\n")
+          PY
+
+      - name: Bereinigtes Entscheidungsergebnis bereitstellen
+        uses: actions/upload-artifact@v4
+        with:
+          name: maehentscheidung-dry-run-${{ github.run_number }}
+          path: generated/mower-decision/decision.json
+          if-no-files-found: error
+          retention-days: 7
