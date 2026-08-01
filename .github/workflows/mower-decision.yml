@@ -9,7 +9,7 @@ on:
         type: boolean
         default: false
   schedule:
-    - cron: "7,22,37,52 * * * *"
+    - cron: "*/5 * * * *"
 
 permissions:
   contents: read
@@ -26,10 +26,10 @@ jobs:
 
     steps:
       - name: Repository laden
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Python einrichten
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -86,6 +86,7 @@ jobs:
               "WAIT_POWER_UP",
           }
           NO_OVERRIDE = {"", "NOT_ACTIVE", "NONE", "null", "None"}
+          PARK_LOOKAHEAD_MINUTES = 15
 
           @dataclass(frozen=True)
           class Decision:
@@ -308,6 +309,7 @@ jobs:
               *,
               now: datetime,
               active_block: Any | None,
+              parking_block: Any | None,
               active_window: Any | None,
               next_block: Any | None,
               activity: str,
@@ -334,15 +336,38 @@ jobs:
                       ),
                   )
 
-              if active_block is not None:
+              if parking_block is not None:
+                  block_is_active = active_block is not None
+                  if block_is_active:
+                      block_context = (
+                          f"Der Platz ist wegen „{parking_block.title}“ gesperrt."
+                      )
+                  else:
+                      minutes_until_block = max(
+                          0,
+                          int(
+                              (parking_block.start - now).total_seconds()
+                              // 60
+                          ),
+                      )
+                      block_context = (
+                          f"Die Sperre „{parking_block.title}“ beginnt um "
+                          f"{parking_block.start.strftime('%H:%M')} Uhr "
+                          f"(in rund {minutes_until_block} Minuten)."
+                      )
+
                   if manual_lock:
                       return Decision(
-                          code="MANUAL_STOP_DURING_BLOCK",
+                          code=(
+                              "MANUAL_STOP_DURING_BLOCK"
+                              if block_is_active
+                              else "MANUAL_LOCK_BEFORE_BLOCK"
+                          ),
                           title="Manuellen Stopp respektieren und Standort prüfen",
                           reason=(
-                              f"Der Platz ist wegen „{active_block.title}“ gesperrt. "
-                              "Der Mäher meldet einen Zustand, der einen manuellen "
-                              "Eingriff erfordert. Kein automatischer Neustart."
+                              f"{block_context} Der Mäher meldet einen Zustand, "
+                              "der einen manuellen Eingriff erfordert. "
+                              "Kein automatischer Neustart."
                           ),
                       )
                   if activity in SAFE_PARK_ACTIVITIES:
@@ -350,8 +375,8 @@ jobs:
                           code="ALREADY_SAFE",
                           title="Keine Aktion erforderlich",
                           reason=(
-                              f"Der Platz ist wegen „{active_block.title}“ gesperrt "
-                              f"und der Mäher ist bereits sicher ({activity})."
+                              f"{block_context} Der Mäher ist bereits sicher "
+                              f"({activity})."
                           ),
                       )
                   if override_action in PARK_OVERRIDE_ACTIONS:
@@ -359,8 +384,8 @@ jobs:
                           code="ALREADY_PARK_REQUESTED",
                           title="Parkbefehl ist bereits aktiv",
                           reason=(
-                              f"Der Platz ist wegen „{active_block.title}“ gesperrt "
-                              f"und der Planner-Override lautet {override_action}."
+                              f"{block_context} Der Planner-Override lautet "
+                              f"{override_action}."
                           ),
                       )
                   if activity not in PARKABLE_ACTIVITIES:
@@ -368,18 +393,16 @@ jobs:
                           code="PARK_STATE_UNCLEAR",
                           title="Status unklar – kein automatischer Befehl",
                           reason=(
-                              f"Der Platz ist wegen „{active_block.title}“ gesperrt, "
-                              f"aber die Aktivität {activity} ist nicht eindeutig "
-                              "als laufender Mähbetrieb klassifiziert."
+                              f"{block_context} Die Aktivität {activity} ist "
+                              "nicht eindeutig als laufender Mähbetrieb "
+                              "klassifiziert."
                           ),
                       )
                   return Decision(
                       code="WOULD_PARK",
                       title="Mäher muss sicher geparkt werden",
                       reason=(
-                          f"Der Platz ist bis {active_block.end.strftime('%H:%M')} "
-                          f"wegen „{active_block.title}“ gesperrt; "
-                          f"aktuelle Aktivität: {activity}."
+                          f"{block_context} Aktuelle Aktivität: {activity}."
                       ),
                       hypothetical_command="PARK_UNTIL_FURTHER_NOTICE",
                   )
@@ -583,9 +606,21 @@ jobs:
               work_areas[0] if len(work_areas) == 1 else None,
           )
 
+          parking_block = active_block
+          if parking_block is None and next_block is not None:
+              minutes_until_next_block = (
+                  next_block.start - now
+              ).total_seconds() / 60
+              if (
+                  0 <= minutes_until_next_block
+                  <= PARK_LOOKAHEAD_MINUTES
+              ):
+                  parking_block = next_block
+
           decision = classify_decision(
               now=now,
               active_block=active_block,
+              parking_block=parking_block,
               active_window=active_window,
               next_block=next_block,
               activity=activity,
@@ -622,7 +657,8 @@ jobs:
                       code="PARK_SENT",
                       title="Parkbefehl erfolgreich gesendet",
                       reason=(
-                          f"Der Platz ist wegen „{active_block.title}“ gesperrt. "
+                          f"Die Sperre „{parking_block.title}“ ist aktiv oder "
+                          "beginnt innerhalb des Sicherheitsvorlaufs. "
                           "Schaf wurde angewiesen, zur Ladestation zu fahren "
                           "und dort bis auf Weiteres zu bleiben."
                       ),
@@ -675,6 +711,18 @@ jobs:
                       if next_block
                       else None
                   ),
+                  "parking_block": (
+                      {
+                          "start": parking_block.start.isoformat(),
+                          "end": parking_block.end.isoformat(),
+                          "title": parking_block.title,
+                          "source": parking_block.source,
+                          "active_now": active_block is not None,
+                          "lookahead_minutes": PARK_LOOKAHEAD_MINUTES,
+                      }
+                      if parking_block
+                      else None
+                  ),
               },
               "hydrawise": {
                   "status": hydrawise_label,
@@ -713,6 +761,7 @@ jobs:
               "PARK_STATE_UNCLEAR": "⚠️",
               "MANUAL_LOCK": "🛑",
               "MANUAL_STOP_DURING_BLOCK": "🛑",
+              "MANUAL_LOCK_BEFORE_BLOCK": "🛑",
               "MANUAL_ATTENTION": "🚨",
               "EXTERNAL_OVERRIDE": "✋",
           }.get(decision.code, "ℹ️")
@@ -720,7 +769,8 @@ jobs:
           lines = [
               "# Aktuelle Mähentscheidung und sicheres Parken",
               "",
-              "Logik: **Freie Fenster werden über Mitternacht verbunden**  ",
+              "Logik: **Freie Fenster werden über Mitternacht verbunden; "
+              "Parkprüfung alle 5 Minuten mit 15 Minuten Sicherheitsvorlauf**  ",
               f"Zeitpunkt: **{now.strftime('%d.%m.%Y %H:%M:%S')} Uhr**  ",
               f"Hydrawise: **{hydrawise_label}**  ",
               (
@@ -809,7 +859,8 @@ jobs:
                   "- Fehler- und Wartungszustände sperren jeden automatischen Start.",
                   "- Automatisches Starten ist nicht implementiert.",
                   "- Der einzige mögliche Schreibbefehl ist "
-                  "`ParkUntilFurtherNotice` bei einer aktiven Sperre.",
+                  "`ParkUntilFurtherNotice` bei einer aktiven oder innerhalb "
+                  "von 15 Minuten bevorstehenden Sperre.",
                   "- Geplante Läufe senden den Parkbefehl nur, wenn die "
                   "Repository-Variable `MOWER_PARKING_ENABLED` exakt `true` ist.",
                   "- Nach einem automatischen Parkbefehl bleibt der Mäher bis "
@@ -826,7 +877,7 @@ jobs:
           PY
 
       - name: Bereinigtes Entscheidungsergebnis bereitstellen
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: maehentscheidung-dry-run-${{ github.run_number }}
           path: generated/mower-decision/decision.json
