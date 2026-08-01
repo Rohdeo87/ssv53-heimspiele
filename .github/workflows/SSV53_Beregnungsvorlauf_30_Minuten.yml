@@ -1,0 +1,82 @@
+name: "Einmalig: Beregnungsvorlauf auf 30 Minuten setzen"
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    name: Beregnungsvorlauf aktualisieren
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Repository laden
+        uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.SSV53_AUTOMATION_TOKEN }}
+          persist-credentials: true
+          fetch-depth: 0
+
+      - name: Vorlauf ändern und prüfen
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path("mower/config.json")
+          data = json.loads(path.read_text(encoding="utf-8"))
+
+          hydrawise = data.get("hydrawise")
+          if not isinstance(hydrawise, dict):
+              raise SystemExit("Der Abschnitt hydrawise fehlt in mower/config.json.")
+
+          current = hydrawise.get("before_minutes")
+          if current not in {15, 30}:
+              raise SystemExit(
+                  f"Unerwarteter bisheriger Hydrawise-Vorlauf: {current!r}. "
+                  "Es wurde nichts geändert."
+              )
+
+          hydrawise["before_minutes"] = 30
+
+          path.write_text(
+              json.dumps(data, ensure_ascii=False, indent=2) + "\n",
+              encoding="utf-8",
+          )
+
+          check = json.loads(path.read_text(encoding="utf-8"))
+          saved = check.get("hydrawise", {}).get("before_minutes")
+          if saved != 30:
+              raise SystemExit(
+                  "Prüfung fehlgeschlagen: before_minutes ist nicht 30."
+              )
+
+          print("Beregnungsvorlauf erfolgreich auf 30 Minuten gesetzt.")
+          PY
+
+      - name: Einmaligen Workflow entfernen und Änderung übertragen
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          rm -f ".github/workflows/SSV53_Beregnungsvorlauf_30_Minuten.yml"
+
+          git config user.name "SSV53 Automation"
+          git config user.email "actions@users.noreply.github.com"
+
+          git add mower/config.json
+          git add -A .github/workflows/SSV53_Beregnungsvorlauf_30_Minuten.yml
+
+          if git diff --cached --quiet; then
+            echo "Keine Änderung erforderlich."
+            exit 0
+          fi
+
+          git commit -m "Beregnungsvorlauf auf 30 Minuten erhöhen"
+          git push origin HEAD:main
