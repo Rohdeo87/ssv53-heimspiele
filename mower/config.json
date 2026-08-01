@@ -1,0 +1,77 @@
+{
+  "timezone": "Europe/Berlin",
+  "planning": {
+    "days": 7,
+    "day_start": "06:00",
+    "day_end": "22:00",
+    "minimum_mowing_window_minutes": 30
+  },
+  "training": {
+    "before_minutes": 30,
+    "after_minutes": 30,
+    "active_ranges": [
+      {
+        "from": "2026-08-24",
+        "to": "2027-07-09"
+      }
+    ],
+    "weekly": [
+      {
+        "weekday": "Dienstag",
+        "start": "17:00",
+        "end": "18:30",
+        "team": "E1"
+      },
+      {
+        "weekday": "Dienstag",
+        "start": "18:30",
+        "end": "20:00",
+        "team": "A"
+      },
+      {
+        "weekday": "Mittwoch",
+        "start": "17:30",
+        "end": "19:00",
+        "team": "C"
+      },
+      {
+        "weekday": "Donnerstag",
+        "start": "17:00",
+        "end": "18:30",
+        "team": "E1"
+      },
+      {
+        "weekday": "Donnerstag",
+        "start": "18:30",
+        "end": "20:00",
+        "team": "A"
+      },
+      {
+        "weekday": "Donnerstag",
+        "start": "20:00",
+        "end": "21:30",
+        "team": "Herren"
+      },
+      {
+        "weekday": "Freitag",
+        "start": "17:00",
+        "end": "18:30",
+        "team": "C"
+      }
+    ]
+  },
+  "matches": {
+    "source": "public/rasen.ics",
+    "already_buffered": true,
+    "description": "Die ICS-Zeiten enthalten bereits 60 Minuten vor und 60 Minuten nach der angenommenen Spielzeit."
+  },
+  "hydrawise": {
+    "enabled": true,
+    "controller_id_env": "HYDRAWISE_CONTROLLER_ID",
+    "include_all_zones": true,
+    "relay_ids": [],
+    "zone_name_patterns": [],
+    "before_minutes": 15,
+    "after_minutes": 30
+  }
+}
