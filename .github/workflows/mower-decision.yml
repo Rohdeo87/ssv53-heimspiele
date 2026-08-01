@@ -1,10 +1,20 @@
-name: SSV53 Mähentscheidung und sicheres Parken
+name: SSV53 Mähsteuerung
 
 on:
   workflow_dispatch:
     inputs:
       execute_park:
         description: "Bei aktiver Sperre echten Parkbefehl senden"
+        required: false
+        type: boolean
+        default: false
+      execute_start:
+        description: "Nach eigener Parkierung echten Startbefehl senden"
+        required: false
+        type: boolean
+        default: false
+      simulate_owned_park:
+        description: "Nur die Freigabe nach eigener Parkierung simulieren"
         required: false
         type: boolean
         default: false
@@ -20,7 +30,7 @@ concurrency:
 
 jobs:
   decide:
-    name: Mähentscheidung berechnen und bei Bedarf sicher parken
+    name: Mähentscheidung berechnen, sicher parken und kontrolliert starten
     runs-on: ubuntu-latest
     timeout-minutes: 8
 
@@ -41,6 +51,8 @@ jobs:
           HYDRAWISE_API_KEY: ${{ secrets.HYDRAWISE_API_KEY }}
           HYDRAWISE_CONTROLLER_ID: ${{ secrets.HYDRAWISE_CONTROLLER_ID }}
           EXECUTE_PARK: ${{ (github.event_name == 'schedule' && vars.MOWER_PARKING_ENABLED == 'true') || (github.event_name == 'workflow_dispatch' && inputs.execute_park) }}
+          EXECUTE_START: ${{ (github.event_name == 'schedule' && vars.MOWER_AUTOSTART_ENABLED == 'true') || (github.event_name == 'workflow_dispatch' && inputs.execute_start) }}
+          SIMULATE_OWNED_PARK: ${{ github.event_name == 'workflow_dispatch' && inputs.simulate_owned_park || false }}
         run: |
           set -euo pipefail
           mkdir -p generated/mower-decision
@@ -49,6 +61,7 @@ jobs:
           from __future__ import annotations
 
           import json
+          import math
           import os
           from dataclasses import asdict, dataclass
           from datetime import date, datetime, timedelta, timezone
@@ -72,10 +85,14 @@ jobs:
           PARKABLE_ACTIVITIES = {"MOWING", "LEAVING"}
           SAFE_PARK_ACTIVITIES = {"PARKED_IN_CS", "CHARGING", "GOING_HOME"}
           PARK_OVERRIDE_ACTIONS = {
+              "FORCE_PARK",
               "PARK_UNTIL_FURTHER_NOTICE",
               "PARK_UNTIL_NEXT_SCHEDULE",
               "PARK",
           }
+          AUTOMATION_EXTERNAL_REASON = 253053
+          AUTOMATION_PARK_RELEASE_HOLD_MINUTES = 20
+          MAX_TIMED_PARK_MINUTES = 1439
           MANUAL_ACTIVITIES = {"STOPPED_IN_GARDEN", "NOT_APPLICABLE"}
           MANUAL_STATES = {"PAUSED", "STOPPED", "OFF", "NOT_APPLICABLE"}
           ERROR_STATES = {
@@ -168,16 +185,16 @@ jobs:
                   token,
               )
 
-          def send_park_until_further_notice(
+          def send_mower_action(
               client_id: str,
               access_token: str,
               mower_id: str,
+              payload: dict[str, Any],
+              label: str,
           ) -> None:
-              """Sendet ausschließlich den sicheren Parkbefehl an den Mäher."""
+              """Sendet genau eine validierte Aktion an den Mäher."""
               action_url = f"{MOWERS_URL}{mower_id}/actions"
-              body = json.dumps(
-                  {"data": {"type": "ParkUntilFurtherNotice"}}
-              ).encode("utf-8")
+              body = json.dumps(payload).encode("utf-8")
               request = Request(
                   action_url,
                   data=body,
@@ -188,7 +205,7 @@ jobs:
                       "Authorization-Provider": "husqvarna",
                       "Content-Type": "application/vnd.api+json",
                       "X-Api-Key": client_id,
-                      "User-Agent": "SSV53-Sicheres-Parken/1.0",
+                      "User-Agent": "SSV53-Maehsteuerung/1.0",
                   },
               )
               try:
@@ -198,18 +215,83 @@ jobs:
               except HTTPError as exc:
                   response_body = exc.read().decode("utf-8", errors="replace")
                   raise SystemExit(
-                      f"Husqvarna-Parkbefehl fehlgeschlagen: HTTP {exc.code}. "
+                      f"{label} fehlgeschlagen: HTTP {exc.code}. "
                       f"Antwort: {response_body[:500]}"
                   ) from exc
               except URLError as exc:
                   raise SystemExit(
-                      f"Husqvarna-Parkbefehl fehlgeschlagen: {exc.reason}"
+                      f"{label} fehlgeschlagen: {exc.reason}"
                   ) from exc
 
               if status < 200 or status >= 300:
+                  raise SystemExit(f"{label} lieferte HTTP {status}.")
+
+          def send_park_until_further_notice(
+              client_id: str,
+              access_token: str,
+              mower_id: str,
+          ) -> None:
+              send_mower_action(
+                  client_id,
+                  access_token,
+                  mower_id,
+                  {"data": {"type": "ParkUntilFurtherNotice"}},
+                  "Husqvarna-Parkbefehl",
+              )
+
+          def send_automation_timed_park(
+              client_id: str,
+              access_token: str,
+              mower_id: str,
+              duration_minutes: int,
+          ) -> None:
+              if not 1 <= duration_minutes <= MAX_TIMED_PARK_MINUTES:
                   raise SystemExit(
-                      f"Husqvarna-Parkbefehl lieferte HTTP {status}."
+                      "Die berechnete Parkdauer liegt außerhalb des "
+                      "sicheren Bereichs."
                   )
+              send_mower_action(
+                  client_id,
+                  access_token,
+                  mower_id,
+                  {
+                      "data": {
+                          "type": "Park",
+                          "attributes": {
+                              "duration": duration_minutes,
+                              "externalReason": AUTOMATION_EXTERNAL_REASON,
+                          },
+                      }
+                  },
+                  "Husqvarna-Parkbefehl mit Automationskennung",
+              )
+
+          def send_start_in_work_area(
+              client_id: str,
+              access_token: str,
+              mower_id: str,
+              work_area_id: int,
+              duration_minutes: int,
+          ) -> None:
+              if duration_minutes < 1:
+                  raise SystemExit(
+                      "Die berechnete Mähdauer muss mindestens eine Minute betragen."
+                  )
+              send_mower_action(
+                  client_id,
+                  access_token,
+                  mower_id,
+                  {
+                      "data": {
+                          "type": "StartInWorkArea",
+                          "attributes": {
+                              "duration": duration_minutes,
+                              "workAreaId": work_area_id,
+                          },
+                      }
+                  },
+                  "Husqvarna-Startbefehl im Arbeitsbereich",
+              )
 
           def select_mower(items: list[dict[str, Any]]) -> dict[str, Any]:
               if len(items) == 1:
@@ -316,6 +398,7 @@ jobs:
               state: str,
               error_code: int,
               override_action: str,
+              automation_owned_park: bool,
               battery: int,
               minimum_remaining_minutes: int,
           ) -> Decision:
@@ -324,7 +407,10 @@ jobs:
                   or state in MANUAL_STATES
               )
               error_or_maintenance = error_code != 0 or state in ERROR_STATES
-              override_active = override_action not in NO_OVERRIDE
+              override_active = (
+                  override_action not in NO_OVERRIDE
+                  and not automation_owned_park
+              )
 
               if error_or_maintenance:
                   return Decision(
@@ -372,7 +458,11 @@ jobs:
                       )
                   if activity in SAFE_PARK_ACTIVITIES:
                       return Decision(
-                          code="ALREADY_SAFE",
+                          code=(
+                              "AUTOMATION_PARK_ACTIVE"
+                              if automation_owned_park
+                              else "ALREADY_SAFE"
+                          ),
                           title="Keine Aktion erforderlich",
                           reason=(
                               f"{block_context} Der Mäher ist bereits sicher "
@@ -404,7 +494,7 @@ jobs:
                       reason=(
                           f"{block_context} Aktuelle Aktivität: {activity}."
                       ),
-                      hypothetical_command="PARK_UNTIL_FURTHER_NOTICE",
+                      hypothetical_command="PARK",
                   )
 
               if manual_lock:
@@ -417,13 +507,86 @@ jobs:
                       ),
                   )
 
+              if automation_owned_park:
+                  if active_window is None:
+                      return Decision(
+                          code="AUTOMATION_PARK_WAIT",
+                          title="Eigene Parkierung noch nicht freigeben",
+                          reason=(
+                              "Die Parkierung stammt von der SSV53-Automatik, "
+                              "aber aktuell besteht kein ausreichend langes "
+                              "freies Mähfenster."
+                          ),
+                      )
+
+                  remaining = int(
+                      (active_window.end - now).total_seconds() // 60
+                  )
+                  if remaining < minimum_remaining_minutes:
+                      return Decision(
+                          code="AUTOMATION_PARK_WINDOW_TOO_SHORT",
+                          title="Eigene Parkierung noch nicht freigeben",
+                          reason=(
+                              f"Bis zum Ende des freien Fensters verbleiben nur "
+                              f"{remaining} Minuten."
+                          ),
+                      )
+                  if activity == "GOING_HOME":
+                      return Decision(
+                          code="AUTOMATION_PARK_GOING_HOME",
+                          title="Rückfahrt zunächst abschließen lassen",
+                          reason=(
+                              "Die Parkierung stammt von der SSV53-Automatik, "
+                              "aber der Mäher fährt noch zur Station."
+                          ),
+                      )
+                  if activity not in {"PARKED_IN_CS", "CHARGING"}:
+                      return Decision(
+                          code="AUTOMATION_PARK_STATE_UNCLEAR",
+                          title="Eigene Parkierung nicht automatisch freigeben",
+                          reason=(
+                              f"Die Automationskennung ist vorhanden, aber die "
+                              f"Aktivität lautet {activity}."
+                          ),
+                      )
+                  if battery < 90:
+                      return Decision(
+                          code="AUTOMATION_PARK_CHARGING",
+                          title="Vor automatischer Freigabe weiter laden",
+                          reason=(
+                              f"Der Akku liegt erst bei {battery} %. "
+                              "Die eigene Parkierung bleibt zunächst aktiv."
+                          ),
+                      )
+
+                  safe_duration = max(0, remaining - 5)
+                  if safe_duration < minimum_remaining_minutes:
+                      return Decision(
+                          code="AUTOMATION_PARK_WINDOW_TOO_SHORT",
+                          title="Eigene Parkierung noch nicht freigeben",
+                          reason=(
+                              "Nach dem technischen Fünf-Minuten-Puffer bleibt "
+                              "kein ausreichendes Mähfenster."
+                          ),
+                      )
+                  return Decision(
+                      code="WOULD_START_AFTER_AUTOMATION_PARK",
+                      title="Eigene Parkierung könnte automatisch freigegeben werden",
+                      reason=(
+                          f"Der Platz ist frei, der Akku liegt bei {battery} %, "
+                          f"und das freie Fenster umfasst noch rund {remaining} Minuten."
+                      ),
+                      hypothetical_command="START_IN_WORK_AREA",
+                      hypothetical_duration_minutes=safe_duration,
+                  )
+
               if override_active:
                   return Decision(
                       code="EXTERNAL_OVERRIDE",
                       title="Vorhandene Übersteuerung nicht automatisch aufheben",
                       reason=(
                           f"Planner-Override „{override_action}“ ist aktiv. "
-                          "Im Dry Run wird er als manuelle oder externe Bedienung behandelt."
+                          "Er wird als manuelle oder externe Bedienung behandelt."
                       ),
                   )
 
@@ -556,10 +719,18 @@ jobs:
           mode = str(mower_data.get("mode") or "UNKNOWN")
           error_code = int(mower_data.get("errorCode") or 0)
           battery = int(battery_data.get("batteryPercent") or 0)
-          override_action = str(override_data.get("action") or "NOT_ACTIVE")
+          override_action = str(
+              override_data.get("action") or "NOT_ACTIVE"
+          ).upper()
           restricted_reason = str(
               planner_data.get("restrictedReason") or "NONE"
-          )
+          ).upper()
+          try:
+              external_reason_id = int(
+                  planner_data.get("externalReason")
+              )
+          except (TypeError, ValueError):
+              external_reason_id = None
 
           work_areas_raw = attributes.get("workAreas")
           work_areas: list[dict[str, Any]] = []
@@ -606,6 +777,35 @@ jobs:
               work_areas[0] if len(work_areas) == 1 else None,
           )
 
+          execute_park = (
+              os.environ.get("EXECUTE_PARK", "false").strip().lower()
+              == "true"
+          )
+          execute_start = (
+              os.environ.get("EXECUTE_START", "false").strip().lower()
+              == "true"
+          )
+          simulate_owned_park = (
+              os.environ.get(
+                  "SIMULATE_OWNED_PARK",
+                  "false",
+              ).strip().lower()
+              == "true"
+          )
+
+          automation_owned_park = (
+              external_reason_id == AUTOMATION_EXTERNAL_REASON
+              and override_action == "FORCE_PARK"
+          )
+          if simulate_owned_park:
+              automation_owned_park = True
+              activity = "PARKED_IN_CS"
+              state = "RESTRICTED"
+              override_action = "FORCE_PARK"
+              restricted_reason = "EXTERNAL"
+              external_reason_id = AUTOMATION_EXTERNAL_REASON
+              execute_start = False
+
           parking_block = active_block
           if parking_block is None and next_block is not None:
               minutes_until_next_block = (
@@ -627,56 +827,134 @@ jobs:
               state=state,
               error_code=error_code,
               override_action=override_action,
+              automation_owned_park=automation_owned_park,
               battery=battery,
               minimum_remaining_minutes=minimum_remaining,
           )
 
-          execute_park = (
-              os.environ.get("EXECUTE_PARK", "false").strip().lower()
-              == "true"
-          )
-          command_sent: str | None = None
-          command_status = "not_needed"
+          mower_id = str(mower_item.get("id") or "").strip()
+          commands_sent: list[str] = []
+          park_command_status = "not_needed"
+          start_command_status = "not_needed"
 
           if decision.code == "WOULD_PARK":
               if execute_park:
-                  mower_id = str(mower_item.get("id") or "").strip()
                   if not mower_id:
                       raise SystemExit(
                           "Der Husqvarna-Parkbefehl kann ohne Mäher-ID "
                           "nicht gesendet werden."
                       )
-                  send_park_until_further_notice(
+                  if execute_start:
+                      release_at = (
+                          parking_block.end
+                          + timedelta(
+                              minutes=AUTOMATION_PARK_RELEASE_HOLD_MINUTES
+                          )
+                      )
+                      park_duration_minutes = int(
+                          math.ceil(
+                              (release_at - now).total_seconds() / 60
+                          )
+                      )
+                      send_automation_timed_park(
+                          client_id,
+                          access_token,
+                          mower_id,
+                          park_duration_minutes,
+                      )
+                      commands_sent.append("Park")
+                      park_command_status = "sent_with_automation_marker"
+                      decision = Decision(
+                          code="PARK_SENT_WITH_AUTOMATION_MARKER",
+                          title="Zeitlich begrenzter Parkbefehl gesendet",
+                          reason=(
+                              f"Die Sperre „{parking_block.title}“ ist aktiv "
+                              "oder beginnt innerhalb des Sicherheitsvorlaufs. "
+                              "Die Parkierung wurde mit der eindeutigen "
+                              "SSV53-Automationskennung versehen."
+                          ),
+                          hypothetical_command="PARK",
+                          hypothetical_duration_minutes=park_duration_minutes,
+                      )
+                  else:
+                      send_park_until_further_notice(
+                          client_id,
+                          access_token,
+                          mower_id,
+                      )
+                      commands_sent.append("ParkUntilFurtherNotice")
+                      park_command_status = "sent_without_autostart"
+                      decision = Decision(
+                          code="PARK_SENT",
+                          title="Parkbefehl erfolgreich gesendet",
+                          reason=(
+                              f"Die Sperre „{parking_block.title}“ ist aktiv "
+                              "oder beginnt innerhalb des Sicherheitsvorlaufs. "
+                              "Schaf bleibt bis zu einer bewussten manuellen "
+                              "Freigabe geparkt."
+                          ),
+                          hypothetical_command="PARK_UNTIL_FURTHER_NOTICE",
+                      )
+              else:
+                  park_command_status = "dry_run"
+
+          if decision.code == "WOULD_START_AFTER_AUTOMATION_PARK":
+              if simulate_owned_park:
+                  start_command_status = "simulation"
+              elif execute_start:
+                  if not mower_id:
+                      raise SystemExit(
+                          "Der Husqvarna-Startbefehl kann ohne Mäher-ID "
+                          "nicht gesendet werden."
+                      )
+                  if not target_area or target_area.get("id") is None:
+                      raise SystemExit(
+                          "Der Arbeitsbereich Rasenfläche konnte nicht "
+                          "eindeutig bestimmt werden."
+                      )
+                  work_area_id = int(target_area["id"])
+                  duration_minutes = int(
+                      decision.hypothetical_duration_minutes or 0
+                  )
+                  send_start_in_work_area(
                       client_id,
                       access_token,
                       mower_id,
+                      work_area_id,
+                      duration_minutes,
                   )
-                  command_sent = "ParkUntilFurtherNotice"
-                  command_status = "sent"
+                  commands_sent.append("StartInWorkArea")
+                  start_command_status = "sent"
                   decision = Decision(
-                      code="PARK_SENT",
-                      title="Parkbefehl erfolgreich gesendet",
+                      code="START_SENT_AFTER_AUTOMATION_PARK",
+                      title="Automatischer Start erfolgreich gesendet",
                       reason=(
-                          f"Die Sperre „{parking_block.title}“ ist aktiv oder "
-                          "beginnt innerhalb des Sicherheitsvorlaufs. "
-                          "Schaf wurde angewiesen, zur Ladestation zu fahren "
-                          "und dort bis auf Weiteres zu bleiben."
+                          "Die vorherige Parkierung stammt eindeutig von der "
+                          "SSV53-Automatik. Der Platz ist wieder frei und "
+                          "Schaf wurde im Arbeitsbereich Rasenfläche gestartet."
                       ),
-                      hypothetical_command="PARK_UNTIL_FURTHER_NOTICE",
+                      hypothetical_command="START_IN_WORK_AREA",
+                      hypothetical_duration_minutes=duration_minutes,
                   )
               else:
-                  command_status = "dry_run"
-          elif execute_park:
-              command_status = "not_needed"
+                  start_command_status = "dry_run"
+          elif execute_start:
+              start_command_status = "not_needed"
 
           result = {
               "generated_at": now.isoformat(),
-              "mode": "decision_dry_run",
-              "commands_sent": ([command_sent] if command_sent else []),
+              "mode": "mower_controller",
+              "commands_sent": commands_sent,
               "control": {
                   "parking_enabled_for_this_run": execute_park,
-                  "command_status": command_status,
-                  "automatic_start_implemented": False,
+                  "autostart_enabled_for_this_run": execute_start,
+                  "simulation_owned_park": simulate_owned_park,
+                  "park_command_status": park_command_status,
+                  "start_command_status": start_command_status,
+                  "automatic_start_implemented": True,
+                  "automation_external_reason": (
+                      AUTOMATION_EXTERNAL_REASON
+                  ),
               },
               "decision": asdict(decision),
               "current_plan": {
@@ -738,6 +1016,8 @@ jobs:
                   "error_code": error_code,
                   "override_action": override_action,
                   "restricted_reason": restricted_reason,
+                  "external_reason_id": external_reason_id,
+                  "automation_owned_park": automation_owned_park,
                   "next_start_local_wall_clock": (
                       local_wall_clock_from_husqvarna_ms(
                           planner_data.get("nextStartTimestamp")
@@ -757,6 +1037,15 @@ jobs:
               "ALREADY_SAFE": "✅",
               "WOULD_PARK": "🟠",
               "PARK_SENT": "🅿️",
+              "PARK_SENT_WITH_AUTOMATION_MARKER": "🅿️",
+              "WOULD_START_AFTER_AUTOMATION_PARK": "🟢",
+              "START_SENT_AFTER_AUTOMATION_PARK": "▶️",
+              "AUTOMATION_PARK_ACTIVE": "✅",
+              "AUTOMATION_PARK_WAIT": "⏳",
+              "AUTOMATION_PARK_GOING_HOME": "⏳",
+              "AUTOMATION_PARK_CHARGING": "🔋",
+              "AUTOMATION_PARK_STATE_UNCLEAR": "⚠️",
+              "AUTOMATION_PARK_WINDOW_TOO_SHORT": "ℹ️",
               "ALREADY_PARK_REQUESTED": "✅",
               "PARK_STATE_UNCLEAR": "⚠️",
               "MANUAL_LOCK": "🛑",
@@ -767,7 +1056,7 @@ jobs:
           }.get(decision.code, "ℹ️")
 
           lines = [
-              "# Aktuelle Mähentscheidung und sicheres Parken",
+              "# Aktuelle Mähentscheidung, sicheres Parken und kontrollierter Neustart",
               "",
               "Logik: **Freie Fenster werden über Mitternacht verbunden; "
               "Parkprüfung alle 5 Minuten mit 15 Minuten Sicherheitsvorlauf**  ",
@@ -775,11 +1064,19 @@ jobs:
               f"Hydrawise: **{hydrawise_label}**  ",
               (
                   "Gesendete Mäherbefehle: "
-                  f"**{command_sent or 'keine'}**"
+                  f"**{', '.join(commands_sent) if commands_sent else 'keine'}**"
               ),
               (
                   "Echtes Parken für diesen Lauf: "
                   f"**{'aktiv' if execute_park else 'deaktiviert'}**"
+              ),
+              (
+                  "Automatischer Start für diesen Lauf: "
+                  f"**{'aktiv' if execute_start else 'deaktiviert'}**"
+              ),
+              (
+                  "Simulation einer eigenen Parkierung: "
+                  f"**{'aktiv' if simulate_owned_park else 'deaktiviert'}**"
               ),
               "",
               f"## {icon} {decision.title}",
@@ -814,6 +1111,7 @@ jobs:
                   f"- Fehlercode: **{error_code}**",
                   f"- Planner-Override: **{override_action}**",
                   f"- Einschränkungsgrund: **{restricted_reason}**",
+                  f"- Externe Kennung: **{external_reason_id or 'keine'}**",
                   (
                       "- Nächster Husqvarna-Start (lokale Mäherzeit): "
                       f"**{result['mower']['next_start_local_wall_clock']}**"
@@ -857,14 +1155,20 @@ jobs:
                   "Startempfehlung.",
                   "- Ein vorhandener Planner-Override wird nicht automatisch aufgehoben.",
                   "- Fehler- und Wartungszustände sperren jeden automatischen Start.",
-                  "- Automatisches Starten ist nicht implementiert.",
-                  "- Der einzige mögliche Schreibbefehl ist "
-                  "`ParkUntilFurtherNotice` bei einer aktiven oder innerhalb "
-                  "von 15 Minuten bevorstehenden Sperre.",
+                  "- Automatisches Starten erfolgt ausschließlich nach einer "
+                  "eindeutig eigenen Parkierung mit Kennung `253053`.",
+                  "- Bei deaktiviertem Autostart bleibt der bisherige sichere "
+                  "`ParkUntilFurtherNotice`-Befehl aktiv.",
+                  "- Bei aktiviertem Autostart nutzt die Automatik einen "
+                  "zeitlich begrenzten `Park`-Befehl mit eigener Kennung.",
                   "- Geplante Läufe senden den Parkbefehl nur, wenn die "
                   "Repository-Variable `MOWER_PARKING_ENABLED` exakt `true` ist.",
-                  "- Nach einem automatischen Parkbefehl bleibt der Mäher bis "
-                  "zu einer bewussten manuellen Freigabe geparkt.",
+                  "- Geplante Läufe senden `StartInWorkArea` nur, wenn die "
+                  "Repository-Variable `MOWER_AUTOSTART_ENABLED` exakt `true` ist.",
+                  "- Manuelle Stopps und fremde Übersteuerungen werden niemals "
+                  "durch einen automatischen Start aufgehoben.",
+                  "- `StartInWorkArea` wird nur bei freiem Platz, mindestens "
+                  "90 % Akku und ausreichend langem Mähfenster gesendet.",
                   "",
               ]
           )
