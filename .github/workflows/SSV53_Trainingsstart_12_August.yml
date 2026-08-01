@@ -1,0 +1,80 @@
+name: "Einmalig: Trainingsstart auf 12.08.2026 setzen"
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Repository laden
+        uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.SSV53_AUTOMATION_TOKEN }}
+          persist-credentials: true
+          fetch-depth: 0
+
+      - name: Trainingsbeginn ändern und prüfen
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path("mower/config.json")
+          data = json.loads(path.read_text(encoding="utf-8"))
+          ranges = data.get("training", {}).get("active_ranges", [])
+
+          if not isinstance(ranges, list) or not ranges:
+              raise SystemExit("training.active_ranges fehlt oder ist leer.")
+
+          matched = False
+          for item in ranges:
+              if isinstance(item, dict) and item.get("from") in {"2026-08-24", "2026-08-12"}:
+                  item["from"] = "2026-08-12"
+                  matched = True
+
+          if not matched:
+              raise SystemExit("Kein passender Trainingszeitraum gefunden.")
+
+          path.write_text(
+              json.dumps(data, ensure_ascii=False, indent=2) + "\n",
+              encoding="utf-8",
+          )
+
+          check = json.loads(path.read_text(encoding="utf-8"))
+          starts = [
+              item.get("from")
+              for item in check["training"]["active_ranges"]
+              if isinstance(item, dict)
+          ]
+          if "2026-08-12" not in starts:
+              raise SystemExit("Prüfung fehlgeschlagen.")
+
+          print("Trainingszeiten gelten jetzt ab 12.08.2026.")
+          PY
+
+      - name: Workflow entfernen und Änderung übertragen
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f ".github/workflows/SSV53_Trainingsstart_12_August.yml"
+
+          git config user.name "SSV53 Automation"
+          git config user.email "actions@users.noreply.github.com"
+
+          git add mower/config.json
+          git add -A .github/workflows/SSV53_Trainingsstart_12_August.yml
+
+          if git diff --cached --quiet; then
+            echo "Keine Änderung erforderlich."
+            exit 0
+          fi
+
+          git commit -m "Trainingszeiten ab 12.08.2026 aktivieren"
+          git push origin HEAD:main
