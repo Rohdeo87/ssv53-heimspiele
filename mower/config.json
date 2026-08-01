@@ -2,8 +2,8 @@
   "timezone": "Europe/Berlin",
   "planning": {
     "days": 7,
-    "day_start": "00:00",
-    "day_end": "00:00",
+    "day_start": "06:00",
+    "day_end": "22:00",
     "minimum_mowing_window_minutes": 30
   },
   "training": {
