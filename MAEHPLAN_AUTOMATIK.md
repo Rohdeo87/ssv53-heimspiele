@@ -1,41 +1,61 @@
-# SSV53 – automatische Mähplanberechnung
+# SSV53 – Mähplan-Automatik
 
-Diese erste Ausbaustufe berechnet einen **Dry Run**. Sie sendet noch keine Befehle an den Husqvarna Automower.
+## Aktueller Stand
 
-## Berücksichtigte Sperren
+Die Automatik befindet sich noch im sicheren Dry-Run-Betrieb. Sie liest alle benötigten Daten und berechnet Entscheidungen, sendet aber noch keine Start-, Park-, Pause- oder Kalenderbefehle an den Husqvarna Automower.
 
-- Heimspiele aus `public/rasen.ics`. Die dortigen Zeiten enthalten bereits 60 Minuten vor und 60 Minuten nach der angenommenen Spielzeit; es wird kein weiterer Spielpuffer addiert.
-- Rasen-Trainings aus `mower/config.json` mit 30 Minuten vorher und 30 Minuten danach.
-- Nächste relevante Hydrawise-Beregnungen mit zunächst 15 Minuten vorher und 30 Minuten danach.
+## Datenquellen
+
+- `public/rasen.ics`: Heimspiele auf dem Rasenplatz; die Termine enthalten bereits 60 Minuten Vorlauf und 60 Minuten Nachlauf.
+- `mower/config.json`: wiederkehrende Trainingszeiten mit 30 Minuten Vorlauf und 30 Minuten Nachlauf.
+- Hydrawise API: aktuelle und nächste Beregnungen; derzeit 15 Minuten Vorlauf und 30 Minuten Nachlauf.
+- Husqvarna Authentication API und Automower Connect API: aktueller Status von „Schaf“, Akku, Aktivität, Fehlerzustand, Planner-Override und EPOS-Arbeitsbereich.
+
+## Dauerhafte Workflows
+
+### `mower-plan.yml`
+
+Berechnet den maximalen Mähplan:
+
+- täglich,
+- nach einem erfolgreichen Heimspielabruf,
+- manuell für ein frei wählbares Startdatum.
+
+Deutsche Datumsformate wie `24.8.26` und `24.08.2026` werden akzeptiert.
+
+### `mower-decision.yml`
+
+Prüft alle 15 Minuten die aktuelle Situation und gibt im Dry Run eine Empfehlung aus:
+
+- Mähen möglich,
+- bereits korrekt am Mähen,
+- Parken wäre erforderlich,
+- bereits sicher geparkt,
+- manuellen Stopp respektieren,
+- Fehler oder Wartungszustand manuell prüfen.
+
+Freie Mähfenster werden über Mitternacht hinweg verbunden.
+
+## Verbindliche Sperrregeln
+
+- Heimspiele: 60 Minuten vor und 60 Minuten nach dem Spiel; bereits in `public/rasen.ics` enthalten.
+- Training: 30 Minuten vor und 30 Minuten nach dem Training.
+- Hydrawise: 15 Minuten vor und 30 Minuten nach der Beregnung.
 - Überlappende Sperren werden zusammengeführt.
-- Freie Fenster unter 30 Minuten werden verworfen.
+- Freie Fenster unter 30 Minuten werden nicht für einen neuen Mähstart verwendet.
 
-## Hydrawise einrichten
+## Manuelle Bedienung
 
-Im Hydrawise-Konto unter **Account Details → Account Settings → Generate API Key** einen API-Key erstellen. Anschließend im GitHub-Repository unter **Settings → Secrets and variables → Actions** folgende Secrets anlegen:
+Ein manueller Stopp oder eine erkennbare manuelle Übersteuerung darf später niemals automatisch aufgehoben werden. Fehler- und Wartungszustände verhindern jeden automatischen Start.
+
+## GitHub-Secrets
 
 - `HYDRAWISE_API_KEY`
-- `HYDRAWISE_CONTROLLER_ID` nur dann, wenn das Hydrawise-Konto mehrere Steuergeräte enthält
+- optional `HYDRAWISE_CONTROLLER_ID`
+- `HUSQVARNA_CLIENT_ID`
+- `HUSQVARNA_CLIENT_SECRET`
+- `SSV53_AUTOMATION_TOKEN` nur für ausdrücklich bestätigte Repository-Wartungsaktionen
 
-Die API wird ausschließlich gelesen. Der Workflow startet, stoppt oder verändert keine Beregnung.
+## Nächste Ausbaustufe
 
-In `mower/config.json` gilt zunächst `include_all_zones: true`. Nach dem ersten erfolgreichen Lauf können die im Artefakt sichtbaren Hydrawise-Zonen auf die tatsächlichen Rasenplatz-Zonen begrenzt werden, indem `include_all_zones` auf `false` gesetzt und `relay_ids` oder `zone_name_patterns` gepflegt werden.
-
-## Workflow
-
-`SSV53 Mähplan installieren und berechnen V5` ist zugleich Installer und dauerhafter Dry-Run-Workflow. Er läuft:
-
-- einmal täglich,
-- nach einem erfolgreichen Heimspiel-Update,
-- manuell über `workflow_dispatch`.
-
-Der Workflow installiert keine weitere Datei unter `.github/workflows/`. Damit wird die GitHub-Sicherheitsbeschränkung vermieden, die das Erzeugen oder Ändern von Workflow-Dateien durch den normalen Actions-Token blockiert.
-
-Bereits vorhandene Mähplan-Dateien werden bei normalen Läufen nicht überschrieben. Das Ergebnis steht in der GitHub-Actions-Zusammenfassung und als Artefakt mit:
-
-- `mowing_plan.md`
-- `mowing_plan.json`
-
-## Noch keine Mähersteuerung
-
-Die Husqvarna-API wird erst ergänzt, nachdem mindestens mehrere Dry Runs plausibel waren, die relevanten Hydrawise-Zonen feststehen und die aktiven Rasen-/Winterzeiträume bestätigt sind.
+Als erster echter Steuerbefehl wird ausschließlich das sichere Parken vor einer aktiven Sperrzeit umgesetzt. Der automatische Start folgt erst nach weiterer Validierung.

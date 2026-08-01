@@ -1,4 +1,4 @@
-name: SSV53 Mähentscheidung Dry Run
+name: SSV53 Mähentscheidung (Dry Run)
 
 on:
   workflow_dispatch:
@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ssv53-maehentscheidung-dry-run
+  group: ssv53-mower-decision-dry-run
   cancel-in-progress: true
 
 jobs:
@@ -182,11 +182,12 @@ jobs:
               ).replace(tzinfo=TZ)
               return wall_clock.isoformat()
 
-          def current_context(day_plan: Any, now: datetime) -> tuple[Any | None, Any | None]:
+          def current_context(day_plans: list[Any], now: datetime) -> tuple[Any | None, Any | None]:
               active_block = next(
                   (
                       block
-                      for block in day_plan.blocked
+                      for plan in day_plans
+                      for block in plan.blocked
                       if block.start <= now < block.end
                   ),
                   None,
@@ -194,11 +195,45 @@ jobs:
               active_window = next(
                   (
                       window
-                      for window in day_plan.mowing_windows
+                      for plan in day_plans
+                      for window in plan.mowing_windows
                       if window.start <= now < window.end
                   ),
                   None,
               )
+              if active_window is None:
+                  return active_block, None
+
+              # Tagespläne enden technisch um 00:00 Uhr. Direkt angrenzende
+              # freie Fenster des Folgetags gehören fachlich zum selben
+              # ununterbrochenen Mähfenster und werden deshalb verbunden.
+              extended_end = active_window.end
+              all_windows = sorted(
+                  (
+                      window
+                      for plan in day_plans
+                      for window in plan.mowing_windows
+                  ),
+                  key=lambda window: (window.start, window.end),
+              )
+              while True:
+                  adjacent = next(
+                      (
+                          window
+                          for window in all_windows
+                          if window.start == extended_end
+                      ),
+                      None,
+                  )
+                  if adjacent is None:
+                      break
+                  extended_end = adjacent.end
+
+              if extended_end != active_window.end:
+                  active_window = type(active_window)(
+                      start=active_window.start,
+                      end=extended_end,
+                  )
               return active_block, active_window
 
           def next_block_after(day_plans: list[Any], now: datetime) -> Any | None:
@@ -403,7 +438,7 @@ jobs:
               now.date(),
               2,
           )
-          active_block, active_window = current_context(plans[0], now)
+          active_block, active_window = current_context(plans, now)
           next_block = next_block_after(plans, now)
 
           mower_item = select_mower(fetch_mowers(client_id, client_secret))
@@ -561,6 +596,7 @@ jobs:
           lines = [
               "# Aktuelle Mähentscheidung – Dry Run",
               "",
+              "Logik: **Freie Fenster werden über Mitternacht verbunden**  ",
               f"Zeitpunkt: **{now.strftime('%d.%m.%Y %H:%M:%S')} Uhr**  ",
               f"Hydrawise: **{hydrawise_label}**  ",
               "Gesendete Mäherbefehle: **keine**",

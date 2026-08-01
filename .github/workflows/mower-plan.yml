@@ -1,0 +1,110 @@
+name: SSV53 Mähplan (Dry Run)
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_date:
+        description: "Optionales Startdatum, z. B. 24.8.26"
+        required: false
+        type: string
+      days:
+        description: "Anzahl Planungstage"
+        required: false
+        type: number
+        default: 7
+      skip_hydrawise:
+        description: "Hydrawise-Abruf für diesen Test überspringen"
+        required: false
+        type: boolean
+        default: false
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_run:
+    workflows: ["SSV53 Heimspiele aktualisieren"]
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ssv53-mower-plan
+  cancel-in-progress: true
+
+jobs:
+  plan:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Repository laden
+        uses: actions/checkout@v4
+
+      - name: Python einrichten
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Programmstand prüfen
+        shell: bash
+        run: |
+          set -euo pipefail
+          REQUIRED=(
+            mower/__init__.py
+            mower/config.json
+            mower/generate_schedule.py
+            mower/hydrawise.py
+            mower/planner.py
+            tests/test_mower_schedule.py
+            public/rasen.ics
+          )
+          for path in "${REQUIRED[@]}"; do
+            if [ ! -f "$path" ]; then
+              echo "Erforderliche Datei fehlt: $path" >&2
+              exit 1
+            fi
+          done
+          python -m compileall -q mower
+          python -m unittest tests.test_mower_schedule -v
+
+      - name: Maximalen Mähplan berechnen
+        shell: bash
+        env:
+          HYDRAWISE_API_KEY: ${{ secrets.HYDRAWISE_API_KEY }}
+          HYDRAWISE_CONTROLLER_ID: ${{ secrets.HYDRAWISE_CONTROLLER_ID }}
+          INPUT_START_DATE: ${{ github.event_name == 'workflow_dispatch' && inputs.start_date || '' }}
+          INPUT_DAYS: ${{ github.event_name == 'workflow_dispatch' && inputs.days || 7 }}
+          INPUT_SKIP_HYDRAWISE: ${{ github.event_name == 'workflow_dispatch' && inputs.skip_hydrawise || false }}
+        run: |
+          set -euo pipefail
+          ARGS=(--config mower/config.json --matches public/rasen.ics --output generated/mower)
+          if [ -n "${INPUT_START_DATE:-}" ]; then
+            ARGS+=(--start-date "$INPUT_START_DATE")
+          fi
+          if [ -n "${INPUT_DAYS:-}" ]; then
+            ARGS+=(--days "$INPUT_DAYS")
+          fi
+          if [ "${INPUT_SKIP_HYDRAWISE:-false}" = "true" ]; then
+            ARGS+=(--no-hydrawise)
+          fi
+          python -m mower.generate_schedule "${ARGS[@]}"
+
+      - name: Ergebnis bereitstellen
+        uses: actions/upload-artifact@v4
+        with:
+          name: maehplan-dry-run-${{ github.run_number }}
+          path: generated/mower
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Abschluss bestätigen
+        shell: bash
+        run: |
+          {
+            echo ""
+            echo "## Mähplan erfolgreich"
+            echo ""
+            echo "- Trainings-, Heimspiel- und Hydrawise-Sperren wurden zusammengeführt."
+            echo "- Freie Zeitfenster wurden für bis zu 24 Stunden pro Tag berechnet."
+            echo "- Es wurden keine Befehle an den Mäher gesendet."
+          } >> "$GITHUB_STEP_SUMMARY"
