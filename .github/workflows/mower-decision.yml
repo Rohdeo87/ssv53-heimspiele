@@ -1,7 +1,13 @@
-name: SSV53 Mähentscheidung (Dry Run)
+name: SSV53 Mähentscheidung und sicheres Parken
 
 on:
   workflow_dispatch:
+    inputs:
+      execute_park:
+        description: "Bei aktiver Sperre echten Parkbefehl senden"
+        required: false
+        type: boolean
+        default: false
   schedule:
     - cron: "7,22,37,52 * * * *"
 
@@ -9,12 +15,12 @@ permissions:
   contents: read
 
 concurrency:
-  group: ssv53-mower-decision-dry-run
+  group: ssv53-mower-decision-and-parking
   cancel-in-progress: true
 
 jobs:
   decide:
-    name: Aktuelle Mähentscheidung ausschließlich berechnen
+    name: Mähentscheidung berechnen und bei Bedarf sicher parken
     runs-on: ubuntu-latest
     timeout-minutes: 8
 
@@ -34,6 +40,7 @@ jobs:
           HUSQVARNA_CLIENT_SECRET: ${{ secrets.HUSQVARNA_CLIENT_SECRET }}
           HYDRAWISE_API_KEY: ${{ secrets.HYDRAWISE_API_KEY }}
           HYDRAWISE_CONTROLLER_ID: ${{ secrets.HYDRAWISE_CONTROLLER_ID }}
+          EXECUTE_PARK: ${{ (github.event_name == 'schedule' && vars.MOWER_PARKING_ENABLED == 'true') || (github.event_name == 'workflow_dispatch' && inputs.execute_park) }}
         run: |
           set -euo pipefail
           mkdir -p generated/mower-decision
@@ -62,7 +69,13 @@ jobs:
           SUMMARY = os.environ.get("GITHUB_STEP_SUMMARY", "")
 
           MOWING_ACTIVITIES = {"MOWING", "LEAVING"}
+          PARKABLE_ACTIVITIES = {"MOWING", "LEAVING"}
           SAFE_PARK_ACTIVITIES = {"PARKED_IN_CS", "CHARGING", "GOING_HOME"}
+          PARK_OVERRIDE_ACTIONS = {
+              "PARK_UNTIL_FURTHER_NOTICE",
+              "PARK_UNTIL_NEXT_SCHEDULE",
+              "PARK",
+          }
           MANUAL_ACTIVITIES = {"STOPPED_IN_GARDEN", "NOT_APPLICABLE"}
           MANUAL_STATES = {"PAUSED", "STOPPED", "OFF", "NOT_APPLICABLE"}
           ERROR_STATES = {
@@ -149,7 +162,53 @@ jobs:
               items = mower_data.get("data", [])
               if not isinstance(items, list):
                   raise SystemExit("Husqvarna lieferte keine gültige Mäherliste.")
-              return [item for item in items if isinstance(item, dict)]
+              return (
+                  [item for item in items if isinstance(item, dict)],
+                  token,
+              )
+
+          def send_park_until_further_notice(
+              client_id: str,
+              access_token: str,
+              mower_id: str,
+          ) -> None:
+              """Sendet ausschließlich den sicheren Parkbefehl an den Mäher."""
+              action_url = f"{MOWERS_URL}{mower_id}/actions"
+              body = json.dumps(
+                  {"data": {"type": "ParkUntilFurtherNotice"}}
+              ).encode("utf-8")
+              request = Request(
+                  action_url,
+                  data=body,
+                  method="POST",
+                  headers={
+                      "Accept": "application/vnd.api+json",
+                      "Authorization": f"Bearer {access_token}",
+                      "Authorization-Provider": "husqvarna",
+                      "Content-Type": "application/vnd.api+json",
+                      "X-Api-Key": client_id,
+                      "User-Agent": "SSV53-Sicheres-Parken/1.0",
+                  },
+              )
+              try:
+                  with urlopen(request, timeout=30) as response:  # noqa: S310
+                      status = int(getattr(response, "status", 200))
+                      response.read()
+              except HTTPError as exc:
+                  response_body = exc.read().decode("utf-8", errors="replace")
+                  raise SystemExit(
+                      f"Husqvarna-Parkbefehl fehlgeschlagen: HTTP {exc.code}. "
+                      f"Antwort: {response_body[:500]}"
+                  ) from exc
+              except URLError as exc:
+                  raise SystemExit(
+                      f"Husqvarna-Parkbefehl fehlgeschlagen: {exc.reason}"
+                  ) from exc
+
+              if status < 200 or status >= 300:
+                  raise SystemExit(
+                      f"Husqvarna-Parkbefehl lieferte HTTP {status}."
+                  )
 
           def select_mower(items: list[dict[str, Any]]) -> dict[str, Any]:
               if len(items) == 1:
@@ -295,9 +354,28 @@ jobs:
                               f"und der Mäher ist bereits sicher ({activity})."
                           ),
                       )
+                  if override_action in PARK_OVERRIDE_ACTIONS:
+                      return Decision(
+                          code="ALREADY_PARK_REQUESTED",
+                          title="Parkbefehl ist bereits aktiv",
+                          reason=(
+                              f"Der Platz ist wegen „{active_block.title}“ gesperrt "
+                              f"und der Planner-Override lautet {override_action}."
+                          ),
+                      )
+                  if activity not in PARKABLE_ACTIVITIES:
+                      return Decision(
+                          code="PARK_STATE_UNCLEAR",
+                          title="Status unklar – kein automatischer Befehl",
+                          reason=(
+                              f"Der Platz ist wegen „{active_block.title}“ gesperrt, "
+                              f"aber die Aktivität {activity} ist nicht eindeutig "
+                              "als laufender Mähbetrieb klassifiziert."
+                          ),
+                      )
                   return Decision(
                       code="WOULD_PARK",
-                      title="Mäher müsste geparkt werden",
+                      title="Mäher muss sicher geparkt werden",
                       reason=(
                           f"Der Platz ist bis {active_block.end.strftime('%H:%M')} "
                           f"wegen „{active_block.title}“ gesperrt; "
@@ -441,7 +519,8 @@ jobs:
           active_block, active_window = current_context(plans, now)
           next_block = next_block_after(plans, now)
 
-          mower_item = select_mower(fetch_mowers(client_id, client_secret))
+          mower_items, access_token = fetch_mowers(client_id, client_secret)
+          mower_item = select_mower(mower_items)
           attributes = as_dict(mower_item.get("attributes"))
           system = as_dict(attributes.get("system"))
           battery_data = as_dict(attributes.get("battery"))
@@ -517,10 +596,52 @@ jobs:
               minimum_remaining_minutes=minimum_remaining,
           )
 
+          execute_park = (
+              os.environ.get("EXECUTE_PARK", "false").strip().lower()
+              == "true"
+          )
+          command_sent: str | None = None
+          command_status = "not_needed"
+
+          if decision.code == "WOULD_PARK":
+              if execute_park:
+                  mower_id = str(mower_item.get("id") or "").strip()
+                  if not mower_id:
+                      raise SystemExit(
+                          "Der Husqvarna-Parkbefehl kann ohne Mäher-ID "
+                          "nicht gesendet werden."
+                      )
+                  send_park_until_further_notice(
+                      client_id,
+                      access_token,
+                      mower_id,
+                  )
+                  command_sent = "ParkUntilFurtherNotice"
+                  command_status = "sent"
+                  decision = Decision(
+                      code="PARK_SENT",
+                      title="Parkbefehl erfolgreich gesendet",
+                      reason=(
+                          f"Der Platz ist wegen „{active_block.title}“ gesperrt. "
+                          "Schaf wurde angewiesen, zur Ladestation zu fahren "
+                          "und dort bis auf Weiteres zu bleiben."
+                      ),
+                      hypothetical_command="PARK_UNTIL_FURTHER_NOTICE",
+                  )
+              else:
+                  command_status = "dry_run"
+          elif execute_park:
+              command_status = "not_needed"
+
           result = {
               "generated_at": now.isoformat(),
               "mode": "decision_dry_run",
-              "commands_sent": [],
+              "commands_sent": ([command_sent] if command_sent else []),
+              "control": {
+                  "parking_enabled_for_this_run": execute_park,
+                  "command_status": command_status,
+                  "automatic_start_implemented": False,
+              },
               "decision": asdict(decision),
               "current_plan": {
                   "blocked_now": (
@@ -587,6 +708,9 @@ jobs:
               "ALREADY_MOWING": "🟢",
               "ALREADY_SAFE": "✅",
               "WOULD_PARK": "🟠",
+              "PARK_SENT": "🅿️",
+              "ALREADY_PARK_REQUESTED": "✅",
+              "PARK_STATE_UNCLEAR": "⚠️",
               "MANUAL_LOCK": "🛑",
               "MANUAL_STOP_DURING_BLOCK": "🛑",
               "MANUAL_ATTENTION": "🚨",
@@ -594,12 +718,19 @@ jobs:
           }.get(decision.code, "ℹ️")
 
           lines = [
-              "# Aktuelle Mähentscheidung – Dry Run",
+              "# Aktuelle Mähentscheidung und sicheres Parken",
               "",
               "Logik: **Freie Fenster werden über Mitternacht verbunden**  ",
               f"Zeitpunkt: **{now.strftime('%d.%m.%Y %H:%M:%S')} Uhr**  ",
               f"Hydrawise: **{hydrawise_label}**  ",
-              "Gesendete Mäherbefehle: **keine**",
+              (
+                  "Gesendete Mäherbefehle: "
+                  f"**{command_sent or 'keine'}**"
+              ),
+              (
+                  "Echtes Parken für diesen Lauf: "
+                  f"**{'aktiv' if execute_park else 'deaktiviert'}**"
+              ),
               "",
               f"## {icon} {decision.title}",
               "",
@@ -668,7 +799,7 @@ jobs:
           lines.extend(
               [
                   "",
-                  "## Sicherheitsregeln dieses Dry Runs",
+                  "## Sicherheitsregeln",
                   "",
                   "- `PAUSED`, `STOPPED`, `OFF`, `STOPPED_IN_GARDEN` und "
                   "`NOT_APPLICABLE` werden als manueller Eingriff behandelt.",
@@ -676,7 +807,13 @@ jobs:
                   "Startempfehlung.",
                   "- Ein vorhandener Planner-Override wird nicht automatisch aufgehoben.",
                   "- Fehler- und Wartungszustände sperren jeden automatischen Start.",
-                  "- Diese Version besitzt keine Mäher-Schreibaufrufe.",
+                  "- Automatisches Starten ist nicht implementiert.",
+                  "- Der einzige mögliche Schreibbefehl ist "
+                  "`ParkUntilFurtherNotice` bei einer aktiven Sperre.",
+                  "- Geplante Läufe senden den Parkbefehl nur, wenn die "
+                  "Repository-Variable `MOWER_PARKING_ENABLED` exakt `true` ist.",
+                  "- Nach einem automatischen Parkbefehl bleibt der Mäher bis "
+                  "zu einer bewussten manuellen Freigabe geparkt.",
                   "",
               ]
           )
