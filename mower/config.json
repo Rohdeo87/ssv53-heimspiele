@@ -71,7 +71,7 @@
     "include_all_zones": true,
     "relay_ids": [],
     "zone_name_patterns": [],
-    "before_minutes": 15,
+    "before_minutes": 30,
     "after_minutes": 30
   }
 }
