@@ -101,16 +101,19 @@ Eine Veröffentlichung erfolgt nur, wenn:
 
 Es gibt weiterhin keine starre Mindestzahl an Spielen.
 
-## Installation
+## Betrieb und Änderungen
 
-1. ZIP vollständig entpacken.
-2. Den vollständigen Inhalt des Ordners `ssv53-heimspiele` in das lokale Repository `ssv53-heimspiele` kopieren. Dieses Wiederherstellungspaket enthält auch `.github`, `state`, `public`, Tests und sämtliche Programmdateien.
-3. Vorhandene Dateien ersetzen. Bei Konflikten in `state/request_state.json` oder `state/team_registry.json` grundsätzlich den aktuelleren Stand aus `main/origin` behalten.
-4. Bei einem Konflikt in `state/request_state.json` die Version `from main/origin` behalten.
-5. Bei Konflikten in Version-12-Dateien wie `poc_scraper.py`, `config.json` oder der Workflow-Datei die lokale Version `from main` behalten.
-6. Commit-Text: `Terminverschiebungen Version 12.2`
-7. `Push origin` ausführen.
-8. Unter GitHub Actions den Workflow `SSV53 Heimspiele aktualisieren` starten.
+`main` enthält den stabilen produktiven Stand. Änderungen werden auf einem
+separaten Branch entwickelt, durch die vollständige Testsuite geprüft und
+anschließend kontrolliert übernommen.
+
+- Keine älteren ZIP-Pakete über den aktuellen Repository-Stand kopieren.
+- Bei Konflikten in `state/` und `public/` gilt der neueste Stand aus
+  `main`.
+- Der Workflow `SSV53 Mähsteuerung (Diagnose)` besitzt keinen Zeitplan und
+  sendet keine Mäherbefehle.
+- Die Azure-Migration bleibt bis zur ausdrücklichen Aktivierung im
+  separaten Branch `feature/azure-mower-migration`.
 
 ## Kontrolle nach dem ersten Lauf
 

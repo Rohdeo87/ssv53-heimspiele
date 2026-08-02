@@ -1,0 +1,850 @@
+name: "Einmalig: Repository Phase 6.1 bereinigen und härten V2"
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ssv53-repository-phase-6-1
+  cancel-in-progress: false
+
+jobs:
+  harden:
+    name: Repository und Azure-Vorbereitung bereinigen
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Repository vollständig laden
+        uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.SSV53_AUTOMATION_TOKEN }}
+          persist-credentials: true
+          fetch-depth: 0
+
+      - name: Python 3.12 einrichten
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Main sicher bereinigen und testen
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git config user.name "SSV53 Automation"
+          git config user.email "actions@users.noreply.github.com"
+
+          git switch main
+          git pull --ff-only origin main
+
+          python - <<'PY'
+          from __future__ import annotations
+
+          import re
+          from pathlib import Path
+
+          ROOT = Path(".")
+          WORKFLOWS = ROOT / ".github" / "workflows"
+
+          def read(path: str) -> str:
+              return (ROOT / path).read_text(encoding="utf-8")
+
+          def write(path: str, content: str) -> None:
+              target = ROOT / path
+              target.parent.mkdir(parents=True, exist_ok=True)
+              target.write_text(content, encoding="utf-8")
+              print(f"Aktualisiert: {path}")
+
+          # 1. Der reine GitHub-Scheduler-Test wird nicht mehr benötigt.
+          heartbeat = WORKFLOWS / "scheduler-heartbeat.yml"
+          if heartbeat.exists():
+              heartbeat.unlink()
+              print(f"Gelöscht: {heartbeat}")
+
+          # 2. Die alte GitHub-Mähsteuerung bleibt nur als manuelle Diagnose
+          #    erhalten und kann aus diesem Workflow heraus keine Befehle senden.
+          mower_path = ".github/workflows/mower-decision.yml"
+          mower = read(mower_path)
+          mower = mower.replace(
+              "name: SSV53 Mähsteuerung\n",
+              "name: SSV53 Mähsteuerung (Diagnose)\n",
+              1,
+          )
+
+          live_inputs = """      execute_park:
+                description: "Bei aktiver Sperre echten Parkbefehl senden"
+                required: false
+                type: boolean
+                default: false
+              execute_start:
+                description: "Nach eigener Parkierung echten Startbefehl senden"
+                required: false
+                type: boolean
+                default: false
+          """
+          if live_inputs in mower:
+              mower = mower.replace(live_inputs, "", 1)
+          else:
+              # Robuste Alternative, falls GitHub die Einrückung nicht verändert hat,
+              # aber zwischenzeitlich Leerzeilen ergänzt wurden.
+              mower = re.sub(
+                  r"(?ms)^      execute_park:\n"
+                  r".*?"
+                  r"^      simulate_owned_park:",
+                  "      simulate_owned_park:",
+                  mower,
+                  count=1,
+              )
+
+          mower = re.sub(
+              r'(?ms)^  schedule:\n    - cron: "2-59/5 \* \* \* \*"\n',
+              "",
+              mower,
+              count=1,
+          )
+          mower = mower.replace(
+              "name: Mähentscheidung berechnen, sicher parken und kontrolliert starten",
+              "name: Mähentscheidung ausschließlich diagnostisch berechnen",
+              1,
+          )
+          mower = re.sub(
+              r"(?m)^          EXECUTE_PARK: .*$",
+              '          EXECUTE_PARK: "false"',
+              mower,
+              count=1,
+          )
+          mower = re.sub(
+              r"(?m)^          EXECUTE_START: .*$",
+              '          EXECUTE_START: "false"',
+              mower,
+              count=1,
+          )
+
+          mower_head = "\n".join(mower.splitlines()[:45])
+          checks = {
+              "kein schedule-Trigger": "  schedule:" not in mower_head,
+              "kein execute_park-Input": "execute_park:" not in mower_head,
+              "kein execute_start-Input": "execute_start:" not in mower_head,
+              "Parken fest deaktiviert": 'EXECUTE_PARK: "false"' in mower,
+              "Starten fest deaktiviert": 'EXECUTE_START: "false"' in mower,
+          }
+          failed = [name for name, ok in checks.items() if not ok]
+          if failed:
+              raise SystemExit(
+                  "Mähsteuerung konnte nicht sicher gehärtet werden: "
+                  + ", ".join(failed)
+              )
+          write(mower_path, mower)
+
+          # 3. Alle langfristigen Workflows verwenden Node-24-kompatible
+          #    GitHub-Actions-Hauptversionen.
+          for workflow in sorted(WORKFLOWS.glob("*.yml")):
+              if workflow.name.startswith("SSV53_Repository_Phase6_1_"):
+                  continue
+              content = workflow.read_text(encoding="utf-8")
+              updated = (
+                  content.replace("actions/checkout@v4", "actions/checkout@v6")
+                  .replace("actions/checkout@v5", "actions/checkout@v6")
+                  .replace("actions/setup-python@v5", "actions/setup-python@v6")
+                  .replace("actions/upload-artifact@v4", "actions/upload-artifact@v7")
+              )
+              if updated != content:
+                  workflow.write_text(updated, encoding="utf-8")
+                  print(f"Actions aktualisiert: {workflow}")
+
+          # 4. Lokale Geheimnisse, Build-Ergebnisse und Azure-Artefakte
+          #    dürfen nicht versehentlich committed werden.
+          gitignore_entries = [
+              ".venv/",
+              "__pycache__/",
+              "*.pyc",
+              "generated/",
+              "local.settings.json",
+              ".env",
+              ".env.*",
+              "!.env.example",
+              ".python_packages/",
+              ".azure/",
+              ".pytest_cache/",
+              ".coverage",
+              "htmlcov/",
+              "dist/",
+              "*.zip",
+          ]
+          gitignore_path = ROOT / ".gitignore"
+          existing = (
+              gitignore_path.read_text(encoding="utf-8").splitlines()
+              if gitignore_path.exists()
+              else []
+          )
+          normalized = [line.rstrip() for line in existing if line.strip()]
+          for entry in gitignore_entries:
+              if entry not in normalized:
+                  normalized.append(entry)
+          gitignore_path.write_text("\n".join(normalized) + "\n", encoding="utf-8")
+          print("Aktualisiert: .gitignore")
+
+          # 5. Exakt der bereits erfolgreich getestete Python-Stand.
+          write(
+              "requirements.txt",
+              "\n".join(
+                  [
+                      "requests==2.34.2",
+                      "beautifulsoup4==4.15.0",
+                      "lxml==6.1.1",
+                      "",
+                  ]
+              ),
+          )
+
+          # 6. Abhängigkeiten werden künftig kontrolliert per Pull Request
+          #    aktualisiert und nicht still während eines Builds ausgetauscht.
+          write(
+              ".github/dependabot.yml",
+              """version: 2
+          updates:
+            - package-ecosystem: "pip"
+              directory: "/"
+              schedule:
+                interval: "weekly"
+              open-pull-requests-limit: 5
+
+            - package-ecosystem: "github-actions"
+              directory: "/"
+              schedule:
+                interval: "weekly"
+              open-pull-requests-limit: 5
+          """,
+          )
+
+          # 7. Kurze Sicherheitsrichtlinie für das öffentliche Repository.
+          write(
+              "SECURITY.md",
+              """# Sicherheit
+
+          ## Zugangsdaten
+
+          Zugangsdaten, API-Schlüssel, Tokens und lokale Azure-Einstellungen dürfen
+          niemals in dieses öffentliche Repository committed werden.
+
+          - GitHub-Laufzeitwerte gehören in GitHub Secrets oder Variables.
+          - Husqvarna- und Hydrawise-Zugangsdaten gehören nach der Migration in
+            Azure Key Vault.
+          - `local.settings.json`, `.env` und erzeugte ZIP-Dateien sind über
+            `.gitignore` ausgeschlossen.
+
+          ## Sicherheitsrelevante Änderungen
+
+          Änderungen an Mähersteuerung, Beregnungslogik, GitHub-OIDC, Azure-Rollen
+          oder Key-Vault-Verweisen werden zuerst auf einem Branch getestet. Echte
+          Gerätebefehle bleiben bis zu einer gesonderten Freigabe deaktiviert.
+
+          Sicherheitsprobleme bitte nicht mit Zugangsdaten in einem öffentlichen
+          Issue dokumentieren.
+          """,
+          )
+
+          # 8. Veraltete ZIP-Installationsanleitung durch den tatsächlichen
+          #    Repository-Betrieb ersetzen.
+          readme_path = ROOT / "README.md"
+          readme = readme_path.read_text(encoding="utf-8")
+          start_marker = "## Installation"
+          end_marker = "## Kontrolle nach dem ersten Lauf"
+          if start_marker in readme and end_marker in readme:
+              before, remainder = readme.split(start_marker, 1)
+              _old_section, after = remainder.split(end_marker, 1)
+              replacement = """## Betrieb und Änderungen
+
+          `main` enthält den stabilen produktiven Stand. Änderungen werden auf einem
+          separaten Branch entwickelt, durch die vollständige Testsuite geprüft und
+          anschließend kontrolliert übernommen.
+
+          - Keine älteren ZIP-Pakete über den aktuellen Repository-Stand kopieren.
+          - Bei Konflikten in `state/` und `public/` gilt der neueste Stand aus
+            `main`.
+          - Der Workflow `SSV53 Mähsteuerung (Diagnose)` besitzt keinen Zeitplan und
+            sendet keine Mäherbefehle.
+          - Die Azure-Migration bleibt bis zur ausdrücklichen Aktivierung im
+            separaten Branch `feature/azure-mower-migration`.
+
+          """
+              readme = before + replacement + end_marker + after
+              readme_path.write_text(readme, encoding="utf-8")
+              print("Aktualisiert: README.md")
+
+          # 9. Dauerhafte Repository-Sicherheitstests.
+          write(
+              "tests/test_repository_hardening.py",
+              """from __future__ import annotations
+
+          import unittest
+          from pathlib import Path
+
+
+          ROOT = Path(__file__).resolve().parents[1]
+          WORKFLOWS = ROOT / ".github" / "workflows"
+
+
+          class RepositoryHardeningTests(unittest.TestCase):
+              def test_old_scheduler_heartbeat_is_removed(self) -> None:
+                  self.assertFalse(
+                      (WORKFLOWS / "scheduler-heartbeat.yml").exists()
+                  )
+
+              def test_mower_workflow_is_manual_diagnostic_only(self) -> None:
+                  content = (
+                      WORKFLOWS / "mower-decision.yml"
+                  ).read_text(encoding="utf-8")
+                  head = "\\n".join(content.splitlines()[:45])
+
+                  self.assertNotIn("  schedule:", head)
+                  self.assertNotIn("execute_park:", head)
+                  self.assertNotIn("execute_start:", head)
+                  self.assertNotIn(
+                      "vars.MOWER_PARKING_ENABLED",
+                      "\n".join(content.splitlines()[:70]),
+                  )
+                  self.assertNotIn(
+                      "vars.MOWER_AUTOSTART_ENABLED",
+                      "\n".join(content.splitlines()[:70]),
+                  )
+                  self.assertIn('EXECUTE_PARK: "false"', content)
+                  self.assertIn('EXECUTE_START: "false"', content)
+
+              def test_long_lived_workflows_use_current_action_majors(self) -> None:
+                  forbidden = (
+                      "actions/checkout@v4",
+                      "actions/checkout@v5",
+                      "actions/setup-python@v5",
+                      "actions/upload-artifact@v4",
+                  )
+                  for workflow in WORKFLOWS.glob("*.yml"):
+                      if workflow.name.startswith(
+                          "SSV53_Repository_Phase6_1_"
+                      ):
+                          continue
+                      content = workflow.read_text(encoding="utf-8")
+                      for value in forbidden:
+                          with self.subTest(
+                              workflow=workflow.name,
+                              value=value,
+                          ):
+                              self.assertNotIn(value, content)
+
+              def test_sensitive_local_files_are_ignored(self) -> None:
+                  content = (ROOT / ".gitignore").read_text(encoding="utf-8")
+                  for value in (
+                      "local.settings.json",
+                      ".env",
+                      ".python_packages/",
+                      ".azure/",
+                      "dist/",
+                      "*.zip",
+                  ):
+                      with self.subTest(value=value):
+                          self.assertIn(value, content)
+
+              def test_runtime_dependencies_are_exactly_pinned(self) -> None:
+                  lines = [
+                      line.strip()
+                      for line in (
+                          ROOT / "requirements.txt"
+                      ).read_text(encoding="utf-8").splitlines()
+                      if line.strip()
+                  ]
+                  self.assertTrue(lines)
+                  for line in lines:
+                      with self.subTest(line=line):
+                          self.assertIn("==", line)
+                          self.assertNotIn(">=", line)
+                          self.assertNotIn("<", line)
+
+              def test_dependabot_covers_pip_and_actions(self) -> None:
+                  content = (
+                      ROOT / ".github" / "dependabot.yml"
+                  ).read_text(encoding="utf-8")
+                  self.assertIn('package-ecosystem: "pip"', content)
+                  self.assertIn(
+                      'package-ecosystem: "github-actions"',
+                      content,
+                  )
+
+
+          if __name__ == "__main__":
+              unittest.main()
+          """,
+          )
+          PY
+
+          python -m pip install --disable-pip-version-check -r requirements.txt
+          python -m compileall -q .
+          python -m unittest discover -s tests -p "test_*.py" -v
+
+          git add -A \
+            .github \
+            .gitignore \
+            requirements.txt \
+            README.md \
+            SECURITY.md \
+            tests/test_repository_hardening.py
+
+          if git diff --cached --quiet; then
+            echo "Main war bereits vollständig bereinigt."
+          else
+            git commit -m "Repository bereinigen und GitHub-Mähsteuerung absichern"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+
+      - name: Azure-Migrationsbranch synchronisieren und härten
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          BRANCH="feature/azure-mower-migration"
+          INSTALLER_V1=".github/workflows/SSV53_Repository_Phase6_1_Bereinigung.yml"
+          INSTALLER_V2=".github/workflows/SSV53_Repository_Phase6_1_Bereinigung_V2.yml"
+
+          git fetch origin main "$BRANCH"
+          git switch "$BRANCH"
+          git pull --ff-only origin "$BRANCH"
+
+          set +e
+          git merge --no-edit origin/main
+          MERGE_STATUS=$?
+          set -e
+
+          if [ "$MERGE_STATUS" -ne 0 ]; then
+            UNMERGED="$(git diff --name-only --diff-filter=U)"
+            if [ "$UNMERGED" != "requirements.txt" ]; then
+              echo "Unerwartete Merge-Konflikte:" >&2
+              printf '%s\n' "$UNMERGED" >&2
+              exit 1
+            fi
+
+            cat > requirements.txt <<'EOF'
+          requests==2.34.2
+          beautifulsoup4==4.15.0
+          lxml==6.1.1
+          azure-functions==1.24.0
+          EOF
+            git add requirements.txt
+            git commit --no-edit
+          fi
+
+          # Der einmalige Installer soll niemals im langfristigen Branch liegen.
+          rm -f "$INSTALLER_V1" "$INSTALLER_V2"
+
+          python - <<'PY'
+          from __future__ import annotations
+
+          import re
+          from pathlib import Path
+
+          ROOT = Path(".")
+
+          def read(path: str) -> str:
+              return (ROOT / path).read_text(encoding="utf-8")
+
+          def write(path: str, content: str) -> None:
+              target = ROOT / path
+              target.parent.mkdir(parents=True, exist_ok=True)
+              target.write_text(content, encoding="utf-8")
+              print(f"Aktualisiert: {path}")
+
+          # Der Azure-Branch benötigt zusätzlich die Azure-Functions-Laufzeit.
+          write(
+              "requirements.txt",
+              "\n".join(
+                  [
+                      "requests==2.34.2",
+                      "beautifulsoup4==4.15.0",
+                      "lxml==6.1.1",
+                      "azure-functions==1.24.0",
+                      "",
+                  ]
+              ),
+          )
+
+          # What-if explizit auf Python 3.12 und den Migrationsbranch begrenzen.
+          what_if_path = ".github/workflows/azure-infra-what-if.yml"
+          what_if = read(what_if_path)
+          anchor = (
+              "      - name: Repository laden\n"
+              "        uses: actions/checkout@v6\n"
+              "\n"
+              "      - name: OIDC-Konfiguration prüfen\n"
+          )
+          insertion = (
+              "      - name: Repository laden\n"
+              "        uses: actions/checkout@v6\n"
+              "\n"
+              "      - name: Python 3.12 einrichten\n"
+              "        uses: actions/setup-python@v6\n"
+              "        with:\n"
+              '          python-version: "3.12"\n'
+              "          cache: pip\n"
+              "\n"
+              "      - name: Ausführung auf den Migrationsbranch begrenzen\n"
+              "        shell: bash\n"
+              "        run: |\n"
+              "          set -euo pipefail\n"
+              '          if [ "$GITHUB_REF_NAME" != "feature/azure-mower-migration" ]; then\n'
+              '            echo "What-if darf ausschließlich vom Azure-Migrationsbranch gestartet werden." >&2\n'
+              "            exit 1\n"
+              "          fi\n"
+              "\n"
+              "      - name: OIDC-Konfiguration prüfen\n"
+          )
+          if "Ausführung auf den Migrationsbranch begrenzen" not in what_if:
+              if anchor not in what_if:
+                  raise SystemExit(
+                      "Der erwartete Einfügepunkt im What-if-Workflow fehlt."
+                  )
+              what_if = what_if.replace(anchor, insertion, 1)
+
+          if "az deployment group create" in what_if:
+              raise SystemExit(
+                  "Der What-if-Workflow enthält unerwartet einen Deploymentbefehl."
+              )
+          write(what_if_path, what_if)
+
+          # Bicep auf geringere Redundanz und kanonische Key-Vault-URIs härten.
+          bicep_path = "infra/main.bicep"
+          bicep = read(bicep_path)
+          bicep = bicep.replace(
+              "var storageBlobDataContributorRoleId = "
+              "'ba92f5b4-2d11-453d-a403-e96b0029c9fe'\n",
+              "",
+              1,
+          )
+          contributor_block = """resource roleAssignmentBlobContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+            name: guid(subscription().id, storage.id, managedIdentity.id, 'Storage Blob Data Contributor')
+            scope: storage
+            properties: {
+              roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageBlobDataContributorRoleId)
+              principalId: managedIdentity.properties.principalId
+              principalType: 'ServicePrincipal'
+            }
+          }
+
+          """
+          bicep = bicep.replace(contributor_block, "", 1)
+          bicep = bicep.replace(
+              "    roleAssignmentBlobContributor\n",
+              "",
+              1,
+          )
+          bicep = bicep.replace(
+              "secrets/husqvarna-client-id/)'",
+              "secrets/husqvarna-client-id)'",
+          )
+          bicep = bicep.replace(
+              "secrets/husqvarna-client-secret/)'",
+              "secrets/husqvarna-client-secret)'",
+          )
+          bicep = bicep.replace(
+              "secrets/hydrawise-api-key/)'",
+              "secrets/hydrawise-api-key)'",
+          )
+          bicep = bicep.replace(
+              "secrets/hydrawise-controller-id/)'",
+              "secrets/hydrawise-controller-id)'",
+          )
+
+          if "roleAssignmentBlobContributor" in bicep:
+              raise SystemExit(
+                  "Die redundante Storage-Blob-Contributor-Rolle ist noch vorhanden."
+              )
+          if re.search(r"secrets/[a-z0-9-]+/\)'", bicep):
+              raise SystemExit(
+                  "Mindestens ein Key-Vault-Verweis endet noch mit einem Schrägstrich."
+              )
+          write(bicep_path, bicep)
+
+          # Doppelte beziehungsweise veraltete Azure-Dokumentation entfernen.
+          legacy_readme = ROOT / "azure_function" / "README.md"
+          if legacy_readme.exists():
+              legacy_readme.unlink()
+              print(f"Gelöscht: {legacy_readme}")
+
+          # Reader allein ist für What-if nicht verlässlich ausreichend.
+          oidc_path = "infra/AZURE_OIDC_SETUP.md"
+          oidc = read(oidc_path)
+          old_permission = """## 3. Minimale Berechtigung vergeben
+
+          Für die reine What-if-Phase zunächst nur die Rolle `Reader` auf der
+          Ressourcengruppe `rg-ssv53-platzpflege-prod` vergeben.
+
+          Der Workflow verwendet `ProviderNoRbac`, sodass er die Vorlage fachlich
+          prüfen kann, ohne bereits Berechtigungen zum Anlegen der Ressourcen oder
+          der enthaltenen Rollenzuweisungen zu besitzen.
+
+          Für eine spätere echte Bereitstellung werden gesonderte, bewusst
+          freizugebende Rechte benötigt. Diese werden in dieser Phase ausdrücklich
+          noch nicht vergeben.
+          """
+          new_permission = """## 3. Berechtigung für What-if bewusst festlegen
+
+          Eine reine `Reader`-Rolle ist nicht in jeder Azure-Konstellation
+          ausreichend, weil auch die Deployment-Validierung und die What-if-
+          Operation selbst autorisiert werden müssen.
+
+          Vor dem ersten Lauf wird deshalb eine gesonderte Identität verwendet,
+          deren Rechte auf die Ressourcengruppe und ausschließlich auf die für
+          Validierung und What-if erforderlichen Deployment-Operationen begrenzt
+          sind. Sie erhält keine allgemeine Berechtigung zum Erstellen, Ändern oder
+          Löschen der Zielressourcen.
+
+          Die konkrete Rollendefinition wird erst nach Aktivierung des
+          Sponsorship-Abonnements anhand der dort verfügbaren Azure-Rollen geprüft.
+          Bis dahin wird der What-if-Workflow nicht gestartet. Für eine spätere
+          echte Bereitstellung wird eine getrennte, ausdrücklich freizugebende
+          Berechtigung eingerichtet.
+          """
+          if old_permission in oidc:
+              oidc = oidc.replace(old_permission, new_permission, 1)
+          elif "## 3. Berechtigung für What-if bewusst festlegen" not in oidc:
+              raise SystemExit(
+                  "Der Berechtigungsabschnitt der OIDC-Anleitung ist unbekannt."
+              )
+          write(oidc_path, oidc)
+
+          # Offene fachliche Entscheidungen werden sichtbar festgehalten.
+          write(
+              "infra/PRE_DEPLOYMENT_DECISIONS.md",
+              """# Offene Entscheidungen vor dem ersten Azure-Deployment
+
+          Vor `what-if`, Deployment oder lesenden Live-Abfragen werden diese Punkte
+          ausdrücklich bestätigt:
+
+          1. Ist die Mannschaftsbezeichnung `E1` in `mower/config.json` korrekt,
+             oder muss sie `E2` lauten?
+          2. Sind die effektiven Vorläufe gewollt?
+             - Training: 30 Minuten Puffer plus 15 Minuten Park-Lookahead
+             - Beregnung: 30 Minuten Puffer plus 15 Minuten Park-Lookahead
+             - Heimspiele: 60 Minuten ICS-Puffer plus 15 Minuten Park-Lookahead
+          3. Wie erhält Azure nach einer Spielplanänderung die aktuelle
+             `public/rasen.ics` und `mower/config.json`?
+             Bevorzugt wird ein versionierter Blob-Abruf mit Managed Identity,
+             ETag, letzter gültiger Kopie und maximal zulässigem Datenalter.
+          4. Welche E-Mail-Adressen erhalten Heartbeat-, Fehler- und Kostenalarme?
+          5. Welche minimale Azure-Rolle wird für den reinen What-if-Lauf
+             freigegeben?
+          6. Sind die vier Key-Vault-Geheimnisse vorhanden und korrekt benannt?
+          7. Bleiben `CONTROL_MODE=DRY_RUN` und `ENABLE_LIVE_READS=false` beim
+             ersten Deployment unverändert?
+
+          Ohne dokumentierte Bestätigung dieser Punkte erfolgt keine Aktivierung.
+          """,
+          )
+
+          # Phase 6.1 in der zentralen Dokumentation vermerken.
+          migration_path = ROOT / "AZURE_MIGRATION.md"
+          migration = migration_path.read_text(encoding="utf-8")
+          addition = """
+
+          ## Phase 6.1 – Repository-Bereinigung und Härtung
+
+          - der unverlässliche GitHub-Scheduler-Heartbeat wurde entfernt
+          - die alte GitHub-Mähsteuerung ist ausschließlich manuell und
+            diagnostisch; Park- und Startbefehle sind fest deaktiviert
+          - langfristige GitHub Actions wurden auf Node-24-kompatible
+            Hauptversionen aktualisiert
+          - Python-Abhängigkeiten sind exakt auf den erfolgreich getesteten Stand
+            festgelegt und werden künftig durch Dependabot geprüft
+          - lokale Geheimnisse, Azure-Einstellungen und Build-Pakete werden
+            zuverlässig ignoriert
+          - der What-if-Workflow verwendet ausdrücklich Python 3.12 und ist auf
+            `feature/azure-mower-migration` begrenzt
+          - redundante Storage-Rollen und nicht kanonische Key-Vault-URIs wurden
+            bereinigt
+          - doppelte Azure-Dokumentation wurde in dieser Datei beziehungsweise
+            unter `infra/` zusammengeführt
+          - offene fachliche Entscheidungen stehen in
+            `infra/PRE_DEPLOYMENT_DECISIONS.md`
+
+          Es wurden weiterhin keine Azure-Ressourcen erstellt und keine Befehle an
+          Mäher oder Beregnung gesendet.
+          """
+          if "## Phase 6.1 – Repository-Bereinigung und Härtung" not in migration:
+              migration_path.write_text(
+                  migration.rstrip() + addition + "\n",
+                  encoding="utf-8",
+              )
+              print("AZURE_MIGRATION.md um Phase 6.1 ergänzt.")
+
+          # Zusätzliche Azure-Härtungstests.
+          write(
+              "tests/test_azure_hardening.py",
+              """from __future__ import annotations
+
+          import unittest
+          from pathlib import Path
+
+
+          ROOT = Path(__file__).resolve().parents[1]
+
+
+          class AzureHardeningTests(unittest.TestCase):
+              def test_what_if_is_branch_limited_and_uses_python_312(self) -> None:
+                  content = (
+                      ROOT
+                      / ".github"
+                      / "workflows"
+                      / "azure-infra-what-if.yml"
+                  ).read_text(encoding="utf-8")
+
+                  self.assertIn("actions/setup-python@v6", content)
+                  self.assertIn('python-version: "3.12"', content)
+                  self.assertIn(
+                      'GITHUB_REF_NAME" != "feature/azure-mower-migration',
+                      content,
+                  )
+                  self.assertNotIn("az deployment group create", content)
+
+              def test_bicep_has_no_redundant_blob_contributor(self) -> None:
+                  content = (
+                      ROOT / "infra" / "main.bicep"
+                  ).read_text(encoding="utf-8")
+
+                  self.assertNotIn(
+                      "storageBlobDataContributorRoleId",
+                      content,
+                  )
+                  self.assertNotIn(
+                      "roleAssignmentBlobContributor",
+                      content,
+                  )
+
+              def test_key_vault_references_have_no_trailing_slash(self) -> None:
+                  content = (
+                      ROOT / "infra" / "main.bicep"
+                  ).read_text(encoding="utf-8")
+
+                  for secret_name in (
+                      "husqvarna-client-id",
+                      "husqvarna-client-secret",
+                      "hydrawise-api-key",
+                      "hydrawise-controller-id",
+                  ):
+                      with self.subTest(secret_name=secret_name):
+                          self.assertIn(
+                              f"secrets/{secret_name})",
+                              content,
+                          )
+                          self.assertNotIn(
+                              f"secrets/{secret_name}/)",
+                              content,
+                          )
+
+              def test_pre_deployment_decisions_are_documented(self) -> None:
+                  content = (
+                      ROOT / "infra" / "PRE_DEPLOYMENT_DECISIONS.md"
+                  ).read_text(encoding="utf-8")
+
+                  self.assertIn("E1", content)
+                  self.assertIn("E2", content)
+                  self.assertIn("Park-Lookahead", content)
+                  self.assertIn("versionierter Blob-Abruf", content)
+
+              def test_legacy_azure_readme_is_removed(self) -> None:
+                  self.assertFalse(
+                      (ROOT / "azure_function" / "README.md").exists()
+                  )
+
+
+          if __name__ == "__main__":
+              unittest.main()
+          """,
+          )
+          PY
+
+          python -m pip install --disable-pip-version-check -r requirements.txt
+          python -m compileall -q mower function_app.py scripts
+          python -m unittest discover -s tests -p "test_*.py" -v
+
+          az bicep install
+          az bicep build \
+            --file infra/main.bicep \
+            --outfile /tmp/ssv53-phase-6-1-main.json
+
+          rm -rf dist
+          mkdir -p dist
+          python scripts/build_azure_source_package.py \
+            --output dist/ssv53-platzpflege-source.zip \
+            > dist/package-result.json
+
+          git add -A \
+            .github \
+            .gitignore \
+            requirements.txt \
+            README.md \
+            SECURITY.md \
+            tests \
+            infra \
+            AZURE_MIGRATION.md \
+            azure_function
+
+          if git diff --cached --quiet; then
+            echo "Azure-Migrationsbranch war bereits vollständig gehärtet."
+          else
+            git commit -m "Azure-Migration Phase 6.1 bereinigen und härten"
+          fi
+
+          git pull --rebase origin "$BRANCH"
+          git push origin HEAD:"$BRANCH"
+
+      - name: Einmaligen Installer aus main entfernen
+        if: ${{ success() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          INSTALLER=".github/workflows/SSV53_Repository_Phase6_1_Bereinigung.yml"
+
+          git switch main
+          git pull --ff-only origin main
+          rm -f "$INSTALLER"
+
+          git config user.name "SSV53 Automation"
+          git config user.email "actions@users.noreply.github.com"
+
+          git add -A "$INSTALLER_V1" "$INSTALLER_V2"
+          if git diff --cached --quiet; then
+            echo "Installer war bereits entfernt."
+          else
+            git commit -m "Einmaligen Phase-6.1-Installer entfernen"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+
+      - name: Ergebnis zusammenfassen
+        if: ${{ success() }}
+        shell: bash
+        run: |
+          {
+            echo "# Repository Phase 6.1 abgeschlossen"
+            echo
+            echo "## Main"
+            echo
+            echo "- Scheduler-Heartbeat entfernt"
+            echo "- GitHub-Mähsteuerung nur noch manuelle Diagnose"
+            echo "- Park- und Startbefehle fest deaktiviert"
+            echo "- Actions aktualisiert"
+            echo "- Abhängigkeiten exakt gepinnt"
+            echo "- Dependabot, SECURITY.md und erweiterte .gitignore ergänzt"
+            echo
+            echo "## Azure-Migrationsbranch"
+            echo
+            echo "- mit aktuellem main synchronisiert"
+            echo "- What-if auf Python 3.12 und Migrationsbranch begrenzt"
+            echo "- Bicep-Rollen und Key-Vault-Verweise bereinigt"
+            echo "- offene Vorbereitungsentscheidungen dokumentiert"
+            echo "- komplette Testsuite, Bicep-Kompilierung und Paketbau erfolgreich"
+            echo
+            echo "**Es wurden keine Azure-Ressourcen erstellt und keine Gerätebefehle gesendet.**"
+          } >> "$GITHUB_STEP_SUMMARY"

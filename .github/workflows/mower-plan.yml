@@ -38,10 +38,10 @@ jobs:
 
     steps:
       - name: Repository laden
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Python einrichten
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -90,7 +90,7 @@ jobs:
           python -m mower.generate_schedule "${ARGS[@]}"
 
       - name: Ergebnis bereitstellen
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: maehplan-dry-run-${{ github.run_number }}
           path: generated/mower

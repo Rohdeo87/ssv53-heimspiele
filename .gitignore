@@ -2,3 +2,14 @@
 __pycache__/
 *.pyc
 generated/
+local.settings.json
+.env
+.env.*
+!.env.example
+.python_packages/
+.azure/
+.pytest_cache/
+.coverage
+htmlcov/
+dist/
+*.zip
