@@ -1,0 +1,163 @@
+name: "Einmalig: Azure-Migration Phase 6 Quellpaket vorbereiten"
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    name: Geprüftes Azure-Quellpaket vorbereiten
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Repository laden
+        uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.SSV53_AUTOMATION_TOKEN }}
+          persist-credentials: true
+          fetch-depth: 0
+
+      - name: Python einrichten
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Phase 6 im Migrationsbranch installieren und prüfen
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          BRANCH="feature/azure-mower-migration"
+
+          if ! git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
+            echo "Der erwartete Migrationsbranch $BRANCH fehlt." >&2
+            exit 1
+          fi
+
+          git switch "$BRANCH"
+          git pull --ff-only origin "$BRANCH"
+
+          python - <<'PYFILES'
+          from __future__ import annotations
+
+          import base64
+          from pathlib import Path
+
+          files = {'scripts/build_azure_source_package.py': 'ZnJvbSBfX2Z1dHVyZV9fIGltcG9ydCBhbm5vdGF0aW9ucwoKaW1wb3J0IGFyZ3BhcnNlCmltcG9ydCBoYXNobGliCmltcG9ydCBqc29uCmltcG9ydCBzdGF0CmltcG9ydCB6aXBmaWxlCmZyb20gcGF0aGxpYiBpbXBvcnQgUGF0aCwgUHVyZVBvc2l4UGF0aAoKClJFUVVJUkVEX0ZJTEVTID0gKAogICAgImZ1bmN0aW9uX2FwcC5weSIsCiAgICAiaG9zdC5qc29uIiwKICAgICJyZXF1aXJlbWVudHMudHh0IiwKICAgICJtb3dlci9fX2luaXRfXy5weSIsCiAgICAibW93ZXIvY29uZmlnLmpzb24iLAogICAgIm1vd2VyL2NvbnRyb2xsZXIucHkiLAogICAgIm1vd2VyL2RlY2lzaW9uLnB5IiwKICAgICJtb3dlci9kcnlfcnVuLnB5IiwKICAgICJtb3dlci9odXNxdmFybmEucHkiLAogICAgIm1vd2VyL2h5ZHJhd2lzZS5weSIsCiAgICAibW93ZXIvcGxhbm5lci5weSIsCiAgICAibW93ZXIvcnVudGltZS5weSIsCiAgICAibW93ZXIvc2FmZXR5LnB5IiwKICAgICJtb3dlci9zdGF0ZS5weSIsCiAgICAibW93ZXIvc3RhdGVfc3RvcmUucHkiLAogICAgInB1YmxpYy9yYXNlbi5pY3MiLAopCgpGT1JCSURERU5fUEFUSF9QQVJUUyA9IHsKICAgICIuZ2l0IiwKICAgICIuZ2l0aHViIiwKICAgICIudmVudiIsCiAgICAiX19weWNhY2hlX18iLAogICAgImdlbmVyYXRlZCIsCiAgICAiaW5mcmEiLAogICAgInRlc3RzIiwKfQoKRk9SQklEREVOX0NPTlRFTlRfTUFSS0VSUyA9ICgKICAgIGIiL2FjdGlvbnMiLAogICAgYiJQYXJrVW50aWxGdXJ0aGVyTm90aWNlIiwKICAgIGIiU3RhcnRJbldvcmtBcmVhIiwKICAgIGIic2VuZF9tb3dlcl9hY3Rpb24iLAogICAgYiJTU1Y1M19BVVRPTUFUSU9OX1RPS0VOIiwKKQoKRklYRURfWklQX1RJTUVTVEFNUCA9ICgyMDI2LCAxLCAxLCAwLCAwLCAwKQoKCmRlZiBfc2hhMjU2KGRhdGE6IGJ5dGVzKSAtPiBzdHI6CiAgICByZXR1cm4gaGFzaGxpYi5zaGEyNTYoZGF0YSkuaGV4ZGlnZXN0KCkKCgpkZWYgX3ZhbGlkYXRlX3JlbGF0aXZlX3BhdGgocmVsYXRpdmVfcGF0aDogc3RyKSAtPiBQdXJlUG9zaXhQYXRoOgogICAgcGF0aCA9IFB1cmVQb3NpeFBhdGgocmVsYXRpdmVfcGF0aCkKICAgIGlmIHBhdGguaXNfYWJzb2x1dGUoKSBvciAiLi4iIGluIHBhdGgucGFydHM6CiAgICAgICAgcmFpc2UgVmFsdWVFcnJvcihmIlVuc2ljaGVyZXIgUGFrZXRwZmFkOiB7cmVsYXRpdmVfcGF0aH0iKQogICAgaWYgRk9SQklEREVOX1BBVEhfUEFSVFMuaW50ZXJzZWN0aW9uKHBhdGgucGFydHMpOgogICAgICAgIHJhaXNlIFZhbHVlRXJyb3IoZiJWZXJib3RlbmVyIFBha2V0cGZhZDoge3JlbGF0aXZlX3BhdGh9IikKICAgIHJldHVybiBwYXRoCgoKZGVmIGNvbGxlY3RfZmlsZXMocmVwb3NpdG9yeV9yb290OiBQYXRoKSAtPiBsaXN0W3R1cGxlW3N0ciwgYnl0ZXNdXToKICAgIGZpbGVzOiBsaXN0W3R1cGxlW3N0ciwgYnl0ZXNdXSA9IFtdCiAgICBtaXNzaW5nOiBsaXN0W3N0cl0gPSBbXQoKICAgIGZvciByZWxhdGl2ZV9wYXRoIGluIFJFUVVJUkVEX0ZJTEVTOgogICAgICAgIHNvdXJjZSA9IHJlcG9zaXRvcnlfcm9vdCAvIHJlbGF0aXZlX3BhdGgKICAgICAgICBpZiBub3Qgc291cmNlLmlzX2ZpbGUoKToKICAgICAgICAgICAgbWlzc2luZy5hcHBlbmQocmVsYXRpdmVfcGF0aCkKICAgICAgICAgICAgY29udGludWUKICAgICAgICBpZiBzb3VyY2UuaXNfc3ltbGluaygpOgogICAgICAgICAgICByYWlzZSBWYWx1ZUVycm9yKGYiU3ltbGlua3Mgd2VyZGVuIG5pY2h0IHBha2V0aWVydDoge3JlbGF0aXZlX3BhdGh9IikKCiAgICAgICAgbm9ybWFsaXplZCA9IF92YWxpZGF0ZV9yZWxhdGl2ZV9wYXRoKHJlbGF0aXZlX3BhdGgpLmFzX3Bvc2l4KCkKICAgICAgICBjb250ZW50ID0gc291cmNlLnJlYWRfYnl0ZXMoKQoKICAgICAgICBmb3IgbWFya2VyIGluIEZPUkJJRERFTl9DT05URU5UX01BUktFUlM6CiAgICAgICAgICAgIGlmIG1hcmtlciBpbiBjb250ZW50OgogICAgICAgICAgICAgICAgcmFpc2UgVmFsdWVFcnJvcigKICAgICAgICAgICAgICAgICAgICBmIlNjaHJlaWItIG9kZXIgR2VoZWltbmlzbG9naWsgaW0gQXp1cmUtUXVlbGxwYWtldCBlbnRkZWNrdDogIgogICAgICAgICAgICAgICAgICAgIGYie3JlbGF0aXZlX3BhdGh9IGVudGjDpGx0IHttYXJrZXIuZGVjb2RlKCd1dGYtOCcsIGVycm9ycz0ncmVwbGFjZScpIXJ9IgogICAgICAgICAgICAgICAgKQoKICAgICAgICBmaWxlcy5hcHBlbmQoKG5vcm1hbGl6ZWQsIGNvbnRlbnQpKQoKICAgIGlmIG1pc3Npbmc6CiAgICAgICAgcmFpc2UgRmlsZU5vdEZvdW5kRXJyb3IoCiAgICAgICAgICAgICJFcmZvcmRlcmxpY2hlIERhdGVpZW4gZmVobGVuOiAiICsgIiwgIi5qb2luKHNvcnRlZChtaXNzaW5nKSkKICAgICAgICApCgogICAgbmFtZXMgPSBbbmFtZSBmb3IgbmFtZSwgX2NvbnRlbnQgaW4gZmlsZXNdCiAgICBpZiBsZW4obmFtZXMpICE9IGxlbihzZXQobmFtZXMpKToKICAgICAgICByYWlzZSBWYWx1ZUVycm9yKCJEb3BwZWx0ZSBQYWtldHBmYWRlIGVya2FubnQuIikKCiAgICByZXR1cm4gc29ydGVkKGZpbGVzLCBrZXk9bGFtYmRhIGl0ZW06IGl0ZW1bMF0pCgoKZGVmIGJ1aWxkX3BhY2thZ2UocmVwb3NpdG9yeV9yb290OiBQYXRoLCBvdXRwdXRfcGF0aDogUGF0aCkgLT4gZGljdFtzdHIsIG9iamVjdF06CiAgICBmaWxlcyA9IGNvbGxlY3RfZmlsZXMocmVwb3NpdG9yeV9yb290KQogICAgb3V0cHV0X3BhdGgucGFyZW50Lm1rZGlyKHBhcmVudHM9VHJ1ZSwgZXhpc3Rfb2s9VHJ1ZSkKCiAgICBtYW5pZmVzdF9maWxlcyA9IFsKICAgICAgICB7CiAgICAgICAgICAgICJwYXRoIjogbmFtZSwKICAgICAgICAgICAgInNpemUiOiBsZW4oY29udGVudCksCiAgICAgICAgICAgICJzaGEyNTYiOiBfc2hhMjU2KGNvbnRlbnQpLAogICAgICAgIH0KICAgICAgICBmb3IgbmFtZSwgY29udGVudCBpbiBmaWxlcwogICAgXQogICAgbWFuaWZlc3QgPSB7CiAgICAgICAgInNjaGVtYV92ZXJzaW9uIjogMSwKICAgICAgICAicGFja2FnZV90eXBlIjogImF6dXJlLWZ1bmN0aW9ucy1weXRob24tc291cmNlIiwKICAgICAgICAic2FmZXR5X3N0YWdlIjogIkRSWV9SVU5fUkVBRF9PTkxZIiwKICAgICAgICAicmVtb3RlX2J1aWxkX3JlcXVpcmVkIjogVHJ1ZSwKICAgICAgICAiZmlsZXMiOiBtYW5pZmVzdF9maWxlcywKICAgIH0KICAgIG1hbmlmZXN0X2J5dGVzID0gKAogICAgICAgIGpzb24uZHVtcHMobWFuaWZlc3QsIGVuc3VyZV9hc2NpaT1GYWxzZSwgaW5kZW50PTIsIHNvcnRfa2V5cz1UcnVlKQogICAgICAgICsgIlxuIgogICAgKS5lbmNvZGUoInV0Zi04IikKCiAgICB3aXRoIHppcGZpbGUuWmlwRmlsZSgKICAgICAgICBvdXRwdXRfcGF0aCwKICAgICAgICBtb2RlPSJ3IiwKICAgICAgICBjb21wcmVzc2lvbj16aXBmaWxlLlpJUF9ERUZMQVRFRCwKICAgICAgICBjb21wcmVzc2xldmVsPTksCiAgICApIGFzIGFyY2hpdmU6CiAgICAgICAgZm9yIG5hbWUsIGNvbnRlbnQgaW4gZmlsZXMgKyBbKCJwYWNrYWdlLW1hbmlmZXN0Lmpzb24iLCBtYW5pZmVzdF9ieXRlcyldOgogICAgICAgICAgICBpbmZvID0gemlwZmlsZS5aaXBJbmZvKG5hbWUsIGRhdGVfdGltZT1GSVhFRF9aSVBfVElNRVNUQU1QKQogICAgICAgICAgICBpbmZvLmNvbXByZXNzX3R5cGUgPSB6aXBmaWxlLlpJUF9ERUZMQVRFRAogICAgICAgICAgICBpbmZvLmV4dGVybmFsX2F0dHIgPSAoc3RhdC5TX0lGUkVHIHwgMG82NDQpIDw8IDE2CiAgICAgICAgICAgIGFyY2hpdmUud3JpdGVzdHIoaW5mbywgY29udGVudCkKCiAgICB3aXRoIHppcGZpbGUuWmlwRmlsZShvdXRwdXRfcGF0aCwgbW9kZT0iciIpIGFzIGFyY2hpdmU6CiAgICAgICAgbmFtZXMgPSBhcmNoaXZlLm5hbWVsaXN0KCkKICAgICAgICBpZiAiaG9zdC5qc29uIiBub3QgaW4gbmFtZXM6CiAgICAgICAgICAgIHJhaXNlIFZhbHVlRXJyb3IoImhvc3QuanNvbiBsaWVndCBuaWNodCBpbSBXdXJ6ZWx2ZXJ6ZWljaG5pcyBkZXMgUGFrZXRzLiIpCiAgICAgICAgaWYgImZ1bmN0aW9uX2FwcC5weSIgbm90IGluIG5hbWVzOgogICAgICAgICAgICByYWlzZSBWYWx1ZUVycm9yKAogICAgICAgICAgICAgICAgImZ1bmN0aW9uX2FwcC5weSBsaWVndCBuaWNodCBpbSBXdXJ6ZWx2ZXJ6ZWljaG5pcyBkZXMgUGFrZXRzLiIKICAgICAgICAgICAgKQogICAgICAgIGlmIGFueShuYW1lLnN0YXJ0c3dpdGgoIi8iKSBvciAiLi4iIGluIFB1cmVQb3NpeFBhdGgobmFtZSkucGFydHMgZm9yIG5hbWUgaW4gbmFtZXMpOgogICAgICAgICAgICByYWlzZSBWYWx1ZUVycm9yKCJEYXMgZXJ6ZXVndGUgWklQIGVudGjDpGx0IGVpbmVuIHVuc2ljaGVyZW4gUGZhZC4iKQogICAgICAgIGJhZCA9IGFyY2hpdmUudGVzdHppcCgpCiAgICAgICAgaWYgYmFkIGlzIG5vdCBOb25lOgogICAgICAgICAgICByYWlzZSBWYWx1ZUVycm9yKGYiQmVzY2jDpGRpZ3RlciBaSVAtRWludHJhZzoge2JhZH0iKQoKICAgIHBhY2thZ2VfYnl0ZXMgPSBvdXRwdXRfcGF0aC5yZWFkX2J5dGVzKCkKICAgIHJlc3VsdCA9IHsKICAgICAgICAib3V0cHV0Ijogc3RyKG91dHB1dF9wYXRoKSwKICAgICAgICAic2l6ZSI6IGxlbihwYWNrYWdlX2J5dGVzKSwKICAgICAgICAic2hhMjU2IjogX3NoYTI1NihwYWNrYWdlX2J5dGVzKSwKICAgICAgICAiZmlsZV9jb3VudCI6IGxlbihtYW5pZmVzdF9maWxlcykgKyAxLAogICAgICAgICJzYWZldHlfc3RhZ2UiOiAiRFJZX1JVTl9SRUFEX09OTFkiLAogICAgICAgICJyZW1vdGVfYnVpbGRfcmVxdWlyZWQiOiBUcnVlLAogICAgfQogICAgcmV0dXJuIHJlc3VsdAoKCmRlZiBwYXJzZV9hcmdzKCkgLT4gYXJncGFyc2UuTmFtZXNwYWNlOgogICAgcGFyc2VyID0gYXJncGFyc2UuQXJndW1lbnRQYXJzZXIoCiAgICAgICAgZGVzY3JpcHRpb249KAogICAgICAgICAgICAiRXJ6ZXVndCBlaW4gZ2VwcsO8ZnRlcyBBenVyZS1GdW5jdGlvbnMtUXVlbGxwYWtldC4gIgogICAgICAgICAgICAiRXMgd2lyZCBuaWNodHMgbmFjaCBBenVyZSDDvGJlcnRyYWdlbi4iCiAgICAgICAgKQogICAgKQogICAgcGFyc2VyLmFkZF9hcmd1bWVudCgKICAgICAgICAiLS1yZXBvc2l0b3J5LXJvb3QiLAogICAgICAgIGRlZmF1bHQ9Ii4iLAogICAgICAgIGhlbHA9Ild1cnplbHZlcnplaWNobmlzIGRlcyBSZXBvc2l0b3J5cyIsCiAgICApCiAgICBwYXJzZXIuYWRkX2FyZ3VtZW50KAogICAgICAgICItLW91dHB1dCIsCiAgICAgICAgZGVmYXVsdD0iZGlzdC9zc3Y1My1wbGF0enBmbGVnZS1zb3VyY2UuemlwIiwKICAgICAgICBoZWxwPSJaaWVscGZhZCBkZXMgWklQLVBha2V0cyIsCiAgICApCiAgICByZXR1cm4gcGFyc2VyLnBhcnNlX2FyZ3MoKQoKCmRlZiBtYWluKCkgLT4gaW50OgogICAgYXJncyA9IHBhcnNlX2FyZ3MoKQogICAgcmVzdWx0ID0gYnVpbGRfcGFja2FnZSgKICAgICAgICBQYXRoKGFyZ3MucmVwb3NpdG9yeV9yb290KS5yZXNvbHZlKCksCiAgICAgICAgUGF0aChhcmdzLm91dHB1dCkucmVzb2x2ZSgpLAogICAgKQogICAgcHJpbnQoanNvbi5kdW1wcyhyZXN1bHQsIGVuc3VyZV9hc2NpaT1GYWxzZSwgaW5kZW50PTIsIHNvcnRfa2V5cz1UcnVlKSkKICAgIHJldHVybiAwCgoKaWYgX19uYW1lX18gPT0gIl9fbWFpbl9fIjoKICAgIHJhaXNlIFN5c3RlbUV4aXQobWFpbigpKQo=', '.github/workflows/azure-package-build.yml': 'bmFtZTogQXp1cmUtRnVuY3Rpb24gUXVlbGxwYWtldCBiYXVlbgoKb246CiAgd29ya2Zsb3dfZGlzcGF0Y2g6CiAgcHVzaDoKICAgIGJyYW5jaGVzOgogICAgICAtIGZlYXR1cmUvYXp1cmUtbW93ZXItbWlncmF0aW9uCiAgICBwYXRoczoKICAgICAgLSAiZnVuY3Rpb25fYXBwLnB5IgogICAgICAtICJob3N0Lmpzb24iCiAgICAgIC0gInJlcXVpcmVtZW50cy50eHQiCiAgICAgIC0gIm1vd2VyLyoqIgogICAgICAtICJwdWJsaWMvcmFzZW4uaWNzIgogICAgICAtICJzY3JpcHRzL2J1aWxkX2F6dXJlX3NvdXJjZV9wYWNrYWdlLnB5IgogICAgICAtICJ0ZXN0cy90ZXN0X2F6dXJlX3BhY2thZ2UucHkiCiAgICAgIC0gIi5naXRodWIvd29ya2Zsb3dzL2F6dXJlLXBhY2thZ2UtYnVpbGQueW1sIgogIHB1bGxfcmVxdWVzdDoKICAgIHBhdGhzOgogICAgICAtICJmdW5jdGlvbl9hcHAucHkiCiAgICAgIC0gImhvc3QuanNvbiIKICAgICAgLSAicmVxdWlyZW1lbnRzLnR4dCIKICAgICAgLSAibW93ZXIvKioiCiAgICAgIC0gInB1YmxpYy9yYXNlbi5pY3MiCiAgICAgIC0gInNjcmlwdHMvYnVpbGRfYXp1cmVfc291cmNlX3BhY2thZ2UucHkiCiAgICAgIC0gInRlc3RzL3Rlc3RfYXp1cmVfcGFja2FnZS5weSIKICAgICAgLSAiLmdpdGh1Yi93b3JrZmxvd3MvYXp1cmUtcGFja2FnZS1idWlsZC55bWwiCgpwZXJtaXNzaW9uczoKICBjb250ZW50czogcmVhZAoKY29uY3VycmVuY3k6CiAgZ3JvdXA6IGF6dXJlLXBhY2thZ2UtYnVpbGQtJHt7IGdpdGh1Yi5yZWYgfX0KICBjYW5jZWwtaW4tcHJvZ3Jlc3M6IHRydWUKCmpvYnM6CiAgYnVpbGQ6CiAgICBuYW1lOiBTaWNoZXJlcyBBenVyZS1RdWVsbHBha2V0IHByw7xmZW4gdW5kIGVyemV1Z2VuCiAgICBydW5zLW9uOiB1YnVudHUtbGF0ZXN0CiAgICB0aW1lb3V0LW1pbnV0ZXM6IDEyCgogICAgc3RlcHM6CiAgICAgIC0gbmFtZTogUmVwb3NpdG9yeSBsYWRlbgogICAgICAgIHVzZXM6IGFjdGlvbnMvY2hlY2tvdXRAdjYKCiAgICAgIC0gbmFtZTogUHl0aG9uIGVpbnJpY2h0ZW4KICAgICAgICB1c2VzOiBhY3Rpb25zL3NldHVwLXB5dGhvbkB2NgogICAgICAgIHdpdGg6CiAgICAgICAgICBweXRob24tdmVyc2lvbjogIjMuMTIiCiAgICAgICAgICBjYWNoZTogcGlwCgogICAgICAtIG5hbWU6IEFiaMOkbmdpZ2tlaXRlbiBpbnN0YWxsaWVyZW4KICAgICAgICBzaGVsbDogYmFzaAogICAgICAgIHJ1bjogfAogICAgICAgICAgc2V0IC1ldW8gcGlwZWZhaWwKICAgICAgICAgIHB5dGhvbiAtbSBwaXAgaW5zdGFsbCAtLWRpc2FibGUtcGlwLXZlcnNpb24tY2hlY2sgLXIgcmVxdWlyZW1lbnRzLnR4dAoKICAgICAgLSBuYW1lOiBSZXBvc2l0b3J5LSB1bmQgU2ljaGVyaGVpdHN0ZXN0cwogICAgICAgIHNoZWxsOiBiYXNoCiAgICAgICAgcnVuOiB8CiAgICAgICAgICBzZXQgLWV1byBwaXBlZmFpbAogICAgICAgICAgcHl0aG9uIC1tIGNvbXBpbGVhbGwgLXEgbW93ZXIgZnVuY3Rpb25fYXBwLnB5IHNjcmlwdHMKICAgICAgICAgIHB5dGhvbiAtbSB1bml0dGVzdCBkaXNjb3ZlciAtcyB0ZXN0cyAtcCAidGVzdF8qLnB5IiAtdgoKICAgICAgLSBuYW1lOiBHZXByw7xmdGVzIFF1ZWxscGFrZXQgYmF1ZW4KICAgICAgICBzaGVsbDogYmFzaAogICAgICAgIHJ1bjogfAogICAgICAgICAgc2V0IC1ldW8gcGlwZWZhaWwKICAgICAgICAgIHJtIC1yZiBkaXN0CiAgICAgICAgICBweXRob24gc2NyaXB0cy9idWlsZF9henVyZV9zb3VyY2VfcGFja2FnZS5weSBcCiAgICAgICAgICAgIC0tb3V0cHV0IGRpc3Qvc3N2NTMtcGxhdHpwZmxlZ2Utc291cmNlLnppcCBcCiAgICAgICAgICAgIHwgdGVlIGRpc3QvcGFja2FnZS1yZXN1bHQuanNvbgoKICAgICAgLSBuYW1lOiBQYWtldHN0cnVrdHVyIHVuZCBTaWNoZXJoZWl0c2dyZW56ZW4gcHLDvGZlbgogICAgICAgIHNoZWxsOiBiYXNoCiAgICAgICAgcnVuOiB8CiAgICAgICAgICBzZXQgLWV1byBwaXBlZmFpbAogICAgICAgICAgcHl0aG9uIC0gPDwnUFknCiAgICAgICAgICBpbXBvcnQganNvbgogICAgICAgICAgaW1wb3J0IHppcGZpbGUKICAgICAgICAgIGZyb20gcGF0aGxpYiBpbXBvcnQgUGF0aAoKICAgICAgICAgIHBhY2thZ2UgPSBQYXRoKCJkaXN0L3NzdjUzLXBsYXR6cGZsZWdlLXNvdXJjZS56aXAiKQogICAgICAgICAgd2l0aCB6aXBmaWxlLlppcEZpbGUocGFja2FnZSkgYXMgYXJjaGl2ZToKICAgICAgICAgICAgICBuYW1lcyA9IHNldChhcmNoaXZlLm5hbWVsaXN0KCkpCiAgICAgICAgICAgICAgcmVxdWlyZWQgPSB7CiAgICAgICAgICAgICAgICAgICJob3N0Lmpzb24iLAogICAgICAgICAgICAgICAgICAiZnVuY3Rpb25fYXBwLnB5IiwKICAgICAgICAgICAgICAgICAgInJlcXVpcmVtZW50cy50eHQiLAogICAgICAgICAgICAgICAgICAicGFja2FnZS1tYW5pZmVzdC5qc29uIiwKICAgICAgICAgICAgICAgICAgIm1vd2VyL2NvbnRyb2xsZXIucHkiLAogICAgICAgICAgICAgICAgICAibW93ZXIvaHVzcXZhcm5hLnB5IiwKICAgICAgICAgICAgICAgICAgInB1YmxpYy9yYXNlbi5pY3MiLAogICAgICAgICAgICAgIH0KICAgICAgICAgICAgICBtaXNzaW5nID0gc29ydGVkKHJlcXVpcmVkIC0gbmFtZXMpCiAgICAgICAgICAgICAgaWYgbWlzc2luZzoKICAgICAgICAgICAgICAgICAgcmFpc2UgU3lzdGVtRXhpdChmIkVyZm9yZGVybGljaGUgUGFrZXRlaW50csOkZ2UgZmVobGVuOiB7bWlzc2luZ30iKQoKICAgICAgICAgICAgICBmb3JiaWRkZW5fcHJlZml4ZXMgPSAoCiAgICAgICAgICAgICAgICAgICIuZ2l0LyIsCiAgICAgICAgICAgICAgICAgICIuZ2l0aHViLyIsCiAgICAgICAgICAgICAgICAgICJ0ZXN0cy8iLAogICAgICAgICAgICAgICAgICAiaW5mcmEvIiwKICAgICAgICAgICAgICAgICAgImdlbmVyYXRlZC8iLAogICAgICAgICAgICAgICkKICAgICAgICAgICAgICBmb3JiaWRkZW4gPSBzb3J0ZWQoCiAgICAgICAgICAgICAgICAgIG5hbWUKICAgICAgICAgICAgICAgICAgZm9yIG5hbWUgaW4gbmFtZXMKICAgICAgICAgICAgICAgICAgaWYgbmFtZS5zdGFydHN3aXRoKGZvcmJpZGRlbl9wcmVmaXhlcykKICAgICAgICAgICAgICApCiAgICAgICAgICAgICAgaWYgZm9yYmlkZGVuOgogICAgICAgICAgICAgICAgICByYWlzZSBTeXN0ZW1FeGl0KAogICAgICAgICAgICAgICAgICAgICAgZiJVbmVyd2FydGV0ZSBEYXRlaWVuIGltIFF1ZWxscGFrZXQ6IHtmb3JiaWRkZW59IgogICAgICAgICAgICAgICAgICApCgogICAgICAgICAgICAgIG1hbmlmZXN0ID0ganNvbi5sb2FkcygKICAgICAgICAgICAgICAgICAgYXJjaGl2ZS5yZWFkKCJwYWNrYWdlLW1hbmlmZXN0Lmpzb24iKS5kZWNvZGUoInV0Zi04IikKICAgICAgICAgICAgICApCiAgICAgICAgICAgICAgaWYgbWFuaWZlc3QuZ2V0KCJzYWZldHlfc3RhZ2UiKSAhPSAiRFJZX1JVTl9SRUFEX09OTFkiOgogICAgICAgICAgICAgICAgICByYWlzZSBTeXN0ZW1FeGl0KCJVbnNpY2hlcmUgb2RlciB1bmJla2FubnRlIFBha2V0c3R1ZmUuIikKICAgICAgICAgICAgICBpZiBtYW5pZmVzdC5nZXQoInJlbW90ZV9idWlsZF9yZXF1aXJlZCIpIGlzIG5vdCBUcnVlOgogICAgICAgICAgICAgICAgICByYWlzZSBTeXN0ZW1FeGl0KCJSZW1vdGUtQnVpbGQtSGlud2VpcyBmZWhsdC4iKQoKICAgICAgICAgIHByaW50KCJBenVyZS1RdWVsbHBha2V0IGlzdCBzdHJ1a3R1cmVsbCB1bmQgZmFjaGxpY2ggc2ljaGVyLiIpCiAgICAgICAgICBQWQoKICAgICAgLSBuYW1lOiBQcsO8ZnBha2V0IGFscyBHaXRIdWItQXJ0ZWZha3Qgc3BlaWNoZXJuCiAgICAgICAgdXNlczogYWN0aW9ucy91cGxvYWQtYXJ0aWZhY3RAdjcKICAgICAgICB3aXRoOgogICAgICAgICAgbmFtZTogc3N2NTMtYXp1cmUtZnVuY3Rpb24tc291cmNlLSR7eyBnaXRodWIucnVuX251bWJlciB9fQogICAgICAgICAgcGF0aDogfAogICAgICAgICAgICBkaXN0L3NzdjUzLXBsYXR6cGZsZWdlLXNvdXJjZS56aXAKICAgICAgICAgICAgZGlzdC9wYWNrYWdlLXJlc3VsdC5qc29uCiAgICAgICAgICBpZi1uby1maWxlcy1mb3VuZDogZXJyb3IKICAgICAgICAgIHJldGVudGlvbi1kYXlzOiAxNAogICAgICAgICAgY29tcHJlc3Npb24tbGV2ZWw6IDAKCiAgICAgIC0gbmFtZTogRXJnZWJuaXMgenVzYW1tZW5mYXNzZW4KICAgICAgICBzaGVsbDogYmFzaAogICAgICAgIHJ1bjogfAogICAgICAgICAgewogICAgICAgICAgICBlY2hvICIjIEF6dXJlLUZ1bmN0aW9uIFF1ZWxscGFrZXQiCiAgICAgICAgICAgIGVjaG8KICAgICAgICAgICAgZWNobyAiLSBUZXN0czogKiplcmZvbGdyZWljaCoqIgogICAgICAgICAgICBlY2hvICItIFNpY2hlcmhlaXRzc3R1ZmU6ICoqRFJZX1JVTl9SRUFEX09OTFkqKiIKICAgICAgICAgICAgZWNobyAiLSBHZXLDpHRlYmVmZWhsZSBpbSBQYWtldDogKiprZWluZSoqIgogICAgICAgICAgICBlY2hvICItIEF6dXJlLcOcYmVydHJhZ3VuZzogKiprZWluZSoqIgogICAgICAgICAgICBlY2hvICItIFJlbW90ZSBCdWlsZCBiZWkgc3DDpHRlcmVyIEJlcmVpdHN0ZWxsdW5nIGVyZm9yZGVybGljaDogKipqYSoqIgogICAgICAgICAgICBlY2hvICItIEFydGVmYWt0YXVmYmV3YWhydW5nOiAqKjE0IFRhZ2UqKiIKICAgICAgICAgIH0gPj4gIiRHSVRIVUJfU1RFUF9TVU1NQVJZIgo=', 'tests/test_azure_package.py': 'ZnJvbSBfX2Z1dHVyZV9fIGltcG9ydCBhbm5vdGF0aW9ucwoKaW1wb3J0IGpzb24KaW1wb3J0IHN1YnByb2Nlc3MKaW1wb3J0IHN5cwppbXBvcnQgdGVtcGZpbGUKaW1wb3J0IHVuaXR0ZXN0CmltcG9ydCB6aXBmaWxlCmZyb20gcGF0aGxpYiBpbXBvcnQgUGF0aAoKClJPT1QgPSBQYXRoKF9fZmlsZV9fKS5yZXNvbHZlKCkucGFyZW50c1sxXQpCVUlMREVSID0gUk9PVCAvICJzY3JpcHRzIiAvICJidWlsZF9henVyZV9zb3VyY2VfcGFja2FnZS5weSIKV09SS0ZMT1cgPSBST09UIC8gIi5naXRodWIiIC8gIndvcmtmbG93cyIgLyAiYXp1cmUtcGFja2FnZS1idWlsZC55bWwiCgoKY2xhc3MgQXp1cmVQYWNrYWdlVGVzdHModW5pdHRlc3QuVGVzdENhc2UpOgogICAgZGVmIHRlc3Rfc291cmNlX3BhY2thZ2VfaGFzX3NhZmVfcm9vdF9sYXlvdXQoc2VsZikgLT4gTm9uZToKICAgICAgICB3aXRoIHRlbXBmaWxlLlRlbXBvcmFyeURpcmVjdG9yeSgpIGFzIGRpcmVjdG9yeToKICAgICAgICAgICAgb3V0cHV0ID0gUGF0aChkaXJlY3RvcnkpIC8gInNvdXJjZS56aXAiCiAgICAgICAgICAgIHN1YnByb2Nlc3MucnVuKAogICAgICAgICAgICAgICAgWwogICAgICAgICAgICAgICAgICAgIHN5cy5leGVjdXRhYmxlLAogICAgICAgICAgICAgICAgICAgIHN0cihCVUlMREVSKSwKICAgICAgICAgICAgICAgICAgICAiLS1yZXBvc2l0b3J5LXJvb3QiLAogICAgICAgICAgICAgICAgICAgIHN0cihST09UKSwKICAgICAgICAgICAgICAgICAgICAiLS1vdXRwdXQiLAogICAgICAgICAgICAgICAgICAgIHN0cihvdXRwdXQpLAogICAgICAgICAgICAgICAgXSwKICAgICAgICAgICAgICAgIGNoZWNrPVRydWUsCiAgICAgICAgICAgICAgICBjd2Q9Uk9PVCwKICAgICAgICAgICAgICAgIGNhcHR1cmVfb3V0cHV0PVRydWUsCiAgICAgICAgICAgICAgICB0ZXh0PVRydWUsCiAgICAgICAgICAgICkKCiAgICAgICAgICAgIHdpdGggemlwZmlsZS5aaXBGaWxlKG91dHB1dCkgYXMgYXJjaGl2ZToKICAgICAgICAgICAgICAgIG5hbWVzID0gc2V0KGFyY2hpdmUubmFtZWxpc3QoKSkKICAgICAgICAgICAgICAgIHNlbGYuYXNzZXJ0SW4oImhvc3QuanNvbiIsIG5hbWVzKQogICAgICAgICAgICAgICAgc2VsZi5hc3NlcnRJbigiZnVuY3Rpb25fYXBwLnB5IiwgbmFtZXMpCiAgICAgICAgICAgICAgICBzZWxmLmFzc2VydEluKCJyZXF1aXJlbWVudHMudHh0IiwgbmFtZXMpCiAgICAgICAgICAgICAgICBzZWxmLmFzc2VydEluKCJwYWNrYWdlLW1hbmlmZXN0Lmpzb24iLCBuYW1lcykKICAgICAgICAgICAgICAgIHNlbGYuYXNzZXJ0SW4oIm1vd2VyL2NvbnRyb2xsZXIucHkiLCBuYW1lcykKICAgICAgICAgICAgICAgIHNlbGYuYXNzZXJ0SW4oInB1YmxpYy9yYXNlbi5pY3MiLCBuYW1lcykKCiAgICAgICAgICAgICAgICBzZWxmLmFzc2VydEZhbHNlKAogICAgICAgICAgICAgICAgICAgIGFueSgKICAgICAgICAgICAgICAgICAgICAgICAgbmFtZS5zdGFydHN3aXRoKAogICAgICAgICAgICAgICAgICAgICAgICAgICAgKCIuZ2l0LyIsICIuZ2l0aHViLyIsICJ0ZXN0cy8iLCAiaW5mcmEvIiwgImdlbmVyYXRlZC8iKQogICAgICAgICAgICAgICAgICAgICAgICApCiAgICAgICAgICAgICAgICAgICAgICAgIGZvciBuYW1lIGluIG5hbWVzCiAgICAgICAgICAgICAgICAgICAgKQogICAgICAgICAgICAgICAgKQoKICAgICAgICAgICAgICAgIG1hbmlmZXN0ID0ganNvbi5sb2FkcygKICAgICAgICAgICAgICAgICAgICBhcmNoaXZlLnJlYWQoInBhY2thZ2UtbWFuaWZlc3QuanNvbiIpLmRlY29kZSgidXRmLTgiKQogICAgICAgICAgICAgICAgKQogICAgICAgICAgICAgICAgc2VsZi5hc3NlcnRFcXVhbCgKICAgICAgICAgICAgICAgICAgICBtYW5pZmVzdFsic2FmZXR5X3N0YWdlIl0sCiAgICAgICAgICAgICAgICAgICAgIkRSWV9SVU5fUkVBRF9PTkxZIiwKICAgICAgICAgICAgICAgICkKICAgICAgICAgICAgICAgIHNlbGYuYXNzZXJ0VHJ1ZShtYW5pZmVzdFsicmVtb3RlX2J1aWxkX3JlcXVpcmVkIl0pCgogICAgICAgICAgICAgICAgam9pbmVkID0gYiJcbiIuam9pbigKICAgICAgICAgICAgICAgICAgICBhcmNoaXZlLnJlYWQobmFtZSkKICAgICAgICAgICAgICAgICAgICBmb3IgbmFtZSBpbiBuYW1lcwogICAgICAgICAgICAgICAgICAgIGlmIG5hbWUuZW5kc3dpdGgoKCIucHkiLCAiLmpzb24iLCAiLnR4dCIsICIuaWNzIikpCiAgICAgICAgICAgICAgICApCiAgICAgICAgICAgICAgICBmb3IgbWFya2VyIGluICgKICAgICAgICAgICAgICAgICAgICBiIi9hY3Rpb25zIiwKICAgICAgICAgICAgICAgICAgICBiIlBhcmtVbnRpbEZ1cnRoZXJOb3RpY2UiLAogICAgICAgICAgICAgICAgICAgIGIiU3RhcnRJbldvcmtBcmVhIiwKICAgICAgICAgICAgICAgICAgICBiInNlbmRfbW93ZXJfYWN0aW9uIiwKICAgICAgICAgICAgICAgICk6CiAgICAgICAgICAgICAgICAgICAgd2l0aCBzZWxmLnN1YlRlc3QobWFya2VyPW1hcmtlcik6CiAgICAgICAgICAgICAgICAgICAgICAgIHNlbGYuYXNzZXJ0Tm90SW4obWFya2VyLCBqb2luZWQpCgogICAgZGVmIHRlc3RfYnVpbGRfd29ya2Zsb3dfaXNfYXJ0aWZhY3Rfb25seShzZWxmKSAtPiBOb25lOgogICAgICAgIGNvbnRlbnQgPSBXT1JLRkxPVy5yZWFkX3RleHQoZW5jb2Rpbmc9InV0Zi04IikKICAgICAgICBmb3IgcmVxdWlyZWQgaW4gKAogICAgICAgICAgICAiYWN0aW9ucy9jaGVja291dEB2NiIsCiAgICAgICAgICAgICJhY3Rpb25zL3NldHVwLXB5dGhvbkB2NiIsCiAgICAgICAgICAgICJhY3Rpb25zL3VwbG9hZC1hcnRpZmFjdEB2NyIsCiAgICAgICAgICAgICJzY3JpcHRzL2J1aWxkX2F6dXJlX3NvdXJjZV9wYWNrYWdlLnB5IiwKICAgICAgICAgICAgIkRSWV9SVU5fUkVBRF9PTkxZIiwKICAgICAgICApOgogICAgICAgICAgICB3aXRoIHNlbGYuc3ViVGVzdChyZXF1aXJlZD1yZXF1aXJlZCk6CiAgICAgICAgICAgICAgICBzZWxmLmFzc2VydEluKHJlcXVpcmVkLCBjb250ZW50KQoKICAgICAgICBmb3IgZm9yYmlkZGVuIGluICgKICAgICAgICAgICAgImF6dXJlL2xvZ2luIiwKICAgICAgICAgICAgImF6IGRlcGxveW1lbnQgZ3JvdXAgY3JlYXRlIiwKICAgICAgICAgICAgImZ1bmMgYXp1cmUgZnVuY3Rpb25hcHAgcHVibGlzaCIsCiAgICAgICAgICAgICJhenVyZS9mdW5jdGlvbnMtYWN0aW9uIiwKICAgICAgICAgICAgImNsaWVudC1zZWNyZXQ6IiwKICAgICAgICApOgogICAgICAgICAgICB3aXRoIHNlbGYuc3ViVGVzdChmb3JiaWRkZW49Zm9yYmlkZGVuKToKICAgICAgICAgICAgICAgIHNlbGYuYXNzZXJ0Tm90SW4oZm9yYmlkZGVuLCBjb250ZW50KQoKCmlmIF9fbmFtZV9fID09ICJfX21haW5fXyI6CiAgICB1bml0dGVzdC5tYWluKCkK'}
+          for relative_path, encoded_content in files.items():
+              target = Path(relative_path)
+              target.parent.mkdir(parents=True, exist_ok=True)
+              target.write_bytes(base64.b64decode(encoded_content))
+              print(f"Erzeugt/aktualisiert: {target}")
+
+          documentation = Path("AZURE_MIGRATION.md")
+          current = documentation.read_text(encoding="utf-8")
+          addition = base64.b64decode('CgojIyBQaGFzZSA2IOKAkyBnZXByw7xmdGVzIEF6dXJlLUZ1bmN0aW9uLVF1ZWxscGFrZXQKClBoYXNlIDYgZXJ6ZXVndCBlaW4gcmVwcm9kdXppZXJiYXJlcywgZ2VwcsO8ZnRlcyBRdWVsbHBha2V0IGbDvHIgZGllIHNww6R0ZXJlCkF6dXJlLUJlcmVpdHN0ZWxsdW5nOgoKLSBgc2NyaXB0cy9idWlsZF9henVyZV9zb3VyY2VfcGFja2FnZS5weWAgcGFrZXRpZXJ0IGF1c3NjaGxpZcOfbGljaCBkaWUKICBiZW7DtnRpZ3RlbiBGdW5jdGlvbi0sIE3DpGhlci0sIEtvbmZpZ3VyYXRpb25zLSB1bmQgS2FsZW5kZXJkYXRlaWVuLgotIGBob3N0Lmpzb25gIHVuZCBgZnVuY3Rpb25fYXBwLnB5YCBsaWVnZW4gaW0gV3VyemVsdmVyemVpY2huaXMgZGVzIFpJUHMuCi0gVGVzdHMsIEdpdEh1Yi1Xb3JrZmxvd3MsIEluZnJhc3RydWt0dXJkYXRlaWVuIHVuZCBsb2thbGUgRWluc3RlbGx1bmdlbgogIHdlcmRlbiBuaWNodCBwYWtldGllcnQuCi0gRGFzIFBha2V0IHdpcmQgYXVmIGJla2FubnRlIEh1c3F2YXJuYS1TY2hyZWliYmVmZWhsZSB1bmQgR2VoZWltbmlzLQogIE1hcmtpZXJ1bmdlbiBnZXByw7xmdC4KLSBFaW4gTWFuaWZlc3QgZW50aMOkbHQgRGF0ZWlncsO2w59lbiB1bmQgU0hBLTI1Ni1QcsO8ZnN1bW1lbi4KLSBEZXIgR2l0SHViLVdvcmtmbG93IHNwZWljaGVydCBkYXMgRXJnZWJuaXMgbnVyIGFscyB6ZWl0bGljaCBiZWdyZW56dGVzCiAgQXJ0ZWZha3QgdW5kIGbDvGhydCBrZWluZSBBenVyZS1Bbm1lbGR1bmcgb2RlciBCZXJlaXRzdGVsbHVuZyBhdXMuCi0gRGllIFNpY2hlcmhlaXRzc3R1ZmUgYmxlaWJ0IGBEUllfUlVOX1JFQURfT05MWWAuCi0gRsO8ciBkaWUgc3DDpHRlcmUgRmxleC1Db25zdW1wdGlvbi1CZXJlaXRzdGVsbHVuZyBibGVpYnQgZWluIEF6dXJlIFJlbW90ZQogIEJ1aWxkIGVyZm9yZGVybGljaC4K').decode("utf-8")
+          if "## Phase 6 – geprüftes Azure-Function-Quellpaket" not in current:
+              documentation.write_text(
+                  current.rstrip() + "\n" + addition,
+                  encoding="utf-8",
+              )
+              print("AZURE_MIGRATION.md um Phase 6 ergänzt.")
+          else:
+              print("Phase-6-Dokumentation ist bereits vorhanden.")
+          PYFILES
+
+          python -m pip install --disable-pip-version-check -r requirements.txt
+          python -m compileall -q mower function_app.py scripts
+          python -m unittest discover -s tests -p "test_*.py" -v
+
+          rm -rf dist
+          python scripts/build_azure_source_package.py             --output dist/ssv53-platzpflege-source.zip             | tee dist/package-result.json
+
+          python - <<'PYSAFE'
+          import json
+          import zipfile
+          from pathlib import Path
+
+          package = Path("dist/ssv53-platzpflege-source.zip")
+          if not package.is_file() or package.stat().st_size == 0:
+              raise SystemExit("Das erwartete Azure-Quellpaket wurde nicht erzeugt.")
+
+          with zipfile.ZipFile(package) as archive:
+              names = set(archive.namelist())
+              if "host.json" not in names or "function_app.py" not in names:
+                  raise SystemExit(
+                      "host.json oder function_app.py liegt nicht im ZIP-Wurzelverzeichnis."
+                  )
+              manifest = json.loads(
+                  archive.read("package-manifest.json").decode("utf-8")
+              )
+              if manifest.get("safety_stage") != "DRY_RUN_READ_ONLY":
+                  raise SystemExit("Unsichere Paketstufe entdeckt.")
+
+          workflow = Path(
+              ".github/workflows/azure-package-build.yml"
+          ).read_text(encoding="utf-8")
+          forbidden = (
+              "azure/login",
+              "az deployment group create",
+              "func azure functionapp publish",
+              "azure/functions-action",
+          )
+          found = [value for value in forbidden if value in workflow]
+          if found:
+              raise SystemExit(
+                  f"Unerwartete Deploymentlogik im Paketworkflow: {found}"
+              )
+
+          print("Phase 6 ist sicher, read-only und bereitstellungsfrei.")
+          PYSAFE
+
+          git config user.name "SSV53 Automation"
+          git config user.email "actions@users.noreply.github.com"
+
+          git add             scripts/build_azure_source_package.py             .github/workflows/azure-package-build.yml             tests/test_azure_package.py             AZURE_MIGRATION.md
+
+          if git diff --cached --quiet; then
+            echo "Phase 6 war bereits vollständig vorhanden."
+          else
+            git commit -m "Azure Phase 6 Quellpaket vorbereiten"
+            git push origin HEAD:"$BRANCH"
+          fi
+
+      - name: Einmaligen Installer aus main entfernen
+        if: ${{ success() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          INSTALLER=".github/workflows/SSV53_Azure_Migration_Phase6_Quellpaket.yml"
+
+          git switch main
+          git pull --ff-only origin main
+          rm -f "$INSTALLER"
+
+          git config user.name "SSV53 Automation"
+          git config user.email "actions@users.noreply.github.com"
+
+          git add -A "$INSTALLER"
+          if git diff --cached --quiet; then
+            echo "Installer war bereits entfernt."
+          else
+            git commit -m "Einmaligen Azure-Phase-6-Installer entfernen"
+            git push origin HEAD:main
+          fi
+
+      - name: Ergebnis zusammenfassen
+        if: ${{ success() }}
+        shell: bash
+        run: |
+          {
+            echo "# Azure-Migration Phase 6 vorbereitet"
+            echo
+            echo "- Branch: \`feature/azure-mower-migration\`"
+            echo "- Geprüfter Azure-Functions-Quellpaket-Builder installiert"
+            echo "- Paketstufe: **DRY_RUN_READ_ONLY**"
+            echo "- Keine Azure-Anmeldung und kein Deployment"
+            echo "- Keine Mäher- oder Beregnungsbefehle im Paket"
+            echo "- Neuer Paketworkflow erzeugt nur ein GitHub-Artefakt"
+          } >> "$GITHUB_STEP_SUMMARY"
