@@ -1,25 +1,13 @@
-name: SSV53 Mähsteuerung
+name: SSV53 Mähsteuerung (Diagnose)
 
 on:
   workflow_dispatch:
     inputs:
-      execute_park:
-        description: "Bei aktiver Sperre echten Parkbefehl senden"
-        required: false
-        type: boolean
-        default: false
-      execute_start:
-        description: "Nach eigener Parkierung echten Startbefehl senden"
-        required: false
-        type: boolean
-        default: false
       simulate_owned_park:
         description: "Nur die Freigabe nach eigener Parkierung simulieren"
         required: false
         type: boolean
         default: false
-  schedule:
-    - cron: "2-59/5 * * * *"
 
 permissions:
   contents: read
@@ -30,7 +18,7 @@ concurrency:
 
 jobs:
   decide:
-    name: Mähentscheidung berechnen, sicher parken und kontrolliert starten
+    name: Mähentscheidung ausschließlich diagnostisch berechnen
     runs-on: ubuntu-latest
     timeout-minutes: 8
 
@@ -50,8 +38,8 @@ jobs:
           HUSQVARNA_CLIENT_SECRET: ${{ secrets.HUSQVARNA_CLIENT_SECRET }}
           HYDRAWISE_API_KEY: ${{ secrets.HYDRAWISE_API_KEY }}
           HYDRAWISE_CONTROLLER_ID: ${{ secrets.HYDRAWISE_CONTROLLER_ID }}
-          EXECUTE_PARK: ${{ (github.event_name == 'schedule' && vars.MOWER_PARKING_ENABLED == 'true') || (github.event_name == 'workflow_dispatch' && inputs.execute_park) }}
-          EXECUTE_START: ${{ (github.event_name == 'schedule' && vars.MOWER_AUTOSTART_ENABLED == 'true') || (github.event_name == 'workflow_dispatch' && inputs.execute_start) }}
+          EXECUTE_PARK: "false"
+          EXECUTE_START: "false"
           SIMULATE_OWNED_PARK: ${{ github.event_name == 'workflow_dispatch' && inputs.simulate_owned_park || false }}
         run: |
           set -euo pipefail
