@@ -45,3 +45,21 @@ ENABLE_LIVE_READS=true
 ```
 
 Auch dann werden keine Mäher- oder Beregnungsbefehle gesendet.
+
+## Phase 3 – Sicherheitszustand und Doppelausführungsschutz
+
+Phase 3 bereitet die dauerhafte Zustandsverwaltung vor, ohne sie bereits mit
+echten Gerätebefehlen zu verbinden:
+
+- `mower/state.py`: versionierter Automationszustand mit Revisionsnummer
+- `mower/state_store.py`: testbarer Speichervertrag, In-Memory- und lokaler JSON-Store
+- `mower/safety.py`: Befehlsfenster, Wartungsmodus, Duplikatschutz und Startschutz
+- `tests/test_mower_state.py`: Tests für Paralleländerungen, Doppelausführungen und Eigentum an Parkierungen
+
+### Weiterhin geltende Sicherheitsgrenzen
+
+- Keine neuen externen API-Aufrufe
+- Keine Husqvarna- oder Hydrawise-Schreibbefehle
+- Azure Table Storage wird erst nach Bereitstellung der Azure-Ressourcen angebunden
+- `PARK_ONLY`, `FULL_MOWER` und `FULL_FAILSAFE` bleiben technisch gesperrt
+- Ein späterer automatischer Start bleibt verboten, wenn die Parkierung nicht eindeutig von der SSV53-Automatik stammt
