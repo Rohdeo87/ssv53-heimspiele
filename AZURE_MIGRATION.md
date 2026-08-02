@@ -63,3 +63,24 @@ echten Gerätebefehlen zu verbinden:
 - Azure Table Storage wird erst nach Bereitstellung der Azure-Ressourcen angebunden
 - `PARK_ONLY`, `FULL_MOWER` und `FULL_FAILSAFE` bleiben technisch gesperrt
 - Ein späterer automatischer Start bleibt verboten, wenn die Parkierung nicht eindeutig von der SSV53-Automatik stammt
+
+## Phase 4 – Azure-Infrastruktur als Code
+
+Phase 4 bereitet die Azure-Ressourcen vollständig als Bicep vor, stellt aber
+noch nichts in Azure bereit:
+
+- Flex-Consumption Function App mit Python 3.12
+- benutzerseitig zugewiesene Managed Identity
+- Storage ohne Shared-Key-Zugriff
+- privater Deployment-Container und Azure Table für den Sicherheitszustand
+- Key Vault mit RBAC und ausschließlich versionlosen Geheimnisreferenzen
+- Log Analytics und Application Insights
+- sicherer Startzustand `CONTROL_MODE=DRY_RUN` und `ENABLE_LIVE_READS=false`
+- separater Validierungsworkflow ohne Azure-Anmeldung und ohne Deploymentrecht
+
+### Weiterhin geltende Sicherheitsgrenzen
+
+- Keine Azure-Ressourcen werden durch Phase 4 erstellt.
+- Keine Geheimniswerte werden im Repository gespeichert.
+- Der Validierungsworkflow enthält weder `azure/login` noch einen Deploymentbefehl.
+- Gerätebefehle und Live-Abfragen bleiben deaktiviert.

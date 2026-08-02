@@ -1,0 +1,87 @@
+name: Azure-Infrastruktur validieren
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/azure-mower-migration
+    paths:
+      - "infra/**"
+      - "tests/test_azure_infra.py"
+      - ".github/workflows/azure-infra-validate.yml"
+  pull_request:
+    paths:
+      - "infra/**"
+      - "tests/test_azure_infra.py"
+      - ".github/workflows/azure-infra-validate.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: azure-infra-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Bicep und Sicherheitstests prüfen
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+
+    steps:
+      - name: Repository laden
+        uses: actions/checkout@v4
+
+      - name: Python einrichten
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Python-Abhängigkeiten installieren
+        run: python -m pip install --disable-pip-version-check -r requirements.txt
+
+      - name: Repository- und Sicherheitstests
+        run: |
+          set -euo pipefail
+          python -m compileall -q mower function_app.py
+          python -m unittest discover -s tests -p "test_*.py" -v
+
+      - name: Bicep kompilieren
+        run: |
+          set -euo pipefail
+          az bicep install
+          az bicep version
+          az bicep build             --file infra/main.bicep             --outfile /tmp/ssv53-platzpflege-main.json
+
+      - name: Kompiliertes Template prüfen
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          template = json.loads(
+              Path("/tmp/ssv53-platzpflege-main.json").read_text(encoding="utf-8")
+          )
+          resource_types = {
+              resource.get("type")
+              for resource in template.get("resources", [])
+          }
+          required = {
+              "Microsoft.Web/sites",
+              "Microsoft.Web/serverfarms",
+              "Microsoft.Storage/storageAccounts",
+              "Microsoft.KeyVault/vaults",
+              "Microsoft.ManagedIdentity/userAssignedIdentities",
+              "Microsoft.Insights/components",
+          }
+          missing = sorted(required - resource_types)
+          if missing:
+              raise SystemExit(f"Erwartete Azure-Ressourcen fehlen: {missing}")
+
+          serialized = json.dumps(template)
+          if "Microsoft.KeyVault/vaults/secrets" in serialized:
+              raise SystemExit("Das Template darf keine Geheimniswerte bereitstellen.")
+
+          print("Bicep-Template und Sicherheitsgrenzen sind gültig.")
+          PY

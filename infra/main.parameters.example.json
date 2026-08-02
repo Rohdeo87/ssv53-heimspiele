@@ -1,0 +1,30 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "value": "germanywestcentral"
+    },
+    "namePrefix": {
+      "value": "ssv53platzpflege"
+    },
+    "environmentName": {
+      "value": "prod"
+    },
+    "timerSchedule": {
+      "value": "0 * * * * *"
+    },
+    "controlMode": {
+      "value": "DRY_RUN"
+    },
+    "enableLiveReads": {
+      "value": false
+    },
+    "maximumInstanceCount": {
+      "value": 40
+    },
+    "instanceMemoryMB": {
+      "value": 512
+    }
+  }
+}
