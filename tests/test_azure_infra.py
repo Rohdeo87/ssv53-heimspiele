@@ -67,7 +67,8 @@ class AzureInfrastructureTests(unittest.TestCase):
             "hydrawise-api-key",
             "hydrawise-controller-id",
         ):
-            self.assertIn(f"secrets/{secret_name}/)", self.bicep)
+            self.assertIn(f"secrets/{secret_name})", self.bicep)
+            self.assertNotIn(f"secrets/{secret_name}/)", self.bicep)
 
     def test_validation_workflow_cannot_deploy(self) -> None:
         self.assertIn("az bicep build", self.workflow)

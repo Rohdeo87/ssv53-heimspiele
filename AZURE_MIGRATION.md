@@ -123,3 +123,26 @@ Azure-Bereitstellung:
 - Die Sicherheitsstufe bleibt `DRY_RUN_READ_ONLY`.
 - Für die spätere Flex-Consumption-Bereitstellung bleibt ein Azure Remote
   Build erforderlich.
+
+## Phase 6.1 – Repository-Bereinigung und Härtung
+
+- der unverlässliche GitHub-Scheduler-Heartbeat wurde entfernt
+- die alte GitHub-Mähsteuerung ist ausschließlich manuell und
+  diagnostisch; Park- und Startbefehle sind fest deaktiviert
+- langfristige GitHub Actions wurden auf Node-24-kompatible
+  Hauptversionen aktualisiert
+- Python-Abhängigkeiten sind exakt auf den erfolgreich getesteten Stand
+  festgelegt und werden künftig durch Dependabot geprüft
+- lokale Geheimnisse, Azure-Einstellungen und Build-Pakete werden
+  zuverlässig ignoriert
+- der What-if-Workflow verwendet ausdrücklich Python 3.12 und ist auf
+  `feature/azure-mower-migration` begrenzt
+- redundante Storage-Rollen und nicht kanonische Key-Vault-URIs wurden
+  bereinigt
+- doppelte Azure-Dokumentation wurde zusammengeführt
+- offene fachliche Entscheidungen stehen in
+  `infra/PRE_DEPLOYMENT_DECISIONS.md`
+
+Es wurden weiterhin keine Azure-Ressourcen erstellt und keine Befehle an
+Mäher oder Beregnung gesendet.
+

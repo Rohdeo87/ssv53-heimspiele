@@ -55,7 +55,6 @@ var deploymentStorageContainerName = 'app-package-${take(resourceToken, 8)}'
 var stateTableName = 'MowerAutomationState'
 
 var storageBlobDataOwnerRoleId = 'b7e6dc6d-f1e8-4753-8033-0f276bb0955b'
-var storageBlobDataContributorRoleId = 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
 var storageQueueDataContributorRoleId = '974c5e8b-45b9-4653-ba55-5f855dd0fb88'
 var storageTableDataContributorRoleId = '0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3'
 var monitoringMetricsPublisherRoleId = '3913510d-42f4-4e42-8a64-420c390055eb'
@@ -184,16 +183,6 @@ resource roleAssignmentBlobOwner 'Microsoft.Authorization/roleAssignments@2022-0
   }
 }
 
-resource roleAssignmentBlobContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(subscription().id, storage.id, managedIdentity.id, 'Storage Blob Data Contributor')
-  scope: storage
-  properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageBlobDataContributorRoleId)
-    principalId: managedIdentity.properties.principalId
-    principalType: 'ServicePrincipal'
-  }
-}
-
 resource roleAssignmentQueueContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(subscription().id, storage.id, managedIdentity.id, 'Storage Queue Data Contributor')
   scope: storage
@@ -291,7 +280,6 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
   }
   dependsOn: [
     roleAssignmentBlobOwner
-    roleAssignmentBlobContributor
     roleAssignmentQueueContributor
     roleAssignmentTableContributor
     roleAssignmentMonitoringPublisher
@@ -315,10 +303,10 @@ resource functionAppSettings 'Microsoft.Web/sites/config@2024-04-01' = {
     SSV53_TIMEZONE: 'Europe/Berlin'
     SSV53_STATE_TABLE_NAME: stateTableName
     SSV53_STORAGE_ACCOUNT_URL: storage.properties.primaryEndpoints.table
-    HUSQVARNA_CLIENT_ID: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/husqvarna-client-id/)'
-    HUSQVARNA_CLIENT_SECRET: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/husqvarna-client-secret/)'
-    HYDRAWISE_API_KEY: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/hydrawise-api-key/)'
-    HYDRAWISE_CONTROLLER_ID: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/hydrawise-controller-id/)'
+    HUSQVARNA_CLIENT_ID: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/husqvarna-client-id)'
+    HUSQVARNA_CLIENT_SECRET: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/husqvarna-client-secret)'
+    HYDRAWISE_API_KEY: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/hydrawise-api-key)'
+    HYDRAWISE_CONTROLLER_ID: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/hydrawise-controller-id)'
   }
 }
 

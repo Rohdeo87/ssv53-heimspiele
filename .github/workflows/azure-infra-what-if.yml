@@ -46,6 +46,21 @@ jobs:
       - name: Repository laden
         uses: actions/checkout@v6
 
+      - name: Python 3.12 einrichten
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Ausführung auf den Migrationsbranch begrenzen
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_REF_NAME" != "feature/azure-mower-migration" ]; then
+            echo "What-if darf ausschließlich vom Azure-Migrationsbranch gestartet werden." >&2
+            exit 1
+          fi
+
       - name: OIDC-Konfiguration prüfen
         shell: bash
         env:

@@ -34,18 +34,23 @@ Der resultierende OIDC-Subject lautet:
 
 Es wird kein Client Secret erstellt.
 
-## 3. Minimale Berechtigung vergeben
+## 3. Berechtigung für What-if bewusst festlegen
 
-Für die reine What-if-Phase zunächst nur die Rolle `Reader` auf der
-Ressourcengruppe `rg-ssv53-platzpflege-prod` vergeben.
+Eine reine `Reader`-Rolle ist nicht in jeder Azure-Konstellation
+ausreichend, weil auch die Deployment-Validierung und die What-if-
+Operation selbst autorisiert werden müssen.
 
-Der Workflow verwendet `ProviderNoRbac`, sodass er die Vorlage fachlich
-prüfen kann, ohne bereits Berechtigungen zum Anlegen der Ressourcen oder
-der enthaltenen Rollenzuweisungen zu besitzen.
+Vor dem ersten Lauf wird deshalb eine gesonderte Identität verwendet,
+deren Rechte auf die Ressourcengruppe und ausschließlich auf die für
+Validierung und What-if erforderlichen Deployment-Operationen begrenzt
+sind. Sie erhält keine allgemeine Berechtigung zum Erstellen, Ändern oder
+Löschen der Zielressourcen.
 
-Für eine spätere echte Bereitstellung werden gesonderte, bewusst
-freizugebende Rechte benötigt. Diese werden in dieser Phase ausdrücklich
-noch nicht vergeben.
+Die konkrete Rollendefinition wird erst nach Aktivierung des
+Sponsorship-Abonnements anhand der dort verfügbaren Azure-Rollen geprüft.
+Bis dahin wird der What-if-Workflow nicht gestartet. Für eine spätere
+echte Bereitstellung wird eine getrennte, ausdrücklich freizugebende
+Berechtigung eingerichtet.
 
 ## 4. GitHub-Variablen anlegen
 
