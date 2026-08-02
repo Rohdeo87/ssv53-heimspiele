@@ -1,0 +1,151 @@
+name: "Einmalig: Scheduler-Diagnose installieren"
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  install:
+    name: Fünf-Minuten-Scheduler neu registrieren und Heartbeat anlegen
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Repository laden
+        uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.SSV53_AUTOMATION_TOKEN }}
+          persist-credentials: true
+          fetch-depth: 0
+
+      - name: Diagnose installieren und prüfen
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python - <<'PY'
+          from pathlib import Path
+          from textwrap import dedent
+
+          mower_path = Path(".github/workflows/mower-decision.yml")
+          if not mower_path.exists():
+              raise SystemExit("mower-decision.yml wurde nicht gefunden.")
+
+          text = mower_path.read_text(encoding="utf-8")
+          old = '- cron: "*/5 * * * *"'
+          new = '- cron: "2-59/5 * * * *"'
+
+          if old in text:
+              if text.count(old) != 1:
+                  raise SystemExit(
+                      "Der bisherige Cron-Eintrag kommt nicht genau einmal vor."
+                  )
+              text = text.replace(old, new, 1)
+              mower_path.write_text(text, encoding="utf-8")
+              print("Mäher-Cron wurde auf 2-59/5 geändert.")
+          elif new in text:
+              print("Mäher-Cron ist bereits auf 2-59/5 gesetzt.")
+          else:
+              raise SystemExit(
+                  "Der erwartete Cron-Eintrag wurde nicht gefunden. "
+                  "Es wurde nichts verändert."
+              )
+
+          heartbeat_text = dedent('''
+          name: SSV53 Scheduler Heartbeat
+
+          on:
+            workflow_dispatch:
+            schedule:
+              - cron: "2-59/5 * * * *"
+
+          permissions:
+            contents: read
+
+          jobs:
+            heartbeat:
+              name: Scheduler-Signal protokollieren
+              runs-on: ubuntu-latest
+              timeout-minutes: 2
+
+              steps:
+                - name: Zeitpunkt dokumentieren
+                  shell: bash
+                  run: |
+                    set -euo pipefail
+
+                    UTC_NOW="$(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+                    LOCAL_NOW="$(TZ=Europe/Berlin date '+%d.%m.%Y %H:%M:%S %Z')"
+                    CURRENT_MINUTE="$(TZ=Europe/Berlin date '+%M')"
+
+                    {
+                      echo "# SSV53 Scheduler Heartbeat"
+                      echo
+                      echo "- Ergebnis: **Workflow wurde ausgelöst**"
+                      echo "- Auslöser: \`${GITHUB_EVENT_NAME}\`"
+                      echo "- Geplanter Cron: \`2-59/5 * * * *\`"
+                      echo "- Tatsächliche lokale Zeit: **${LOCAL_NOW}**"
+                      echo "- Tatsächliche UTC-Zeit: **${UTC_NOW}**"
+                      echo "- Lokale Ausführungsminute: **${CURRENT_MINUTE}**"
+                      echo "- Run-Nummer: **${GITHUB_RUN_NUMBER}**"
+                      echo "- Versuch: **${GITHUB_RUN_ATTEMPT}**"
+                      echo
+                      echo "Dieser Workflow liest keine Secrets und sendet keine Befehle."
+                    } >> "${GITHUB_STEP_SUMMARY}"
+
+                    echo "Heartbeat: ${LOCAL_NOW}"
+          ''').lstrip()
+
+          heartbeat_path = Path(".github/workflows/scheduler-heartbeat.yml")
+          heartbeat_path.write_text(heartbeat_text, encoding="utf-8")
+
+          mower_check = mower_path.read_text(encoding="utf-8")
+          heartbeat_check = heartbeat_path.read_text(encoding="utf-8")
+
+          if mower_check.count(new) != 1:
+              raise SystemExit("Prüfung des Mäher-Crons fehlgeschlagen.")
+          if heartbeat_check.count(new) != 1:
+              raise SystemExit("Prüfung des Heartbeat-Crons fehlgeschlagen.")
+          if "HUSQVARNA_" in heartbeat_check or "HYDRAWISE_" in heartbeat_check:
+              raise SystemExit(
+                  "Der Heartbeat enthält unerwartet Steuerungs-Zugangsdaten."
+              )
+
+          print("Scheduler-Diagnose wurde erfolgreich vorbereitet.")
+          PY
+
+      - name: Einmaligen Installer entfernen und übertragen
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          rm -f ".github/workflows/SSV53_Scheduler_Diagnose_Installieren.yml"
+
+          git config user.name "SSV53 Automation"
+          git config user.email "actions@users.noreply.github.com"
+
+          git add .github/workflows/mower-decision.yml
+          git add .github/workflows/scheduler-heartbeat.yml
+          git add -A .github/workflows/SSV53_Scheduler_Diagnose_Installieren.yml
+
+          if git diff --cached --quiet; then
+            echo "Keine Änderung erforderlich."
+            exit 0
+          fi
+
+          git commit -m "Fünf-Minuten-Scheduler neu registrieren und Heartbeat ergänzen"
+          git push origin HEAD:main
+
+      - name: Ergebnis zusammenfassen
+        shell: bash
+        run: |
+          {
+            echo "# Scheduler-Diagnose installiert"
+            echo
+            echo "- Mäher-Cron: \`2-59/5 * * * *\`"
+            echo "- Heartbeat-Cron: \`2-59/5 * * * *\`"
+            echo "- Der Heartbeat sendet keinerlei Mäher- oder Beregnungsbefehl."
+            echo "- Der einmalige Installer wurde wieder entfernt."
+          } >> "$GITHUB_STEP_SUMMARY"
