@@ -84,3 +84,22 @@ noch nichts in Azure bereit:
 - Keine Geheimniswerte werden im Repository gespeichert.
 - Der Validierungsworkflow enthält weder `azure/login` noch einen Deploymentbefehl.
 - Gerätebefehle und Live-Abfragen bleiben deaktiviert.
+
+
+## Phase 5 – OIDC und Azure What-if
+
+Phase 5 bereitet die passwortlose Anmeldung von GitHub bei Azure vor,
+führt aber noch keine Azure-Anmeldung und keine Bereitstellung aus:
+
+- `azure-infra-what-if.yml` nutzt später GitHub OIDC mit `azure/login@v3`.
+- Es werden nur `az deployment group validate` und `what-if` ausgeführt.
+- Der Workflow enthält keinen `az deployment group create`-Befehl.
+- Die erste Vorschau bleibt fest auf `CONTROL_MODE=DRY_RUN` und
+  `ENABLE_LIVE_READS=false`.
+- Die OIDC-Anwendung erhält zunächst nur Leserechte für die Vorschau.
+- `actions/checkout` wurde auf die Node-24-basierte Version 6 aktualisiert.
+
+Vor dem ersten What-if müssen das Azure-Sponsorship aktiviert, eine leere
+Ressourcengruppe angelegt, die föderierte Entra-Anmeldung eingerichtet und
+die drei GitHub-Variablen `AZURE_CLIENT_ID`, `AZURE_TENANT_ID` und
+`AZURE_SUBSCRIPTION_ID` gesetzt werden.

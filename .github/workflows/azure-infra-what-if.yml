@@ -1,0 +1,182 @@
+name: Azure-Infrastruktur What-if
+
+on:
+  workflow_dispatch:
+    inputs:
+      resource_group:
+        description: "Bereits vorhandene Azure-Ressourcengruppe"
+        required: true
+        type: string
+        default: "rg-ssv53-platzpflege-prod"
+      location:
+        description: "Azure-Region"
+        required: true
+        type: string
+        default: "germanywestcentral"
+      name_prefix:
+        description: "Namenspräfix der Platzpflege-Ressourcen"
+        required: true
+        type: string
+        default: "ssv53platzpflege"
+      environment_name:
+        description: "Azure-Umgebung"
+        required: true
+        type: choice
+        options:
+          - prod
+          - test
+          - dev
+        default: prod
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: azure-infra-what-if-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  what_if:
+    name: Ausschließlich Azure What-if ausführen
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Repository laden
+        uses: actions/checkout@v6
+
+      - name: OIDC-Konfiguration prüfen
+        shell: bash
+        env:
+          AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          set -euo pipefail
+          for variable in AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID; do
+            if [ -z "${!variable:-}" ]; then
+              echo "GitHub-Variable ${variable} fehlt." >&2
+              exit 1
+            fi
+          done
+
+      - name: Ohne Passwort per OIDC bei Azure anmelden
+        uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Zielabonnement und Ressourcengruppe prüfen
+        shell: bash
+        env:
+          RESOURCE_GROUP: ${{ inputs.resource_group }}
+        run: |
+          set -euo pipefail
+          az account show --output table
+          if ! az group show --name "$RESOURCE_GROUP" --output none; then
+            echo "Die Ressourcengruppe ${RESOURCE_GROUP} muss vor dem What-if vorhanden sein." >&2
+            exit 1
+          fi
+
+      - name: Repository- und Sicherheitstests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check -r requirements.txt
+          python -m compileall -q mower function_app.py
+          python -m unittest discover -s tests -p "test_*.py" -v
+
+      - name: Bicep kompilieren
+        shell: bash
+        run: |
+          set -euo pipefail
+          az bicep install
+          az bicep build \
+            --file infra/main.bicep \
+            --outfile /tmp/ssv53-platzpflege-main.json
+
+      - name: ARM-Validierung ohne Bereitstellung
+        shell: bash
+        env:
+          RESOURCE_GROUP: ${{ inputs.resource_group }}
+          LOCATION: ${{ inputs.location }}
+          NAME_PREFIX: ${{ inputs.name_prefix }}
+          ENVIRONMENT_NAME: ${{ inputs.environment_name }}
+        run: |
+          set -euo pipefail
+          az deployment group validate \
+            --resource-group "$RESOURCE_GROUP" \
+            --template-file infra/main.bicep \
+            --validation-level ProviderNoRbac \
+            --parameters \
+              location="$LOCATION" \
+              namePrefix="$NAME_PREFIX" \
+              environmentName="$ENVIRONMENT_NAME" \
+              timerSchedule="0 * * * * *" \
+              controlMode="DRY_RUN" \
+              enableLiveReads=false \
+            --output none
+
+      - name: Azure What-if ohne Bereitstellung
+        shell: bash
+        env:
+          RESOURCE_GROUP: ${{ inputs.resource_group }}
+          LOCATION: ${{ inputs.location }}
+          NAME_PREFIX: ${{ inputs.name_prefix }}
+          ENVIRONMENT_NAME: ${{ inputs.environment_name }}
+        run: |
+          set -euo pipefail
+          az deployment group what-if \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "ssv53-platzpflege-what-if-${GITHUB_RUN_NUMBER}" \
+            --template-file infra/main.bicep \
+            --validation-level ProviderNoRbac \
+            --result-format ResourceIdOnly \
+            --no-pretty-print \
+            --parameters \
+              location="$LOCATION" \
+              namePrefix="$NAME_PREFIX" \
+              environmentName="$ENVIRONMENT_NAME" \
+              timerSchedule="0 * * * * *" \
+              controlMode="DRY_RUN" \
+              enableLiveReads=false \
+            --output json > /tmp/ssv53-what-if.json
+
+          python - <<'PY'
+          import json
+          from collections import Counter
+          from pathlib import Path
+
+          path = Path("/tmp/ssv53-what-if.json")
+          result = json.loads(path.read_text(encoding="utf-8"))
+          changes = result.get("changes", [])
+          counts = Counter(change.get("changeType", "Unknown") for change in changes)
+
+          summary = Path(__import__("os").environ["GITHUB_STEP_SUMMARY"])
+          with summary.open("a", encoding="utf-8") as handle:
+              handle.write("# Azure-Infrastruktur What-if\n\n")
+              handle.write("**Es wurde nichts bereitgestellt oder verändert.**\n\n")
+              handle.write("## Erwartete Änderungen\n\n")
+              if counts:
+                  for change_type, count in sorted(counts.items()):
+                      handle.write(f"- {change_type}: **{count}**\n")
+              else:
+                  handle.write("- Keine Änderungen erkannt\n")
+
+              handle.write("\n## Betroffene Ressourcen\n\n")
+              for change in changes[:100]:
+                  resource_id = change.get("resourceId", "unbekannt")
+                  change_type = change.get("changeType", "Unknown")
+                  handle.write(f"- `{change_type}` – `{resource_id}`\n")
+              if len(changes) > 100:
+                  handle.write(f"- … und {len(changes) - 100} weitere\n")
+
+          print(json.dumps(result, ensure_ascii=False, indent=2))
+          PY
+
+      - name: Azure-Sitzung beenden
+        if: ${{ always() }}
+        shell: bash
+        run: az logout || true
