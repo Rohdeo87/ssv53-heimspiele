@@ -38,7 +38,7 @@ jobs:
 
     steps:
       - name: Repository laden
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Python einrichten
         uses: actions/setup-python@v6
