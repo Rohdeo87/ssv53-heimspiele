@@ -1,0 +1,10 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "python",
+    "TIMER_SCHEDULE": "0 * * * * *",
+    "CONTROL_MODE": "DRY_RUN",
+    "SSV53_TIMEZONE": "Europe/Berlin"
+  }
+}
