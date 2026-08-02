@@ -103,3 +103,23 @@ Vor dem ersten What-if müssen das Azure-Sponsorship aktiviert, eine leere
 Ressourcengruppe angelegt, die föderierte Entra-Anmeldung eingerichtet und
 die drei GitHub-Variablen `AZURE_CLIENT_ID`, `AZURE_TENANT_ID` und
 `AZURE_SUBSCRIPTION_ID` gesetzt werden.
+
+
+## Phase 6 – geprüftes Azure-Function-Quellpaket
+
+Phase 6 erzeugt ein reproduzierbares, geprüftes Quellpaket für die spätere
+Azure-Bereitstellung:
+
+- `scripts/build_azure_source_package.py` paketiert ausschließlich die
+  benötigten Function-, Mäher-, Konfigurations- und Kalenderdateien.
+- `host.json` und `function_app.py` liegen im Wurzelverzeichnis des ZIPs.
+- Tests, GitHub-Workflows, Infrastrukturdateien und lokale Einstellungen
+  werden nicht paketiert.
+- Das Paket wird auf bekannte Husqvarna-Schreibbefehle und Geheimnis-
+  Markierungen geprüft.
+- Ein Manifest enthält Dateigrößen und SHA-256-Prüfsummen.
+- Der GitHub-Workflow speichert das Ergebnis nur als zeitlich begrenztes
+  Artefakt und führt keine Azure-Anmeldung oder Bereitstellung aus.
+- Die Sicherheitsstufe bleibt `DRY_RUN_READ_ONLY`.
+- Für die spätere Flex-Consumption-Bereitstellung bleibt ein Azure Remote
+  Build erforderlich.
