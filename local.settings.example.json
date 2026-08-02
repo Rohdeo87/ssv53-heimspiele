@@ -5,6 +5,14 @@
     "FUNCTIONS_WORKER_RUNTIME": "python",
     "TIMER_SCHEDULE": "0 * * * * *",
     "CONTROL_MODE": "DRY_RUN",
-    "SSV53_TIMEZONE": "Europe/Berlin"
+    "ENABLE_LIVE_READS": "false",
+    "SSV53_TIMEZONE": "Europe/Berlin",
+    "PARK_LOOKAHEAD_MINUTES": "15",
+    "MOWER_CONFIG_PATH": "mower/config.json",
+    "MOWER_MATCHES_PATH": "public/rasen.ics",
+    "HUSQVARNA_CLIENT_ID": "",
+    "HUSQVARNA_CLIENT_SECRET": "",
+    "HYDRAWISE_API_KEY": "",
+    "HYDRAWISE_CONTROLLER_ID": ""
   }
 }

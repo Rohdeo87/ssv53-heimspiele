@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from enum import Enum
 from typing import Any, Mapping
@@ -46,11 +46,24 @@ class ControlMode(str, Enum):
         return self is ControlMode.FULL_FAILSAFE
 
 
+def _parse_bool(value: str | None, default: bool = False) -> bool:
+    if value is None or not value.strip():
+        return default
+    normalized = value.strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    raise ValueError(f"Ungültiger boolescher Wert: {value!r}")
+
+
 @dataclass(frozen=True)
 class RuntimeSettings:
     control_mode: ControlMode
     timer_schedule: str
     timezone_name: str
+    enable_live_reads: bool
+    park_lookahead_minutes: int
 
     @classmethod
     def from_mapping(cls, values: Mapping[str, str]) -> "RuntimeSettings":
@@ -60,10 +73,29 @@ class RuntimeSettings:
             raise ValueError("TIMER_SCHEDULE darf nicht leer sein.")
         if not timezone_name:
             raise ValueError("SSV53_TIMEZONE darf nicht leer sein.")
+
+        try:
+            park_lookahead_minutes = int(
+                values.get("PARK_LOOKAHEAD_MINUTES", "15").strip()
+            )
+        except ValueError as exc:
+            raise ValueError(
+                "PARK_LOOKAHEAD_MINUTES muss eine ganze Zahl sein."
+            ) from exc
+        if not 0 <= park_lookahead_minutes <= 120:
+            raise ValueError(
+                "PARK_LOOKAHEAD_MINUTES muss zwischen 0 und 120 liegen."
+            )
+
         return cls(
             control_mode=ControlMode.parse(values.get("CONTROL_MODE")),
             timer_schedule=timer_schedule,
             timezone_name=timezone_name,
+            enable_live_reads=_parse_bool(
+                values.get("ENABLE_LIVE_READS"),
+                default=False,
+            ),
+            park_lookahead_minutes=park_lookahead_minutes,
         )
 
 
@@ -77,13 +109,14 @@ class CycleResult:
     decision_code: str
     command_sent: bool
     message: str
+    details: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
 def ensure_heartbeat_only_mode(mode: ControlMode) -> None:
-    """Verhindert echte Steuerbefehle, solange nur das Azure-Gerüst aktiv ist."""
+    """Verhindert echte Steuerbefehle in der vorbereitenden Azure-Phase."""
 
     if mode not in {ControlMode.OFF, ControlMode.DRY_RUN}:
         raise RuntimeError(
@@ -109,11 +142,11 @@ def build_heartbeat_result(
         decision_code = "HEARTBEAT_ONLY"
         message = (
             "Azure-Timer lief im sicheren Dry Run. "
-            "Es wurden keine externen APIs aufgerufen und keine Befehle gesendet."
+            "Live-Abfragen sind noch deaktiviert und es wurden keine Befehle gesendet."
         )
 
     return CycleResult(
-        schema_version=1,
+        schema_version=2,
         executed_at_utc=now_utc.isoformat(),
         source=source,
         control_mode=settings.control_mode.value,
@@ -121,4 +154,9 @@ def build_heartbeat_result(
         decision_code=decision_code,
         command_sent=False,
         message=message,
+        details={
+            "enable_live_reads": settings.enable_live_reads,
+            "timer_schedule": settings.timer_schedule,
+            "timezone": settings.timezone_name,
+        },
     )

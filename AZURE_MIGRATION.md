@@ -1,48 +1,47 @@
-# Azure-Migration der SSV53-Platzpflege
+# SSV53 Azure-Migration
 
-## Status dieser ersten Stufe
+## Phase 1 – abgeschlossen
 
-Diese Vorbereitung ist vollständig **inert**:
+- Azure Functions Timer-Grundgerüst
+- sichere Betriebsmodi
+- Standard `CONTROL_MODE=DRY_RUN`
+- keinerlei externe API-Aufrufe
+- keinerlei Steuerbefehle
 
-- kein Azure-Deployment,
-- keine Azure-Ressourcen,
-- kein Husqvarna-Aufruf,
-- kein Hydrawise-Aufruf,
-- kein Park-, Start- oder Beregnungsbefehl.
+## Phase 2 – Read-only Live Dry Run
 
-Die bestehende GitHub-Mähsteuerung bleibt unverändert. Die neuen Dateien liegen
-ausschließlich auf dem Branch `feature/azure-mower-migration`.
+Phase 2 verschiebt die reine Mähentscheidung aus dem GitHub-Workflow in
+wiederverwendbare Python-Module:
 
-## Enthaltene Grundlage
+- `mower/husqvarna.py`: ausschließlich Anmeldung und lesender Mäherabruf
+- `mower/decision.py`: reine, testbare Entscheidungslogik
+- `mower/dry_run.py`: Zusammenführung von Training, Heimspielen, Hydrawise
+  und Husqvarna
+- `mower/controller.py`: stabiler Einstiegspunkt für Azure
 
-- Azure Functions Python-v2-Projekt im Repository-Stamm,
-- minütlicher Timer über `TIMER_SCHEDULE`,
-- Schedule-Monitoring,
-- drei Wiederholungsversuche im Abstand von zehn Sekunden,
-- strukturierte Heartbeat-Protokolle,
-- zentrale Funktion `mower.controller.run_control_cycle`,
-- feste Betriebsmodi mit gesperrten Live-Modi,
-- automatisierte Sicherheitstests.
+### Sicherheitsgrenzen
 
-## Betriebsmodi
+- `PARK_ONLY`, `FULL_MOWER` und `FULL_FAILSAFE` bleiben technisch gesperrt.
+- Das Husqvarna-Modul enthält keinen `/actions`-Endpunkt.
+- Jede Entscheidung setzt `command_sent=false`.
+- Live-Abfragen sind zusätzlich durch `ENABLE_LIVE_READS=false` deaktiviert.
+- Zugangsdaten gehören später in Azure Key Vault, niemals in GitHub.
 
-| Wert | Bedeutung |
-|---|---|
-| `OFF` | Timer protokolliert nur, Automatik deaktiviert |
-| `DRY_RUN` | sichere Standardstufe ohne Befehle |
-| `PARK_ONLY` | für Phase 1 technisch gesperrt |
-| `FULL_MOWER` | für Phase 1 technisch gesperrt |
-| `FULL_FAILSAFE` | für Phase 1 technisch gesperrt |
+### Aktivierung nach Azure-Bereitstellung
 
-Ein versehentlich gesetzter Live-Modus führt in dieser Stufe zu einem Fehler und
-damit zu einer sichtbaren Wiederholung beziehungsweise Alarmierung, aber niemals
-zu einem Gerätebefehl.
+Zunächst ausschließlich:
 
-## Nächste technische Stufe
+```text
+CONTROL_MODE=DRY_RUN
+ENABLE_LIVE_READS=false
+```
 
-1. Bestehende Husqvarna-Logik aus `mower-decision.yml` in `mower/husqvarna.py`
-   verschieben.
-2. Entscheidungslogik in ein unabhängig testbares Modul übernehmen.
-3. persistenten Automationszustand definieren.
-4. Azure Storage und Key Vault als Infrastrukturcode vorbereiten.
-5. nach Freischaltung des Nonprofit-Guthabens den Heartbeat bereitstellen.
+Nach erfolgreichem Azure-Heartbeat und eingerichteten Key-Vault-Verweisen darf
+nur die lesende Diagnose aktiviert werden:
+
+```text
+CONTROL_MODE=DRY_RUN
+ENABLE_LIVE_READS=true
+```
+
+Auch dann werden keine Mäher- oder Beregnungsbefehle gesendet.
