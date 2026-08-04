@@ -16,7 +16,7 @@
     {
       "date_from": "2026-07-01",
       "date_to": "2026-09-30",
-      "competition_rows": 18
+      "competition_rows": 19
     },
     {
       "date_from": "2026-10-01",
@@ -41,11 +41,11 @@
       "depth": 0,
       "source_url": "https://www.fussball.de/ajax.club.matchplan/-/id/00ES8GNBL0000049VV0AG08LVUPGND5I/mode/PAGE/show-filter/false/show-venues/true/mime-type/HTML/datum-von/2026-07-01/datum-bis/2026-09-30/max/50",
       "source_scope": "all club teams; inclusion decided only by venue",
-      "competition_rows": 18,
-      "source_detail_ids": 14,
-      "parsed_matches_before_duplicate_merge": 18,
-      "parsed_matches": 17,
-      "parsed_detail_ids": 14,
+      "competition_rows": 19,
+      "source_detail_ids": 15,
+      "parsed_matches_before_duplicate_merge": 19,
+      "parsed_matches": 18,
+      "parsed_detail_ids": 15,
       "missing_detail_ids": [],
       "duplicate_detail_ids": [],
       "collapsed_duplicate_detail_ids": [
@@ -67,14 +67,17 @@
             "reference": {
               "exact_kickoffs": [
                 "2024-07-16T10:20+02:00",
-                "2024-09-22T12:30+02:00"
+                "2024-09-22T12:30+02:00",
+                "2026-08-04T13:00+02:00"
               ],
               "dates": [
                 "2024-07-16",
                 "2024-09-22",
+                "2026-08-04",
                 "2026-09-04"
               ],
               "sources": {
+                "2026-08-04T13:00+02:00": "visible",
                 "2024-09-22T12:30+02:00": "visible",
                 "2024-07-16T10:20+02:00": "visible"
               },
