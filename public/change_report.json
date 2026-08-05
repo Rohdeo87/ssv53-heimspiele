@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-04T17:10:11+00:00",
+  "generatedAt": "2026-08-05T08:05:34+00:00",
   "status": "ok",
   "counts": {
     "before": 22,
     "after": 22,
     "added": 0,
-    "changed": 0,
+    "changed": 1,
     "removed": 0
   },
   "guard": {
@@ -16,6 +16,57 @@
     "reasons": []
   },
   "added": [],
-  "changed": [],
+  "changed": [
+    {
+      "id": "dfb:031DP96PJK000000VS5489BUVUR5FS5A",
+      "label": "Spielgemeinschaft Schönwalde-Perwenitz-Paaren · Spielgemeinschaft Schönwalde-Perwenitz-Paaren – FC Deetz · 28.02.2027 14:00 · Rasen",
+      "before": {
+        "id": "dfb:031DP96PJK000000VS5489BUVUR5FS5A",
+        "title": "Spiel Spielgemeinschaft Schönwalde-Perwenitz-Paaren: Spielgemeinschaft Schönwalde-Perwenitz-Paaren – FC Deetz I",
+        "start": "2027-02-28T13:00+01:00",
+        "end": "2027-02-28T16:30+01:00",
+        "kickoff": "2027-02-28T14:00+01:00",
+        "place": "rasen",
+        "calendar": "Rasen",
+        "team": "Spielgemeinschaft Schönwalde-Perwenitz-Paaren",
+        "teamCategory": "Herren | Kreisliga",
+        "teamRole": "home",
+        "homeTeam": "Spielgemeinschaft Schönwalde-Perwenitz-Paaren",
+        "awayTeam": "FC Deetz I",
+        "competition": "So, | Herren | Kreisliga",
+        "status": "",
+        "detailLink": "https://www.fussball.de/spiel/spielgemeinschaft-schoenwalde-perwenitz-paaren-fc-deetz-i/-/spiel/031DP96PJK000000VS5489BUVUR5FS5A",
+        "source": "fussball.de",
+        "checksum": "ebc4b3be1df2785cf7722b5ebce17b35de64617a2704168201cfe0d3a78ecb92"
+      },
+      "after": {
+        "id": "dfb:031DP96PJK000000VS5489BUVUR5FS5A",
+        "title": "Spiel Spielgemeinschaft Schönwalde-Perwenitz-Paaren: Spielgemeinschaft Schönwalde-Perwenitz-Paaren – FC Deetz",
+        "start": "2027-02-28T13:00+01:00",
+        "end": "2027-02-28T16:30+01:00",
+        "kickoff": "2027-02-28T14:00+01:00",
+        "place": "rasen",
+        "calendar": "Rasen",
+        "team": "Spielgemeinschaft Schönwalde-Perwenitz-Paaren",
+        "teamCategory": "Herren | Kreisliga",
+        "teamRole": "home",
+        "homeTeam": "Spielgemeinschaft Schönwalde-Perwenitz-Paaren",
+        "awayTeam": "FC Deetz",
+        "competition": "So, | Herren | Kreisliga",
+        "status": "",
+        "detailLink": "https://www.fussball.de/spiel/spielgemeinschaft-schoenwalde-perwenitz-paaren-fc-deetz-i/-/spiel/031DP96PJK000000VS5489BUVUR5FS5A",
+        "source": "fussball.de",
+        "checksum": "e6f8015c6886097022ad44a77f4a9a8d412486e4e0852ab4a154fc5212bb620b"
+      },
+      "changes": [
+        {
+          "field": "awayTeam",
+          "label": "Gastteam",
+          "before": "FC Deetz I",
+          "after": "FC Deetz"
+        }
+      ]
+    }
+  ],
   "removed": []
 }

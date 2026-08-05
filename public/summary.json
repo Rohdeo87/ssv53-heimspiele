@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-04T17:10:11+00:00",
+  "generated_at": "2026-08-05T08:05:34+00:00",
   "selection_mode": "club-wide venue",
   "event_timing": {
     "before_minutes": 60,
@@ -54,11 +54,10 @@
     "Spielgemeinschaft Schönwalde-Perwenitz-Paaren"
   ],
   "team_registry_changes": {
-    "new": [
-      "Schönwalder SV"
-    ],
+    "new": [],
     "known": [
       "Spielgemeinschaft Schönwalde-Perwenitz-Paaren",
+      "Schönwalder SV",
       "SpG Perwenitz/​Schönwalde Ü50",
       "Schönwalder SV (Ü40)",
       "Schönwalder SV (9er)"

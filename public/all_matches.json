@@ -175,7 +175,7 @@
     "team_category": "Herren | Kreisliga",
     "team_role": "away",
     "kickoff": "2026-08-30T15:00+02:00",
-    "home_team": "FC Deetz I",
+    "home_team": "FC Deetz",
     "away_team": "Spielgemeinschaft Schönwalde-Perwenitz-Paaren",
     "competition": "Herren | Kreisliga",
     "match_type": "ME",
@@ -188,7 +188,7 @@
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2026-08-30T14:00+02:00",
     "event_end": "2026-08-30T17:30+02:00",
-    "checksum": "fc66ecdeff654c02db3b4493b30861e9261181e999054bc9cd6417595d248e24",
+    "checksum": "7a5ca1dded6447e4ea25aea1255713e5947c03a2cd460e9853d9c8140a49967c",
     "warnings": []
   },
   {
@@ -802,7 +802,7 @@
     "team_role": "home",
     "kickoff": "2027-02-28T14:00+01:00",
     "home_team": "Spielgemeinschaft Schönwalde-Perwenitz-Paaren",
-    "away_team": "FC Deetz I",
+    "away_team": "FC Deetz",
     "competition": "So, | Herren | Kreisliga",
     "match_type": "ME",
     "status": "",
@@ -814,7 +814,7 @@
     "venue_rule": "Rasen Schönwalde",
     "event_start": "2027-02-28T13:00+01:00",
     "event_end": "2027-02-28T16:30+01:00",
-    "checksum": "ebc4b3be1df2785cf7722b5ebce17b35de64617a2704168201cfe0d3a78ecb92",
+    "checksum": "e6f8015c6886097022ad44a77f4a9a8d412486e4e0852ab4a154fc5212bb620b",
     "warnings": []
   },
   {
