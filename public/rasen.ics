@@ -7,7 +7,7 @@ X-WR-CALNAME:SSV53 Rasen – Spiele
 X-WR-TIMEZONE:Europe/Berlin
 BEGIN:VEVENT
 UID:dfb-031C84AB5K000000VS5489BUVUR5FS5A@ssv53.de
-DTSTAMP:20260802T114628Z
+DTSTAMP:20260806T122256Z
 DTSTART;TZID=Europe/Berlin:20260821T180000
 DTEND;TZID=Europe/Berlin:20260821T213000
 SUMMARY:Schönwalder SV (Ü40): Schönwalder SV (Ü40) – SG Bornim Ü40
@@ -16,7 +16,7 @@ DESCRIPTION:Fr\, | Herren Ü40 | Kreispokal | https://www.fussball.de/spiel/scho
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031DP96C58000000VS5489BUVUR5FS5A@ssv53.de
-DTSTAMP:20260802T114628Z
+DTSTAMP:20260806T122256Z
 DTSTART;TZID=Europe/Berlin:20260904T183000
 DTEND;TZID=Europe/Berlin:20260904T220000
 SUMMARY:Spielgemeinschaft Schönwalde-Perwenitz-Paaren: Spielgemeinschaft Schönwalde-Perwenitz-Paaren – VfL Nauen II
@@ -25,7 +25,7 @@ DESCRIPTION:Herren | Kreisliga | https://www.fussball.de/spiel/spielgemeinschaft
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031DP96GGC000000VS5489BUVUR5FS5A@ssv53.de
-DTSTAMP:20260802T114628Z
+DTSTAMP:20260806T122256Z
 DTSTART;TZID=Europe/Berlin:20260913T130000
 DTEND;TZID=Europe/Berlin:20260913T163000
 SUMMARY:Spielgemeinschaft Schönwalde-Perwenitz-Paaren: Spielgemeinschaft Schönwalde-Perwenitz-Paaren – FSV 1950 Wachow/​Tremmen
@@ -34,7 +34,7 @@ DESCRIPTION:So\, | Herren | Kreisliga | https://www.fussball.de/spiel/spielgemei
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031DB86VDS000000VS5489BUVUR5FS5A@ssv53.de
-DTSTAMP:20260802T114628Z
+DTSTAMP:20260806T122256Z
 DTSTART;TZID=Europe/Berlin:20261002T180000
 DTEND;TZID=Europe/Berlin:20261002T213000
 SUMMARY:Schönwalder SV (Ü40): Schönwalder SV (Ü40) – SV Dallgow 47
@@ -43,7 +43,7 @@ DESCRIPTION:Fr\, | Herren Ü40 | Kreisliga | https://www.fussball.de/spiel/schoe
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031DP96F8G000000VS5489BUVUR5FS5A@ssv53.de
-DTSTAMP:20260802T114628Z
+DTSTAMP:20260806T122256Z
 DTSTART;TZID=Europe/Berlin:20261004T130000
 DTEND;TZID=Europe/Berlin:20261004T163000
 SUMMARY:Spielgemeinschaft Schönwalde-Perwenitz-Paaren: Spielgemeinschaft Schönwalde-Perwenitz-Paaren – SV Hohennauen
@@ -52,7 +52,7 @@ DESCRIPTION:So\, | Herren | Kreisliga | https://www.fussball.de/spiel/spielgemei
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031DP96EHK000000VS5489BUVUR5FS5A@ssv53.de
-DTSTAMP:20260802T114628Z
+DTSTAMP:20260806T122256Z
 DTSTART;TZID=Europe/Berlin:20261018T130000
 DTEND;TZID=Europe/Berlin:20261018T163000
 SUMMARY:Spielgemeinschaft Schönwalde-Perwenitz-Paaren: Spielgemeinschaft Schönwalde-Perwenitz-Paaren – FC Rot-Weiß Nennhausen
@@ -61,7 +61,7 @@ DESCRIPTION:So\, | Herren | Kreisliga | https://www.fussball.de/spiel/spielgemei
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031DP96DRK000000VS5489BUVUR5FS5A@ssv53.de
-DTSTAMP:20260802T114628Z
+DTSTAMP:20260806T122256Z
 DTSTART;TZID=Europe/Berlin:20261101T130000
 DTEND;TZID=Europe/Berlin:20261101T163000
 SUMMARY:Spielgemeinschaft Schönwalde-Perwenitz-Paaren: Spielgemeinschaft Schönwalde-Perwenitz-Paaren – SV Blau-Weiß Damsdorf
@@ -70,7 +70,7 @@ DESCRIPTION:So\, | Herren | Kreisliga | https://www.fussball.de/spiel/spielgemei
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031DB86V6S000000VS5489BUVUR5FS5A@ssv53.de
-DTSTAMP:20260802T114628Z
+DTSTAMP:20260806T122256Z
 DTSTART;TZID=Europe/Berlin:20261106T180000
 DTEND;TZID=Europe/Berlin:20261106T213000
 SUMMARY:Schönwalder SV (Ü40): Schönwalder SV (Ü40) – SV Falkensee-Finkenkrug
@@ -79,7 +79,7 @@ DESCRIPTION:Fr\, | Herren Ü40 | Kreisliga | https://www.fussball.de/spiel/schoe
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031DP96D60000000VS5489BUVUR5FS5A@ssv53.de
-DTSTAMP:20260802T114628Z
+DTSTAMP:20260806T122256Z
 DTSTART;TZID=Europe/Berlin:20261115T130000
 DTEND;TZID=Europe/Berlin:20261115T163000
 SUMMARY:Spielgemeinschaft Schönwalde-Perwenitz-Paaren: Spielgemeinschaft Schönwalde-Perwenitz-Paaren – FC Borussia Brandenburg II
@@ -88,16 +88,16 @@ DESCRIPTION:So\, | Herren | Kreisliga | https://www.fussball.de/spiel/spielgemei
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031DP96PJK000000VS5489BUVUR5FS5A@ssv53.de
-DTSTAMP:20260802T114628Z
+DTSTAMP:20260806T122256Z
 DTSTART;TZID=Europe/Berlin:20270228T130000
 DTEND;TZID=Europe/Berlin:20270228T163000
-SUMMARY:Spielgemeinschaft Schönwalde-Perwenitz-Paaren: Spielgemeinschaft Schönwalde-Perwenitz-Paaren – FC Deetz I
+SUMMARY:Spielgemeinschaft Schönwalde-Perwenitz-Paaren: Spielgemeinschaft Schönwalde-Perwenitz-Paaren – FC Deetz
 LOCATION:Rasenplatz\, Sportplatz Schönwalde Strandbad\, Platz 1\, Kurmärkische Str. 2\, 14621 Schönwalde-Glien
 DESCRIPTION:So\, | Herren | Kreisliga | https://www.fussball.de/spiel/spielgemeinschaft-schoenwalde-perwenitz-paaren-fc-deetz-i/-/spiel/031DP96PJK000000VS5489BUVUR5FS5A
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031DB870D4000000VS5489BUVUR5FS5A@ssv53.de
-DTSTAMP:20260802T114628Z
+DTSTAMP:20260806T122256Z
 DTSTART;TZID=Europe/Berlin:20270409T180000
 DTEND;TZID=Europe/Berlin:20270409T213000
 SUMMARY:Schönwalder SV (Ü40): Schönwalder SV (Ü40) – Eintracht Falkensee Ü40
@@ -106,7 +106,7 @@ DESCRIPTION:Fr\, | Herren Ü40 | Kreisliga | https://www.fussball.de/spiel/schoe
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031DB8NT0S000000VS5489BUVUR5FS5A@ssv53.de
-DTSTAMP:20260802T114628Z
+DTSTAMP:20260806T122256Z
 DTSTART;TZID=Europe/Berlin:20270409T190000
 DTEND;TZID=Europe/Berlin:20270409T223000
 SUMMARY:SpG Perwenitz/​Schönwalde Ü50: SpG Perwenitz/​Schönwalde Ü50 – SV Falkensee-Finkenkrug
@@ -115,7 +115,7 @@ DESCRIPTION:Herren Ü50 | Kreisliga | https://www.fussball.de/spiel/spg-perwenit
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031DP96M1K000000VS5489BUVUR5FS5A@ssv53.de
-DTSTAMP:20260802T114628Z
+DTSTAMP:20260806T122256Z
 DTSTART;TZID=Europe/Berlin:20270411T130000
 DTEND;TZID=Europe/Berlin:20270411T163000
 SUMMARY:Spielgemeinschaft Schönwalde-Perwenitz-Paaren: Spielgemeinschaft Schönwalde-Perwenitz-Paaren – SV Roskow
@@ -124,7 +124,7 @@ DESCRIPTION:So\, | Herren | Kreisliga | https://www.fussball.de/spiel/spielgemei
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031DP96KK4000000VS5489BUVUR5FS5A@ssv53.de
-DTSTAMP:20260802T114628Z
+DTSTAMP:20260806T122256Z
 DTSTART;TZID=Europe/Berlin:20270425T130000
 DTEND;TZID=Europe/Berlin:20270425T163000
 SUMMARY:Spielgemeinschaft Schönwalde-Perwenitz-Paaren: Spielgemeinschaft Schönwalde-Perwenitz-Paaren – SV Grün-Weiss Brieselang II
@@ -133,7 +133,7 @@ DESCRIPTION:So\, | Herren | Kreisliga | https://www.fussball.de/spiel/spielgemei
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031DB87058000000VS5489BUVUR5FS5A@ssv53.de
-DTSTAMP:20260802T114628Z
+DTSTAMP:20260806T122256Z
 DTSTART;TZID=Europe/Berlin:20270507T180000
 DTEND;TZID=Europe/Berlin:20270507T213000
 SUMMARY:Schönwalder SV (Ü40): Schönwalder SV (Ü40) – SG Eintracht Friesack Ü40
@@ -142,7 +142,7 @@ DESCRIPTION:Fr\, | Herren Ü40 | Kreisliga | https://www.fussball.de/spiel/schoe
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031DB8NSPC000000VS5489BUVUR5FS5A@ssv53.de
-DTSTAMP:20260802T114628Z
+DTSTAMP:20260806T122256Z
 DTSTART;TZID=Europe/Berlin:20270507T190000
 DTEND;TZID=Europe/Berlin:20270507T223000
 SUMMARY:SpG Perwenitz/​Schönwalde Ü50: SpG Perwenitz/​Schönwalde Ü50 – SpG Empor Schenkenberg/​Eintracht Glindow
@@ -151,7 +151,7 @@ DESCRIPTION:Herren Ü50 | Kreisliga | https://www.fussball.de/spiel/spg-perwenit
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031DP96JUG000000VS5489BUVUR5FS5A@ssv53.de
-DTSTAMP:20260802T114628Z
+DTSTAMP:20260806T122256Z
 DTSTART;TZID=Europe/Berlin:20270509T130000
 DTEND;TZID=Europe/Berlin:20270509T163000
 SUMMARY:Spielgemeinschaft Schönwalde-Perwenitz-Paaren: Spielgemeinschaft Schönwalde-Perwenitz-Paaren – Mögeliner SC 1913
@@ -160,7 +160,7 @@ DESCRIPTION:So\, | Herren | Kreisliga | https://www.fussball.de/spiel/spielgemei
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031DP96IO0000000VS5489BUVUR5FS5A@ssv53.de
-DTSTAMP:20260802T114628Z
+DTSTAMP:20260806T122256Z
 DTSTART;TZID=Europe/Berlin:20270523T130000
 DTEND;TZID=Europe/Berlin:20270523T163000
 SUMMARY:Spielgemeinschaft Schönwalde-Perwenitz-Paaren: Spielgemeinschaft Schönwalde-Perwenitz-Paaren – BSC Rathenow
@@ -169,7 +169,7 @@ DESCRIPTION:So\, | Herren | Kreisliga | https://www.fussball.de/spiel/spielgemei
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031DB86VQ4000000VS5489BUVUR5FS5A@ssv53.de
-DTSTAMP:20260802T114628Z
+DTSTAMP:20260806T122256Z
 DTSTART;TZID=Europe/Berlin:20270528T180000
 DTEND;TZID=Europe/Berlin:20270528T213000
 SUMMARY:Schönwalder SV (Ü40): Schönwalder SV (Ü40) – FSV 95 Ketzin/​Falkenrehde Ü40
@@ -178,7 +178,7 @@ DESCRIPTION:Fr\, | Herren Ü40 | Kreisliga | https://www.fussball.de/spiel/schoe
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031DB8NSH4000000VS5489BUVUR5FS5A@ssv53.de
-DTSTAMP:20260802T114628Z
+DTSTAMP:20260806T122256Z
 DTSTART;TZID=Europe/Berlin:20270528T190000
 DTEND;TZID=Europe/Berlin:20270528T223000
 SUMMARY:SpG Perwenitz/​Schönwalde Ü50: SpG Perwenitz/​Schönwalde Ü50 – SV Blau-Gelb Falkensee
@@ -187,7 +187,7 @@ DESCRIPTION:Herren Ü50 | Kreisliga | https://www.fussball.de/spiel/spg-perwenit
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031DP96HKG000000VS5489BUVUR5FS5A@ssv53.de
-DTSTAMP:20260802T114628Z
+DTSTAMP:20260806T122256Z
 DTSTART;TZID=Europe/Berlin:20270606T130000
 DTEND;TZID=Europe/Berlin:20270606T163000
 SUMMARY:Spielgemeinschaft Schönwalde-Perwenitz-Paaren: Spielgemeinschaft Schönwalde-Perwenitz-Paaren – SV Kloster Lehnin
