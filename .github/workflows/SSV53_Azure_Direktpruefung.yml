@@ -1,0 +1,216 @@
+name: "Einmalig: Azure-Prüfungen direkt ausführen"
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ssv53-azure-direktpruefung
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Azure-Paket und Infrastruktur direkt prüfen
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Azure-Migrationsbranch laden
+        uses: actions/checkout@v7
+        with:
+          ref: feature/azure-mower-migration
+          fetch-depth: 0
+
+      - name: Python 3.12 einrichten
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Abhängigkeiten installieren
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check -r requirements.txt
+
+      - name: Gesamte Test-Suite ausführen
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m compileall -q mower function_app.py scripts
+          python -m unittest discover -s tests -p "test_*.py" -v
+
+      - name: Azure-Function-Quellpaket bauen
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf dist
+          mkdir -p dist
+          python scripts/build_azure_source_package.py \
+            --output dist/ssv53-platzpflege-source.zip \
+            | tee dist/package-result.json
+
+      - name: Paketstruktur und Sicherheitsstufe prüfen
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import zipfile
+          from pathlib import Path
+
+          package = Path("dist/ssv53-platzpflege-source.zip")
+          with zipfile.ZipFile(package) as archive:
+              names = set(archive.namelist())
+              required = {
+                  "host.json",
+                  "function_app.py",
+                  "requirements.txt",
+                  "package-manifest.json",
+                  "mower/controller.py",
+                  "mower/husqvarna.py",
+                  "public/rasen.ics",
+              }
+              missing = sorted(required - names)
+              if missing:
+                  raise SystemExit(f"Erforderliche Paketeinträge fehlen: {missing}")
+
+              forbidden_prefixes = (
+                  ".git/",
+                  ".github/",
+                  "tests/",
+                  "infra/",
+                  "generated/",
+              )
+              forbidden = sorted(
+                  name for name in names if name.startswith(forbidden_prefixes)
+              )
+              if forbidden:
+                  raise SystemExit(
+                      f"Unerwartete Dateien im Quellpaket: {forbidden}"
+                  )
+
+              manifest = json.loads(
+                  archive.read("package-manifest.json").decode("utf-8")
+              )
+              if manifest.get("safety_stage") != "DRY_RUN_READ_ONLY":
+                  raise SystemExit("Unsichere oder unbekannte Paketstufe.")
+              if manifest.get("remote_build_required") is not True:
+                  raise SystemExit("Remote-Build-Hinweis fehlt.")
+
+          print("Azure-Quellpaket ist strukturell und fachlich sicher.")
+          PY
+
+      - name: Bicep installieren und kompilieren
+        shell: bash
+        run: |
+          set -euo pipefail
+          az bicep install
+          az bicep version
+          az bicep build \
+            --file infra/main.bicep \
+            --outfile /tmp/ssv53-platzpflege-main.json
+
+      - name: Kompiliertes Azure-Template prüfen
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          template = json.loads(
+              Path("/tmp/ssv53-platzpflege-main.json").read_text(
+                  encoding="utf-8"
+              )
+          )
+          resource_types = {
+              resource.get("type")
+              for resource in template.get("resources", [])
+          }
+          required = {
+              "Microsoft.Web/sites",
+              "Microsoft.Web/serverfarms",
+              "Microsoft.Storage/storageAccounts",
+              "Microsoft.KeyVault/vaults",
+              "Microsoft.ManagedIdentity/userAssignedIdentities",
+              "Microsoft.Insights/components",
+          }
+          missing = sorted(required - resource_types)
+          if missing:
+              raise SystemExit(
+                  f"Erwartete Azure-Ressourcen fehlen: {missing}"
+              )
+
+          serialized = json.dumps(template)
+          if "Microsoft.KeyVault/vaults/secrets" in serialized:
+              raise SystemExit(
+                  "Das Template darf keine Geheimniswerte bereitstellen."
+              )
+
+          print("Bicep-Template und Sicherheitsgrenzen sind gültig.")
+          PY
+
+      - name: Prüfpaket als GitHub-Artefakt speichern
+        uses: actions/upload-artifact@v7
+        with:
+          name: ssv53-azure-direktpruefung-${{ github.run_number }}
+          path: |
+            dist/ssv53-platzpflege-source.zip
+            dist/package-result.json
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+      - name: Ergebnis zusammenfassen
+        shell: bash
+        run: |
+          {
+            echo "# SSV53 Azure-Direktprüfung"
+            echo
+            echo "- Gesamte Python-Test-Suite: **erfolgreich**"
+            echo "- Azure-Function-Paket: **erfolgreich gebaut**"
+            echo "- Sicherheitsstufe: **DRY_RUN_READ_ONLY**"
+            echo "- Bicep-Kompilierung: **erfolgreich**"
+            echo "- Azure-Anmeldung: **keine**"
+            echo "- Azure-Ressourcen erstellt: **keine**"
+            echo "- Gerätebefehle ausgeführt: **keine**"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  cleanup:
+    name: Einmaligen Direktprüfungs-Workflow entfernen
+    needs: validate
+    if: ${{ success() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Main laden
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          token: ${{ secrets.SSV53_AUTOMATION_TOKEN }}
+          persist-credentials: true
+          fetch-depth: 0
+
+      - name: Workflow aus main entfernen
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          WORKFLOW_PATH=".github/workflows/SSV53_Azure_Direktpruefung.yml"
+
+          git config user.name "SSV53 Automation"
+          git config user.email "actions@users.noreply.github.com"
+
+          rm -f "$WORKFLOW_PATH"
+
+          if git diff --quiet; then
+            echo "Der einmalige Workflow ist bereits entfernt."
+          else
+            git add -A "$WORKFLOW_PATH"
+            git commit -m "Einmaligen Azure-Direktprüfungs-Workflow entfernen"
+            git push origin main
+          fi
