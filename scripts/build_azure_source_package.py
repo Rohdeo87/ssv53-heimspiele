@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+# Prüf-Trigger nach Synchronisierung mit main; keine Funktionsänderung.
+
 import argparse
 import hashlib
 import json

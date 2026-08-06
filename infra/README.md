@@ -37,3 +37,5 @@ Die Bereitstellung erfolgt erst nach Aktivierung des Azure-Nonprofit-Guthabens,
 einem Azure-`what-if` und einer ausdrücklichen Freigabe. Die vier Gerätezugänge
 werden anschließend direkt im Key Vault angelegt und niemals in GitHub
 gespeichert.
+
+> Prüfstatus: Synchronisierungstest für Paket- und Infrastrukturvalidierung ausgelöst.
