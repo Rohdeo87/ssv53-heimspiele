@@ -1,0 +1,106 @@
+name: "Einmalig: Azure-Prüfläufe auslösen"
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ssv53-azure-prueflaeufe-ausloesen
+  cancel-in-progress: false
+
+jobs:
+  trigger-tests:
+    name: Sicheren Prüf-Commit im Azure-Migrationsbranch anlegen
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Repository vollständig laden
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          token: ${{ secrets.SSV53_AUTOMATION_TOKEN }}
+          persist-credentials: true
+          fetch-depth: 0
+
+      - name: Prüf-Commit anlegen und pushen
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          TARGET_BRANCH="feature/azure-mower-migration"
+
+          git config user.name "SSV53 Automation"
+          git config user.email "actions@users.noreply.github.com"
+
+          git fetch origin main "$TARGET_BRANCH"
+          git switch "$TARGET_BRANCH"
+          git pull --ff-only origin "$TARGET_BRANCH"
+
+          if ! git merge-base --is-ancestor origin/main HEAD; then
+            echo "Abbruch: Der Azure-Migrationsbranch enthält den aktuellen main-Stand nicht vollständig." >&2
+            exit 1
+          fi
+
+          python - <<'PY'
+          from pathlib import Path
+
+          package_script = Path("scripts/build_azure_source_package.py")
+          package_marker = "# Prüf-Trigger nach Synchronisierung mit main; keine Funktionsänderung."
+          package_text = package_script.read_text(encoding="utf-8")
+          if package_marker not in package_text:
+              anchor = "from __future__ import annotations\n"
+              if anchor not in package_text:
+                  raise SystemExit("Erwarteter Kopf in build_azure_source_package.py fehlt.")
+              package_text = package_text.replace(
+                  anchor,
+                  anchor + "\n" + package_marker + "\n",
+                  1,
+              )
+              package_script.write_text(package_text, encoding="utf-8")
+
+          infra_readme = Path("infra/README.md")
+          infra_marker = "Prüfstatus: Synchronisierungstest für Paket- und Infrastrukturvalidierung ausgelöst."
+          infra_text = infra_readme.read_text(encoding="utf-8")
+          if infra_marker not in infra_text:
+              if not infra_text.endswith("\n"):
+                  infra_text += "\n"
+              infra_text += "\n> " + infra_marker + "\n"
+              infra_readme.write_text(infra_text, encoding="utf-8")
+          PY
+
+          python -m py_compile scripts/build_azure_source_package.py
+
+          if grep -R --line-number --fixed-string "az deployment group create" .github/workflows/azure-infra-what-if.yml; then
+            echo "Abbruch: Der What-if-Workflow enthält unerwartet einen Deployment-Befehl." >&2
+            exit 1
+          fi
+
+          if git diff --quiet; then
+            echo "Die Prüfmarker waren bereits vorhanden; es ist kein neuer Commit nötig."
+          else
+            git add scripts/build_azure_source_package.py infra/README.md
+            git commit -m "Azure-Paket- und Infrastrukturprüfung auslösen"
+            git push origin "$TARGET_BRANCH"
+          fi
+
+      - name: Einmaligen Installer aus main entfernen
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          WORKFLOW_PATH=".github/workflows/SSV53_Azure_Prueflaeufe_Ausloesen.yml"
+
+          git switch main
+          git pull --ff-only origin main
+          rm -f "$WORKFLOW_PATH"
+
+          if git diff --quiet; then
+            echo "Der einmalige Installer ist bereits entfernt."
+          else
+            git add -A "$WORKFLOW_PATH"
+            git commit -m "Einmaligen Azure-Prüflauf-Installer entfernen"
+            git push origin main
+          fi
