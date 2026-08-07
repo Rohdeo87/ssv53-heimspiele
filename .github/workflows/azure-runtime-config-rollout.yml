@@ -393,7 +393,7 @@ jobs:
           PY
 
       - name: Kandidat als GitHub-Artefakt sichern
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ssv53-runtime-config-candidate
           path: ${{ steps.bundle.outputs.bundle_dir }}
@@ -477,7 +477,7 @@ jobs:
           done
 
       - name: Kandidat laden
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: ssv53-runtime-config-candidate
           path: ${{ runner.temp }}/runtime-config-bundle
