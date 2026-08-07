@@ -350,7 +350,6 @@ resource functionAppSettings 'Microsoft.Web/sites/config@2024-04-01' = {
     AzureWebJobsStorage__clientId: managedIdentity.properties.clientId
     APPLICATIONINSIGHTS_CONNECTION_STRING: applicationInsights.properties.ConnectionString
     APPLICATIONINSIGHTS_AUTHENTICATION_STRING: 'ClientId=${managedIdentity.properties.clientId};Authorization=AAD'
-    FUNCTIONS_WORKER_RUNTIME: 'python'
     TIMER_SCHEDULE: timerSchedule
     CONTROL_MODE: controlMode
     ENABLE_LIVE_READS: string(enableLiveReads)

@@ -114,6 +114,18 @@ jobs:
           az bicep install
           az bicep build --file infra/main.bicep --outfile /tmp/ssv53-main.json
 
+      - name: Flex-Consumption-Legacy-Settings ausschließen
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -R --line-number --fixed-strings "FUNCTIONS_WORKER_RUNTIME" infra/main.bicep; then
+            echo "FUNCTIONS_WORKER_RUNTIME ist bei Flex Consumption unzulässig." >&2
+            exit 1
+          fi
+          grep -Fq "functionAppConfig:" infra/main.bicep
+          grep -Fq "name: 'python'" infra/main.bicep
+          grep -Fq "version: '3.12'" infra/main.bicep
+
       - name: Per OIDC mit Bootstrap-Identität anmelden
         uses: azure/login@v3
         with:

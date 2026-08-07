@@ -98,6 +98,13 @@ class AzureInfrastructureTests(unittest.TestCase):
         self.assertIn("param alertEmail string", self.bicep)
         self.assertNotIn("@ssv53.de", self.bicep.casefold())
 
+    def test_flex_consumption_avoids_legacy_worker_runtime_setting(self) -> None:
+        self.assertNotIn("FUNCTIONS_WORKER_RUNTIME", self.bicep)
+        self.assertIn("functionAppConfig:", self.bicep)
+        self.assertIn("runtime:", self.bicep)
+        self.assertIn("name: 'python'", self.bicep)
+        self.assertIn("version: '3.12'", self.bicep)
+
 
 if __name__ == "__main__":
     unittest.main()
