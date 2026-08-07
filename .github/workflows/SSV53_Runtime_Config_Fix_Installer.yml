@@ -1,0 +1,200 @@
+name: "Einmalig: Runtime-Config Workflow reparieren"
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ssv53-runtime-config-fix-installer
+  cancel-in-progress: false
+
+env:
+  TARGET_BRANCH: feature/azure-mower-migration
+  TARGET_WORKFLOW: .github/workflows/azure-runtime-config-rollout.yml
+  INSTALLER_PATH: .github/workflows/SSV53_Runtime_Config_Fix_Installer.yml
+
+jobs:
+  repair:
+    name: Runtime-Config Workflow reparieren und testen
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Installer aus main laden
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Sicherheitsgate
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          DEFAULT_BRANCH="${{ github.event.repository.default_branch }}"
+          if [ "$GITHUB_REF_NAME" != "$DEFAULT_BRANCH" ]; then
+            echo "Dieser Einmal-Installer muss auf dem Default-Branch $DEFAULT_BRANCH gestartet werden." >&2
+            exit 1
+          fi
+
+          if [ "$DEFAULT_BRANCH" != "main" ]; then
+            echo "Unerwarteter Default-Branch: $DEFAULT_BRANCH" >&2
+            exit 1
+          fi
+
+      - name: Python 3.12 einrichten
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Migration-Branch in Arbeitsverzeichnis laden
+        id: worktree
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git fetch origin "$TARGET_BRANCH"
+          WORKTREE="$RUNNER_TEMP/runtime-config-fix"
+          rm -rf "$WORKTREE"
+          git worktree add --detach "$WORKTREE" "origin/$TARGET_BRANCH"
+
+          echo "path=$WORKTREE" >> "$GITHUB_OUTPUT"
+
+      - name: Genau die beiden veralteten Action-Versionen reparieren
+        id: patch
+        shell: bash
+        env:
+          WORKTREE: ${{ steps.worktree.outputs.path }}
+        run: |
+          set -euo pipefail
+
+          export TARGET_FILE="$WORKTREE/$TARGET_WORKFLOW"
+          test -f "$TARGET_FILE"
+
+          python - <<'PY'
+          from pathlib import Path
+          import os
+
+          path = Path(os.environ["TARGET_FILE"])
+          text = path.read_text(encoding="utf-8")
+
+          replacements = (
+              ("actions/upload-artifact@v4", "actions/upload-artifact@v7"),
+              ("actions/download-artifact@v4", "actions/download-artifact@v5"),
+          )
+
+          changed = False
+          for old, new in replacements:
+              old_count = text.count(old)
+              new_count = text.count(new)
+
+              if old_count == 1 and new_count == 0:
+                  text = text.replace(old, new, 1)
+                  changed = True
+              elif old_count == 0 and new_count == 1:
+                  pass
+              else:
+                  raise SystemExit(
+                      f"Unerwarteter Stand für {old!r}/{new!r}: "
+                      f"alt={old_count}, neu={new_count}. Abbruch ohne Commit."
+                  )
+
+          path.write_text(text, encoding="utf-8")
+
+          final = path.read_text(encoding="utf-8")
+          checks = {
+              "actions/upload-artifact@v4": 0,
+              "actions/download-artifact@v4": 0,
+              "actions/upload-artifact@v7": 1,
+              "actions/download-artifact@v5": 1,
+          }
+          for marker, expected in checks.items():
+              actual = final.count(marker)
+              if actual != expected:
+                  raise SystemExit(
+                      f"Prüfung fehlgeschlagen: {marker!r} "
+                      f"kommt {actual} statt {expected} Mal vor."
+                  )
+
+          print("Patch-Prüfung erfolgreich.")
+          print("Geändert:", changed)
+          PY
+
+          if git -C "$WORKTREE" diff --quiet -- "$TARGET_WORKFLOW"; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Abhängigkeiten der Migration installieren
+        shell: bash
+        env:
+          WORKTREE: ${{ steps.worktree.outputs.path }}
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check -r "$WORKTREE/requirements.txt"
+
+      - name: Gesamte Testsuite auf dem reparierten Migration-Branch ausführen
+        shell: bash
+        env:
+          WORKTREE: ${{ steps.worktree.outputs.path }}
+        run: |
+          set -euo pipefail
+          cd "$WORKTREE"
+
+          python -m compileall -q mower function_app.py scripts
+          python -m unittest discover -s tests -p "test_*.py" -v
+
+      - name: Reparatur auf Migration-Branch speichern
+        shell: bash
+        env:
+          WORKTREE: ${{ steps.worktree.outputs.path }}
+          CHANGED: ${{ steps.patch.outputs.changed }}
+        run: |
+          set -euo pipefail
+
+          if [ "$CHANGED" != "true" ]; then
+            echo "Der Zielworkflow war bereits korrekt. Kein Migration-Commit nötig."
+            exit 0
+          fi
+
+          git -C "$WORKTREE" config user.name "github-actions[bot]"
+          git -C "$WORKTREE" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C "$WORKTREE" add "$TARGET_WORKFLOW"
+          git -C "$WORKTREE" commit -m "Runtime-Config Workflow auf aktuelle Artifact Actions aktualisieren"
+          git -C "$WORKTREE" push origin "HEAD:$TARGET_BRANCH"
+
+      - name: Einmal-Installer aus main entfernen
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ ! -f "$INSTALLER_PATH" ]; then
+            echo "Installer-Datei ist bereits entfernt."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git rm "$INSTALLER_PATH"
+          git commit -m "Einmaligen Runtime-Config-Fix-Installer entfernen"
+          git push origin "HEAD:main"
+
+      - name: Ergebnis zusammenfassen
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          {
+            echo "# Runtime-Config Workflow Fix"
+            echo
+            echo "- Zielbranch: \`$TARGET_BRANCH\`"
+            echo "- Zielworkflow: \`$TARGET_WORKFLOW\`"
+            echo "- upload-artifact: **v7**"
+            echo "- download-artifact: **v5**"
+            echo "- Vollständige Testsuite vor Commit: **ausgeführt**"
+            echo "- Azure-Kommandos: **keine**"
+            echo "- Gerätebefehle: **keine**"
+            echo "- Installer: **wird nach Erfolg aus main entfernt**"
+          } >> "$GITHUB_STEP_SUMMARY"
