@@ -1,0 +1,24 @@
+name: Azure-Erstbereitstellung
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Nur Platzhalter auf main – hier nicht deployen"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  guard:
+    name: Main bleibt gesperrt
+    runs-on: ubuntu-latest
+    steps:
+      - name: Abbruch
+        shell: bash
+        run: |
+          echo "Dieser Eintrag existiert auf main nur für die GitHub-Oberfläche."
+          echo "Bitte im Run-workflow-Dialog feature/azure-mower-migration auswählen."
+          exit 1
