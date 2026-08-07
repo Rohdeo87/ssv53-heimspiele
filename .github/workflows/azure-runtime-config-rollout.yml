@@ -1,0 +1,645 @@
+name: SSV53 Runtime-Config Rollout
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: "Nur validieren oder validieren + nach Azure veröffentlichen"
+        required: true
+        type: choice
+        options:
+          - validate
+          - publish
+        default: validate
+      publish_confirmation:
+        description: "Nur bei publish exakt SSV53-RUNTIME-CONFIG-PUBLISH eintragen"
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: ssv53-runtime-config-rollout
+  cancel-in-progress: false
+
+env:
+  MIGRATION_BRANCH: feature/azure-mower-migration
+  RESOURCE_GROUP: rg-ssv53-platzpflege-prod
+  RUNTIME_CONTAINER: runtime-config
+
+jobs:
+  validate:
+    name: Konfiguration bauen und vollständig prüfen
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Branch-Sicherheitsgate
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_REF_NAME" != "$MIGRATION_BRANCH" ]; then
+            echo "Dieser Workflow darf nur auf $MIGRATION_BRANCH ausgeführt werden." >&2
+            exit 1
+          fi
+
+      - name: Repository laden
+        uses: actions/checkout@v7
+
+      - name: Python 3.12 einrichten
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Abhängigkeiten installieren
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check -r requirements.txt
+
+      - name: Gesamte Testsuite ausführen
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m compileall -q mower function_app.py scripts
+          python -m unittest discover -s tests -p "test_*.py" -v
+
+      - name: Runtime-Daten fachlich validieren und Bundle bauen
+        id: bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          VERSION="$(date -u +%Y%m%dT%H%M%SZ)-${GITHUB_SHA:0:12}-${GITHUB_RUN_ID}"
+          PUBLISHED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          BUNDLE_DIR="$RUNNER_TEMP/runtime-config-bundle"
+
+          rm -rf "$BUNDLE_DIR"
+          mkdir -p \
+            "$BUNDLE_DIR/versions/$VERSION/mower" \
+            "$BUNDLE_DIR/versions/$VERSION/public" \
+            "$BUNDLE_DIR/current"
+
+          cp mower/config.json "$BUNDLE_DIR/versions/$VERSION/mower/config.json"
+          cp public/rasen.ics "$BUNDLE_DIR/versions/$VERSION/public/rasen.ics"
+
+          export VERSION PUBLISHED_AT BUNDLE_DIR
+
+          python - <<'PY'
+          from __future__ import annotations
+
+          from datetime import date
+          from hashlib import sha256
+          import json
+          import os
+          from pathlib import Path
+          from zoneinfo import ZoneInfo
+
+          from mower.planner import build_training_blocks, load_json, read_match_blocks
+
+          config_path = Path("mower/config.json")
+          matches_path = Path("public/rasen.ics")
+          config = load_json(config_path)
+
+          if config.get("timezone") != "Europe/Berlin":
+              raise SystemExit("timezone muss Europe/Berlin sein.")
+
+          planning = config.get("planning")
+          if not isinstance(planning, dict):
+              raise SystemExit("planning fehlt oder ist ungültig.")
+          if int(planning.get("minimum_mowing_window_minutes", 0)) < 30:
+              raise SystemExit("minimum_mowing_window_minutes darf nicht unter 30 liegen.")
+
+          training = config.get("training")
+          if not isinstance(training, dict):
+              raise SystemExit("training fehlt oder ist ungültig.")
+          if int(training.get("before_minutes", -1)) != 30:
+              raise SystemExit("Trainings-Vorlauf muss 30 Minuten betragen.")
+          if int(training.get("after_minutes", -1)) != 30:
+              raise SystemExit("Trainings-Nachlauf muss 30 Minuten betragen.")
+
+          active_ranges = training.get("active_ranges")
+          if not isinstance(active_ranges, list) or not active_ranges:
+              raise SystemExit("training.active_ranges fehlt.")
+          if not any(
+              str(item.get("from")) == "2026-08-12"
+              for item in active_ranges
+              if isinstance(item, dict)
+          ):
+              raise SystemExit("Der Trainingsstand muss ab 2026-08-12 aktiv sein.")
+
+          weekly = training.get("weekly")
+          if not isinstance(weekly, list) or not weekly:
+              raise SystemExit("training.weekly ist leer.")
+
+          required_e1 = {
+              ("Dienstag", "17:00", "18:30", "E1"),
+              ("Donnerstag", "17:00", "18:30", "E1"),
+          }
+          actual_sessions = {
+              (
+                  str(item.get("weekday")),
+                  str(item.get("start")),
+                  str(item.get("end")),
+                  str(item.get("team")),
+              )
+              for item in weekly
+              if isinstance(item, dict)
+          }
+          missing_e1 = required_e1 - actual_sessions
+          if missing_e1:
+              raise SystemExit(f"Erwartete E1-Trainingszeiten fehlen: {sorted(missing_e1)!r}")
+
+          matches = config.get("matches")
+          if not isinstance(matches, dict):
+              raise SystemExit("matches fehlt oder ist ungültig.")
+          if str(matches.get("source")) != "public/rasen.ics":
+              raise SystemExit("matches.source muss public/rasen.ics sein.")
+          if matches.get("already_buffered") is not True:
+              raise SystemExit("Die Heimspiel-ICS muss als bereits gepuffert markiert sein.")
+
+          hydrawise = config.get("hydrawise")
+          if not isinstance(hydrawise, dict):
+              raise SystemExit("hydrawise fehlt oder ist ungültig.")
+          if int(hydrawise.get("before_minutes", -1)) != 30:
+              raise SystemExit("Beregnungs-Vorlauf muss 30 Minuten betragen.")
+          if int(hydrawise.get("after_minutes", -1)) != 30:
+              raise SystemExit("Beregnungs-Nachlauf muss 30 Minuten betragen.")
+
+          raw_ics = matches_path.read_text(encoding="utf-8")
+          if "BEGIN:VCALENDAR" not in raw_ics or "END:VCALENDAR" not in raw_ics:
+              raise SystemExit("public/rasen.ics ist kein vollständiger VCALENDAR.")
+          if raw_ics.count("BEGIN:VEVENT") != raw_ics.count("END:VEVENT"):
+              raise SystemExit("public/rasen.ics enthält unvollständige VEVENT-Blöcke.")
+
+          tz = ZoneInfo("Europe/Berlin")
+          match_blocks = read_match_blocks(matches_path, tz)
+          if not match_blocks:
+              raise SystemExit("Es wurden keine Heimspiel-Blöcke aus public/rasen.ics gelesen.")
+
+          uids = [str(block.details.get("uid", "")).strip() for block in match_blocks]
+          if any(not uid for uid in uids):
+              raise SystemExit("Mindestens ein Heimspiel besitzt keine UID.")
+          if len(uids) != len(set(uids)):
+              raise SystemExit("Doppelte Heimspiel-UIDs erkannt.")
+          if any(block.end <= block.start for block in match_blocks):
+              raise SystemExit("Mindestens ein Heimspiel besitzt ein ungültiges Zeitfenster.")
+
+          training_blocks = build_training_blocks(
+              training,
+              date(2026, 8, 12),
+              14,
+              tz,
+          )
+          if not training_blocks:
+              raise SystemExit("Aus den Trainingsdaten konnten keine Sperrblöcke erzeugt werden.")
+
+          e1_blocks = [
+              block
+              for block in training_blocks
+              if block.details.get("team") == "E1"
+          ]
+          if len(e1_blocks) < 4:
+              raise SystemExit(
+                  "Für die ersten 14 Tage ab 12.08.2026 werden weniger als vier E1-Sperrblöcke erzeugt."
+              )
+
+          for block in e1_blocks:
+              minutes = int((block.end - block.start).total_seconds() // 60)
+              if minutes != 150:
+                  raise SystemExit(
+                      f"E1-Sperrblock hat {minutes} statt 150 Minuten inklusive Puffer."
+                  )
+
+          bundle_dir = Path(os.environ["BUNDLE_DIR"])
+          version = os.environ["VERSION"]
+          published_at = os.environ["PUBLISHED_AT"]
+
+          version_config = bundle_dir / "versions" / version / "mower" / "config.json"
+          version_matches = bundle_dir / "versions" / version / "public" / "rasen.ics"
+
+          config_bytes = version_config.read_bytes()
+          matches_bytes = version_matches.read_bytes()
+
+          manifest = {
+              "schema_version": 1,
+              "version": version,
+              "published_at_utc": published_at,
+              "config_blob": f"versions/{version}/mower/config.json",
+              "matches_blob": f"versions/{version}/public/rasen.ics",
+              "config_sha256": sha256(config_bytes).hexdigest(),
+              "matches_sha256": sha256(matches_bytes).hexdigest(),
+          }
+
+          manifest_path = bundle_dir / "current" / "manifest.json"
+          manifest_path.write_text(
+              json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+
+          summary = {
+              "version": version,
+              "published_at_utc": published_at,
+              "matches_loaded": len(match_blocks),
+              "training_blocks_14_days": len(training_blocks),
+              "e1_blocks_14_days": len(e1_blocks),
+              "config_sha256": manifest["config_sha256"],
+              "matches_sha256": manifest["matches_sha256"],
+          }
+          (bundle_dir / "validation-summary.json").write_text(
+              json.dumps(summary, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+
+          print(json.dumps(summary, ensure_ascii=False, indent=2))
+          PY
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "bundle_dir=$BUNDLE_DIR" >> "$GITHUB_OUTPUT"
+
+      - name: Produktionsmodul mit dem erzeugten Manifest end-to-end testen
+        shell: bash
+        env:
+          BUNDLE_DIR: ${{ steps.bundle.outputs.bundle_dir }}
+        run: |
+          set -euo pipefail
+
+          python - <<'PY'
+          from __future__ import annotations
+
+          from datetime import datetime, timezone
+          import json
+          import os
+          from pathlib import Path
+          import tempfile
+
+          from mower.config_source import resolve_runtime_inputs
+
+          bundle = Path(os.environ["BUNDLE_DIR"])
+          manifest = json.loads(
+              (bundle / "current" / "manifest.json").read_text(encoding="utf-8")
+          )
+
+          blobs = {
+              "current/manifest.json": (
+                  bundle / "current" / "manifest.json"
+              ).read_bytes(),
+              manifest["config_blob"]: (
+                  bundle / manifest["config_blob"]
+              ).read_bytes(),
+              manifest["matches_blob"]: (
+                  bundle / manifest["matches_blob"]
+              ).read_bytes(),
+          }
+
+          class Download:
+              def __init__(self, payload: bytes) -> None:
+                  self.payload = payload
+
+              def readall(self) -> bytes:
+                  return self.payload
+
+          class Props:
+              etag = '"runtime-candidate-etag"'
+
+          class Blob:
+              def __init__(self, payload: bytes) -> None:
+                  self.payload = payload
+
+              def get_blob_properties(self):
+                  return Props()
+
+              def download_blob(self):
+                  return Download(self.payload)
+
+          class Container:
+              def get_blob_client(self, name: str):
+                  if name not in blobs:
+                      raise ValueError(f"missing blob {name}")
+                  return Blob(blobs[name])
+
+          class Service:
+              def get_container_client(self, _name: str):
+                  return Container()
+
+          published = datetime.fromisoformat(
+              manifest["published_at_utc"].replace("Z", "+00:00")
+          ).astimezone(timezone.utc)
+
+          with tempfile.TemporaryDirectory() as tmp:
+              env = {
+                  "SSV53_DYNAMIC_CONFIG_ENABLED": "true",
+                  "SSV53_CONFIG_STORAGE_ACCOUNT_URL": "https://example.blob.core.windows.net",
+                  "SSV53_CONFIG_CONTAINER": "runtime-config",
+                  "SSV53_CONFIG_MANAGED_IDENTITY_CLIENT_ID": "candidate-test-client",
+                  "SSV53_CONFIG_CACHE_DIR": tmp,
+                  "SSV53_CONFIG_MAX_AGE_MINUTES": "1440",
+              }
+
+              result = resolve_runtime_inputs(
+                  env,
+                  now_utc=published,
+                  service_client_factory=lambda **_: Service(),
+                  credential_factory=lambda **_: object(),
+              )
+
+              if result.source_kind != "azure_blob":
+                  raise SystemExit(f"Unerwartete Quelle: {result.source_kind!r}")
+              if result.manifest_path != "current/manifest.json":
+                  raise SystemExit(f"Unerwarteter Manifest-Pfad: {result.manifest_path!r}")
+              if result.fallback_used:
+                  raise SystemExit("Current-Manifest wurde fälschlich als Fallback markiert.")
+
+              if Path(result.config_path).read_bytes() != blobs[manifest["config_blob"]]:
+                  raise SystemExit("Config-Inhalt stimmt nach Produktionsmodul-Test nicht überein.")
+              if Path(result.matches_path).read_bytes() != blobs[manifest["matches_blob"]]:
+                  raise SystemExit("ICS-Inhalt stimmt nach Produktionsmodul-Test nicht überein.")
+
+          bad_manifest = dict(manifest)
+          bad_manifest["config_sha256"] = "0" * 64
+          bad_blobs = dict(blobs)
+          bad_blobs["current/manifest.json"] = json.dumps(bad_manifest).encode("utf-8")
+
+          class BadContainer:
+              def get_blob_client(self, name: str):
+                  if name not in bad_blobs:
+                      raise ValueError(f"missing blob {name}")
+                  return Blob(bad_blobs[name])
+
+          class BadService:
+              def get_container_client(self, _name: str):
+                  return BadContainer()
+
+          with tempfile.TemporaryDirectory() as tmp:
+              env["SSV53_CONFIG_CACHE_DIR"] = tmp
+              try:
+                  resolve_runtime_inputs(
+                      env,
+                      now_utc=published,
+                      service_client_factory=lambda **_: BadService(),
+                      credential_factory=lambda **_: object(),
+                  )
+              except RuntimeError as exc:
+                  if "fail-closed" not in str(exc):
+                      raise
+              else:
+                  raise SystemExit("Manipulierter SHA256 wurde nicht fail-closed abgewiesen.")
+
+          print("Produktionsmodul-Test und SHA256-Fail-Closed-Test erfolgreich.")
+          PY
+
+      - name: Kandidat als GitHub-Artefakt sichern
+        uses: actions/upload-artifact@v4
+        with:
+          name: ssv53-runtime-config-candidate
+          path: ${{ steps.bundle.outputs.bundle_dir }}
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Validierung zusammenfassen
+        shell: bash
+        env:
+          BUNDLE_DIR: ${{ steps.bundle.outputs.bundle_dir }}
+        run: |
+          set -euo pipefail
+
+          SUMMARY="$(cat "$BUNDLE_DIR/validation-summary.json")"
+
+          {
+            echo "# SSV53 Runtime-Config"
+            echo
+            echo "## Validierung: GRÜN"
+            echo
+            echo "- Gesamte Python-Testsuite: **bestanden**"
+            echo "- Trainings-/Pufferlogik: **validiert**"
+            echo "- Heimspiel-ICS: **validiert**"
+            echo "- Manifest + SHA256: **validiert**"
+            echo "- Produktionsmodul config_source.py: **end-to-end getestet**"
+            echo "- Manipulierter Hash: **fail-closed bestätigt**"
+            echo "- Azure-Infrastruktur geändert: **nein**"
+            echo "- Function-App geändert: **nein**"
+            echo "- Mäher/Beregnung angesprochen: **nein**"
+            echo
+            echo '```json'
+            echo "$SUMMARY"
+            echo '```'
+            echo
+            if [ "${{ inputs.operation }}" = "validate" ]; then
+              echo "Das Bundle wurde nur als GitHub-Artefakt erzeugt. Es wurde nichts nach Azure geschrieben."
+            else
+              echo "Nach dieser Validierung folgt der separat abgesicherte Publish-Job."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  publish:
+    name: Validiertes Bundle nach runtime-config veröffentlichen
+    if: ${{ inputs.operation == 'publish' }}
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Publish-Sicherheitsgate
+        shell: bash
+        env:
+          PUBLISH_ENABLED: ${{ vars.AZURE_RUNTIME_CONFIG_PUBLISH_ENABLED }}
+          RUNTIME_CLIENT_ID: ${{ vars.AZURE_RUNTIME_CONFIG_CLIENT_ID }}
+          STORAGE_ACCOUNT: ${{ vars.AZURE_RUNTIME_CONFIG_STORAGE_ACCOUNT }}
+          TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          set -euo pipefail
+
+          if [ "$GITHUB_REF_NAME" != "$MIGRATION_BRANCH" ]; then
+            echo "Publish nur auf $MIGRATION_BRANCH erlaubt." >&2
+            exit 1
+          fi
+
+          if [ "${{ inputs.publish_confirmation }}" != "SSV53-RUNTIME-CONFIG-PUBLISH" ]; then
+            echo "Publish-Bestätigung ist falsch." >&2
+            exit 1
+          fi
+
+          if [ "${PUBLISH_ENABLED:-}" != "true" ]; then
+            echo "AZURE_RUNTIME_CONFIG_PUBLISH_ENABLED muss explizit true sein." >&2
+            exit 1
+          fi
+
+          for variable in RUNTIME_CLIENT_ID STORAGE_ACCOUNT TENANT_ID SUBSCRIPTION_ID; do
+            if [ -z "${!variable:-}" ]; then
+              echo "Erforderliche GitHub-Variable ${variable} fehlt." >&2
+              exit 1
+            fi
+          done
+
+      - name: Kandidat laden
+        uses: actions/download-artifact@v4
+        with:
+          name: ssv53-runtime-config-candidate
+          path: ${{ runner.temp }}/runtime-config-bundle
+
+      - name: Per OIDC mit eng begrenzter Runtime-Identität anmelden
+        uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_RUNTIME_CONFIG_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Versionierte Dateien atomar veröffentlichen und zurückprüfen
+        shell: bash
+        env:
+          STORAGE_ACCOUNT: ${{ vars.AZURE_RUNTIME_CONFIG_STORAGE_ACCOUNT }}
+          BUNDLE_DIR: ${{ runner.temp }}/runtime-config-bundle
+        run: |
+          set -euo pipefail
+
+          MANIFEST="$BUNDLE_DIR/current/manifest.json"
+
+          VERSION="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["version"])' "$MANIFEST")"
+          CONFIG_BLOB="versions/$VERSION/mower/config.json"
+          MATCHES_BLOB="versions/$VERSION/public/rasen.ics"
+
+          CONFIG_FILE="$BUNDLE_DIR/$CONFIG_BLOB"
+          MATCHES_FILE="$BUNDLE_DIR/$MATCHES_BLOB"
+
+          test -f "$CONFIG_FILE"
+          test -f "$MATCHES_FILE"
+          test -f "$MANIFEST"
+
+          CURRENT_EXISTS="$(az storage blob exists \
+            --account-name "$STORAGE_ACCOUNT" \
+            --container-name "$RUNTIME_CONTAINER" \
+            --name "current/manifest.json" \
+            --auth-mode login \
+            --query exists \
+            --output tsv)"
+
+          if [ "${CURRENT_EXISTS,,}" = "true" ]; then
+            az storage blob download \
+              --account-name "$STORAGE_ACCOUNT" \
+              --container-name "$RUNTIME_CONTAINER" \
+              --name "current/manifest.json" \
+              --file "$RUNNER_TEMP/previous-manifest.json" \
+              --auth-mode login \
+              --overwrite true \
+              --only-show-errors
+
+            az storage blob upload \
+              --account-name "$STORAGE_ACCOUNT" \
+              --container-name "$RUNTIME_CONTAINER" \
+              --name "previous/manifest.json" \
+              --file "$RUNNER_TEMP/previous-manifest.json" \
+              --auth-mode login \
+              --overwrite true \
+              --only-show-errors
+          fi
+
+          az storage blob upload \
+            --account-name "$STORAGE_ACCOUNT" \
+            --container-name "$RUNTIME_CONTAINER" \
+            --name "$CONFIG_BLOB" \
+            --file "$CONFIG_FILE" \
+            --auth-mode login \
+            --overwrite false \
+            --only-show-errors
+
+          az storage blob upload \
+            --account-name "$STORAGE_ACCOUNT" \
+            --container-name "$RUNTIME_CONTAINER" \
+            --name "$MATCHES_BLOB" \
+            --file "$MATCHES_FILE" \
+            --auth-mode login \
+            --overwrite false \
+            --only-show-errors
+
+          az storage blob upload \
+            --account-name "$STORAGE_ACCOUNT" \
+            --container-name "$RUNTIME_CONTAINER" \
+            --name "current/manifest.json" \
+            --file "$MANIFEST" \
+            --auth-mode login \
+            --overwrite true \
+            --only-show-errors
+
+          mkdir -p "$RUNNER_TEMP/runtime-verify"
+
+          az storage blob download \
+            --account-name "$STORAGE_ACCOUNT" \
+            --container-name "$RUNTIME_CONTAINER" \
+            --name "current/manifest.json" \
+            --file "$RUNNER_TEMP/runtime-verify/manifest.json" \
+            --auth-mode login \
+            --overwrite true \
+            --only-show-errors
+
+          az storage blob download \
+            --account-name "$STORAGE_ACCOUNT" \
+            --container-name "$RUNTIME_CONTAINER" \
+            --name "$CONFIG_BLOB" \
+            --file "$RUNNER_TEMP/runtime-verify/config.json" \
+            --auth-mode login \
+            --overwrite true \
+            --only-show-errors
+
+          az storage blob download \
+            --account-name "$STORAGE_ACCOUNT" \
+            --container-name "$RUNTIME_CONTAINER" \
+            --name "$MATCHES_BLOB" \
+            --file "$RUNNER_TEMP/runtime-verify/rasen.ics" \
+            --auth-mode login \
+            --overwrite true \
+            --only-show-errors
+
+          export MANIFEST
+          python - <<'PY'
+          from hashlib import sha256
+          import json
+          import os
+          from pathlib import Path
+
+          source_manifest = json.loads(
+              Path(os.environ["MANIFEST"]).read_text(encoding="utf-8")
+          )
+          verify_dir = Path(os.environ["RUNNER_TEMP"]) / "runtime-verify"
+          remote_manifest = json.loads(
+              (verify_dir / "manifest.json").read_text(encoding="utf-8")
+          )
+
+          if remote_manifest != source_manifest:
+              raise SystemExit("Remote current/manifest.json weicht vom validierten Kandidaten ab.")
+
+          remote_config = (verify_dir / "config.json").read_bytes()
+          remote_matches = (verify_dir / "rasen.ics").read_bytes()
+
+          if sha256(remote_config).hexdigest() != source_manifest["config_sha256"]:
+              raise SystemExit("Remote config.json hat einen falschen SHA256.")
+          if sha256(remote_matches).hexdigest() != source_manifest["matches_sha256"]:
+              raise SystemExit("Remote rasen.ics hat einen falschen SHA256.")
+
+          print("Remote Manifest und beide SHA256-Prüfungen erfolgreich.")
+          PY
+
+          {
+            echo "# SSV53 Runtime-Config – Publish"
+            echo
+            echo "- Version: **$VERSION**"
+            echo "- Zielcontainer: **runtime-config**"
+            echo "- Versionierte Dateien: **hochgeladen**"
+            echo "- previous/manifest.json: **gesichert, sofern vorher vorhanden**"
+            echo "- current/manifest.json: **zuletzt umgeschaltet**"
+            echo "- Remote SHA256-Prüfung: **bestanden**"
+            echo "- Azure-Infrastruktur geändert: **nein**"
+            echo "- Function-App geändert: **nein**"
+            echo "- Mäher/Beregnung angesprochen: **nein**"
+            echo
+            echo "Die dynamische Function-Nutzung ist durch diesen Workflow noch nicht aktiviert."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Azure-Sitzung beenden
+        if: ${{ always() }}
+        shell: bash
+        run: az logout || true
