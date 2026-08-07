@@ -1,0 +1,217 @@
+name: "Einmalig: Azure Flex-Consumption Fix"
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ssv53-azure-flex-fix
+  cancel-in-progress: false
+
+jobs:
+  fix:
+    name: Legacy-Worker-Runtime-Setting entfernen
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Azure-Migrationsbranch laden
+        uses: actions/checkout@v7
+        with:
+          ref: feature/azure-mower-migration
+          token: ${{ secrets.SSV53_AUTOMATION_TOKEN }}
+          persist-credentials: true
+          fetch-depth: 0
+
+      - name: Branch aktualisieren
+        shell: bash
+        run: |
+          set -euo pipefail
+          git pull --ff-only origin feature/azure-mower-migration
+
+      - name: Flex-Consumption-Konfiguration korrigieren
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          bicep_path = Path("infra/main.bicep")
+          bicep = bicep_path.read_text(encoding="utf-8")
+
+          legacy = "    FUNCTIONS_WORKER_RUNTIME: 'python'\n"
+          if legacy in bicep:
+              bicep = bicep.replace(legacy, "", 1)
+
+          if "FUNCTIONS_WORKER_RUNTIME" in bicep:
+              raise SystemExit(
+                  "FUNCTIONS_WORKER_RUNTIME ist noch im Flex-Consumption-Bicep enthalten."
+              )
+
+          for marker in (
+              "functionAppConfig:",
+              "runtime:",
+              "name: 'python'",
+              "version: '3.12'",
+          ):
+              if marker not in bicep:
+                  raise SystemExit(
+                      f"Erforderliche Flex-Consumption-Runtime-Konfiguration fehlt: {marker}"
+                  )
+
+          bicep_path.write_text(bicep, encoding="utf-8")
+
+          test_path = Path("tests/test_azure_infra.py")
+          tests = test_path.read_text(encoding="utf-8")
+
+          test_name = "test_flex_consumption_avoids_legacy_worker_runtime_setting"
+          if test_name not in tests:
+              marker = '\n\nif __name__ == "__main__":\n'
+              if marker not in tests:
+                  raise SystemExit(
+                      "Einfügeposition in tests/test_azure_infra.py nicht gefunden."
+                  )
+
+              new_test = (
+                  '\n    def test_flex_consumption_avoids_legacy_worker_runtime_setting(self) -> None:\n'
+                  '        self.assertNotIn("FUNCTIONS_WORKER_RUNTIME", self.bicep)\n'
+                  '        self.assertIn("functionAppConfig:", self.bicep)\n'
+                  '        self.assertIn("runtime:", self.bicep)\n'
+                  '        self.assertIn("name: \'python\'", self.bicep)\n'
+                  '        self.assertIn("version: \'3.12\'", self.bicep)\n'
+              )
+              tests = tests.replace(marker, new_test + marker, 1)
+              test_path.write_text(tests, encoding="utf-8")
+
+          workflow_path = Path(".github/workflows/azure-first-deploy.yml")
+          workflow = workflow_path.read_text(encoding="utf-8")
+
+          if "Flex-Consumption-Legacy-Settings ausschließen" not in workflow:
+              needle = "      - name: Per OIDC mit Bootstrap-Identität anmelden\n"
+              if needle not in workflow:
+                  raise SystemExit(
+                      "Einfügeposition im Erstdeployment-Workflow nicht gefunden."
+                  )
+
+              guard = (
+                  "      - name: Flex-Consumption-Legacy-Settings ausschließen\n"
+                  "        shell: bash\n"
+                  "        run: |\n"
+                  "          set -euo pipefail\n"
+                  "          if grep -R --line-number --fixed-strings "
+                  "\"FUNCTIONS_WORKER_RUNTIME\" infra/main.bicep; then\n"
+                  "            echo \"FUNCTIONS_WORKER_RUNTIME ist bei Flex Consumption unzulässig.\" >&2\n"
+                  "            exit 1\n"
+                  "          fi\n"
+                  "          grep -Fq \"functionAppConfig:\" infra/main.bicep\n"
+                  "          grep -Fq \"name: 'python'\" infra/main.bicep\n"
+                  "          grep -Fq \"version: '3.12'\" infra/main.bicep\n"
+                  "\n"
+              )
+              workflow = workflow.replace(needle, guard + needle, 1)
+              workflow_path.write_text(workflow, encoding="utf-8")
+          PY
+
+      - name: Python 3.12 einrichten
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Abhängigkeiten installieren
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check -r requirements.txt
+
+      - name: Gesamte Testsuite ausführen
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m compileall -q mower function_app.py scripts
+          python -m unittest discover -s tests -p "test_*.py" -v
+
+      - name: Bicep kompilieren
+        shell: bash
+        run: |
+          set -euo pipefail
+          az bicep install
+          az bicep build \
+            --file infra/main.bicep \
+            --outfile /tmp/ssv53-main.json
+
+      - name: Korrektur verifizieren
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if grep -R --line-number --fixed-strings "FUNCTIONS_WORKER_RUNTIME" infra/main.bicep; then
+            echo "Legacy-Setting wurde nicht vollständig entfernt." >&2
+            exit 1
+          fi
+
+          grep -Fq "functionAppConfig:" infra/main.bicep
+          grep -Fq "name: 'python'" infra/main.bicep
+          grep -Fq "version: '3.12'" infra/main.bicep
+          grep -Fq "CONTROL_MODE" infra/main.bicep
+          grep -Fq "ENABLE_LIVE_READS" infra/main.bicep
+
+          echo "Flex-Consumption-Runtime wird ausschließlich über functionAppConfig.runtime definiert."
+
+      - name: Änderungen committen
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git config user.name "SSV53 Automation"
+          git config user.email "actions@users.noreply.github.com"
+
+          git add \
+            infra/main.bicep \
+            tests/test_azure_infra.py \
+            .github/workflows/azure-first-deploy.yml
+
+          if git diff --cached --quiet; then
+            echo "Flex-Consumption-Fix ist bereits vorhanden."
+          else
+            git commit -m "Azure Flex Consumption: Legacy-Worker-Runtime-Setting entfernen"
+            git push origin feature/azure-mower-migration
+          fi
+
+  cleanup:
+    name: Einmaligen Flex-Fix-Installer entfernen
+    needs: fix
+    if: ${{ success() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Main laden
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          token: ${{ secrets.SSV53_AUTOMATION_TOKEN }}
+          persist-credentials: true
+          fetch-depth: 0
+
+      - name: Installer entfernen
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          FILE=".github/workflows/SSV53_Azure_FlexConsumption_Fix.yml"
+
+          git config user.name "SSV53 Automation"
+          git config user.email "actions@users.noreply.github.com"
+
+          rm -f "$FILE"
+
+          if git diff --quiet; then
+            echo "Installer bereits entfernt."
+          else
+            git add -A "$FILE"
+            git commit -m "Einmaligen Azure-Flex-Consumption-Fix entfernen"
+            git push origin main
+          fi
