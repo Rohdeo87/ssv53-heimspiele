@@ -1,0 +1,19 @@
+name: Azure Post-Deployment-Prüfung
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  guard:
+    name: Main bleibt gesperrt
+    runs-on: ubuntu-latest
+    steps:
+      - name: Abbruch
+        shell: bash
+        run: |
+          echo "Dieser Eintrag existiert auf main nur für die GitHub-Oberfläche."
+          echo "Im Run-workflow-Dialog feature/azure-mower-migration auswählen."
+          exit 1
