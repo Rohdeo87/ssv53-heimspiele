@@ -1,0 +1,186 @@
+name: SSV53 Azure Post-Deployment Diagnose
+
+on:
+  workflow_dispatch:
+    inputs:
+      resource_group:
+        description: Azure-Ressourcengruppe
+        required: true
+        default: rg-ssv53-platzpflege-prod
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  diagnose:
+    name: Azure nur lesend prüfen
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Sicherheitsgate prüfen
+        shell: bash
+        env:
+          BOOTSTRAP_ENABLED: ${{ vars.AZURE_BOOTSTRAP_ENABLED }}
+        run: |
+          set -euo pipefail
+          if [ "${BOOTSTRAP_ENABLED:-}" = "true" ]; then
+            echo "AZURE_BOOTSTRAP_ENABLED muss false sein." >&2
+            exit 1
+          fi
+
+      - name: Per OIDC anmelden
+        uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_BOOTSTRAP_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Zielressourcen ermitteln
+        shell: bash
+        env:
+          RESOURCE_GROUP: ${{ inputs.resource_group }}
+        run: |
+          set -euo pipefail
+
+          az group show --name "$RESOURCE_GROUP" --output none
+
+          FUNCTION_APP="$(az resource list             --resource-group "$RESOURCE_GROUP"             --resource-type Microsoft.Web/sites             --query "[?contains(kind, 'functionapp')].name | [0]"             --output tsv)"
+
+          STORAGE_ACCOUNT="$(az storage account list             --resource-group "$RESOURCE_GROUP"             --query "[0].name"             --output tsv)"
+
+          KEY_VAULT="$(az keyvault list             --resource-group "$RESOURCE_GROUP"             --query "[0].name"             --output tsv)"
+
+          echo "Function App: ${FUNCTION_APP:-<nicht gefunden>}"
+          echo "Storage Account: ${STORAGE_ACCOUNT:-<nicht gefunden>}"
+          echo "Key Vault: ${KEY_VAULT:-<nicht gefunden>}"
+
+          [ -n "$FUNCTION_APP" ]
+          [ -n "$STORAGE_ACCOUNT" ]
+          [ -n "$KEY_VAULT" ]
+
+          echo "FUNCTION_APP=$FUNCTION_APP" >> "$GITHUB_ENV"
+          echo "STORAGE_ACCOUNT=$STORAGE_ACCOUNT" >> "$GITHUB_ENV"
+          echo "KEY_VAULT=$KEY_VAULT" >> "$GITHUB_ENV"
+
+      - name: Sichere Appsettings prüfen
+        shell: bash
+        env:
+          RESOURCE_GROUP: ${{ inputs.resource_group }}
+        run: |
+          set -euo pipefail
+
+          az functionapp config appsettings list             --resource-group "$RESOURCE_GROUP"             --name "$FUNCTION_APP"             --output json > /tmp/appsettings.json
+
+          python - <<'PY'
+          import json
+
+          rows = json.load(open("/tmp/appsettings.json", encoding="utf-8"))
+          values = {row["name"]: str(row.get("value", "")) for row in rows}
+
+          checks = {
+              "CONTROL_MODE": "DRY_RUN",
+              "ENABLE_LIVE_READS": "false",
+              "SSV53_DYNAMIC_CONFIG_ENABLED": "false",
+          }
+
+          for key, expected in checks.items():
+              actual = values.get(key, "")
+              print(f"{key}={actual}")
+              if actual.casefold() != expected.casefold():
+                  raise SystemExit(f"{key} unerwartet: {actual!r}")
+
+          print("FUNCTIONS_WORKER_RUNTIME gesetzt:", "FUNCTIONS_WORKER_RUNTIME" in values)
+          if "FUNCTIONS_WORKER_RUNTIME" in values:
+              raise SystemExit("FUNCTIONS_WORKER_RUNTIME darf bei Flex Consumption nicht gesetzt sein.")
+          PY
+
+      - name: Function App und Code diagnostizieren
+        shell: bash
+        env:
+          RESOURCE_GROUP: ${{ inputs.resource_group }}
+        run: |
+          set -euo pipefail
+
+          STATE="$(az functionapp show             --resource-group "$RESOURCE_GROUP"             --name "$FUNCTION_APP"             --query state             --output tsv)"
+
+          IDENTITY_TYPE="$(az functionapp show             --resource-group "$RESOURCE_GROUP"             --name "$FUNCTION_APP"             --query identity.type             --output tsv)"
+
+          echo "Function App state: ${STATE:-<leer>}"
+          echo "Managed identity type: ${IDENTITY_TYPE:-<leer>}"
+
+          az functionapp function list             --resource-group "$RESOURCE_GROUP"             --name "$FUNCTION_APP"             --output json > /tmp/functions.json
+
+          COUNT="$(python - <<'PY'
+          import json
+          rows = json.load(open("/tmp/functions.json", encoding="utf-8"))
+          print(len(rows))
+          PY
+          )"
+
+          echo "Erkannte Azure Functions: $COUNT"
+
+          if [ "${STATE,,}" != "running" ]; then
+            echo "DIAGNOSE: Function App ist nicht Running." >&2
+            exit 1
+          fi
+
+          if [[ "${IDENTITY_TYPE,,}" != *"userassigned"* ]]; then
+            echo "DIAGNOSE: User-Assigned Managed Identity wird nicht erkannt." >&2
+            exit 1
+          fi
+
+          if [ "$COUNT" -le 0 ]; then
+            echo "DIAGNOSE: Function App läuft, aber Azure erkennt keinen Function-Trigger." >&2
+            echo "Deployment-Historie:"
+            az functionapp log deployment list               --resource-group "$RESOURCE_GROUP"               --name "$FUNCTION_APP"               --output table || true
+            exit 1
+          fi
+
+      - name: Storage Key Vault und Alarme prüfen
+        shell: bash
+        env:
+          RESOURCE_GROUP: ${{ inputs.resource_group }}
+        run: |
+          set -euo pipefail
+
+          SHARED_KEY="$(az storage account show             --resource-group "$RESOURCE_GROUP"             --name "$STORAGE_ACCOUNT"             --query allowSharedKeyAccess             --output tsv)"
+
+          KV_RBAC="$(az keyvault show             --resource-group "$RESOURCE_GROUP"             --name "$KEY_VAULT"             --query properties.enableRbacAuthorization             --output tsv)"
+
+          ALERT_COUNT="$(az resource list             --resource-group "$RESOURCE_GROUP"             --resource-type Microsoft.Insights/scheduledQueryRules             --query "length(@)"             --output tsv)"
+
+          echo "Storage allowSharedKeyAccess: $SHARED_KEY"
+          echo "Key Vault RBAC: $KV_RBAC"
+          echo "Scheduled Query Rules: $ALERT_COUNT"
+
+          [ "${SHARED_KEY,,}" = "false" ]
+          [ "${KV_RBAC,,}" = "true" ]
+          [ "$ALERT_COUNT" -eq 2 ]
+
+      - name: Ergebnis
+        if: ${{ success() }}
+        shell: bash
+        run: |
+          {
+            echo "# SSV53 Azure Diagnose"
+            echo
+            echo "Alle geprüften Post-Deployment-Punkte sind grün."
+            echo
+            echo "- CONTROL_MODE: DRY_RUN"
+            echo "- Live Reads: false"
+            echo "- Dynamische Konfiguration: false"
+            echo "- Function App: Running"
+            echo "- Function-Code: erkannt"
+            echo "- Storage Shared Key: deaktiviert"
+            echo "- Key Vault RBAC: aktiviert"
+            echo "- Alarmregeln: 2"
+            echo "- Azure-Änderungen: keine"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Azure-Sitzung beenden
+        if: ${{ always() }}
+        shell: bash
+        run: az logout || true
