@@ -391,7 +391,7 @@ resource heartbeatAlert 'Microsoft.Insights/scheduledQueryRules@2023-12-01' = {
     criteria: {
       allOf: [
         {
-          query: 'AppTraces | where Message startswith "SSV53_CONTROL_CYCLE"'
+          query: 'traces | where message startswith "SSV53_CONTROL_CYCLE"'
           timeAggregation: 'Count'
           operator: 'LessThan'
           threshold: 1
@@ -431,7 +431,7 @@ resource failureAlert 'Microsoft.Insights/scheduledQueryRules@2023-12-01' = {
     criteria: {
       allOf: [
         {
-          query: 'AppExceptions'
+          query: 'exceptions'
           timeAggregation: 'Count'
           operator: 'GreaterThan'
           threshold: 0
