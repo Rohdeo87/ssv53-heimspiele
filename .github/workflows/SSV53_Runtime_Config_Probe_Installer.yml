@@ -1,0 +1,139 @@
+name: "Einmalig: Runtime-Config Config-only-Probe vorbereiten"
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ssv53-runtime-config-probe-installer
+  cancel-in-progress: false
+
+env:
+  TARGET_BRANCH: feature/azure-mower-migration
+
+jobs:
+  prepare:
+    name: Config-only-Probe einbauen, testen und speichern
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Repository laden
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Sicherheitsgate
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_REF_NAME" != "${{ github.event.repository.default_branch }}" ]; then
+            echo "Installer nur auf dem Default-Branch starten." >&2
+            exit 1
+          fi
+
+      - name: Python 3.12 einrichten
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Migration-Branch laden
+        id: worktree
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin "$TARGET_BRANCH"
+          WORKTREE="$RUNNER_TEMP/runtime-config-probe"
+          rm -rf "$WORKTREE"
+          git worktree add --detach "$WORKTREE" "origin/$TARGET_BRANCH"
+          echo "path=$WORKTREE" >> "$GITHUB_OUTPUT"
+
+      - name: Sicheren Config-only-Probe einbauen
+        shell: bash
+        env:
+          WORKTREE: ${{ steps.worktree.outputs.path }}
+          CONTROLLER_B64: "ZnJvbSBfX2Z1dHVyZV9fIGltcG9ydCBhbm5vdGF0aW9ucwoKZnJvbSBjb2xsZWN0aW9ucy5hYmMgaW1wb3J0IENhbGxhYmxlCmZyb20gZGF0YWNsYXNzZXMgaW1wb3J0IHJlcGxhY2UKZnJvbSBkYXRldGltZSBpbXBvcnQgZGF0ZXRpbWUKZnJvbSB0eXBpbmcgaW1wb3J0IEFueSwgTWFwcGluZwoKZnJvbSBtb3dlci5jb25maWdfc291cmNlIGltcG9ydCByZXNvbHZlX3J1bnRpbWVfaW5wdXRzCmZyb20gbW93ZXIuZHJ5X3J1biBpbXBvcnQgcnVuX3JlYWRfb25seV9jeWNsZQpmcm9tIG1vd2VyLnJ1bnRpbWUgaW1wb3J0ICgKICAgIENvbnRyb2xNb2RlLAogICAgQ3ljbGVSZXN1bHQsCiAgICBSdW50aW1lU2V0dGluZ3MsCiAgICBidWlsZF9oZWFydGJlYXRfcmVzdWx0LAogICAgZW5zdXJlX2hlYXJ0YmVhdF9vbmx5X21vZGUsCikKCgpMaXZlQ3ljbGVSdW5uZXIgPSBDYWxsYWJsZVsuLi4sIEN5Y2xlUmVzdWx0XQpSdW50aW1lSW5wdXRSZXNvbHZlciA9IENhbGxhYmxlWy4uLiwgQW55XQoKCmRlZiBfZHluYW1pY19jb25maWdfZW5hYmxlZChlbnZpcm9ubWVudDogTWFwcGluZ1tzdHIsIHN0cl0pIC0+IGJvb2w6CiAgICByZXR1cm4gc3RyKAogICAgICAgIGVudmlyb25tZW50LmdldCgiU1NWNTNfRFlOQU1JQ19DT05GSUdfRU5BQkxFRCIsICJmYWxzZSIpCiAgICApLnN0cmlwKCkuY2FzZWZvbGQoKSBpbiB7IjEiLCAidHJ1ZSIsICJ5ZXMiLCAib24ifQoKCmRlZiBfaGVhcnRiZWF0X3dpdGhfcnVudGltZV9jb25maWdfcHJvYmUoCiAgICAqLAogICAgcmVzdWx0OiBDeWNsZVJlc3VsdCwKICAgIGVudmlyb25tZW50OiBNYXBwaW5nW3N0ciwgc3RyXSwKICAgIG5vd191dGM6IGRhdGV0aW1lLAogICAgcnVudGltZV9pbnB1dF9yZXNvbHZlcjogUnVudGltZUlucHV0UmVzb2x2ZXIsCikgLT4gQ3ljbGVSZXN1bHQ6CiAgICAiIiJWYWxpZGllcnQgZHluYW1pc2NoZSBMYXVmemVpdGRhdGVuIG9obmUgR2Vyw6R0ZXp1Z3JpZmYuCgogICAgRGVyIFByb2JlIGzDpHVmdCBhdXNzY2hsaWXDn2xpY2ggaW0gRFJZX1JVTiBiZWkgZGVha3RpdmllcnRlbiBMaXZlIFJlYWRzLgogICAgRXIgdmVyd2VuZGV0IGRpZXNlbGJlIGZhaWwtY2xvc2VkIFJ1bnRpbWUtQ29uZmlnLUF1ZmzDtnN1bmcgd2llIGRlciBzcMOkdGVyZQogICAgUmVhZC1vbmx5LUxhdWYsIGdyZWlmdCBhYmVyIHdlZGVyIGF1ZiBIdXNxdmFybmEgbm9jaCBhdWYgSHlkcmF3aXNlIHp1LgogICAgIiIiCgogICAgcnVudGltZV9pbnB1dHMgPSBydW50aW1lX2lucHV0X3Jlc29sdmVyKAogICAgICAgIGVudmlyb25tZW50LAogICAgICAgIG5vd191dGM9bm93X3V0YywKICAgICkKICAgIGRldGFpbHMgPSBkaWN0KHJlc3VsdC5kZXRhaWxzKQogICAgZGV0YWlsc1sicnVudGltZV9jb25maWciXSA9IHsKICAgICAgICAicHJvYmUiOiAiY29uZmlnX29ubHkiLAogICAgICAgICJzb3VyY2Vfa2luZCI6IHJ1bnRpbWVfaW5wdXRzLnNvdXJjZV9raW5kLAogICAgICAgICJtYW5pZmVzdF9ldGFnIjogcnVudGltZV9pbnB1dHMubWFuaWZlc3RfZXRhZywKICAgICAgICAibWFuaWZlc3RfcGF0aCI6IHJ1bnRpbWVfaW5wdXRzLm1hbmlmZXN0X3BhdGgsCiAgICAgICAgInB1Ymxpc2hlZF9hdF91dGMiOiBydW50aW1lX2lucHV0cy5wdWJsaXNoZWRfYXRfdXRjLAogICAgICAgICJmYWxsYmFja191c2VkIjogcnVudGltZV9pbnB1dHMuZmFsbGJhY2tfdXNlZCwKICAgIH0KICAgIHJldHVybiByZXBsYWNlKHJlc3VsdCwgZGV0YWlscz1kZXRhaWxzKQoKCmRlZiBydW5fY29udHJvbF9jeWNsZSgKICAgICosCiAgICBub3dfdXRjOiBkYXRldGltZSwKICAgIGVudmlyb25tZW50OiBNYXBwaW5nW3N0ciwgc3RyXSwKICAgIHBhc3RfZHVlOiBib29sLAogICAgc291cmNlOiBzdHIgPSAiYXp1cmUtdGltZXIiLAogICAgbGl2ZV9jeWNsZV9ydW5uZXI6IExpdmVDeWNsZVJ1bm5lciA9IHJ1bl9yZWFkX29ubHlfY3ljbGUsCiAgICBydW50aW1lX2lucHV0X3Jlc29sdmVyOiBSdW50aW1lSW5wdXRSZXNvbHZlciA9IHJlc29sdmVfcnVudGltZV9pbnB1dHMsCikgLT4gQ3ljbGVSZXN1bHQ6CiAgICAiIiJGw7xocnQgZ2VuYXUgZWluZW4gc2ljaGVyZW4gQXp1cmUtU3RldWVydW5nc3p5a2x1cyBhdXMuCgogICAgUGhhc2UgMiBrYW5uIG9wdGlvbmFsIEh1c3F2YXJuYSwgSHlkcmF3aXNlIHVuZCBkZW4gUGxhdHpwbGFuIGxpdmUgbGVzZW4uCiAgICBFY2h0ZSBTdGV1ZXJiZWZlaGxlIGJsZWliZW4gdGVjaG5pc2NoIGF1c2dlc2NobG9zc2VuLCB3ZWlsIHdlaXRlcmhpbiBudXIKICAgIE9GRiB1bmQgRFJZX1JVTiB6dWdlbGFzc2VuIHNpbmQgdW5kIGRhcyBMZXNlbW9kdWwga2VpbmUgQWt0aW9uc2Z1bmt0aW9uZW4KICAgIGVudGjDpGx0LgoKICAgIFNvbGFuZ2UgTGl2ZSBSZWFkcyBkZWFrdGl2aWVydCBzaW5kLCBrYW5uIGltIERSWV9SVU4gZGllIGR5bmFtaXNjaGUKICAgIFJ1bnRpbWUtQ29uZmlnIHNlcGFyYXQgdmFsaWRpZXJ0IHdlcmRlbi4gRGllc2VyIENvbmZpZy1vbmx5LVByb2JlIG51dHp0CiAgICBhdXNzY2hsaWXDn2xpY2ggQmxvYiBTdG9yYWdlIMO8YmVyIE1hbmFnZWQgSWRlbnRpdHkgdW5kIGtlaW5lcmxlaQogICAgR2Vyw6R0ZXp1Z8OkbmdlLgogICAgIiIiCgogICAgc2V0dGluZ3MgPSBSdW50aW1lU2V0dGluZ3MuZnJvbV9tYXBwaW5nKGVudmlyb25tZW50KQogICAgZW5zdXJlX2hlYXJ0YmVhdF9vbmx5X21vZGUoc2V0dGluZ3MuY29udHJvbF9tb2RlKQoKICAgIGlmIHNldHRpbmdzLmNvbnRyb2xfbW9kZSBpcyBDb250cm9sTW9kZS5PRkY6CiAgICAgICAgcmV0dXJuIGJ1aWxkX2hlYXJ0YmVhdF9yZXN1bHQoCiAgICAgICAgICAgIG5vd191dGM9bm93X3V0YywKICAgICAgICAgICAgc2V0dGluZ3M9c2V0dGluZ3MsCiAgICAgICAgICAgIHBhc3RfZHVlPXBhc3RfZHVlLAogICAgICAgICAgICBzb3VyY2U9c291cmNlLAogICAgICAgICkKCiAgICBpZiBub3Qgc2V0dGluZ3MuZW5hYmxlX2xpdmVfcmVhZHM6CiAgICAgICAgcmVzdWx0ID0gYnVpbGRfaGVhcnRiZWF0X3Jlc3VsdCgKICAgICAgICAgICAgbm93X3V0Yz1ub3dfdXRjLAogICAgICAgICAgICBzZXR0aW5ncz1zZXR0aW5ncywKICAgICAgICAgICAgcGFzdF9kdWU9cGFzdF9kdWUsCiAgICAgICAgICAgIHNvdXJjZT1zb3VyY2UsCiAgICAgICAgKQogICAgICAgIGlmIF9keW5hbWljX2NvbmZpZ19lbmFibGVkKGVudmlyb25tZW50KToKICAgICAgICAgICAgcmV0dXJuIF9oZWFydGJlYXRfd2l0aF9ydW50aW1lX2NvbmZpZ19wcm9iZSgKICAgICAgICAgICAgICAgIHJlc3VsdD1yZXN1bHQsCiAgICAgICAgICAgICAgICBlbnZpcm9ubWVudD1lbnZpcm9ubWVudCwKICAgICAgICAgICAgICAgIG5vd191dGM9bm93X3V0YywKICAgICAgICAgICAgICAgIHJ1bnRpbWVfaW5wdXRfcmVzb2x2ZXI9cnVudGltZV9pbnB1dF9yZXNvbHZlciwKICAgICAgICAgICAgKQogICAgICAgIHJldHVybiByZXN1bHQKCiAgICByZXR1cm4gbGl2ZV9jeWNsZV9ydW5uZXIoCiAgICAgICAgbm93X3V0Yz1ub3dfdXRjLAogICAgICAgIHNldHRpbmdzPXNldHRpbmdzLAogICAgICAgIGVudmlyb25tZW50PWVudmlyb25tZW50LAogICAgICAgIHBhc3RfZHVlPXBhc3RfZHVlLAogICAgICAgIHNvdXJjZT1zb3VyY2UsCiAgICApCg=="
+          TESTS_B64: "ZnJvbSBfX2Z1dHVyZV9fIGltcG9ydCBhbm5vdGF0aW9ucwoKaW1wb3J0IHVuaXR0ZXN0CmZyb20gZGF0ZXRpbWUgaW1wb3J0IGRhdGV0aW1lLCB0aW1lem9uZQoKZnJvbSBtb3dlci5jb25maWdfc291cmNlIGltcG9ydCBSdW50aW1lSW5wdXRQYXRocwpmcm9tIG1vd2VyLmNvbnRyb2xsZXIgaW1wb3J0IHJ1bl9jb250cm9sX2N5Y2xlCmZyb20gbW93ZXIucnVudGltZSBpbXBvcnQgQ3ljbGVSZXN1bHQsIFJ1bnRpbWVTZXR0aW5ncwoKCk5PVyA9IGRhdGV0aW1lKDIwMjYsIDgsIDIsIDEyLCAwLCB0emluZm89dGltZXpvbmUudXRjKQoKCmNsYXNzIFJ1bnRpbWVTZXR0aW5nc1BoYXNlMlRlc3RzKHVuaXR0ZXN0LlRlc3RDYXNlKToKICAgIGRlZiB0ZXN0X2xpdmVfcmVhZHNfZGVmYXVsdF90b19vZmYoc2VsZikgLT4gTm9uZToKICAgICAgICBzZXR0aW5ncyA9IFJ1bnRpbWVTZXR0aW5ncy5mcm9tX21hcHBpbmcoe30pCiAgICAgICAgc2VsZi5hc3NlcnRGYWxzZShzZXR0aW5ncy5lbmFibGVfbGl2ZV9yZWFkcykKICAgICAgICBzZWxmLmFzc2VydEVxdWFsKHNldHRpbmdzLnBhcmtfbG9va2FoZWFkX21pbnV0ZXMsIDE1KQoKICAgIGRlZiB0ZXN0X2ludmFsaWRfbGl2ZV9yZWFkX3ZhbHVlX2lzX3JlamVjdGVkKHNlbGYpIC0+IE5vbmU6CiAgICAgICAgd2l0aCBzZWxmLmFzc2VydFJhaXNlc1JlZ2V4KFZhbHVlRXJyb3IsICJib29sZXNjaGVyIik6CiAgICAgICAgICAgIFJ1bnRpbWVTZXR0aW5ncy5mcm9tX21hcHBpbmcoCiAgICAgICAgICAgICAgICB7IkVOQUJMRV9MSVZFX1JFQURTIjogInZpZWxsZWljaHQifQogICAgICAgICAgICApCgoKY2xhc3MgQ29udHJvbGxlclBoYXNlMlRlc3RzKHVuaXR0ZXN0LlRlc3RDYXNlKToKICAgIGRlZiB0ZXN0X2xpdmVfcnVubmVyX2lzX25vdF9jYWxsZWRfYnlfZGVmYXVsdChzZWxmKSAtPiBOb25lOgogICAgICAgIGNhbGxlZCA9IEZhbHNlCgogICAgICAgIGRlZiBydW5uZXIoKipfa3dhcmdzKToKICAgICAgICAgICAgbm9ubG9jYWwgY2FsbGVkCiAgICAgICAgICAgIGNhbGxlZCA9IFRydWUKICAgICAgICAgICAgcmFpc2UgQXNzZXJ0aW9uRXJyb3IoImRhcmYgbmljaHQgYXVmZ2VydWZlbiB3ZXJkZW4iKQoKICAgICAgICByZXN1bHQgPSBydW5fY29udHJvbF9jeWNsZSgKICAgICAgICAgICAgbm93X3V0Yz1OT1csCiAgICAgICAgICAgIGVudmlyb25tZW50PXsiQ09OVFJPTF9NT0RFIjogIkRSWV9SVU4ifSwKICAgICAgICAgICAgcGFzdF9kdWU9RmFsc2UsCiAgICAgICAgICAgIGxpdmVfY3ljbGVfcnVubmVyPXJ1bm5lciwKICAgICAgICApCiAgICAgICAgc2VsZi5hc3NlcnRGYWxzZShjYWxsZWQpCiAgICAgICAgc2VsZi5hc3NlcnRFcXVhbChyZXN1bHQuZGVjaXNpb25fY29kZSwgIkhFQVJUQkVBVF9PTkxZIikKCiAgICBkZWYgdGVzdF9keW5hbWljX2NvbmZpZ19wcm9iZV9pc19ub3RfY2FsbGVkX3doZW5fZGlzYWJsZWQoc2VsZikgLT4gTm9uZToKICAgICAgICBjYWxsZWQgPSBGYWxzZQoKICAgICAgICBkZWYgcmVzb2x2ZXIoKl9hcmdzLCAqKl9rd2FyZ3MpOgogICAgICAgICAgICBub25sb2NhbCBjYWxsZWQKICAgICAgICAgICAgY2FsbGVkID0gVHJ1ZQogICAgICAgICAgICByYWlzZSBBc3NlcnRpb25FcnJvcigiZGFyZiBuaWNodCBhdWZnZXJ1ZmVuIHdlcmRlbiIpCgogICAgICAgIHJlc3VsdCA9IHJ1bl9jb250cm9sX2N5Y2xlKAogICAgICAgICAgICBub3dfdXRjPU5PVywKICAgICAgICAgICAgZW52aXJvbm1lbnQ9ewogICAgICAgICAgICAgICAgIkNPTlRST0xfTU9ERSI6ICJEUllfUlVOIiwKICAgICAgICAgICAgICAgICJFTkFCTEVfTElWRV9SRUFEUyI6ICJmYWxzZSIsCiAgICAgICAgICAgICAgICAiU1NWNTNfRFlOQU1JQ19DT05GSUdfRU5BQkxFRCI6ICJmYWxzZSIsCiAgICAgICAgICAgIH0sCiAgICAgICAgICAgIHBhc3RfZHVlPUZhbHNlLAogICAgICAgICAgICBydW50aW1lX2lucHV0X3Jlc29sdmVyPXJlc29sdmVyLAogICAgICAgICkKCiAgICAgICAgc2VsZi5hc3NlcnRGYWxzZShjYWxsZWQpCiAgICAgICAgc2VsZi5hc3NlcnRFcXVhbChyZXN1bHQuZGVjaXNpb25fY29kZSwgIkhFQVJUQkVBVF9PTkxZIikKICAgICAgICBzZWxmLmFzc2VydE5vdEluKCJydW50aW1lX2NvbmZpZyIsIHJlc3VsdC5kZXRhaWxzKQoKICAgIGRlZiB0ZXN0X2R5bmFtaWNfY29uZmlnX3Byb2JlX3J1bnNfd2l0aG91dF9saXZlX3JlYWRzKHNlbGYpIC0+IE5vbmU6CiAgICAgICAgbGl2ZV9jYWxsZWQgPSBGYWxzZQogICAgICAgIHJlc29sdmVyX2NhbGxlZCA9IEZhbHNlCgogICAgICAgIGRlZiBydW5uZXIoKipfa3dhcmdzKToKICAgICAgICAgICAgbm9ubG9jYWwgbGl2ZV9jYWxsZWQKICAgICAgICAgICAgbGl2ZV9jYWxsZWQgPSBUcnVlCiAgICAgICAgICAgIHJhaXNlIEFzc2VydGlvbkVycm9yKCJMaXZlIFJ1bm5lciBkYXJmIG5pY2h0IGF1ZmdlcnVmZW4gd2VyZGVuIikKCiAgICAgICAgZGVmIHJlc29sdmVyKGVudmlyb25tZW50LCAqLCBub3dfdXRjKToKICAgICAgICAgICAgbm9ubG9jYWwgcmVzb2x2ZXJfY2FsbGVkCiAgICAgICAgICAgIHJlc29sdmVyX2NhbGxlZCA9IFRydWUKICAgICAgICAgICAgc2VsZi5hc3NlcnRFcXVhbChub3dfdXRjLCBOT1cpCiAgICAgICAgICAgIHNlbGYuYXNzZXJ0RXF1YWwoCiAgICAgICAgICAgICAgICBlbnZpcm9ubWVudFsiU1NWNTNfRFlOQU1JQ19DT05GSUdfRU5BQkxFRCJdLAogICAgICAgICAgICAgICAgInRydWUiLAogICAgICAgICAgICApCiAgICAgICAgICAgIHJldHVybiBSdW50aW1lSW5wdXRQYXRocygKICAgICAgICAgICAgICAgIGNvbmZpZ19wYXRoPSIvdG1wL3NzdjUzLWNvbmZpZy9tb3dlci1jb25maWcuanNvbiIsCiAgICAgICAgICAgICAgICBtYXRjaGVzX3BhdGg9Ii90bXAvc3N2NTMtY29uZmlnL3Jhc2VuLmljcyIsCiAgICAgICAgICAgICAgICBzb3VyY2Vfa2luZD0iYXp1cmVfYmxvYiIsCiAgICAgICAgICAgICAgICBtYW5pZmVzdF9ldGFnPSciZXRhZy0xIicsCiAgICAgICAgICAgICAgICBtYW5pZmVzdF9wYXRoPSJjdXJyZW50L21hbmlmZXN0Lmpzb24iLAogICAgICAgICAgICAgICAgcHVibGlzaGVkX2F0X3V0Yz0iMjAyNi0wOC0wMlQxMTo1NTowMCswMDowMCIsCiAgICAgICAgICAgICAgICBmYWxsYmFja191c2VkPUZhbHNlLAogICAgICAgICAgICApCgogICAgICAgIHJlc3VsdCA9IHJ1bl9jb250cm9sX2N5Y2xlKAogICAgICAgICAgICBub3dfdXRjPU5PVywKICAgICAgICAgICAgZW52aXJvbm1lbnQ9ewogICAgICAgICAgICAgICAgIkNPTlRST0xfTU9ERSI6ICJEUllfUlVOIiwKICAgICAgICAgICAgICAgICJFTkFCTEVfTElWRV9SRUFEUyI6ICJmYWxzZSIsCiAgICAgICAgICAgICAgICAiU1NWNTNfRFlOQU1JQ19DT05GSUdfRU5BQkxFRCI6ICJ0cnVlIiwKICAgICAgICAgICAgfSwKICAgICAgICAgICAgcGFzdF9kdWU9RmFsc2UsCiAgICAgICAgICAgIGxpdmVfY3ljbGVfcnVubmVyPXJ1bm5lciwKICAgICAgICAgICAgcnVudGltZV9pbnB1dF9yZXNvbHZlcj1yZXNvbHZlciwKICAgICAgICApCgogICAgICAgIHNlbGYuYXNzZXJ0VHJ1ZShyZXNvbHZlcl9jYWxsZWQpCiAgICAgICAgc2VsZi5hc3NlcnRGYWxzZShsaXZlX2NhbGxlZCkKICAgICAgICBzZWxmLmFzc2VydEZhbHNlKHJlc3VsdC5jb21tYW5kX3NlbnQpCiAgICAgICAgc2VsZi5hc3NlcnRFcXVhbChyZXN1bHQuZGVjaXNpb25fY29kZSwgIkhFQVJUQkVBVF9PTkxZIikKICAgICAgICBzZWxmLmFzc2VydEVxdWFsKAogICAgICAgICAgICByZXN1bHQuZGV0YWlsc1sicnVudGltZV9jb25maWciXVsic291cmNlX2tpbmQiXSwKICAgICAgICAgICAgImF6dXJlX2Jsb2IiLAogICAgICAgICkKICAgICAgICBzZWxmLmFzc2VydEVxdWFsKAogICAgICAgICAgICByZXN1bHQuZGV0YWlsc1sicnVudGltZV9jb25maWciXVsibWFuaWZlc3RfcGF0aCJdLAogICAgICAgICAgICAiY3VycmVudC9tYW5pZmVzdC5qc29uIiwKICAgICAgICApCiAgICAgICAgc2VsZi5hc3NlcnRGYWxzZSgKICAgICAgICAgICAgcmVzdWx0LmRldGFpbHNbInJ1bnRpbWVfY29uZmlnIl1bImZhbGxiYWNrX3VzZWQiXQogICAgICAgICkKICAgICAgICBzZWxmLmFzc2VydEVxdWFsKAogICAgICAgICAgICByZXN1bHQuZGV0YWlsc1sicnVudGltZV9jb25maWciXVsicHJvYmUiXSwKICAgICAgICAgICAgImNvbmZpZ19vbmx5IiwKICAgICAgICApCgogICAgZGVmIHRlc3RfZHluYW1pY19jb25maWdfcHJvYmVfZmFpbHNfY2xvc2VkKHNlbGYpIC0+IE5vbmU6CiAgICAgICAgZGVmIHJlc29sdmVyKCpfYXJncywgKipfa3dhcmdzKToKICAgICAgICAgICAgcmFpc2UgUnVudGltZUVycm9yKAogICAgICAgICAgICAgICAgIktlaW5lIGZyaXNjaGUgTGF1ZnplaXRrb25maWd1cmF0aW9uOyBmYWlsLWNsb3NlZC4iCiAgICAgICAgICAgICkKCiAgICAgICAgd2l0aCBzZWxmLmFzc2VydFJhaXNlc1JlZ2V4KFJ1bnRpbWVFcnJvciwgImZhaWwtY2xvc2VkIik6CiAgICAgICAgICAgIHJ1bl9jb250cm9sX2N5Y2xlKAogICAgICAgICAgICAgICAgbm93X3V0Yz1OT1csCiAgICAgICAgICAgICAgICBlbnZpcm9ubWVudD17CiAgICAgICAgICAgICAgICAgICAgIkNPTlRST0xfTU9ERSI6ICJEUllfUlVOIiwKICAgICAgICAgICAgICAgICAgICAiRU5BQkxFX0xJVkVfUkVBRFMiOiAiZmFsc2UiLAogICAgICAgICAgICAgICAgICAgICJTU1Y1M19EWU5BTUlDX0NPTkZJR19FTkFCTEVEIjogInRydWUiLAogICAgICAgICAgICAgICAgfSwKICAgICAgICAgICAgICAgIHBhc3RfZHVlPUZhbHNlLAogICAgICAgICAgICAgICAgcnVudGltZV9pbnB1dF9yZXNvbHZlcj1yZXNvbHZlciwKICAgICAgICAgICAgKQoKICAgIGRlZiB0ZXN0X29mZl9tb2RlX25ldmVyX3Byb2Jlc19keW5hbWljX2NvbmZpZyhzZWxmKSAtPiBOb25lOgogICAgICAgIGNhbGxlZCA9IEZhbHNlCgogICAgICAgIGRlZiByZXNvbHZlcigqX2FyZ3MsICoqX2t3YXJncyk6CiAgICAgICAgICAgIG5vbmxvY2FsIGNhbGxlZAogICAgICAgICAgICBjYWxsZWQgPSBUcnVlCiAgICAgICAgICAgIHJhaXNlIEFzc2VydGlvbkVycm9yKCJPRkYgZGFyZiBrZWluZSBSdW50aW1lLUNvbmZpZyBsZXNlbiIpCgogICAgICAgIHJlc3VsdCA9IHJ1bl9jb250cm9sX2N5Y2xlKAogICAgICAgICAgICBub3dfdXRjPU5PVywKICAgICAgICAgICAgZW52aXJvbm1lbnQ9ewogICAgICAgICAgICAgICAgIkNPTlRST0xfTU9ERSI6ICJPRkYiLAogICAgICAgICAgICAgICAgIkVOQUJMRV9MSVZFX1JFQURTIjogImZhbHNlIiwKICAgICAgICAgICAgICAgICJTU1Y1M19EWU5BTUlDX0NPTkZJR19FTkFCTEVEIjogInRydWUiLAogICAgICAgICAgICB9LAogICAgICAgICAgICBwYXN0X2R1ZT1GYWxzZSwKICAgICAgICAgICAgcnVudGltZV9pbnB1dF9yZXNvbHZlcj1yZXNvbHZlciwKICAgICAgICApCgogICAgICAgIHNlbGYuYXNzZXJ0RmFsc2UoY2FsbGVkKQogICAgICAgIHNlbGYuYXNzZXJ0RXF1YWwocmVzdWx0LmRlY2lzaW9uX2NvZGUsICJBVVRPTUFUSU9OX09GRiIpCgogICAgZGVmIHRlc3RfbGl2ZV9ydW5uZXJfaXNfY2FsbGVkX29ubHlfYWZ0ZXJfZXhwbGljaXRfb3B0X2luKHNlbGYpIC0+IE5vbmU6CiAgICAgICAgZGVmIHJ1bm5lcigqKmt3YXJncyk6CiAgICAgICAgICAgIHNlbGYuYXNzZXJ0RXF1YWwoCiAgICAgICAgICAgICAgICBrd2FyZ3NbInNldHRpbmdzIl0uY29udHJvbF9tb2RlLnZhbHVlLAogICAgICAgICAgICAgICAgIkRSWV9SVU4iLAogICAgICAgICAgICApCiAgICAgICAgICAgIHJldHVybiBDeWNsZVJlc3VsdCgKICAgICAgICAgICAgICAgIHNjaGVtYV92ZXJzaW9uPTIsCiAgICAgICAgICAgICAgICBleGVjdXRlZF9hdF91dGM9Tk9XLmlzb2Zvcm1hdCgpLAogICAgICAgICAgICAgICAgc291cmNlPWt3YXJnc1sic291cmNlIl0sCiAgICAgICAgICAgICAgICBjb250cm9sX21vZGU9IkRSWV9SVU4iLAogICAgICAgICAgICAgICAgcGFzdF9kdWU9RmFsc2UsCiAgICAgICAgICAgICAgICBkZWNpc2lvbl9jb2RlPSJURVNUX1JFQURfT05MWSIsCiAgICAgICAgICAgICAgICBjb21tYW5kX3NlbnQ9RmFsc2UsCiAgICAgICAgICAgICAgICBtZXNzYWdlPSJvayIsCiAgICAgICAgICAgICkKCiAgICAgICAgcmVzdWx0ID0gcnVuX2NvbnRyb2xfY3ljbGUoCiAgICAgICAgICAgIG5vd191dGM9Tk9XLAogICAgICAgICAgICBlbnZpcm9ubWVudD17CiAgICAgICAgICAgICAgICAiQ09OVFJPTF9NT0RFIjogIkRSWV9SVU4iLAogICAgICAgICAgICAgICAgIkVOQUJMRV9MSVZFX1JFQURTIjogInRydWUiLAogICAgICAgICAgICB9LAogICAgICAgICAgICBwYXN0X2R1ZT1GYWxzZSwKICAgICAgICAgICAgbGl2ZV9jeWNsZV9ydW5uZXI9cnVubmVyLAogICAgICAgICkKICAgICAgICBzZWxmLmFzc2VydEVxdWFsKHJlc3VsdC5kZWNpc2lvbl9jb2RlLCAiVEVTVF9SRUFEX09OTFkiKQogICAgICAgIHNlbGYuYXNzZXJ0RmFsc2UocmVzdWx0LmNvbW1hbmRfc2VudCkKCiAgICBkZWYgdGVzdF9saXZlX2NvbnRyb2xfbW9kZXNfcmVtYWluX2Jsb2NrZWQoc2VsZikgLT4gTm9uZToKICAgICAgICBmb3IgbW9kZSBpbiAoIlBBUktfT05MWSIsICJGVUxMX01PV0VSIiwgIkZVTExfRkFJTFNBRkUiKToKICAgICAgICAgICAgd2l0aCBzZWxmLnN1YlRlc3QobW9kZT1tb2RlKToKICAgICAgICAgICAgICAgIHdpdGggc2VsZi5hc3NlcnRSYWlzZXNSZWdleCgKICAgICAgICAgICAgICAgICAgICBSdW50aW1lRXJyb3IsCiAgICAgICAgICAgICAgICAgICAgIkhlYXJ0YmVhdC1TdGFkaXVtIiwKICAgICAgICAgICAgICAgICk6CiAgICAgICAgICAgICAgICAgICAgcnVuX2NvbnRyb2xfY3ljbGUoCiAgICAgICAgICAgICAgICAgICAgICAgIG5vd191dGM9Tk9XLAogICAgICAgICAgICAgICAgICAgICAgICBlbnZpcm9ubWVudD17CiAgICAgICAgICAgICAgICAgICAgICAgICAgICAiQ09OVFJPTF9NT0RFIjogbW9kZSwKICAgICAgICAgICAgICAgICAgICAgICAgICAgICJFTkFCTEVfTElWRV9SRUFEUyI6ICJ0cnVlIiwKICAgICAgICAgICAgICAgICAgICAgICAgfSwKICAgICAgICAgICAgICAgICAgICAgICAgcGFzdF9kdWU9RmFsc2UsCiAgICAgICAgICAgICAgICAgICAgKQoKCmlmIF9fbmFtZV9fID09ICJfX21haW5fXyI6CiAgICB1bml0dGVzdC5tYWluKCkK"
+        run: |
+          set -euo pipefail
+          printf '%s' "$CONTROLLER_B64" | base64 --decode > "$WORKTREE/mower/controller.py"
+          printf '%s' "$TESTS_B64" | base64 --decode > "$WORKTREE/tests/test_mower_controller_phase2.py"
+
+      - name: Sicherheitsprüfung des Patches
+        shell: bash
+        env:
+          WORKTREE: ${{ steps.worktree.outputs.path }}
+        run: |
+          set -euo pipefail
+          cd "$WORKTREE"
+
+          python -m py_compile mower/controller.py tests/test_mower_controller_phase2.py
+
+          grep -Fq '"probe": "config_only"' mower/controller.py
+          grep -Fq '"ENABLE_LIVE_READS": "false"' tests/test_mower_controller_phase2.py
+          grep -Fq 'self.assertFalse(live_called)' tests/test_mower_controller_phase2.py
+          grep -Fq 'self.assertFalse(result.command_sent)' tests/test_mower_controller_phase2.py
+          grep -Fq 'fail-closed' tests/test_mower_controller_phase2.py
+
+          if grep -Eq 'FORCE_PARK|RESUME_SCHEDULE|/actions' mower/controller.py; then
+            echo "Unerwarteter Geräte-Marker im Controller-Patch." >&2
+            exit 1
+          fi
+
+          echo "Patch-Sicherheitsprüfung: GRÜN"
+
+      - name: Abhängigkeiten installieren
+        shell: bash
+        env:
+          WORKTREE: ${{ steps.worktree.outputs.path }}
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check -r "$WORKTREE/requirements.txt"
+
+      - name: Gesamte Testsuite ausführen
+        shell: bash
+        env:
+          WORKTREE: ${{ steps.worktree.outputs.path }}
+        run: |
+          set -euo pipefail
+          cd "$WORKTREE"
+          python -m compileall -q mower function_app.py scripts
+          python -m unittest discover -s tests -p "test_*.py" -v
+
+      - name: Änderungen auf Migration-Branch speichern
+        shell: bash
+        env:
+          WORKTREE: ${{ steps.worktree.outputs.path }}
+        run: |
+          set -euo pipefail
+          cd "$WORKTREE"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add mower/controller.py tests/test_mower_controller_phase2.py
+
+          if git diff --cached --quiet; then
+            echo "Config-only-Probe war bereits identisch vorhanden."
+            exit 0
+          fi
+
+          git commit -m "Runtime-Config im DRY_RUN ohne Gerätezugriff prüfen"
+          git push origin "HEAD:$TARGET_BRANCH"
+
+      - name: Ergebnis
+        shell: bash
+        run: |
+          {
+            echo "# Runtime-Config Config-only-Probe"
+            echo
+            echo "- Migration-Branch aktualisiert: **ja**"
+            echo "- Gesamte Testsuite: **bestanden**"
+            echo "- CONTROL_MODE-Freigaben geändert: **nein**"
+            echo "- Live Reads aktiviert: **nein**"
+            echo "- Gerätebefehle ergänzt: **nein**"
+            echo "- Neuer Probe: **Blob-Runtime-Config über Managed Identity**"
+          } >> "$GITHUB_STEP_SUMMARY"
