@@ -1,0 +1,407 @@
+name: "Einmalig: Azure Post-Deployment-Prüfung vorbereiten"
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ssv53-azure-postdeploy-verify-installer
+  cancel-in-progress: false
+
+jobs:
+  install:
+    name: Post-Deployment-Prüfung vorbereiten
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Main laden
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          token: ${{ secrets.SSV53_AUTOMATION_TOKEN }}
+          persist-credentials: true
+          fetch-depth: 0
+
+      - name: Echten Prüfworkflow im Migrationsbranch schreiben
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git fetch origin feature/azure-mower-migration
+          git checkout feature/azure-mower-migration
+          git pull --ff-only origin feature/azure-mower-migration
+
+          cat > .github/workflows/azure-postdeploy-verify.yml <<'YAML'
+          name: Azure Post-Deployment-Prüfung
+
+          on:
+            workflow_dispatch:
+              inputs:
+                resource_group:
+                  description: "Azure-Ressourcengruppe"
+                  required: true
+                  type: string
+                  default: "rg-ssv53-platzpflege-prod"
+
+          permissions:
+            id-token: write
+            contents: read
+
+          concurrency:
+            group: ssv53-azure-postdeploy-verify
+            cancel-in-progress: false
+
+          jobs:
+            verify:
+              name: Bereitgestellten sicheren Zustand prüfen
+              runs-on: ubuntu-latest
+              timeout-minutes: 20
+
+              steps:
+                - name: Repository laden
+                  uses: actions/checkout@v7
+
+                - name: Harte Prüfbedingungen
+                  shell: bash
+                  env:
+                    BOOTSTRAP_ENABLED: ${{ vars.AZURE_BOOTSTRAP_ENABLED }}
+                    BOOTSTRAP_CLIENT_ID: ${{ vars.AZURE_BOOTSTRAP_CLIENT_ID }}
+                    TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+                    SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+                  run: |
+                    set -euo pipefail
+                    if [ "$GITHUB_REF_NAME" != "feature/azure-mower-migration" ]; then
+                      echo "Prüfung ausschließlich vom Azure-Migrationsbranch erlaubt." >&2
+                      exit 1
+                    fi
+                    if [ "${BOOTSTRAP_ENABLED:-}" = "true" ]; then
+                      echo "AZURE_BOOTSTRAP_ENABLED muss vor der Post-Deployment-Prüfung false sein." >&2
+                      exit 1
+                    fi
+                    for variable in BOOTSTRAP_CLIENT_ID TENANT_ID SUBSCRIPTION_ID; do
+                      if [ -z "${!variable:-}" ]; then
+                        echo "Erforderliche GitHub-Variable ${variable} fehlt." >&2
+                        exit 1
+                      fi
+                    done
+
+                - name: Per OIDC anmelden
+                  uses: azure/login@v3
+                  with:
+                    client-id: ${{ vars.AZURE_BOOTSTRAP_CLIENT_ID }}
+                    tenant-id: ${{ vars.AZURE_TENANT_ID }}
+                    subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+                - name: Ressourcenbestand und Funktionsnamen ermitteln
+                  shell: bash
+                  env:
+                    RESOURCE_GROUP: ${{ inputs.resource_group }}
+                  run: |
+                    set -euo pipefail
+                    az group show --name "$RESOURCE_GROUP" --output none
+
+                    FUNCTION_APP="$(az resource list \
+                      --resource-group "$RESOURCE_GROUP" \
+                      --resource-type Microsoft.Web/sites \
+                      --query "[?kind && contains(kind, 'functionapp')].name | [0]" \
+                      --output tsv)"
+                    STORAGE_ACCOUNT="$(az storage account list \
+                      --resource-group "$RESOURCE_GROUP" \
+                      --query "[0].name" \
+                      --output tsv)"
+                    KEY_VAULT="$(az keyvault list \
+                      --resource-group "$RESOURCE_GROUP" \
+                      --query "[0].name" \
+                      --output tsv)"
+
+                    [ -n "$FUNCTION_APP" ]
+                    [ -n "$STORAGE_ACCOUNT" ]
+                    [ -n "$KEY_VAULT" ]
+
+                    echo "FUNCTION_APP=$FUNCTION_APP" >> "$GITHUB_ENV"
+                    echo "STORAGE_ACCOUNT=$STORAGE_ACCOUNT" >> "$GITHUB_ENV"
+                    echo "KEY_VAULT=$KEY_VAULT" >> "$GITHUB_ENV"
+
+                - name: Sicherheits-Appsettings prüfen
+                  shell: bash
+                  env:
+                    RESOURCE_GROUP: ${{ inputs.resource_group }}
+                  run: |
+                    set -euo pipefail
+                    az functionapp config appsettings list \
+                      --resource-group "$RESOURCE_GROUP" \
+                      --name "$FUNCTION_APP" \
+                      --output json > /tmp/appsettings.json
+
+                    python - <<'PY'
+                    import json
+
+                    rows = json.load(open("/tmp/appsettings.json", encoding="utf-8"))
+                    values = {row["name"]: str(row.get("value", "")) for row in rows}
+
+                    expected = {
+                        "CONTROL_MODE": "DRY_RUN",
+                        "ENABLE_LIVE_READS": "false",
+                        "SSV53_DYNAMIC_CONFIG_ENABLED": "false",
+                    }
+                    for key, expected_value in expected.items():
+                        actual = values.get(key, "")
+                        if actual.casefold() != expected_value.casefold():
+                            raise SystemExit(
+                                f"{key} unsicher/unerwartet: {actual!r}; erwartet {expected_value!r}"
+                            )
+
+                    if "FUNCTIONS_WORKER_RUNTIME" in values:
+                        raise SystemExit(
+                            "FUNCTIONS_WORKER_RUNTIME darf bei Flex Consumption nicht gesetzt sein."
+                        )
+
+                    required = (
+                        "AzureWebJobsStorage__credential",
+                        "AzureWebJobsStorage__clientId",
+                        "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                        "SSV53_STATE_TABLE_NAME",
+                    )
+                    missing = [key for key in required if not values.get(key)]
+                    if missing:
+                        raise SystemExit("Erforderliche Appsettings fehlen: " + ", ".join(missing))
+                    PY
+
+                - name: Storage und Key Vault härten prüfen
+                  shell: bash
+                  env:
+                    RESOURCE_GROUP: ${{ inputs.resource_group }}
+                  run: |
+                    set -euo pipefail
+
+                    SHARED_KEY="$(az storage account show \
+                      --resource-group "$RESOURCE_GROUP" \
+                      --name "$STORAGE_ACCOUNT" \
+                      --query allowSharedKeyAccess \
+                      --output tsv)"
+                    [ "${SHARED_KEY,,}" = "false" ]
+
+                    KV_RBAC="$(az keyvault show \
+                      --resource-group "$RESOURCE_GROUP" \
+                      --name "$KEY_VAULT" \
+                      --query properties.enableRbacAuthorization \
+                      --output tsv)"
+                    [ "${KV_RBAC,,}" = "true" ]
+
+                - name: Function und Flex-Consumption-Konfiguration prüfen
+                  shell: bash
+                  env:
+                    RESOURCE_GROUP: ${{ inputs.resource_group }}
+                  run: |
+                    set -euo pipefail
+
+                    az functionapp show \
+                      --resource-group "$RESOURCE_GROUP" \
+                      --name "$FUNCTION_APP" \
+                      --output json > /tmp/function.json
+
+                    python - <<'PY'
+                    import json
+                    data = json.load(open("/tmp/function.json", encoding="utf-8"))
+                    if str(data.get("state", "")).casefold() != "running":
+                        raise SystemExit(f"Function App ist nicht Running: {data.get('state')!r}")
+                    identity = data.get("identity") or {}
+                    if identity.get("type") != "UserAssigned":
+                        raise SystemExit(f"Unerwarteter Identity-Typ: {identity.get('type')!r}")
+                    PY
+
+                    # Read-only: Funktionsmetadaten abrufen, ohne eine Funktion auszulösen.
+                    for attempt in 1 2 3 4 5 6; do
+                      if az functionapp function list \
+                        --resource-group "$RESOURCE_GROUP" \
+                        --name "$FUNCTION_APP" \
+                        --output json > /tmp/functions.json 2>/tmp/functions.err; then
+                        COUNT="$(python - <<'PY'
+                    import json
+                    print(len(json.load(open("/tmp/functions.json", encoding="utf-8"))))
+                    PY
+                        )"
+                        if [ "$COUNT" -gt 0 ]; then
+                          echo "Gefundene Functions: $COUNT"
+                          break
+                        fi
+                      fi
+                      if [ "$attempt" -eq 6 ]; then
+                        cat /tmp/functions.err >&2 || true
+                        echo "Keine bereitgestellte Azure Function auffindbar." >&2
+                        exit 1
+                      fi
+                      sleep 15
+                    done
+
+                - name: Alarmregeln prüfen
+                  shell: bash
+                  env:
+                    RESOURCE_GROUP: ${{ inputs.resource_group }}
+                  run: |
+                    set -euo pipefail
+
+                    az resource list \
+                      --resource-group "$RESOURCE_GROUP" \
+                      --resource-type Microsoft.Insights/scheduledQueryRules \
+                      --output json > /tmp/alerts.json
+
+                    python - <<'PY'
+                    import json, subprocess
+
+                    alerts = json.load(open("/tmp/alerts.json", encoding="utf-8"))
+                    if len(alerts) != 2:
+                        raise SystemExit(f"Erwartet 2 Scheduled Query Rules, gefunden: {len(alerts)}")
+
+                    for alert in alerts:
+                        resource_id = alert["id"]
+                        raw = subprocess.check_output([
+                            "az", "resource", "show",
+                            "--ids", resource_id,
+                            "--api-version", "2023-12-01",
+                            "--output", "json",
+                        ], text=True)
+                        details = json.loads(raw)
+                        enabled = details.get("properties", {}).get("enabled")
+                        if enabled is not True:
+                            raise SystemExit(
+                                f"Alarmregel nicht aktiviert: {alert.get('name')} ({enabled!r})"
+                            )
+                    PY
+
+                - name: Letzte Erstdeployments prüfen
+                  shell: bash
+                  env:
+                    RESOURCE_GROUP: ${{ inputs.resource_group }}
+                  run: |
+                    set -euo pipefail
+                    az deployment group list \
+                      --resource-group "$RESOURCE_GROUP" \
+                      --query "[?starts_with(name, 'ssv53-firstdeploy-')].{name:name,state:properties.provisioningState,timestamp:properties.timestamp}" \
+                      --output json > /tmp/deployments.json
+
+                    python - <<'PY'
+                    import json
+                    rows = json.load(open("/tmp/deployments.json", encoding="utf-8"))
+                    if not rows:
+                        raise SystemExit("Keine Erstdeployment-Historie gefunden.")
+                    succeeded = [r for r in rows if r.get("state") == "Succeeded"]
+                    if not succeeded:
+                        raise SystemExit("Kein erfolgreiches Erstdeployment gefunden.")
+                    print("Erfolgreiche Erstdeployment-Einträge:", len(succeeded))
+                    PY
+
+                - name: Ergebnis zusammenfassen
+                  shell: bash
+                  run: |
+                    {
+                      echo "# Azure Post-Deployment-Prüfung"
+                      echo
+                      echo "- Bootstrap-Gate: **deaktiviert**"
+                      echo "- Function App: **Running**"
+                      echo "- Function-Code: **auffindbar**"
+                      echo "- CONTROL_MODE: **DRY_RUN**"
+                      echo "- ENABLE_LIVE_READS: **false**"
+                      echo "- Dynamische Laufzeitdaten: **false**"
+                      echo "- Legacy FUNCTIONS_WORKER_RUNTIME: **nicht gesetzt**"
+                      echo "- Storage Shared Key: **deaktiviert**"
+                      echo "- Key Vault RBAC: **aktiviert**"
+                      echo "- Alarmregeln: **2 / aktiviert**"
+                      echo "- Geräteaktionen: **nicht ausgeführt**"
+                      echo
+                      echo "Die Prüfung ist ausschließlich lesend."
+                    } >> "$GITHUB_STEP_SUMMARY"
+
+                - name: Azure-Sitzung beenden
+                  if: ${{ always() }}
+                  shell: bash
+                  run: az logout || true
+          YAML
+
+          git config user.name "SSV53 Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add .github/workflows/azure-postdeploy-verify.yml
+          if git diff --cached --quiet; then
+            echo "Post-Deployment-Prüfung bereits aktuell."
+          else
+            git commit -m "Azure Post-Deployment-Prüfung ergänzen"
+            git push origin feature/azure-mower-migration
+          fi
+
+      - name: Sicheren Platzhalter auf main anlegen
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git checkout main
+          git pull --ff-only origin main
+
+          cat > .github/workflows/azure-postdeploy-verify.yml <<'YAML'
+          name: Azure Post-Deployment-Prüfung
+
+          on:
+            workflow_dispatch:
+
+          permissions:
+            contents: read
+
+          jobs:
+            guard:
+              name: Main bleibt gesperrt
+              runs-on: ubuntu-latest
+              steps:
+                - name: Abbruch
+                  shell: bash
+                  run: |
+                    echo "Dieser Eintrag existiert auf main nur für die GitHub-Oberfläche."
+                    echo "Im Run-workflow-Dialog feature/azure-mower-migration auswählen."
+                    exit 1
+          YAML
+
+          git config user.name "SSV53 Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add .github/workflows/azure-postdeploy-verify.yml
+          if git diff --cached --quiet; then
+            echo "Platzhalter bereits vorhanden."
+          else
+            git commit -m "Sicheren Platzhalter für Azure Post-Deployment-Prüfung ergänzen"
+            git push origin main
+          fi
+
+  cleanup:
+    name: Einmaligen Post-Deployment-Installer entfernen
+    needs: install
+    if: ${{ success() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Main laden
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          token: ${{ secrets.SSV53_AUTOMATION_TOKEN }}
+          persist-credentials: true
+          fetch-depth: 0
+
+      - name: Installer entfernen
+        shell: bash
+        run: |
+          set -euo pipefail
+          FILE=".github/workflows/SSV53_Azure_PostDeployment_Installer.yml"
+
+          git config user.name "SSV53 Automation"
+          git config user.email "actions@users.noreply.github.com"
+
+          rm -f "$FILE"
+
+          if git diff --quiet; then
+            echo "Installer bereits entfernt."
+          else
+            git add -A "$FILE"
+            git commit -m "Einmaligen Azure-Post-Deployment-Installer entfernen"
+            git push origin main
+          fi
