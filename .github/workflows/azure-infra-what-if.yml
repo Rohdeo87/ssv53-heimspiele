@@ -1,0 +1,44 @@
+name: Azure-Infrastruktur What-if
+
+on:
+  workflow_dispatch:
+    inputs:
+      resource_group:
+        description: "Bereits vorhandene Azure-Ressourcengruppe"
+        required: true
+        type: string
+        default: "rg-ssv53-platzpflege-prod"
+      location:
+        description: "Azure-Region"
+        required: true
+        type: string
+        default: "germanywestcentral"
+      name_prefix:
+        description: "Namenspräfix der Platzpflege-Ressourcen"
+        required: true
+        type: string
+        default: "ssv53platzpflege"
+      environment_name:
+        description: "Azure-Umgebung"
+        required: true
+        type: choice
+        options:
+          - prod
+          - test
+          - dev
+        default: prod
+
+permissions:
+  contents: read
+
+jobs:
+  guard:
+    name: Nur Platzhalter auf main
+    runs-on: ubuntu-latest
+    steps:
+      - name: Nicht auf main ausführen
+        shell: bash
+        run: |
+          echo "Dieser Workflow-Eintrag existiert auf main nur, damit GitHub workflow_dispatch anbietet."
+          echo "Bitte im Run-workflow-Dialog den Branch feature/azure-mower-migration auswählen."
+          exit 1
