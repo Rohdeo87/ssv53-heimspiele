@@ -1,0 +1,212 @@
+name: Azure-Bootstrap Preflight
+
+on:
+  workflow_dispatch:
+    inputs:
+      resource_group:
+        description: "Vorhandene Azure-Ressourcengruppe"
+        required: true
+        type: string
+        default: "rg-ssv53-platzpflege-prod"
+      location:
+        description: "Azure-Region"
+        required: true
+        type: string
+        default: "germanywestcentral"
+      name_prefix:
+        description: "Namenspräfix"
+        required: true
+        type: string
+        default: "ssv53platzpflege"
+      environment_name:
+        description: "Azure-Umgebung"
+        required: true
+        type: choice
+        options:
+          - prod
+        default: prod
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: ssv53-azure-bootstrap-preflight
+  cancel-in-progress: true
+
+jobs:
+  preflight:
+    name: Bootstrap-Identität ohne Deployment prüfen
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Repository laden
+        uses: actions/checkout@v7
+
+      - name: Nur Migrationsbranch zulassen
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_REF_NAME" != "feature/azure-mower-migration" ]; then
+            echo "Bootstrap-Preflight darf ausschließlich vom Azure-Migrationsbranch laufen." >&2
+            exit 1
+          fi
+
+      - name: Erforderliche Variablen prüfen
+        shell: bash
+        env:
+          BOOTSTRAP_CLIENT_ID: ${{ vars.AZURE_BOOTSTRAP_CLIENT_ID }}
+          WHATIF_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          ALERT_EMAIL: ${{ vars.AZURE_ALERT_EMAIL }}
+        run: |
+          set -euo pipefail
+          for variable in BOOTSTRAP_CLIENT_ID TENANT_ID SUBSCRIPTION_ID ALERT_EMAIL; do
+            if [ -z "${!variable:-}" ]; then
+              echo "GitHub-Variable ${variable} fehlt." >&2
+              exit 1
+            fi
+          done
+          if [ -n "${WHATIF_CLIENT_ID:-}" ] && [ "$BOOTSTRAP_CLIENT_ID" = "$WHATIF_CLIENT_ID" ]; then
+            echo "Bootstrap- und What-if-Identität dürfen nicht identisch sein." >&2
+            exit 1
+          fi
+
+      - name: Python 3.12 einrichten
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Abhängigkeiten installieren und Tests ausführen
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check -r requirements.txt
+          python -m compileall -q mower function_app.py scripts
+          python -m unittest discover -s tests -p "test_*.py" -v
+
+      - name: Bicep lokal kompilieren
+        shell: bash
+        run: |
+          set -euo pipefail
+          az bicep install
+          az bicep build --file infra/main.bicep --outfile /tmp/ssv53-main.json
+
+      - name: Per OIDC mit separater Bootstrap-Identität anmelden
+        uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_BOOTSTRAP_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Zielbereich und Rollenzuweisungen prüfen
+        shell: bash
+        env:
+          RESOURCE_GROUP: ${{ inputs.resource_group }}
+          BOOTSTRAP_CLIENT_ID: ${{ vars.AZURE_BOOTSTRAP_CLIENT_ID }}
+        run: |
+          set -euo pipefail
+          az account show --output none
+          RG_ID="$(az group show --name "$RESOURCE_GROUP" --query id -o tsv)"
+          [ -n "$RG_ID" ]
+
+          az role assignment list \
+            --assignee "$BOOTSTRAP_CLIENT_ID" \
+            --scope "$RG_ID" \
+            --include-inherited \
+            --query "[].roleDefinitionName" \
+            -o tsv | sort -u | tee /tmp/bootstrap-roles.txt
+
+          grep -Fxq "Contributor" /tmp/bootstrap-roles.txt || \
+            grep -Fxq "Mitwirkender" /tmp/bootstrap-roles.txt || {
+              echo "Contributor/Mitwirkender fehlt auf der Ressourcengruppe." >&2
+              exit 1
+            }
+
+          grep -Fxq "Role Based Access Control Administrator" /tmp/bootstrap-roles.txt || {
+            echo "Role Based Access Control Administrator fehlt auf der Ressourcengruppe." >&2
+            exit 1
+          }
+
+      - name: ARM-Validierung ohne Bereitstellung
+        shell: bash
+        env:
+          RESOURCE_GROUP: ${{ inputs.resource_group }}
+          LOCATION: ${{ inputs.location }}
+          NAME_PREFIX: ${{ inputs.name_prefix }}
+          ENVIRONMENT_NAME: ${{ inputs.environment_name }}
+          ALERT_EMAIL: ${{ vars.AZURE_ALERT_EMAIL }}
+        run: |
+          set -euo pipefail
+          az deployment group validate \
+            --resource-group "$RESOURCE_GROUP" \
+            --template-file infra/main.bicep \
+            --validation-level ProviderNoRbac \
+            --parameters \
+              location="$LOCATION" \
+              namePrefix="$NAME_PREFIX" \
+              environmentName="$ENVIRONMENT_NAME" \
+              timerSchedule="0 * * * * *" \
+              controlMode="DRY_RUN" \
+              enableLiveReads=false \
+              alertEmail="$ALERT_EMAIL" \
+              runtimeConfigMaxAgeMinutes=1440 \
+            --output none
+
+      - name: Bootstrap-What-if ohne Bereitstellung
+        shell: bash
+        env:
+          RESOURCE_GROUP: ${{ inputs.resource_group }}
+          LOCATION: ${{ inputs.location }}
+          NAME_PREFIX: ${{ inputs.name_prefix }}
+          ENVIRONMENT_NAME: ${{ inputs.environment_name }}
+          ALERT_EMAIL: ${{ vars.AZURE_ALERT_EMAIL }}
+        run: |
+          set -euo pipefail
+          az deployment group what-if \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "ssv53-bootstrap-preflight-${GITHUB_RUN_NUMBER}" \
+            --template-file infra/main.bicep \
+            --validation-level ProviderNoRbac \
+            --result-format ResourceIdOnly \
+            --no-pretty-print \
+            --parameters \
+              location="$LOCATION" \
+              namePrefix="$NAME_PREFIX" \
+              environmentName="$ENVIRONMENT_NAME" \
+              timerSchedule="0 * * * * *" \
+              controlMode="DRY_RUN" \
+              enableLiveReads=false \
+              alertEmail="$ALERT_EMAIL" \
+              runtimeConfigMaxAgeMinutes=1440 \
+            --output json > /tmp/bootstrap-whatif.json
+
+          python - <<'PY2'
+          import json, os
+          from collections import Counter
+          from pathlib import Path
+          data = json.loads(Path('/tmp/bootstrap-whatif.json').read_text(encoding='utf-8'))
+          changes = data.get('changes', [])
+          counts = Counter(c.get('changeType', 'Unknown') for c in changes)
+          summary = Path(os.environ['GITHUB_STEP_SUMMARY'])
+          with summary.open('a', encoding='utf-8') as h:
+              h.write('# Azure-Bootstrap Preflight\n\n')
+              h.write('**Es wurde nichts bereitgestellt oder verändert.**\n\n')
+              h.write('- OIDC Bootstrap-Identität: **erfolgreich**\n')
+              h.write('- Ressourcengruppen-Scope: **erreichbar**\n')
+              h.write('- Contributor/Mitwirkender: **vorhanden**\n')
+              h.write('- RBAC Administrator: **vorhanden**\n')
+              h.write('- Tests/Bicep: **erfolgreich**\n')
+              h.write('- What-if: **erfolgreich**\n\n')
+              h.write('## Erwartete Änderungen\n\n')
+              for k, v in sorted(counts.items()):
+                  h.write(f'- {k}: **{v}**\n')
+          PY2
+
+      - name: Azure-Sitzung beenden
+        if: ${{ always() }}
+        shell: bash
+        run: az logout || true
