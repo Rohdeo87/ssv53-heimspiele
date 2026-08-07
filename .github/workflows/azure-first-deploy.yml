@@ -1,0 +1,310 @@
+name: Azure-Erstbereitstellung
+
+on:
+  workflow_dispatch:
+    inputs:
+      resource_group:
+        description: "Vorhandene Azure-Ressourcengruppe"
+        required: true
+        type: string
+        default: "rg-ssv53-platzpflege-prod"
+      location:
+        description: "Azure-Region"
+        required: true
+        type: string
+        default: "germanywestcentral"
+      name_prefix:
+        description: "Namenspräfix"
+        required: true
+        type: string
+        default: "ssv53platzpflege"
+      environment_name:
+        description: "Azure-Umgebung"
+        required: true
+        type: choice
+        options:
+          - prod
+        default: prod
+      confirmation:
+        description: "Exakt SSV53-AZURE-ERSTDEPLOYMENT eingeben"
+        required: true
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: ssv53-azure-first-deployment
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Sichere Azure-Erstbereitstellung
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Repository laden
+        uses: actions/checkout@v7
+
+      - name: Harte Freigabesperren prüfen
+        shell: bash
+        env:
+          BOOTSTRAP_ENABLED: ${{ vars.AZURE_BOOTSTRAP_ENABLED }}
+          BOOTSTRAP_CLIENT_ID: ${{ vars.AZURE_BOOTSTRAP_CLIENT_ID }}
+          WHATIF_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          ALERT_EMAIL: ${{ vars.AZURE_ALERT_EMAIL }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_REF_NAME" != "feature/azure-mower-migration" ]; then
+            echo "Erstdeployment ist ausschließlich vom Azure-Migrationsbranch erlaubt." >&2
+            exit 1
+          fi
+          if [ "${BOOTSTRAP_ENABLED:-}" != "true" ]; then
+            echo "AZURE_BOOTSTRAP_ENABLED ist nicht true. Deployment bleibt gesperrt." >&2
+            exit 1
+          fi
+          if [ "${CONFIRMATION:-}" != "SSV53-AZURE-ERSTDEPLOYMENT" ]; then
+            echo "Explizite Deployment-Bestätigung fehlt." >&2
+            exit 1
+          fi
+          for variable in BOOTSTRAP_CLIENT_ID TENANT_ID SUBSCRIPTION_ID ALERT_EMAIL; do
+            if [ -z "${!variable:-}" ]; then
+              echo "Erforderliche GitHub-Variable ${variable} fehlt." >&2
+              exit 1
+            fi
+          done
+          if [ -n "${WHATIF_CLIENT_ID:-}" ] && [ "$BOOTSTRAP_CLIENT_ID" = "$WHATIF_CLIENT_ID" ]; then
+            echo "What-if- und Bootstrap-Identität dürfen nicht identisch sein." >&2
+            exit 1
+          fi
+
+      - name: Python 3.12 einrichten
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Abhängigkeiten installieren und Tests ausführen
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check -r requirements.txt
+          python -m compileall -q mower function_app.py scripts
+          python -m unittest discover -s tests -p "test_*.py" -v
+
+      - name: Geprüftes Function-Paket bauen
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf dist
+          mkdir -p dist
+          python scripts/build_azure_source_package.py \
+            --output dist/ssv53-platzpflege-source.zip \
+            | tee dist/package-result.json
+
+      - name: Bicep lokal kompilieren
+        shell: bash
+        run: |
+          set -euo pipefail
+          az bicep install
+          az bicep build --file infra/main.bicep --outfile /tmp/ssv53-main.json
+
+      - name: Per OIDC mit Bootstrap-Identität anmelden
+        uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_BOOTSTRAP_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Zielressourcengruppe prüfen
+        shell: bash
+        env:
+          RESOURCE_GROUP: ${{ inputs.resource_group }}
+        run: |
+          set -euo pipefail
+          az account show --output none
+          az group show --name "$RESOURCE_GROUP" --output none
+
+      - name: Letztes What-if vor Bereitstellung
+        shell: bash
+        env:
+          RESOURCE_GROUP: ${{ inputs.resource_group }}
+          LOCATION: ${{ inputs.location }}
+          NAME_PREFIX: ${{ inputs.name_prefix }}
+          ENVIRONMENT_NAME: ${{ inputs.environment_name }}
+          ALERT_EMAIL: ${{ vars.AZURE_ALERT_EMAIL }}
+        run: |
+          set -euo pipefail
+          az deployment group what-if \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "ssv53-firstdeploy-preflight-${GITHUB_RUN_NUMBER}" \
+            --template-file infra/main.bicep \
+            --validation-level ProviderNoRbac \
+            --result-format ResourceIdOnly \
+            --parameters \
+              location="$LOCATION" \
+              namePrefix="$NAME_PREFIX" \
+              environmentName="$ENVIRONMENT_NAME" \
+              timerSchedule="0 * * * * *" \
+              controlMode="DRY_RUN" \
+              enableLiveReads=false \
+              dynamicConfigEnabled=false \
+              alertsEnabled=false \
+              alertEmail="$ALERT_EMAIL" \
+              runtimeConfigMaxAgeMinutes=1440 \
+            --output none
+
+      - name: Infrastruktur mit deaktivierten Alarmregeln bereitstellen
+        shell: bash
+        env:
+          RESOURCE_GROUP: ${{ inputs.resource_group }}
+          LOCATION: ${{ inputs.location }}
+          NAME_PREFIX: ${{ inputs.name_prefix }}
+          ENVIRONMENT_NAME: ${{ inputs.environment_name }}
+          ALERT_EMAIL: ${{ vars.AZURE_ALERT_EMAIL }}
+        run: |
+          set -euo pipefail
+          az deployment group create \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "ssv53-firstdeploy-infra-${GITHUB_RUN_NUMBER}" \
+            --template-file infra/main.bicep \
+            --mode Incremental \
+            --parameters \
+              location="$LOCATION" \
+              namePrefix="$NAME_PREFIX" \
+              environmentName="$ENVIRONMENT_NAME" \
+              timerSchedule="0 * * * * *" \
+              controlMode="DRY_RUN" \
+              enableLiveReads=false \
+              dynamicConfigEnabled=false \
+              alertsEnabled=false \
+              alertEmail="$ALERT_EMAIL" \
+              runtimeConfigMaxAgeMinutes=1440 \
+            --output json > /tmp/ssv53-firstdeploy.json
+
+          FUNCTION_APP="$(python - <<'PY2'
+          import json
+          with open('/tmp/ssv53-firstdeploy.json', encoding='utf-8') as handle:
+              data = json.load(handle)
+          print(data['properties']['outputs']['deployedFunctionAppName']['value'])
+          PY2
+          )"
+          [ -n "$FUNCTION_APP" ]
+          echo "FUNCTION_APP=$FUNCTION_APP" >> "$GITHUB_ENV"
+
+      - name: Sicherheitsparameter vor Codebereitstellung prüfen
+        shell: bash
+        env:
+          RESOURCE_GROUP: ${{ inputs.resource_group }}
+        run: |
+          set -euo pipefail
+          az functionapp config appsettings list \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$FUNCTION_APP" \
+            --output json > /tmp/appsettings-before.json
+          python - <<'PY2'
+          import json
+          rows = json.load(open('/tmp/appsettings-before.json', encoding='utf-8'))
+          values = {row['name']: str(row.get('value', '')) for row in rows}
+          for key, expected in {
+              'CONTROL_MODE': 'DRY_RUN',
+              'ENABLE_LIVE_READS': 'false',
+              'SSV53_DYNAMIC_CONFIG_ENABLED': 'false',
+          }.items():
+              actual = values.get(key, '')
+              if actual.casefold() != expected.casefold():
+                  raise SystemExit(f'{key} ist unsicher oder unerwartet: {actual!r}')
+          PY2
+
+      - name: Python-Function auf Flex Consumption bereitstellen
+        shell: bash
+        env:
+          RESOURCE_GROUP: ${{ inputs.resource_group }}
+        run: |
+          set -euo pipefail
+          az functionapp deployment source config-zip \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$FUNCTION_APP" \
+            --src dist/ssv53-platzpflege-source.zip \
+            --build-remote true \
+            --timeout 900 \
+            --output none
+
+      - name: Sicherheitsparameter nach Codebereitstellung erneut prüfen
+        shell: bash
+        env:
+          RESOURCE_GROUP: ${{ inputs.resource_group }}
+        run: |
+          set -euo pipefail
+          az functionapp config appsettings list \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$FUNCTION_APP" \
+            --output json > /tmp/appsettings-after.json
+          python - <<'PY2'
+          import json
+          rows = json.load(open('/tmp/appsettings-after.json', encoding='utf-8'))
+          values = {row['name']: str(row.get('value', '')) for row in rows}
+          for key, expected in {
+              'CONTROL_MODE': 'DRY_RUN',
+              'ENABLE_LIVE_READS': 'false',
+              'SSV53_DYNAMIC_CONFIG_ENABLED': 'false',
+          }.items():
+              actual = values.get(key, '')
+              if actual.casefold() != expected.casefold():
+                  raise SystemExit(f'{key} ist unsicher oder unerwartet: {actual!r}')
+          PY2
+
+      - name: Alarmregeln erst jetzt aktivieren
+        shell: bash
+        env:
+          RESOURCE_GROUP: ${{ inputs.resource_group }}
+          LOCATION: ${{ inputs.location }}
+          NAME_PREFIX: ${{ inputs.name_prefix }}
+          ENVIRONMENT_NAME: ${{ inputs.environment_name }}
+          ALERT_EMAIL: ${{ vars.AZURE_ALERT_EMAIL }}
+        run: |
+          set -euo pipefail
+          az deployment group create \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "ssv53-firstdeploy-alerts-${GITHUB_RUN_NUMBER}" \
+            --template-file infra/main.bicep \
+            --mode Incremental \
+            --parameters \
+              location="$LOCATION" \
+              namePrefix="$NAME_PREFIX" \
+              environmentName="$ENVIRONMENT_NAME" \
+              timerSchedule="0 * * * * *" \
+              controlMode="DRY_RUN" \
+              enableLiveReads=false \
+              dynamicConfigEnabled=false \
+              alertsEnabled=true \
+              alertEmail="$ALERT_EMAIL" \
+              runtimeConfigMaxAgeMinutes=1440 \
+            --output none
+
+      - name: Ergebnis zusammenfassen
+        shell: bash
+        run: |
+          {
+            echo "# SSV53 Azure-Erstbereitstellung"
+            echo
+            echo "- Infrastruktur: **bereitgestellt**"
+            echo "- Function-Code: **bereitgestellt**"
+            echo "- CONTROL_MODE: **DRY_RUN**"
+            echo "- ENABLE_LIVE_READS: **false**"
+            echo "- Dynamische Laufzeitdaten: **noch deaktiviert**"
+            echo "- Mäher-/Bewässerungsbefehle: **nicht möglich**"
+            echo "- Fehler-/Heartbeat-Alarme: **aktiviert**"
+            echo
+            echo "Bootstrap-Berechtigung nach erfolgreichem Lauf wieder sperren."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Azure-Sitzung beenden
+        if: ${{ always() }}
+        shell: bash
+        run: az logout || true

@@ -38,6 +38,12 @@ param alertEmail string
 @maxValue(10080)
 param runtimeConfigMaxAgeMinutes int = 1440
 
+@description('Alarmregeln können während des Bootstrap gezielt deaktiviert werden.')
+param alertsEnabled bool = true
+
+@description('Dynamische Laufzeitdaten bleiben beim Erstdeployment zunächst deaktiviert.')
+param dynamicConfigEnabled bool = false
+
 @description('Maximale Instanzzahl des Flex-Consumption-Plans.')
 @minValue(40)
 @maxValue(1000)
@@ -351,7 +357,7 @@ resource functionAppSettings 'Microsoft.Web/sites/config@2024-04-01' = {
     SSV53_TIMEZONE: 'Europe/Berlin'
     SSV53_STATE_TABLE_NAME: stateTableName
     SSV53_STORAGE_ACCOUNT_URL: storage.properties.primaryEndpoints.table
-    SSV53_DYNAMIC_CONFIG_ENABLED: 'true'
+    SSV53_DYNAMIC_CONFIG_ENABLED: string(dynamicConfigEnabled)
     SSV53_CONFIG_STORAGE_ACCOUNT_URL: storage.properties.primaryEndpoints.blob
     SSV53_CONFIG_CONTAINER: runtimeConfigContainerName
     SSV53_CONFIG_MANAGED_IDENTITY_CLIENT_ID: managedIdentity.properties.clientId
@@ -373,7 +379,7 @@ resource heartbeatAlert 'Microsoft.Insights/scheduledQueryRules@2023-12-01' = {
   properties: {
     displayName: 'SSV53 Platzpflege – Heartbeat fehlt'
     description: 'Alarm, wenn innerhalb von 15 Minuten kein SSV53_CONTROL_CYCLE protokolliert wurde.'
-    enabled: true
+    enabled: alertsEnabled
     severity: 2
     evaluationFrequency: 'PT5M'
     windowSize: 'PT15M'
@@ -413,7 +419,7 @@ resource failureAlert 'Microsoft.Insights/scheduledQueryRules@2023-12-01' = {
   properties: {
     displayName: 'SSV53 Platzpflege – Fehler'
     description: 'Alarm bei mindestens einer Application-Insights-Exception innerhalb von 5 Minuten.'
-    enabled: true
+    enabled: alertsEnabled
     severity: 2
     evaluationFrequency: 'PT5M'
     windowSize: 'PT5M'

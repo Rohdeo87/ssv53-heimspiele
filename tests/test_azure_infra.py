@@ -21,6 +21,8 @@ class AzureInfrastructureTests(unittest.TestCase):
     def test_safe_defaults_are_fixed(self) -> None:
         self.assertIn("param controlMode string = 'DRY_RUN'", self.bicep)
         self.assertIn("param enableLiveReads bool = false", self.bicep)
+        self.assertIn("param alertsEnabled bool = true", self.bicep)
+        self.assertIn("param dynamicConfigEnabled bool = false", self.bicep)
         self.assertIn("param timerSchedule string = '0 * * * * *'", self.bicep)
         self.assertIn("param maximumInstanceCount int = 40", self.bicep)
         self.assertIn("param instanceMemoryMB int = 512", self.bicep)
@@ -50,6 +52,8 @@ class AzureInfrastructureTests(unittest.TestCase):
                 "instanceMemoryMB",
                 "alertEmail",
                 "runtimeConfigMaxAgeMinutes",
+                "alertsEnabled",
+                "dynamicConfigEnabled",
             },
             set(self.parameters["parameters"]),
         )
@@ -81,7 +85,8 @@ class AzureInfrastructureTests(unittest.TestCase):
 
     def test_runtime_config_blob_and_alerting_are_declared(self) -> None:
         self.assertIn("runtimeConfigContainerName = 'runtime-config'", self.bicep)
-        self.assertIn("SSV53_DYNAMIC_CONFIG_ENABLED: 'true'", self.bicep)
+        self.assertIn("SSV53_DYNAMIC_CONFIG_ENABLED: string(dynamicConfigEnabled)", self.bicep)
+        self.assertIn("enabled: alertsEnabled", self.bicep)
         self.assertIn("SSV53_CONFIG_MAX_AGE_MINUTES", self.bicep)
         self.assertIn("Microsoft.Insights/actionGroups@2023-01-01", self.bicep)
         self.assertIn("Microsoft.Insights/scheduledQueryRules@2023-12-01", self.bicep)

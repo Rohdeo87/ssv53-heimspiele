@@ -31,6 +31,12 @@
     },
     "runtimeConfigMaxAgeMinutes": {
       "value": 1440
+    },
+    "alertsEnabled": {
+      "value": true
+    },
+    "dynamicConfigEnabled": {
+      "value": false
     }
   }
 }
