@@ -1,0 +1,19 @@
+name: Azure-Bootstrap Preflight
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  guard:
+    name: Nur Platzhalter auf main
+    runs-on: ubuntu-latest
+    steps:
+      - name: Abbruch
+        shell: bash
+        run: |
+          echo "Dieser Eintrag existiert auf main nur für die GitHub-Oberfläche."
+          echo "Bitte im Run-workflow-Dialog feature/azure-mower-migration auswählen."
+          exit 1
