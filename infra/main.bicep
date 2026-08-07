@@ -29,6 +29,15 @@ param controlMode string = 'DRY_RUN'
 @description('Lesende Live-Abfragen bleiben bei der ersten Bereitstellung deaktiviert.')
 param enableLiveReads bool = false
 
+@description('Einziger E-Mail-Empfänger für Platzpflege-Fehler- und Heartbeat-Alarme.')
+@minLength(3)
+param alertEmail string
+
+@description('Maximal zulässiges Alter der dynamischen Trainings-/Spielplandaten in Minuten.')
+@minValue(60)
+@maxValue(10080)
+param runtimeConfigMaxAgeMinutes int = 1440
+
 @description('Maximale Instanzzahl des Flex-Consumption-Plans.')
 @minValue(40)
 @maxValue(1000)
@@ -52,7 +61,11 @@ var logAnalyticsName = take('log-${namePrefix}-${environmentName}-${resourceToke
 var applicationInsightsName = take('appi-${namePrefix}-${environmentName}-${resourceToken}', 260)
 var keyVaultName = take('kv-${namePrefix}-${environmentName}-${resourceToken}', 24)
 var deploymentStorageContainerName = 'app-package-${take(resourceToken, 8)}'
+var runtimeConfigContainerName = 'runtime-config'
 var stateTableName = 'MowerAutomationState'
+var actionGroupName = take('ag-${namePrefix}-${environmentName}-${resourceToken}', 64)
+var heartbeatAlertName = take('alert-${namePrefix}-${environmentName}-heartbeat-${resourceToken}', 260)
+var failureAlertName = take('alert-${namePrefix}-${environmentName}-failure-${resourceToken}', 260)
 
 var storageBlobDataOwnerRoleId = 'b7e6dc6d-f1e8-4753-8033-0f276bb0955b'
 var storageQueueDataContributorRoleId = '974c5e8b-45b9-4653-ba55-5f855dd0fb88'
@@ -94,6 +107,33 @@ resource applicationInsights 'Microsoft.Insights/components@2020-02-02' = {
   }
 }
 
+resource actionGroup 'Microsoft.Insights/actionGroups@2023-01-01' = {
+  name: actionGroupName
+  location: 'global'
+  tags: tags
+  properties: {
+    enabled: true
+    groupShortName: 'SSV53Pflege'
+    emailReceivers: [
+      {
+        name: 'Thomas'
+        emailAddress: alertEmail
+        useCommonAlertSchema: true
+      }
+    ]
+    smsReceivers: []
+    webhookReceivers: []
+    itsmReceivers: []
+    azureAppPushReceivers: []
+    automationRunbookReceivers: []
+    voiceReceivers: []
+    logicAppReceivers: []
+    azureFunctionReceivers: []
+    eventHubReceivers: []
+    armRoleReceivers: []
+  }
+}
+
 resource storage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   name: storageAccountName
   location: location
@@ -130,6 +170,14 @@ resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2023-05-01'
 resource deploymentContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
   parent: blobService
   name: deploymentStorageContainerName
+  properties: {
+    publicAccess: 'None'
+  }
+}
+
+resource runtimeConfigContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
+  parent: blobService
+  name: runtimeConfigContainerName
   properties: {
     publicAccess: 'None'
   }
@@ -303,10 +351,97 @@ resource functionAppSettings 'Microsoft.Web/sites/config@2024-04-01' = {
     SSV53_TIMEZONE: 'Europe/Berlin'
     SSV53_STATE_TABLE_NAME: stateTableName
     SSV53_STORAGE_ACCOUNT_URL: storage.properties.primaryEndpoints.table
+    SSV53_DYNAMIC_CONFIG_ENABLED: 'true'
+    SSV53_CONFIG_STORAGE_ACCOUNT_URL: storage.properties.primaryEndpoints.blob
+    SSV53_CONFIG_CONTAINER: runtimeConfigContainerName
+    SSV53_CONFIG_MANAGED_IDENTITY_CLIENT_ID: managedIdentity.properties.clientId
+    SSV53_CONFIG_MAX_AGE_MINUTES: string(runtimeConfigMaxAgeMinutes)
+    SSV53_CONFIG_CACHE_DIR: '/tmp/ssv53-config'
     HUSQVARNA_CLIENT_ID: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/husqvarna-client-id)'
     HUSQVARNA_CLIENT_SECRET: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/husqvarna-client-secret)'
     HYDRAWISE_API_KEY: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/hydrawise-api-key)'
     HYDRAWISE_CONTROLLER_ID: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/hydrawise-controller-id)'
+  }
+}
+
+
+resource heartbeatAlert 'Microsoft.Insights/scheduledQueryRules@2023-12-01' = {
+  name: heartbeatAlertName
+  location: location
+  kind: 'LogAlert'
+  tags: tags
+  properties: {
+    displayName: 'SSV53 Platzpflege – Heartbeat fehlt'
+    description: 'Alarm, wenn innerhalb von 15 Minuten kein SSV53_CONTROL_CYCLE protokolliert wurde.'
+    enabled: true
+    severity: 2
+    evaluationFrequency: 'PT5M'
+    windowSize: 'PT15M'
+    autoMitigate: true
+    checkWorkspaceAlertsStorageConfigured: false
+    skipQueryValidation: true
+    scopes: [
+      applicationInsights.id
+    ]
+    criteria: {
+      allOf: [
+        {
+          query: 'AppTraces | where Message startswith "SSV53_CONTROL_CYCLE"'
+          timeAggregation: 'Count'
+          operator: 'LessThan'
+          threshold: 1
+          failingPeriods: {
+            minFailingPeriodsToAlert: 1
+            numberOfEvaluationPeriods: 1
+          }
+        }
+      ]
+    }
+    actions: {
+      actionGroups: [
+        actionGroup.id
+      ]
+    }
+  }
+}
+
+resource failureAlert 'Microsoft.Insights/scheduledQueryRules@2023-12-01' = {
+  name: failureAlertName
+  location: location
+  kind: 'LogAlert'
+  tags: tags
+  properties: {
+    displayName: 'SSV53 Platzpflege – Fehler'
+    description: 'Alarm bei mindestens einer Application-Insights-Exception innerhalb von 5 Minuten.'
+    enabled: true
+    severity: 2
+    evaluationFrequency: 'PT5M'
+    windowSize: 'PT5M'
+    autoMitigate: true
+    checkWorkspaceAlertsStorageConfigured: false
+    skipQueryValidation: true
+    scopes: [
+      applicationInsights.id
+    ]
+    criteria: {
+      allOf: [
+        {
+          query: 'AppExceptions'
+          timeAggregation: 'Count'
+          operator: 'GreaterThan'
+          threshold: 0
+          failingPeriods: {
+            minFailingPeriodsToAlert: 1
+            numberOfEvaluationPeriods: 1
+          }
+        }
+      ]
+    }
+    actions: {
+      actionGroups: [
+        actionGroup.id
+      ]
+    }
   }
 }
 
@@ -317,4 +452,6 @@ output deployedKeyVaultName string = keyVault.name
 output deployedStorageAccountName string = storage.name
 output deployedStateTableName string = stateTableName
 output deploymentContainerName string = deploymentContainer.name
+output runtimeConfigContainerName string = runtimeConfigContainer.name
+output alertActionGroupName string = actionGroup.name
 output deployedApplicationInsightsName string = applicationInsights.name

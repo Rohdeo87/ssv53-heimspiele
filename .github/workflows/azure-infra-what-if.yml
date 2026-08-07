@@ -67,9 +67,10 @@ jobs:
           AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
           AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
           AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          AZURE_ALERT_EMAIL: ${{ vars.AZURE_ALERT_EMAIL }}
         run: |
           set -euo pipefail
-          for variable in AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID; do
+          for variable in AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID AZURE_ALERT_EMAIL; do
             if [ -z "${!variable:-}" ]; then
               echo "GitHub-Variable ${variable} fehlt." >&2
               exit 1
@@ -132,6 +133,8 @@ jobs:
               timerSchedule="0 * * * * *" \
               controlMode="DRY_RUN" \
               enableLiveReads=false \
+              alertEmail="${{ vars.AZURE_ALERT_EMAIL }}" \
+              runtimeConfigMaxAgeMinutes=1440 \
             --output none
 
       - name: Azure What-if ohne Bereitstellung
@@ -157,6 +160,8 @@ jobs:
               timerSchedule="0 * * * * *" \
               controlMode="DRY_RUN" \
               enableLiveReads=false \
+              alertEmail="${{ vars.AZURE_ALERT_EMAIL }}" \
+              runtimeConfigMaxAgeMinutes=1440 \
             --output json > /tmp/ssv53-what-if.json
 
           python - <<'PY'

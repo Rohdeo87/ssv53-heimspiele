@@ -16,6 +16,7 @@ REQUIRED_FILES = (
     "requirements.txt",
     "mower/__init__.py",
     "mower/config.json",
+    "mower/config_source.py",
     "mower/controller.py",
     "mower/decision.py",
     "mower/dry_run.py",

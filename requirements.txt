@@ -2,3 +2,5 @@ requests==2.34.2
 beautifulsoup4==4.15.0
 lxml==6.1.1
 azure-functions==1.24.0
+azure-identity==1.25.3
+azure-storage-blob==12.30.0

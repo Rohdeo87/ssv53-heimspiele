@@ -21,3 +21,14 @@ ausdrücklich bestätigt:
    ersten Deployment unverändert?
 
 Ohne dokumentierte Bestätigung dieser Punkte erfolgt keine Aktivierung.
+
+## Bestätigter Stand 2026-08-07
+
+- Mannschaftsbezeichnung: **E1** ist korrekt.
+- Puffer: Training 30 Min, Beregnung 30 Min, Heimspiele 60 Min; zusätzlich 15 Min Park-Lookahead.
+- Laufzeitdaten: versionierter Blob-Abruf per Managed Identity mit ETag, `current`/`previous`, lokaler letzter gültiger Kopie, SHA256-Prüfung und Maximalalter 1440 Minuten. Bei fehlender frischer Kopie gilt **fail-closed**.
+- Alarmempfänger: genau **eine** per GitHub-Variable `AZURE_ALERT_EMAIL` gesetzte Adresse; keine Adresse wird im Repository gespeichert.
+- What-if-Rolle: **SSV53 Azure What-if**.
+- Erstes Deployment bleibt `CONTROL_MODE=DRY_RUN` und `ENABLE_LIVE_READS=false`.
+- Die vier Key-Vault-Geheimnisse bleiben Voraussetzung **vor Aktivierung lesender Live-Abfragen**, nicht für What-if.
+- Vor Aktivierung der dynamischen Live-Daten muss ein initiales `current/manifest.json` samt versionierten Dateien im Container `runtime-config` veröffentlicht werden.

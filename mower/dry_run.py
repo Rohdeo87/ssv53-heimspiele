@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Mapping
 from zoneinfo import ZoneInfo
 
+from mower.config_source import resolve_runtime_inputs
 from mower.decision import (
     AUTOMATION_EXTERNAL_REASON,
     classify_decision,
@@ -95,14 +96,12 @@ def run_read_only_cycle(
 
     tz = ZoneInfo(settings.timezone_name)
     now_local = now_utc.astimezone(tz)
-    config_path = environment.get(
-        "MOWER_CONFIG_PATH",
-        "mower/config.json",
-    ).strip()
-    matches_path = environment.get(
-        "MOWER_MATCHES_PATH",
-        "public/rasen.ics",
-    ).strip()
+    runtime_inputs = resolve_runtime_inputs(
+        environment,
+        now_utc=now_utc,
+    )
+    config_path = runtime_inputs.config_path
+    matches_path = runtime_inputs.matches_path
 
     config = load_json(config_path)
     planning = _as_dict(config.get("planning"))
@@ -213,6 +212,11 @@ def run_read_only_cycle(
                 "matches": str(Path(matches_path)),
                 "matches_found": Path(matches_path).exists(),
                 "matches_loaded": len(match_blocks),
+                "source_kind": runtime_inputs.source_kind,
+                "manifest_etag": runtime_inputs.manifest_etag,
+                "manifest_path": runtime_inputs.manifest_path,
+                "published_at_utc": runtime_inputs.published_at_utc,
+                "fallback_used": runtime_inputs.fallback_used,
             },
             "safety": {
                 "read_only": True,

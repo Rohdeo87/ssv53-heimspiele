@@ -48,6 +48,8 @@ class AzureInfrastructureTests(unittest.TestCase):
                 "enableLiveReads",
                 "maximumInstanceCount",
                 "instanceMemoryMB",
+                "alertEmail",
+                "runtimeConfigMaxAgeMinutes",
             },
             set(self.parameters["parameters"]),
         )
@@ -75,6 +77,21 @@ class AzureInfrastructureTests(unittest.TestCase):
         self.assertNotIn("azure/login", self.workflow)
         self.assertNotIn("az deployment", self.workflow)
         self.assertNotIn("azure/functions-action", self.workflow)
+
+
+    def test_runtime_config_blob_and_alerting_are_declared(self) -> None:
+        self.assertIn("runtimeConfigContainerName = 'runtime-config'", self.bicep)
+        self.assertIn("SSV53_DYNAMIC_CONFIG_ENABLED: 'true'", self.bicep)
+        self.assertIn("SSV53_CONFIG_MAX_AGE_MINUTES", self.bicep)
+        self.assertIn("Microsoft.Insights/actionGroups@2023-01-01", self.bicep)
+        self.assertIn("Microsoft.Insights/scheduledQueryRules@2023-12-01", self.bicep)
+        self.assertIn("SSV53_CONTROL_CYCLE", self.bicep)
+        self.assertIn("AppExceptions", self.bicep)
+        self.assertIn("emailAddress: alertEmail", self.bicep)
+
+    def test_alert_email_is_parameterized_not_hardcoded(self) -> None:
+        self.assertIn("param alertEmail string", self.bicep)
+        self.assertNotIn("@ssv53.de", self.bicep.casefold())
 
 
 if __name__ == "__main__":

@@ -25,6 +25,12 @@
     },
     "instanceMemoryMB": {
       "value": 512
+    },
+    "alertEmail": {
+      "value": "replace-before-deployment@example.invalid"
+    },
+    "runtimeConfigMaxAgeMinutes": {
+      "value": 1440
     }
   }
 }
