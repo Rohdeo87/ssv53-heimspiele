@@ -1,0 +1,112 @@
+name: "Einmalig: Azure Alert-Schema Fix"
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feature/azure-mower-migration
+          token: ${{ secrets.SSV53_AUTOMATION_TOKEN }}
+          persist-credentials: true
+          fetch-depth: 0
+
+      - name: Alert-Abfragen korrigieren
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          b = Path("infra/main.bicep")
+          text = b.read_text(encoding="utf-8")
+          text = text.replace(
+              'query: \'AppTraces | where Message startswith "SSV53_CONTROL_CYCLE"\'',
+              'query: \'traces | where message startswith "SSV53_CONTROL_CYCLE"\'',
+              1,
+          )
+          text = text.replace("query: 'AppExceptions'", "query: 'exceptions'", 1)
+
+          if "AppTraces" in text or "AppExceptions" in text:
+              raise SystemExit("Alte Workspace-Tabellennamen noch vorhanden.")
+
+          b.write_text(text, encoding="utf-8")
+
+          t = Path("tests/test_azure_infra.py")
+          tests = t.read_text(encoding="utf-8")
+          tests = tests.replace(
+              '        self.assertIn("AppExceptions", self.bicep)\n',
+              '        self.assertIn("query: \'exceptions\'", self.bicep)\n'
+              '        self.assertIn("query: \'traces | where message startswith \\"SSV53_CONTROL_CYCLE\\"\'", self.bicep)\n'
+              '        self.assertNotIn("AppTraces", self.bicep)\n'
+              '        self.assertNotIn("AppExceptions", self.bicep)\n',
+              1,
+          )
+          t.write_text(tests, encoding="utf-8")
+          PY
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check -r requirements.txt
+          python -m compileall -q mower function_app.py scripts
+          python -m unittest discover -s tests -p "test_*.py" -v
+          az bicep install
+          az bicep build --file infra/main.bicep --outfile /tmp/ssv53-main.json
+          ! grep -Eq "AppTraces|AppExceptions" infra/main.bicep
+          grep -Fq 'query: '\''traces | where message startswith "SSV53_CONTROL_CYCLE"'\''' infra/main.bicep
+          grep -Fq "query: 'exceptions'" infra/main.bicep
+
+      - name: Commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "SSV53 Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add infra/main.bicep tests/test_azure_infra.py
+          if git diff --cached --quiet; then
+            echo "Fix bereits vorhanden."
+          else
+            git commit -m "Azure Alerts: Application-Insights-Abfrageschema korrigieren"
+            git push origin feature/azure-mower-migration
+          fi
+
+  cleanup:
+    needs: fix
+    if: ${{ success() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          token: ${{ secrets.SSV53_AUTOMATION_TOKEN }}
+          persist-credentials: true
+          fetch-depth: 0
+
+      - name: Installer entfernen
+        shell: bash
+        run: |
+          set -euo pipefail
+          FILE=".github/workflows/SSV53_Azure_AlertSchema_Fix.yml"
+          git config user.name "SSV53 Automation"
+          git config user.email "actions@users.noreply.github.com"
+          rm -f "$FILE"
+          if git diff --quiet; then
+            echo "Bereits entfernt."
+          else
+            git add -A "$FILE"
+            git commit -m "Einmaligen Azure-Alert-Schema-Fix entfernen"
+            git push origin main
+          fi
