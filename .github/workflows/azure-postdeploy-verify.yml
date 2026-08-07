@@ -1,0 +1,166 @@
+name: Azure Post-Deployment-Prüfung
+
+on:
+  workflow_dispatch:
+    inputs:
+      resource_group:
+        description: "Azure-Ressourcengruppe"
+        required: true
+        type: string
+        default: "rg-ssv53-platzpflege-prod"
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: ssv53-azure-postdeploy-verify
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Bereitgestellten sicheren Zustand prüfen
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Repository laden
+        uses: actions/checkout@v7
+
+      - name: Harte Prüfbedingungen
+        shell: bash
+        env:
+          BOOTSTRAP_ENABLED: ${{ vars.AZURE_BOOTSTRAP_ENABLED }}
+          BOOTSTRAP_CLIENT_ID: ${{ vars.AZURE_BOOTSTRAP_CLIENT_ID }}
+          TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_REF_NAME" != "feature/azure-mower-migration" ]; then
+            echo "Prüfung ausschließlich vom Azure-Migrationsbranch erlaubt." >&2
+            exit 1
+          fi
+          if [ "${BOOTSTRAP_ENABLED:-}" = "true" ]; then
+            echo "AZURE_BOOTSTRAP_ENABLED muss false sein." >&2
+            exit 1
+          fi
+          for variable in BOOTSTRAP_CLIENT_ID TENANT_ID SUBSCRIPTION_ID; do
+            if [ -z "${!variable:-}" ]; then
+              echo "Erforderliche GitHub-Variable ${variable} fehlt." >&2
+              exit 1
+            fi
+          done
+
+      - name: Per OIDC anmelden
+        uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_BOOTSTRAP_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Zielressourcen ermitteln
+        shell: bash
+        env:
+          RESOURCE_GROUP: ${{ inputs.resource_group }}
+        run: |
+          set -euo pipefail
+          az group show --name "$RESOURCE_GROUP" --output none
+
+          FUNCTION_APP="$(az resource list --resource-group "$RESOURCE_GROUP" --resource-type Microsoft.Web/sites --query "[?kind && contains(kind, 'functionapp')].name | [0]" --output tsv)"
+          STORAGE_ACCOUNT="$(az storage account list --resource-group "$RESOURCE_GROUP" --query "[0].name" --output tsv)"
+          KEY_VAULT="$(az keyvault list --resource-group "$RESOURCE_GROUP" --query "[0].name" --output tsv)"
+
+          [ -n "$FUNCTION_APP" ]
+          [ -n "$STORAGE_ACCOUNT" ]
+          [ -n "$KEY_VAULT" ]
+
+          echo "FUNCTION_APP=$FUNCTION_APP" >> "$GITHUB_ENV"
+          echo "STORAGE_ACCOUNT=$STORAGE_ACCOUNT" >> "$GITHUB_ENV"
+          echo "KEY_VAULT=$KEY_VAULT" >> "$GITHUB_ENV"
+
+      - name: Sicherheits-Appsettings prüfen
+        shell: bash
+        env:
+          RESOURCE_GROUP: ${{ inputs.resource_group }}
+        run: |
+          set -euo pipefail
+          az functionapp config appsettings list --resource-group "$RESOURCE_GROUP" --name "$FUNCTION_APP" --output json > /tmp/appsettings.json
+          python - <<'PY2'
+          import json
+          rows = json.load(open('/tmp/appsettings.json', encoding='utf-8'))
+          values = {row['name']: str(row.get('value', '')) for row in rows}
+          expected = {
+              'CONTROL_MODE': 'DRY_RUN',
+              'ENABLE_LIVE_READS': 'false',
+              'SSV53_DYNAMIC_CONFIG_ENABLED': 'false',
+          }
+          for key, expected_value in expected.items():
+              actual = values.get(key, '')
+              if actual.casefold() != expected_value.casefold():
+                  raise SystemExit(f'{key} unsicher/unerwartet: {actual!r}')
+          if 'FUNCTIONS_WORKER_RUNTIME' in values:
+              raise SystemExit('FUNCTIONS_WORKER_RUNTIME darf bei Flex Consumption nicht gesetzt sein.')
+          PY2
+
+      - name: Storage und Key Vault prüfen
+        shell: bash
+        env:
+          RESOURCE_GROUP: ${{ inputs.resource_group }}
+        run: |
+          set -euo pipefail
+          SHARED_KEY="$(az storage account show --resource-group "$RESOURCE_GROUP" --name "$STORAGE_ACCOUNT" --query allowSharedKeyAccess --output tsv)"
+          [ "${SHARED_KEY,,}" = "false" ]
+          KV_RBAC="$(az keyvault show --resource-group "$RESOURCE_GROUP" --name "$KEY_VAULT" --query properties.enableRbacAuthorization --output tsv)"
+          [ "${KV_RBAC,,}" = "true" ]
+
+      - name: Function App und Code prüfen
+        shell: bash
+        env:
+          RESOURCE_GROUP: ${{ inputs.resource_group }}
+        run: |
+          set -euo pipefail
+          STATE="$(az functionapp show --resource-group "$RESOURCE_GROUP" --name "$FUNCTION_APP" --query state --output tsv)"
+          [ "${STATE,,}" = "running" ]
+          IDENTITY_TYPE="$(az functionapp show --resource-group "$RESOURCE_GROUP" --name "$FUNCTION_APP" --query identity.type --output tsv)"
+          [ "$IDENTITY_TYPE" = "UserAssigned" ]
+          COUNT="$(az functionapp function list --resource-group "$RESOURCE_GROUP" --name "$FUNCTION_APP" --query "length(@)" --output tsv)"
+          [ "$COUNT" -gt 0 ]
+
+      - name: Alarmregeln prüfen
+        shell: bash
+        env:
+          RESOURCE_GROUP: ${{ inputs.resource_group }}
+        run: |
+          set -euo pipefail
+          ALERT_IDS="$(az resource list --resource-group "$RESOURCE_GROUP" --resource-type Microsoft.Insights/scheduledQueryRules --query "[].id" --output tsv)"
+          COUNT="$(printf '%s\n' "$ALERT_IDS" | sed '/^$/d' | wc -l)"
+          [ "$COUNT" -eq 2 ]
+          while IFS= read -r ALERT_ID; do
+            [ -z "$ALERT_ID" ] && continue
+            ENABLED="$(az resource show --ids "$ALERT_ID" --api-version 2023-12-01 --query properties.enabled --output tsv)"
+            [ "${ENABLED,,}" = "true" ]
+          done <<< "$ALERT_IDS"
+
+      - name: Ergebnis zusammenfassen
+        shell: bash
+        run: |
+          {
+            echo "# Azure Post-Deployment-Prüfung"
+            echo
+            echo "- Bootstrap-Gate: **deaktiviert**"
+            echo "- Function App: **Running**"
+            echo "- Function-Code: **auffindbar**"
+            echo "- CONTROL_MODE: **DRY_RUN**"
+            echo "- ENABLE_LIVE_READS: **false**"
+            echo "- Dynamische Laufzeitdaten: **false**"
+            echo "- Legacy FUNCTIONS_WORKER_RUNTIME: **nicht gesetzt**"
+            echo "- Storage Shared Key: **deaktiviert**"
+            echo "- Key Vault RBAC: **aktiviert**"
+            echo "- Alarmregeln: **2 / aktiviert**"
+            echo "- Geräteaktionen: **nicht ausgeführt**"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Azure-Sitzung beenden
+        if: ${{ always() }}
+        shell: bash
+        run: az logout || true
