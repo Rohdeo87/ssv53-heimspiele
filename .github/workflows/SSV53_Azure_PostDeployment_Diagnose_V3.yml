@@ -1,0 +1,132 @@
+name: "Einmalig: Azure Post-Deployment Diagnose V3"
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    name: Diagnoseausgabe ergänzen
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Migrationsbranch laden
+        uses: actions/checkout@v7
+        with:
+          ref: feature/azure-mower-migration
+          token: ${{ secrets.SSV53_AUTOMATION_TOKEN }}
+          persist-credentials: true
+          fetch-depth: 0
+
+      - name: Prüfworkflow diagnostisch verbessern
+        shell: bash
+        run: |
+          set -euo pipefail
+          git pull --ff-only origin feature/azure-mower-migration
+
+          python - <<'PY'
+          from pathlib import Path
+
+          p = Path(".github/workflows/azure-postdeploy-verify.yml")
+          text = p.read_text(encoding="utf-8")
+
+          start = text.index("      - name: Function App und Code prüfen\n")
+          end = text.index("      - name: Alarmregeln prüfen\n", start)
+
+          new = '''      - name: Function App und Code prüfen
+        shell: bash
+        env:
+          RESOURCE_GROUP: ${{ inputs.resource_group }}
+        run: |
+          set -euo pipefail
+
+          STATE="$(az functionapp show --resource-group "$RESOURCE_GROUP" --name "$FUNCTION_APP" --query state --output tsv)"
+          echo "Function App state: ${STATE:-<leer>}"
+          if [ "${STATE,,}" != "running" ]; then
+            echo "FEHLER: Function App ist nicht Running." >&2
+            exit 1
+          fi
+
+          IDENTITY_TYPE="$(az functionapp show --resource-group "$RESOURCE_GROUP" --name "$FUNCTION_APP" --query identity.type --output tsv)"
+          echo "Managed identity type: ${IDENTITY_TYPE:-<leer>}"
+          if [[ "${IDENTITY_TYPE,,}" != *"userassigned"* ]]; then
+            echo "FEHLER: Keine User-Assigned Managed Identity erkannt." >&2
+            exit 1
+          fi
+
+          az functionapp function list --resource-group "$RESOURCE_GROUP" --name "$FUNCTION_APP" --output json > /tmp/functions.json
+          COUNT="$(jq 'length' /tmp/functions.json)"
+          echo "Erkannte Azure Functions: $COUNT"
+
+          if [ "$COUNT" -le 0 ]; then
+            echo "FEHLER: Function App läuft, aber Azure erkennt keinen Function-Trigger." >&2
+            echo "Letzte Deployment-Metadaten (nur lesend):"
+            az functionapp log deployment list --resource-group "$RESOURCE_GROUP" --name "$FUNCTION_APP" --output table || true
+            exit 1
+          fi
+
+'''
+
+          p.write_text(text[:start] + new + text[end:], encoding="utf-8")
+          PY
+
+      - name: Änderung prüfen
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq "Function App state:" .github/workflows/azure-postdeploy-verify.yml
+          grep -Fq "Managed identity type:" .github/workflows/azure-postdeploy-verify.yml
+          grep -Fq "Erkannte Azure Functions:" .github/workflows/azure-postdeploy-verify.yml
+
+      - name: Committen
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "SSV53 Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add .github/workflows/azure-postdeploy-verify.yml
+
+          if git diff --cached --quiet; then
+            echo "Diagnoseausgabe bereits vorhanden."
+          else
+            git commit -m "Azure Post-Deployment-Prüfung diagnostisch verbessern"
+            git push origin feature/azure-mower-migration
+          fi
+
+  cleanup:
+    name: Diagnose-Installer entfernen
+    needs: patch
+    if: ${{ success() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Main laden
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          token: ${{ secrets.SSV53_AUTOMATION_TOKEN }}
+          persist-credentials: true
+          fetch-depth: 0
+
+      - name: V3 entfernen
+        shell: bash
+        run: |
+          set -euo pipefail
+          FILE=".github/workflows/SSV53_Azure_PostDeployment_Diagnose_V3.yml"
+
+          git config user.name "SSV53 Automation"
+          git config user.email "actions@users.noreply.github.com"
+
+          rm -f "$FILE"
+
+          if git diff --quiet; then
+            echo "Installer bereits entfernt."
+          else
+            git add -A "$FILE"
+            git commit -m "Einmaligen Azure-Post-Deployment-Diagnose-Installer entfernen"
+            git push origin main
+          fi

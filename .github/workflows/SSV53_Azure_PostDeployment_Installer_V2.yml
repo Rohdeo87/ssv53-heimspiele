@@ -1,0 +1,97 @@
+name: "Einmalig: Azure Post-Deployment-Prüfung V2 vorbereiten"
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ssv53-azure-postdeploy-v2-installer
+  cancel-in-progress: false
+
+jobs:
+  install:
+    name: Post-Deployment-Prüfung V2 vorbereiten
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Main laden
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          token: ${{ secrets.SSV53_AUTOMATION_TOKEN }}
+          persist-credentials: true
+          fetch-depth: 0
+
+      - name: Prüfworkflow im Migrationsbranch schreiben
+        shell: bash
+        env:
+          WORKFLOW_B64: "bmFtZTogQXp1cmUgUG9zdC1EZXBsb3ltZW50LVByw7xmdW5nCgpvbjoKICB3b3JrZmxvd19kaXNwYXRjaDoKICAgIGlucHV0czoKICAgICAgcmVzb3VyY2VfZ3JvdXA6CiAgICAgICAgZGVzY3JpcHRpb246ICJBenVyZS1SZXNzb3VyY2VuZ3J1cHBlIgogICAgICAgIHJlcXVpcmVkOiB0cnVlCiAgICAgICAgdHlwZTogc3RyaW5nCiAgICAgICAgZGVmYXVsdDogInJnLXNzdjUzLXBsYXR6cGZsZWdlLXByb2QiCgpwZXJtaXNzaW9uczoKICBpZC10b2tlbjogd3JpdGUKICBjb250ZW50czogcmVhZAoKY29uY3VycmVuY3k6CiAgZ3JvdXA6IHNzdjUzLWF6dXJlLXBvc3RkZXBsb3ktdmVyaWZ5CiAgY2FuY2VsLWluLXByb2dyZXNzOiBmYWxzZQoKam9iczoKICB2ZXJpZnk6CiAgICBuYW1lOiBCZXJlaXRnZXN0ZWxsdGVuIHNpY2hlcmVuIFp1c3RhbmQgcHLDvGZlbgogICAgcnVucy1vbjogdWJ1bnR1LWxhdGVzdAogICAgdGltZW91dC1taW51dGVzOiAyMAoKICAgIHN0ZXBzOgogICAgICAtIG5hbWU6IFJlcG9zaXRvcnkgbGFkZW4KICAgICAgICB1c2VzOiBhY3Rpb25zL2NoZWNrb3V0QHY3CgogICAgICAtIG5hbWU6IEhhcnRlIFByw7xmYmVkaW5ndW5nZW4KICAgICAgICBzaGVsbDogYmFzaAogICAgICAgIGVudjoKICAgICAgICAgIEJPT1RTVFJBUF9FTkFCTEVEOiAke3sgdmFycy5BWlVSRV9CT09UU1RSQVBfRU5BQkxFRCB9fQogICAgICAgICAgQk9PVFNUUkFQX0NMSUVOVF9JRDogJHt7IHZhcnMuQVpVUkVfQk9PVFNUUkFQX0NMSUVOVF9JRCB9fQogICAgICAgICAgVEVOQU5UX0lEOiAke3sgdmFycy5BWlVSRV9URU5BTlRfSUQgfX0KICAgICAgICAgIFNVQlNDUklQVElPTl9JRDogJHt7IHZhcnMuQVpVUkVfU1VCU0NSSVBUSU9OX0lEIH19CiAgICAgICAgcnVuOiB8CiAgICAgICAgICBzZXQgLWV1byBwaXBlZmFpbAogICAgICAgICAgaWYgWyAiJEdJVEhVQl9SRUZfTkFNRSIgIT0gImZlYXR1cmUvYXp1cmUtbW93ZXItbWlncmF0aW9uIiBdOyB0aGVuCiAgICAgICAgICAgIGVjaG8gIlByw7xmdW5nIGF1c3NjaGxpZcOfbGljaCB2b20gQXp1cmUtTWlncmF0aW9uc2JyYW5jaCBlcmxhdWJ0LiIgPiYyCiAgICAgICAgICAgIGV4aXQgMQogICAgICAgICAgZmkKICAgICAgICAgIGlmIFsgIiR7Qk9PVFNUUkFQX0VOQUJMRUQ6LX0iID0gInRydWUiIF07IHRoZW4KICAgICAgICAgICAgZWNobyAiQVpVUkVfQk9PVFNUUkFQX0VOQUJMRUQgbXVzcyBmYWxzZSBzZWluLiIgPiYyCiAgICAgICAgICAgIGV4aXQgMQogICAgICAgICAgZmkKICAgICAgICAgIGZvciB2YXJpYWJsZSBpbiBCT09UU1RSQVBfQ0xJRU5UX0lEIFRFTkFOVF9JRCBTVUJTQ1JJUFRJT05fSUQ7IGRvCiAgICAgICAgICAgIGlmIFsgLXogIiR7IXZhcmlhYmxlOi19IiBdOyB0aGVuCiAgICAgICAgICAgICAgZWNobyAiRXJmb3JkZXJsaWNoZSBHaXRIdWItVmFyaWFibGUgJHt2YXJpYWJsZX0gZmVobHQuIiA+JjIKICAgICAgICAgICAgICBleGl0IDEKICAgICAgICAgICAgZmkKICAgICAgICAgIGRvbmUKCiAgICAgIC0gbmFtZTogUGVyIE9JREMgYW5tZWxkZW4KICAgICAgICB1c2VzOiBhenVyZS9sb2dpbkB2MwogICAgICAgIHdpdGg6CiAgICAgICAgICBjbGllbnQtaWQ6ICR7eyB2YXJzLkFaVVJFX0JPT1RTVFJBUF9DTElFTlRfSUQgfX0KICAgICAgICAgIHRlbmFudC1pZDogJHt7IHZhcnMuQVpVUkVfVEVOQU5UX0lEIH19CiAgICAgICAgICBzdWJzY3JpcHRpb24taWQ6ICR7eyB2YXJzLkFaVVJFX1NVQlNDUklQVElPTl9JRCB9fQoKICAgICAgLSBuYW1lOiBaaWVscmVzc291cmNlbiBlcm1pdHRlbG4KICAgICAgICBzaGVsbDogYmFzaAogICAgICAgIGVudjoKICAgICAgICAgIFJFU09VUkNFX0dST1VQOiAke3sgaW5wdXRzLnJlc291cmNlX2dyb3VwIH19CiAgICAgICAgcnVuOiB8CiAgICAgICAgICBzZXQgLWV1byBwaXBlZmFpbAogICAgICAgICAgYXogZ3JvdXAgc2hvdyAtLW5hbWUgIiRSRVNPVVJDRV9HUk9VUCIgLS1vdXRwdXQgbm9uZQoKICAgICAgICAgIEZVTkNUSU9OX0FQUD0iJChheiByZXNvdXJjZSBsaXN0IC0tcmVzb3VyY2UtZ3JvdXAgIiRSRVNPVVJDRV9HUk9VUCIgLS1yZXNvdXJjZS10eXBlIE1pY3Jvc29mdC5XZWIvc2l0ZXMgLS1xdWVyeSAiWz9raW5kICYmIGNvbnRhaW5zKGtpbmQsICdmdW5jdGlvbmFwcCcpXS5uYW1lIHwgWzBdIiAtLW91dHB1dCB0c3YpIgogICAgICAgICAgU1RPUkFHRV9BQ0NPVU5UPSIkKGF6IHN0b3JhZ2UgYWNjb3VudCBsaXN0IC0tcmVzb3VyY2UtZ3JvdXAgIiRSRVNPVVJDRV9HUk9VUCIgLS1xdWVyeSAiWzBdLm5hbWUiIC0tb3V0cHV0IHRzdikiCiAgICAgICAgICBLRVlfVkFVTFQ9IiQoYXoga2V5dmF1bHQgbGlzdCAtLXJlc291cmNlLWdyb3VwICIkUkVTT1VSQ0VfR1JPVVAiIC0tcXVlcnkgIlswXS5uYW1lIiAtLW91dHB1dCB0c3YpIgoKICAgICAgICAgIFsgLW4gIiRGVU5DVElPTl9BUFAiIF0KICAgICAgICAgIFsgLW4gIiRTVE9SQUdFX0FDQ09VTlQiIF0KICAgICAgICAgIFsgLW4gIiRLRVlfVkFVTFQiIF0KCiAgICAgICAgICBlY2hvICJGVU5DVElPTl9BUFA9JEZVTkNUSU9OX0FQUCIgPj4gIiRHSVRIVUJfRU5WIgogICAgICAgICAgZWNobyAiU1RPUkFHRV9BQ0NPVU5UPSRTVE9SQUdFX0FDQ09VTlQiID4+ICIkR0lUSFVCX0VOViIKICAgICAgICAgIGVjaG8gIktFWV9WQVVMVD0kS0VZX1ZBVUxUIiA+PiAiJEdJVEhVQl9FTlYiCgogICAgICAtIG5hbWU6IFNpY2hlcmhlaXRzLUFwcHNldHRpbmdzIHByw7xmZW4KICAgICAgICBzaGVsbDogYmFzaAogICAgICAgIGVudjoKICAgICAgICAgIFJFU09VUkNFX0dST1VQOiAke3sgaW5wdXRzLnJlc291cmNlX2dyb3VwIH19CiAgICAgICAgcnVuOiB8CiAgICAgICAgICBzZXQgLWV1byBwaXBlZmFpbAogICAgICAgICAgYXogZnVuY3Rpb25hcHAgY29uZmlnIGFwcHNldHRpbmdzIGxpc3QgLS1yZXNvdXJjZS1ncm91cCAiJFJFU09VUkNFX0dST1VQIiAtLW5hbWUgIiRGVU5DVElPTl9BUFAiIC0tb3V0cHV0IGpzb24gPiAvdG1wL2FwcHNldHRpbmdzLmpzb24KICAgICAgICAgIHB5dGhvbiAtIDw8J1BZMicKICAgICAgICAgIGltcG9ydCBqc29uCiAgICAgICAgICByb3dzID0ganNvbi5sb2FkKG9wZW4oJy90bXAvYXBwc2V0dGluZ3MuanNvbicsIGVuY29kaW5nPSd1dGYtOCcpKQogICAgICAgICAgdmFsdWVzID0ge3Jvd1snbmFtZSddOiBzdHIocm93LmdldCgndmFsdWUnLCAnJykpIGZvciByb3cgaW4gcm93c30KICAgICAgICAgIGV4cGVjdGVkID0gewogICAgICAgICAgICAgICdDT05UUk9MX01PREUnOiAnRFJZX1JVTicsCiAgICAgICAgICAgICAgJ0VOQUJMRV9MSVZFX1JFQURTJzogJ2ZhbHNlJywKICAgICAgICAgICAgICAnU1NWNTNfRFlOQU1JQ19DT05GSUdfRU5BQkxFRCc6ICdmYWxzZScsCiAgICAgICAgICB9CiAgICAgICAgICBmb3Iga2V5LCBleHBlY3RlZF92YWx1ZSBpbiBleHBlY3RlZC5pdGVtcygpOgogICAgICAgICAgICAgIGFjdHVhbCA9IHZhbHVlcy5nZXQoa2V5LCAnJykKICAgICAgICAgICAgICBpZiBhY3R1YWwuY2FzZWZvbGQoKSAhPSBleHBlY3RlZF92YWx1ZS5jYXNlZm9sZCgpOgogICAgICAgICAgICAgICAgICByYWlzZSBTeXN0ZW1FeGl0KGYne2tleX0gdW5zaWNoZXIvdW5lcndhcnRldDoge2FjdHVhbCFyfScpCiAgICAgICAgICBpZiAnRlVOQ1RJT05TX1dPUktFUl9SVU5USU1FJyBpbiB2YWx1ZXM6CiAgICAgICAgICAgICAgcmFpc2UgU3lzdGVtRXhpdCgnRlVOQ1RJT05TX1dPUktFUl9SVU5USU1FIGRhcmYgYmVpIEZsZXggQ29uc3VtcHRpb24gbmljaHQgZ2VzZXR6dCBzZWluLicpCiAgICAgICAgICBQWTIKCiAgICAgIC0gbmFtZTogU3RvcmFnZSB1bmQgS2V5IFZhdWx0IHByw7xmZW4KICAgICAgICBzaGVsbDogYmFzaAogICAgICAgIGVudjoKICAgICAgICAgIFJFU09VUkNFX0dST1VQOiAke3sgaW5wdXRzLnJlc291cmNlX2dyb3VwIH19CiAgICAgICAgcnVuOiB8CiAgICAgICAgICBzZXQgLWV1byBwaXBlZmFpbAogICAgICAgICAgU0hBUkVEX0tFWT0iJChheiBzdG9yYWdlIGFjY291bnQgc2hvdyAtLXJlc291cmNlLWdyb3VwICIkUkVTT1VSQ0VfR1JPVVAiIC0tbmFtZSAiJFNUT1JBR0VfQUNDT1VOVCIgLS1xdWVyeSBhbGxvd1NoYXJlZEtleUFjY2VzcyAtLW91dHB1dCB0c3YpIgogICAgICAgICAgWyAiJHtTSEFSRURfS0VZLCx9IiA9ICJmYWxzZSIgXQogICAgICAgICAgS1ZfUkJBQz0iJChheiBrZXl2YXVsdCBzaG93IC0tcmVzb3VyY2UtZ3JvdXAgIiRSRVNPVVJDRV9HUk9VUCIgLS1uYW1lICIkS0VZX1ZBVUxUIiAtLXF1ZXJ5IHByb3BlcnRpZXMuZW5hYmxlUmJhY0F1dGhvcml6YXRpb24gLS1vdXRwdXQgdHN2KSIKICAgICAgICAgIFsgIiR7S1ZfUkJBQywsfSIgPSAidHJ1ZSIgXQoKICAgICAgLSBuYW1lOiBGdW5jdGlvbiBBcHAgdW5kIENvZGUgcHLDvGZlbgogICAgICAgIHNoZWxsOiBiYXNoCiAgICAgICAgZW52OgogICAgICAgICAgUkVTT1VSQ0VfR1JPVVA6ICR7eyBpbnB1dHMucmVzb3VyY2VfZ3JvdXAgfX0KICAgICAgICBydW46IHwKICAgICAgICAgIHNldCAtZXVvIHBpcGVmYWlsCiAgICAgICAgICBTVEFURT0iJChheiBmdW5jdGlvbmFwcCBzaG93IC0tcmVzb3VyY2UtZ3JvdXAgIiRSRVNPVVJDRV9HUk9VUCIgLS1uYW1lICIkRlVOQ1RJT05fQVBQIiAtLXF1ZXJ5IHN0YXRlIC0tb3V0cHV0IHRzdikiCiAgICAgICAgICBbICIke1NUQVRFLCx9IiA9ICJydW5uaW5nIiBdCiAgICAgICAgICBJREVOVElUWV9UWVBFPSIkKGF6IGZ1bmN0aW9uYXBwIHNob3cgLS1yZXNvdXJjZS1ncm91cCAiJFJFU09VUkNFX0dST1VQIiAtLW5hbWUgIiRGVU5DVElPTl9BUFAiIC0tcXVlcnkgaWRlbnRpdHkudHlwZSAtLW91dHB1dCB0c3YpIgogICAgICAgICAgWyAiJElERU5USVRZX1RZUEUiID0gIlVzZXJBc3NpZ25lZCIgXQogICAgICAgICAgQ09VTlQ9IiQoYXogZnVuY3Rpb25hcHAgZnVuY3Rpb24gbGlzdCAtLXJlc291cmNlLWdyb3VwICIkUkVTT1VSQ0VfR1JPVVAiIC0tbmFtZSAiJEZVTkNUSU9OX0FQUCIgLS1xdWVyeSAibGVuZ3RoKEApIiAtLW91dHB1dCB0c3YpIgogICAgICAgICAgWyAiJENPVU5UIiAtZ3QgMCBdCgogICAgICAtIG5hbWU6IEFsYXJtcmVnZWxuIHByw7xmZW4KICAgICAgICBzaGVsbDogYmFzaAogICAgICAgIGVudjoKICAgICAgICAgIFJFU09VUkNFX0dST1VQOiAke3sgaW5wdXRzLnJlc291cmNlX2dyb3VwIH19CiAgICAgICAgcnVuOiB8CiAgICAgICAgICBzZXQgLWV1byBwaXBlZmFpbAogICAgICAgICAgQUxFUlRfSURTPSIkKGF6IHJlc291cmNlIGxpc3QgLS1yZXNvdXJjZS1ncm91cCAiJFJFU09VUkNFX0dST1VQIiAtLXJlc291cmNlLXR5cGUgTWljcm9zb2Z0Lkluc2lnaHRzL3NjaGVkdWxlZFF1ZXJ5UnVsZXMgLS1xdWVyeSAiW10uaWQiIC0tb3V0cHV0IHRzdikiCiAgICAgICAgICBDT1VOVD0iJChwcmludGYgJyVzXG4nICIkQUxFUlRfSURTIiB8IHNlZCAnL14kL2QnIHwgd2MgLWwpIgogICAgICAgICAgWyAiJENPVU5UIiAtZXEgMiBdCiAgICAgICAgICB3aGlsZSBJRlM9IHJlYWQgLXIgQUxFUlRfSUQ7IGRvCiAgICAgICAgICAgIFsgLXogIiRBTEVSVF9JRCIgXSAmJiBjb250aW51ZQogICAgICAgICAgICBFTkFCTEVEPSIkKGF6IHJlc291cmNlIHNob3cgLS1pZHMgIiRBTEVSVF9JRCIgLS1hcGktdmVyc2lvbiAyMDIzLTEyLTAxIC0tcXVlcnkgcHJvcGVydGllcy5lbmFibGVkIC0tb3V0cHV0IHRzdikiCiAgICAgICAgICAgIFsgIiR7RU5BQkxFRCwsfSIgPSAidHJ1ZSIgXQogICAgICAgICAgZG9uZSA8PDwgIiRBTEVSVF9JRFMiCgogICAgICAtIG5hbWU6IEVyZ2VibmlzIHp1c2FtbWVuZmFzc2VuCiAgICAgICAgc2hlbGw6IGJhc2gKICAgICAgICBydW46IHwKICAgICAgICAgIHsKICAgICAgICAgICAgZWNobyAiIyBBenVyZSBQb3N0LURlcGxveW1lbnQtUHLDvGZ1bmciCiAgICAgICAgICAgIGVjaG8KICAgICAgICAgICAgZWNobyAiLSBCb290c3RyYXAtR2F0ZTogKipkZWFrdGl2aWVydCoqIgogICAgICAgICAgICBlY2hvICItIEZ1bmN0aW9uIEFwcDogKipSdW5uaW5nKioiCiAgICAgICAgICAgIGVjaG8gIi0gRnVuY3Rpb24tQ29kZTogKiphdWZmaW5kYmFyKioiCiAgICAgICAgICAgIGVjaG8gIi0gQ09OVFJPTF9NT0RFOiAqKkRSWV9SVU4qKiIKICAgICAgICAgICAgZWNobyAiLSBFTkFCTEVfTElWRV9SRUFEUzogKipmYWxzZSoqIgogICAgICAgICAgICBlY2hvICItIER5bmFtaXNjaGUgTGF1ZnplaXRkYXRlbjogKipmYWxzZSoqIgogICAgICAgICAgICBlY2hvICItIExlZ2FjeSBGVU5DVElPTlNfV09SS0VSX1JVTlRJTUU6ICoqbmljaHQgZ2VzZXR6dCoqIgogICAgICAgICAgICBlY2hvICItIFN0b3JhZ2UgU2hhcmVkIEtleTogKipkZWFrdGl2aWVydCoqIgogICAgICAgICAgICBlY2hvICItIEtleSBWYXVsdCBSQkFDOiAqKmFrdGl2aWVydCoqIgogICAgICAgICAgICBlY2hvICItIEFsYXJtcmVnZWxuOiAqKjIgLyBha3RpdmllcnQqKiIKICAgICAgICAgICAgZWNobyAiLSBHZXLDpHRlYWt0aW9uZW46ICoqbmljaHQgYXVzZ2Vmw7xocnQqKiIKICAgICAgICAgIH0gPj4gIiRHSVRIVUJfU1RFUF9TVU1NQVJZIgoKICAgICAgLSBuYW1lOiBBenVyZS1TaXR6dW5nIGJlZW5kZW4KICAgICAgICBpZjogJHt7IGFsd2F5cygpIH19CiAgICAgICAgc2hlbGw6IGJhc2gKICAgICAgICBydW46IGF6IGxvZ291dCB8fCB0cnVlCg=="
+        run: |
+          set -euo pipefail
+          git fetch origin feature/azure-mower-migration
+          git checkout feature/azure-mower-migration
+          git pull --ff-only origin feature/azure-mower-migration
+          printf '%s' "$WORKFLOW_B64" | base64 -d > .github/workflows/azure-postdeploy-verify.yml
+          git config user.name "SSV53 Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add .github/workflows/azure-postdeploy-verify.yml
+          if git diff --cached --quiet; then
+            echo "Prüfworkflow bereits aktuell."
+          else
+            git commit -m "Azure Post-Deployment-Prüfung ergänzen"
+            git push origin feature/azure-mower-migration
+          fi
+
+      - name: Sicheren Platzhalter auf main schreiben
+        shell: bash
+        env:
+          PLACEHOLDER_B64: "bmFtZTogQXp1cmUgUG9zdC1EZXBsb3ltZW50LVByw7xmdW5nCgpvbjoKICB3b3JrZmxvd19kaXNwYXRjaDoKCnBlcm1pc3Npb25zOgogIGNvbnRlbnRzOiByZWFkCgpqb2JzOgogIGd1YXJkOgogICAgbmFtZTogTWFpbiBibGVpYnQgZ2VzcGVycnQKICAgIHJ1bnMtb246IHVidW50dS1sYXRlc3QKICAgIHN0ZXBzOgogICAgICAtIG5hbWU6IEFiYnJ1Y2gKICAgICAgICBzaGVsbDogYmFzaAogICAgICAgIHJ1bjogfAogICAgICAgICAgZWNobyAiRGllc2VyIEVpbnRyYWcgZXhpc3RpZXJ0IGF1ZiBtYWluIG51ciBmw7xyIGRpZSBHaXRIdWItT2JlcmZsw6RjaGUuIgogICAgICAgICAgZWNobyAiSW0gUnVuLXdvcmtmbG93LURpYWxvZyBmZWF0dXJlL2F6dXJlLW1vd2VyLW1pZ3JhdGlvbiBhdXN3w6RobGVuLiIKICAgICAgICAgIGV4aXQgMQo="
+        run: |
+          set -euo pipefail
+          git checkout main
+          git pull --ff-only origin main
+          printf '%s' "$PLACEHOLDER_B64" | base64 -d > .github/workflows/azure-postdeploy-verify.yml
+          git config user.name "SSV53 Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add .github/workflows/azure-postdeploy-verify.yml
+          if git diff --cached --quiet; then
+            echo "Platzhalter bereits aktuell."
+          else
+            git commit -m "Sicheren Platzhalter für Azure Post-Deployment-Prüfung ergänzen"
+            git push origin main
+          fi
+
+  cleanup:
+    name: Alte Installer aufräumen
+    needs: install
+    if: ${{ success() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Main laden
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          token: ${{ secrets.SSV53_AUTOMATION_TOKEN }}
+          persist-credentials: true
+          fetch-depth: 0
+
+      - name: Installer entfernen
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "SSV53 Automation"
+          git config user.email "actions@users.noreply.github.com"
+          rm -f .github/workflows/SSV53_Azure_PostDeployment_Installer.yml
+          rm -f .github/workflows/SSV53_Azure_PostDeployment_Installer_V2.yml
+          git add -A .github/workflows
+          if git diff --cached --quiet; then
+            echo "Nichts aufzuräumen."
+          else
+            git commit -m "Einmalige Azure-Post-Deployment-Installer entfernen"
+            git push origin main
+          fi
