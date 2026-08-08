@@ -1,0 +1,381 @@
+name: Azure Post-Deployment-Prüfung
+
+on:
+  workflow_dispatch:
+    inputs:
+      resource_group:
+        description: "Azure-Ressourcengruppe"
+        required: true
+        type: string
+        default: "rg-ssv53-platzpflege-prod"
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: ssv53-azure-postdeploy-verify
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Bereitgestellten sicheren Zustand prüfen
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Repository laden
+        uses: actions/checkout@v7
+
+      - name: Harte Prüfbedingungen
+        shell: bash
+        env:
+          BOOTSTRAP_ENABLED: ${{ vars.AZURE_BOOTSTRAP_ENABLED }}
+          VERIFY_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          set -euo pipefail
+
+          if [ "$GITHUB_REF_NAME" != "feature/azure-mower-migration" ]; then
+            echo "Prüfung ausschließlich vom Azure-Migrationsbranch erlaubt." >&2
+            exit 1
+          fi
+
+          if [ "${BOOTSTRAP_ENABLED:-}" = "true" ]; then
+            echo "AZURE_BOOTSTRAP_ENABLED muss für die Post-Deployment-Prüfung false sein." >&2
+            exit 1
+          fi
+
+          for variable in VERIFY_CLIENT_ID TENANT_ID SUBSCRIPTION_ID; do
+            if [ -z "${!variable:-}" ]; then
+              echo "Erforderliche GitHub-Variable ${variable} fehlt." >&2
+              exit 1
+            fi
+          done
+
+      - name: Per OIDC mit Prüfidentität anmelden
+        uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Zielressourcen ermitteln
+        shell: bash
+        env:
+          RESOURCE_GROUP: ${{ inputs.resource_group }}
+        run: |
+          set -euo pipefail
+
+          az group show --name "$RESOURCE_GROUP" --output none
+
+          FUNCTION_APP="$(az resource list \
+            --resource-group "$RESOURCE_GROUP" \
+            --resource-type Microsoft.Web/sites \
+            --query "[?contains(kind, 'functionapp')].name | [0]" \
+            --output tsv)"
+
+          STORAGE_ACCOUNT="$(az storage account list \
+            --resource-group "$RESOURCE_GROUP" \
+            --query "[0].name" \
+            --output tsv)"
+
+          KEY_VAULT="$(az keyvault list \
+            --resource-group "$RESOURCE_GROUP" \
+            --query "[0].name" \
+            --output tsv)"
+
+          [ -n "$FUNCTION_APP" ]
+          [ -n "$STORAGE_ACCOUNT" ]
+          [ -n "$KEY_VAULT" ]
+
+          echo "Function App: $FUNCTION_APP"
+          echo "Storage Account: $STORAGE_ACCOUNT"
+          echo "Key Vault: $KEY_VAULT"
+
+          echo "FUNCTION_APP=$FUNCTION_APP" >> "$GITHUB_ENV"
+          echo "STORAGE_ACCOUNT=$STORAGE_ACCOUNT" >> "$GITHUB_ENV"
+          echo "KEY_VAULT=$KEY_VAULT" >> "$GITHUB_ENV"
+
+      - name: Sicherheitsparameter des Erstdeployments prüfen
+        shell: bash
+        env:
+          RESOURCE_GROUP: ${{ inputs.resource_group }}
+        run: |
+          set -euo pipefail
+
+          az deployment group list \
+            --resource-group "$RESOURCE_GROUP" \
+            --query "[?starts_with(name, 'ssv53-firstdeploy-alerts-')]" \
+            --output json > /tmp/firstdeploy-alerts.json
+
+          DEPLOYMENT_NAME="$(python - <<'PY'
+          import json
+
+          rows = json.load(open("/tmp/firstdeploy-alerts.json", encoding="utf-8"))
+          succeeded = [
+              row for row in rows
+              if (row.get("properties") or {}).get("provisioningState") == "Succeeded"
+          ]
+          if not succeeded:
+              raise SystemExit("Kein erfolgreiches finales Erstdeployment mit aktivierten Alarmen gefunden.")
+
+          succeeded.sort(
+              key=lambda row: str((row.get("properties") or {}).get("timestamp", ""))
+          )
+          print(succeeded[-1]["name"])
+          PY
+          )"
+
+          echo "Geprüftes Deployment: $DEPLOYMENT_NAME"
+
+          az deployment group show \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$DEPLOYMENT_NAME" \
+            --output json > /tmp/firstdeploy-final.json
+
+          python - <<'PY'
+          import json
+
+          data = json.load(open("/tmp/firstdeploy-final.json", encoding="utf-8"))
+          parameters = (data.get("properties") or {}).get("parameters") or {}
+
+          def value(name):
+              item = parameters.get(name)
+              if not isinstance(item, dict) or "value" not in item:
+                  raise SystemExit(f"Deployment-Parameter fehlt: {name}")
+              return item["value"]
+
+          expected = {
+              "controlMode": "DRY_RUN",
+              "enableLiveReads": False,
+              "dynamicConfigEnabled": False,
+              "timerSchedule": "0 * * * * *",
+              "alertsEnabled": True,
+          }
+
+          for key, expected_value in expected.items():
+              actual = value(key)
+              print(f"{key}={actual!r}")
+              if isinstance(expected_value, str):
+                  ok = str(actual).casefold() == expected_value.casefold()
+              else:
+                  ok = actual is expected_value
+              if not ok:
+                  raise SystemExit(
+                      f"{key} unsicher oder unerwartet: {actual!r}; "
+                      f"erwartet {expected_value!r}"
+                  )
+
+          print("Sicherheitsparameter des finalen Erstdeployments sind korrekt.")
+          PY
+
+      - name: Flex-Consumption-Konfiguration und Code prüfen
+        shell: bash
+        env:
+          RESOURCE_GROUP: ${{ inputs.resource_group }}
+        run: |
+          set -euo pipefail
+
+          az resource show \
+            --resource-group "$RESOURCE_GROUP" \
+            --resource-type Microsoft.Web/sites \
+            --name "$FUNCTION_APP" \
+            --api-version 2024-04-01 \
+            --output json > /tmp/function-site.json
+
+          python - <<'PY'
+          import json
+
+          site = json.load(open("/tmp/function-site.json", encoding="utf-8"))
+
+          kind = str(site.get("kind", ""))
+          if "functionapp" not in kind.casefold():
+              raise SystemExit(f"Ressource ist keine Function App: kind={kind!r}")
+
+          identity_type = str((site.get("identity") or {}).get("type", ""))
+          print("Managed identity type:", identity_type)
+          if "userassigned" not in identity_type.casefold():
+              raise SystemExit(
+                  f"User-Assigned Managed Identity fehlt: {identity_type!r}"
+              )
+
+          properties = site.get("properties") or {}
+          function_config = properties.get("functionAppConfig") or {}
+          runtime = function_config.get("runtime") or {}
+
+          runtime_name = str(runtime.get("name", ""))
+          runtime_version = str(runtime.get("version", ""))
+          print("Flex runtime:", runtime_name, runtime_version)
+
+          if runtime_name.casefold() != "python":
+              raise SystemExit(f"Unerwartete Flex Runtime: {runtime_name!r}")
+          if runtime_version != "3.12":
+              raise SystemExit(
+                  f"Unerwartete Python-Version: {runtime_version!r}"
+              )
+
+          deployment = function_config.get("deployment") or {}
+          storage = deployment.get("storage") or {}
+          if str(storage.get("type", "")).casefold() != "blobcontainer":
+              raise SystemExit(
+                  f"Unerwartete Deployment-Storage-Konfiguration: {storage!r}"
+              )
+          PY
+
+          az functionapp function list \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$FUNCTION_APP" \
+            --output json > /tmp/functions.json
+
+          python - <<'PY'
+          import json
+
+          functions = json.load(open("/tmp/functions.json", encoding="utf-8"))
+          names = [str(row.get("name", "")) for row in functions]
+
+          print("Erkannte Azure Functions:", len(functions))
+          for name in names:
+              print(" -", name)
+
+          if not functions:
+              raise SystemExit("Azure erkennt keinen Function-Trigger.")
+
+          if not any(
+              name == "ssv53_mower_timer"
+              or name.endswith("/ssv53_mower_timer")
+              for name in names
+          ):
+              raise SystemExit(
+                  "Erwarteter Timer-Trigger ssv53_mower_timer wurde nicht gefunden."
+              )
+          PY
+
+      - name: Storage und Key Vault prüfen
+        shell: bash
+        env:
+          RESOURCE_GROUP: ${{ inputs.resource_group }}
+        run: |
+          set -euo pipefail
+
+          SHARED_KEY="$(az storage account show \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$STORAGE_ACCOUNT" \
+            --query allowSharedKeyAccess \
+            --output tsv)"
+
+          KV_RBAC="$(az keyvault show \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$KEY_VAULT" \
+            --query properties.enableRbacAuthorization \
+            --output tsv)"
+
+          echo "Storage allowSharedKeyAccess: $SHARED_KEY"
+          echo "Key Vault RBAC: $KV_RBAC"
+
+          [ "${SHARED_KEY,,}" = "false" ]
+          [ "${KV_RBAC,,}" = "true" ]
+
+      - name: Alarmregeln prüfen
+        shell: bash
+        env:
+          RESOURCE_GROUP: ${{ inputs.resource_group }}
+        run: |
+          set -euo pipefail
+
+          az resource list \
+            --resource-group "$RESOURCE_GROUP" \
+            --resource-type Microsoft.Insights/scheduledQueryRules \
+            --output json > /tmp/alerts.json
+
+          python - <<'PY'
+          import json
+          import subprocess
+
+          alerts = json.load(open("/tmp/alerts.json", encoding="utf-8"))
+
+          if len(alerts) != 2:
+              raise SystemExit(
+                  f"Erwartet 2 Scheduled Query Rules, gefunden: {len(alerts)}"
+              )
+
+          for alert in alerts:
+              name = alert.get("name")
+              raw = subprocess.check_output(
+                  [
+                      "az",
+                      "resource",
+                      "show",
+                      "--ids",
+                      alert["id"],
+                      "--api-version",
+                      "2023-12-01",
+                      "--output",
+                      "json",
+                  ],
+                  text=True,
+              )
+              details = json.loads(raw)
+              enabled = (details.get("properties") or {}).get("enabled")
+              print(f"{name}: enabled={enabled!r}")
+              if enabled is not True:
+                  raise SystemExit(
+                      f"Alarmregel nicht aktiviert: {name} ({enabled!r})"
+                  )
+          PY
+
+      - name: Erfolgreiches Erstdeployment prüfen
+        shell: bash
+        env:
+          RESOURCE_GROUP: ${{ inputs.resource_group }}
+        run: |
+          set -euo pipefail
+
+          az deployment group list \
+            --resource-group "$RESOURCE_GROUP" \
+            --query "[?starts_with(name, 'ssv53-firstdeploy-')].{name:name,state:properties.provisioningState,timestamp:properties.timestamp}" \
+            --output json > /tmp/deployments.json
+
+          python - <<'PY'
+          import json
+
+          rows = json.load(open("/tmp/deployments.json", encoding="utf-8"))
+          succeeded = [row for row in rows if row.get("state") == "Succeeded"]
+
+          print("Erfolgreiche Erstdeployment-Einträge:", len(succeeded))
+          for row in succeeded:
+              print(" -", row.get("name"), row.get("timestamp"))
+
+          if not succeeded:
+              raise SystemExit("Kein erfolgreiches Erstdeployment gefunden.")
+          PY
+
+      - name: Ergebnis zusammenfassen
+        shell: bash
+        run: |
+          {
+            echo "# Azure Post-Deployment-Prüfung"
+            echo
+            echo "- Bootstrap-Gate: **deaktiviert**"
+            echo "- Prüfidentität: **AZURE_CLIENT_ID / OIDC**"
+            echo "- Sicherheitsmodus: **aus Deploymentparametern geprüft**"
+            echo "- CONTROL_MODE: **DRY_RUN**"
+            echo "- ENABLE_LIVE_READS: **false**"
+            echo "- Dynamische Laufzeitdaten: **false**"
+            echo "- Function App: **bereitgestellt**"
+            echo "- Flex Runtime: **Python 3.12**"
+            echo "- Timer-Trigger ssv53_mower_timer: **erkannt**"
+            echo "- Storage Shared Key: **deaktiviert**"
+            echo "- Key Vault RBAC: **aktiviert**"
+            echo "- Alarmregeln: **2 / aktiviert**"
+            echo "- Sensible App-Settings ausgelesen: **nein**"
+            echo "- Geräteaktionen: **nicht ausgeführt**"
+            echo
+            echo "Die Prüfung verwendet ausschließlich lesende Azure-Abfragen."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Azure-Sitzung beenden
+        if: ${{ always() }}
+        shell: bash
+        run: az logout || true
