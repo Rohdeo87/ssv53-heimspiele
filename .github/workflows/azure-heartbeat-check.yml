@@ -1,0 +1,153 @@
+name: Azure Heartbeat-Prüfung
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  heartbeat:
+    name: Echten Azure-Timer-Heartbeat prüfen
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Sicherheitsbedingungen prüfen
+        shell: bash
+        env:
+          CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          BOOTSTRAP_ENABLED: ${{ vars.AZURE_BOOTSTRAP_ENABLED }}
+        run: |
+          set -euo pipefail
+
+          if [ "$GITHUB_REF_NAME" != "feature/azure-mower-migration" ]; then
+            echo "Heartbeat-Prüfung nur vom Azure-Migrationsbranch erlaubt." >&2
+            exit 1
+          fi
+
+          if [ "${BOOTSTRAP_ENABLED:-}" = "true" ]; then
+            echo "AZURE_BOOTSTRAP_ENABLED muss false sein." >&2
+            exit 1
+          fi
+
+          for variable in CLIENT_ID TENANT_ID SUBSCRIPTION_ID; do
+            if [ -z "${!variable:-}" ]; then
+              echo "Erforderliche GitHub-Variable ${variable} fehlt." >&2
+              exit 1
+            fi
+          done
+
+      - name: Per OIDC lesend anmelden
+        uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Application-Insights-Abfrage vorbereiten
+        shell: bash
+        run: |
+          set -euo pipefail
+          az extension add --name application-insights --upgrade --only-show-errors
+
+      - name: Heartbeat der letzten 30 Minuten prüfen
+        shell: bash
+        env:
+          RESOURCE_GROUP: rg-ssv53-platzpflege-prod
+        run: |
+          set -euo pipefail
+
+          APP_INSIGHTS="$(az resource list \
+            --resource-group "$RESOURCE_GROUP" \
+            --resource-type Microsoft.Insights/components \
+            --query "[0].name" \
+            --output tsv)"
+
+          if [ -z "$APP_INSIGHTS" ]; then
+            echo "Application Insights wurde nicht gefunden." >&2
+            exit 1
+          fi
+
+          echo "Application Insights: $APP_INSIGHTS"
+
+          az monitor app-insights query \
+            --app "$APP_INSIGHTS" \
+            --resource-group "$RESOURCE_GROUP" \
+            --analytics-query 'traces | where message startswith "SSV53_CONTROL_CYCLE" | summarize heartbeat_count=count(), last_heartbeat=max(timestamp)' \
+            --offset 30m \
+            --output json > /tmp/heartbeat.json
+
+          python - <<'PY'
+          import json
+          from datetime import datetime, timezone
+
+          data = json.load(open("/tmp/heartbeat.json", encoding="utf-8"))
+
+          def find_rows(value):
+              if isinstance(value, dict):
+                  rows = value.get("rows")
+                  if isinstance(rows, list):
+                      return rows
+                  for child in value.values():
+                      found = find_rows(child)
+                      if found is not None:
+                          return found
+              elif isinstance(value, list):
+                  for child in value:
+                      found = find_rows(child)
+                      if found is not None:
+                          return found
+              return None
+
+          rows = find_rows(data) or []
+          if not rows or len(rows[0]) < 2:
+              raise SystemExit("Application Insights lieferte kein auswertbares Heartbeat-Ergebnis.")
+
+          count = int(rows[0][0] or 0)
+          last_raw = rows[0][1]
+
+          print(f"Heartbeats in den letzten 30 Minuten: {count}")
+          print(f"Letzter Heartbeat: {last_raw}")
+
+          if count < 1 or not last_raw:
+              raise SystemExit("Kein SSV53_CONTROL_CYCLE in den letzten 30 Minuten gefunden.")
+
+          last = datetime.fromisoformat(str(last_raw).replace("Z", "+00:00"))
+          age_minutes = (
+              datetime.now(timezone.utc) - last.astimezone(timezone.utc)
+          ).total_seconds() / 60
+
+          print(f"Alter des letzten Heartbeats: {age_minutes:.1f} Minuten")
+
+          if age_minutes > 10:
+              raise SystemExit(
+                  f"Letzter Heartbeat ist mit {age_minutes:.1f} Minuten zu alt."
+              )
+
+          print("ECHTER_AZURE_HEARTBEAT=GRÜN")
+          PY
+
+      - name: Ergebnis zusammenfassen
+        if: ${{ success() }}
+        shell: bash
+        run: |
+          {
+            echo "# Azure Heartbeat-Prüfung"
+            echo
+            echo "- Azure-Timer: **läuft**"
+            echo "- SSV53_CONTROL_CYCLE: **in Application Insights gefunden**"
+            echo "- Letzter Heartbeat: **maximal 10 Minuten alt**"
+            echo "- CONTROL_MODE bleibt: **DRY_RUN**"
+            echo "- Geräteaktionen: **keine**"
+            echo
+            echo "Der reguläre Azure-Timer wurde damit anhand echter Telemetrie bestätigt."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Azure-Sitzung beenden
+        if: ${{ always() }}
+        shell: bash
+        run: az logout || true
