@@ -31,7 +31,7 @@ jobs:
         shell: bash
         env:
           BOOTSTRAP_ENABLED: ${{ vars.AZURE_BOOTSTRAP_ENABLED }}
-          BOOTSTRAP_CLIENT_ID: ${{ vars.AZURE_BOOTSTRAP_CLIENT_ID }}
+          VERIFY_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
           TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
           SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
         run: |
@@ -47,17 +47,17 @@ jobs:
             exit 1
           fi
 
-          for variable in BOOTSTRAP_CLIENT_ID TENANT_ID SUBSCRIPTION_ID; do
+          for variable in VERIFY_CLIENT_ID TENANT_ID SUBSCRIPTION_ID; do
             if [ -z "${!variable:-}" ]; then
               echo "Erforderliche GitHub-Variable ${variable} fehlt." >&2
               exit 1
             fi
           done
 
-      - name: Per OIDC anmelden
+      - name: Per OIDC mit Prüfidentität anmelden
         uses: azure/login@v3
         with:
-          client-id: ${{ vars.AZURE_BOOTSTRAP_CLIENT_ID }}
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
@@ -98,55 +98,77 @@ jobs:
           echo "STORAGE_ACCOUNT=$STORAGE_ACCOUNT" >> "$GITHUB_ENV"
           echo "KEY_VAULT=$KEY_VAULT" >> "$GITHUB_ENV"
 
-      - name: Sicherheits-Appsettings prüfen
+      - name: Sicherheitsparameter des Erstdeployments prüfen
         shell: bash
         env:
           RESOURCE_GROUP: ${{ inputs.resource_group }}
         run: |
           set -euo pipefail
 
-          az functionapp config appsettings list \
+          az deployment group list \
             --resource-group "$RESOURCE_GROUP" \
-            --name "$FUNCTION_APP" \
-            --output json > /tmp/appsettings.json
+            --query "[?starts_with(name, 'ssv53-firstdeploy-alerts-')]" \
+            --output json > /tmp/firstdeploy-alerts.json
+
+          DEPLOYMENT_NAME="$(python - <<'PY'
+          import json
+
+          rows = json.load(open("/tmp/firstdeploy-alerts.json", encoding="utf-8"))
+          succeeded = [
+              row for row in rows
+              if (row.get("properties") or {}).get("provisioningState") == "Succeeded"
+          ]
+          if not succeeded:
+              raise SystemExit("Kein erfolgreiches finales Erstdeployment mit aktivierten Alarmen gefunden.")
+
+          succeeded.sort(
+              key=lambda row: str((row.get("properties") or {}).get("timestamp", ""))
+          )
+          print(succeeded[-1]["name"])
+          PY
+          )"
+
+          echo "Geprüftes Deployment: $DEPLOYMENT_NAME"
+
+          az deployment group show \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$DEPLOYMENT_NAME" \
+            --output json > /tmp/firstdeploy-final.json
 
           python - <<'PY'
           import json
 
-          rows = json.load(open("/tmp/appsettings.json", encoding="utf-8"))
-          values = {row["name"]: str(row.get("value", "")) for row in rows}
+          data = json.load(open("/tmp/firstdeploy-final.json", encoding="utf-8"))
+          parameters = (data.get("properties") or {}).get("parameters") or {}
+
+          def value(name):
+              item = parameters.get(name)
+              if not isinstance(item, dict) or "value" not in item:
+                  raise SystemExit(f"Deployment-Parameter fehlt: {name}")
+              return item["value"]
 
           expected = {
-              "CONTROL_MODE": "DRY_RUN",
-              "ENABLE_LIVE_READS": "false",
-              "SSV53_DYNAMIC_CONFIG_ENABLED": "false",
-              "TIMER_SCHEDULE": "0 * * * * *",
+              "controlMode": "DRY_RUN",
+              "enableLiveReads": False,
+              "dynamicConfigEnabled": False,
+              "timerSchedule": "0 * * * * *",
+              "alertsEnabled": True,
           }
 
           for key, expected_value in expected.items():
-              actual = values.get(key, "")
-              print(f"{key}={actual}")
-              if actual.casefold() != expected_value.casefold():
+              actual = value(key)
+              print(f"{key}={actual!r}")
+              if isinstance(expected_value, str):
+                  ok = str(actual).casefold() == expected_value.casefold()
+              else:
+                  ok = actual is expected_value
+              if not ok:
                   raise SystemExit(
-                      f"{key} unsicher oder unerwartet: {actual!r}; erwartet {expected_value!r}"
+                      f"{key} unsicher oder unerwartet: {actual!r}; "
+                      f"erwartet {expected_value!r}"
                   )
 
-          if "FUNCTIONS_WORKER_RUNTIME" in values:
-              raise SystemExit(
-                  "FUNCTIONS_WORKER_RUNTIME darf bei Flex Consumption nicht gesetzt sein."
-              )
-
-          required = (
-              "AzureWebJobsStorage__credential",
-              "AzureWebJobsStorage__clientId",
-              "APPLICATIONINSIGHTS_CONNECTION_STRING",
-              "SSV53_STATE_TABLE_NAME",
-          )
-          missing = [key for key in required if not values.get(key)]
-          if missing:
-              raise SystemExit(
-                  "Erforderliche Appsettings fehlen: " + ", ".join(missing)
-              )
+          print("Sicherheitsparameter des finalen Erstdeployments sind korrekt.")
           PY
 
       - name: Flex-Consumption-Konfiguration und Code prüfen
@@ -336,19 +358,21 @@ jobs:
             echo "# Azure Post-Deployment-Prüfung"
             echo
             echo "- Bootstrap-Gate: **deaktiviert**"
-            echo "- Function App: **bereitgestellt**"
-            echo "- Flex Runtime: **Python 3.12**"
-            echo "- Timer-Trigger ssv53_mower_timer: **erkannt**"
+            echo "- Prüfidentität: **AZURE_CLIENT_ID / OIDC**"
+            echo "- Sicherheitsmodus: **aus Deploymentparametern geprüft**"
             echo "- CONTROL_MODE: **DRY_RUN**"
             echo "- ENABLE_LIVE_READS: **false**"
             echo "- Dynamische Laufzeitdaten: **false**"
-            echo "- Legacy FUNCTIONS_WORKER_RUNTIME: **nicht gesetzt**"
+            echo "- Function App: **bereitgestellt**"
+            echo "- Flex Runtime: **Python 3.12**"
+            echo "- Timer-Trigger ssv53_mower_timer: **erkannt**"
             echo "- Storage Shared Key: **deaktiviert**"
             echo "- Key Vault RBAC: **aktiviert**"
             echo "- Alarmregeln: **2 / aktiviert**"
+            echo "- Sensible App-Settings ausgelesen: **nein**"
             echo "- Geräteaktionen: **nicht ausgeführt**"
             echo
-            echo "Die Prüfung hat ausschließlich lesende Azure-Befehle verwendet."
+            echo "Die Prüfung verwendet ausschließlich lesende Azure-Abfragen."
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Azure-Sitzung beenden
