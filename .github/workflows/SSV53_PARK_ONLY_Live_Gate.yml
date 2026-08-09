@@ -1,0 +1,191 @@
+name: PARK_ONLY - Letzten Live-Zyklus pruefen
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  check:
+    name: Aktuellen Maeherzustand aus Azure pruefen
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Branch und Azure-Variablen pruefen
+        shell: bash
+        env:
+          CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_REF_NAME" != "feature/azure-mower-migration" ]; then
+            echo "Pruefung nur vom Azure-Migrationsbranch erlaubt." >&2
+            exit 1
+          fi
+          for variable in CLIENT_ID TENANT_ID SUBSCRIPTION_ID; do
+            if [ -z "${!variable:-}" ]; then
+              echo "Erforderliche GitHub-Variable ${variable} fehlt." >&2
+              exit 1
+            fi
+          done
+
+      - name: Per OIDC lesend anmelden
+        uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Application-Insights-Erweiterung vorbereiten
+        shell: bash
+        run: |
+          set -euo pipefail
+          az extension add --name application-insights --upgrade --only-show-errors
+
+      - name: Neuesten echten Steuerungszyklus auswerten
+        shell: bash
+        env:
+          RESOURCE_GROUP: rg-ssv53-platzpflege-prod
+        run: |
+          set -euo pipefail
+
+          APP_INSIGHTS="$(az resource list \
+            --resource-group "$RESOURCE_GROUP" \
+            --resource-type Microsoft.Insights/components \
+            --query "[0].name" \
+            --output tsv)"
+
+          if [ -z "$APP_INSIGHTS" ]; then
+            echo "Application Insights wurde nicht gefunden." >&2
+            exit 1
+          fi
+
+          az monitor app-insights query \
+            --app "$APP_INSIGHTS" \
+            --resource-group "$RESOURCE_GROUP" \
+            --analytics-query 'traces | where message startswith "SSV53_CONTROL_CYCLE" | top 1 by timestamp desc | project timestamp, message' \
+            --offset 30m \
+            --output json > /tmp/latest-cycle.json
+
+          python - <<'PY'
+          import json
+          from datetime import datetime, timezone
+
+          data = json.load(open("/tmp/latest-cycle.json", encoding="utf-8"))
+
+          def find_rows(value):
+              if isinstance(value, dict):
+                  rows = value.get("rows")
+                  if isinstance(rows, list):
+                      return rows
+                  for child in value.values():
+                      found = find_rows(child)
+                      if found is not None:
+                          return found
+              elif isinstance(value, list):
+                  for child in value:
+                      found = find_rows(child)
+                      if found is not None:
+                          return found
+              return None
+
+          rows = find_rows(data) or []
+          if not rows or len(rows[0]) < 2:
+              raise SystemExit("Kein aktueller SSV53_CONTROL_CYCLE gefunden.")
+
+          timestamp, message = rows[0][0], str(rows[0][1])
+          start = message.find("{")
+          if start < 0:
+              raise SystemExit("Neuester Steuerungszyklus enthaelt kein JSON.")
+
+          payload = json.loads(message[start:])
+          details = payload.get("details") or {}
+          mower = details.get("mower") or {}
+          safety = details.get("safety") or {}
+
+          control_mode = str(payload.get("control_mode") or "")
+          command_sent = bool(payload.get("command_sent"))
+          decision_code = str(payload.get("decision_code") or "")
+          mower_state = str(mower.get("state") or "")
+          mower_activity = str(mower.get("activity") or "")
+          mower_error = mower.get("error_code")
+
+          print(f"Zeitpunkt: {timestamp}")
+          print(f"CONTROL_MODE: {control_mode}")
+          print(f"decision_code: {decision_code}")
+          print(f"command_sent: {command_sent}")
+          print(f"Maeher state: {mower_state}")
+          print(f"Maeher activity: {mower_activity}")
+          print(f"Maeher error_code: {mower_error}")
+          print(f"safety.command_sent: {safety.get('command_sent')}")
+
+          if control_mode.upper() != "DRY_RUN":
+              raise SystemExit(
+                  f"Sicherheitsabbruch: CONTROL_MODE ist {control_mode!r}, erwartet DRY_RUN."
+              )
+
+          if command_sent:
+              raise SystemExit("Sicherheitsabbruch: Der Zyklus meldet command_sent=true.")
+
+          try:
+              error_code = int(mower_error)
+          except (TypeError, ValueError):
+              raise SystemExit(
+                  f"Maeher-error_code ist nicht eindeutig auswertbar: {mower_error!r}"
+              )
+
+          if error_code != 0:
+              raise SystemExit(
+                  f"Maeher ist noch nicht fehlerfrei: error_code={error_code}."
+              )
+
+          bad_states = {
+              "ERROR",
+              "FATAL_ERROR",
+              "ERROR_AT_POWER_UP",
+              "WAIT_UPDATING",
+              "WAIT_POWER_UP",
+          }
+          if mower_state.strip().upper() in bad_states:
+              raise SystemExit(
+                  f"Maeherzustand ist trotz error_code=0 nicht freigabefaehig: {mower_state}."
+              )
+
+          observed = datetime.fromisoformat(str(timestamp).replace("Z", "+00:00"))
+          age_min = (
+              datetime.now(timezone.utc) - observed.astimezone(timezone.utc)
+          ).total_seconds() / 60.0
+          print(f"Alter des Zyklus: {age_min:.1f} Minuten")
+
+          if age_min > 10:
+              raise SystemExit(
+                  f"Der neueste Zyklus ist mit {age_min:.1f} Minuten zu alt."
+              )
+
+          print("PARK_ONLY_LIVE_GATE=GRUEN")
+          PY
+
+      - name: Ergebnis zusammenfassen
+        if: ${{ success() }}
+        shell: bash
+        run: |
+          {
+            echo "# PARK_ONLY Live-Gate"
+            echo
+            echo "- Neuester echter Azure-Zyklus: **aktuell**"
+            echo "- CONTROL_MODE: **DRY_RUN**"
+            echo "- Maeher error_code: **0**"
+            echo "- Maeherzustand: **kein Fehlerzustand**"
+            echo "- command_sent: **false**"
+            echo
+            echo "Damit ist der letzte technische Gate vor einer bewussten PARK_ONLY-Freigabe bestanden."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Azure-Sitzung beenden
+        if: ${{ always() }}
+        shell: bash
+        run: az logout || true
