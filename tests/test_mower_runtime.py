@@ -34,6 +34,7 @@ class RuntimeSettingsTests(unittest.TestCase):
         self.assertIs(settings.control_mode, ControlMode.DRY_RUN)
         self.assertEqual(settings.timer_schedule, "0 * * * * *")
         self.assertEqual(settings.timezone_name, "Europe/Berlin")
+        self.assertFalse(settings.enable_park_commands)
 
 
 class ControlCycleTests(unittest.TestCase):
@@ -56,10 +57,18 @@ class ControlCycleTests(unittest.TestCase):
         self.assertTrue(result.past_due)
         self.assertFalse(result.command_sent)
 
-    def test_live_modes_are_blocked_in_phase_one(self) -> None:
-        for mode in ("PARK_ONLY", "FULL_MOWER", "FULL_FAILSAFE"):
+    def test_park_only_requires_live_reads(self) -> None:
+        with self.assertRaisesRegex(RuntimeError, "ENABLE_LIVE_READS"):
+            run_control_cycle(
+                now_utc=datetime(2026, 8, 2, 12, 0, tzinfo=timezone.utc),
+                environment={"CONTROL_MODE": "PARK_ONLY"},
+                past_due=False,
+            )
+
+    def test_start_capable_modes_remain_blocked(self) -> None:
+        for mode in ("FULL_MOWER", "FULL_FAILSAFE"):
             with self.subTest(mode=mode):
-                with self.assertRaisesRegex(RuntimeError, "Heartbeat-Stadium"):
+                with self.assertRaisesRegex(RuntimeError, "Automatischer Start"):
                     run_control_cycle(
                         now_utc=datetime(
                             2026,

@@ -7,6 +7,7 @@ from typing import Any, Mapping
 
 from mower.config_source import resolve_runtime_inputs
 from mower.dry_run import run_read_only_cycle
+from mower.park_only import run_park_only_cycle
 from mower.runtime import (
     ControlMode,
     CycleResult,
@@ -17,6 +18,7 @@ from mower.runtime import (
 
 
 LiveCycleRunner = Callable[..., CycleResult]
+ParkOnlyRunner = Callable[..., CycleResult]
 RuntimeInputResolver = Callable[..., Any]
 
 
@@ -63,6 +65,7 @@ def run_control_cycle(
     past_due: bool,
     source: str = "azure-timer",
     live_cycle_runner: LiveCycleRunner = run_read_only_cycle,
+    park_only_runner: ParkOnlyRunner = run_park_only_cycle,
     runtime_input_resolver: RuntimeInputResolver = resolve_runtime_inputs,
 ) -> CycleResult:
     """Führt genau einen sicheren Azure-Steuerungszyklus aus.
@@ -90,6 +93,8 @@ def run_control_cycle(
         )
 
     if not settings.enable_live_reads:
+        if settings.control_mode is ControlMode.PARK_ONLY:
+            raise RuntimeError("PARK_ONLY benötigt ENABLE_LIVE_READS=true.")
         result = build_heartbeat_result(
             now_utc=now_utc,
             settings=settings,
@@ -104,6 +109,15 @@ def run_control_cycle(
                 runtime_input_resolver=runtime_input_resolver,
             )
         return result
+
+    if settings.control_mode is ControlMode.PARK_ONLY:
+        return park_only_runner(
+            now_utc=now_utc,
+            settings=settings,
+            environment=environment,
+            past_due=past_due,
+            source=source,
+        )
 
     return live_cycle_runner(
         now_utc=now_utc,

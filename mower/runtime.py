@@ -63,6 +63,7 @@ class RuntimeSettings:
     timer_schedule: str
     timezone_name: str
     enable_live_reads: bool
+    enable_park_commands: bool
     park_lookahead_minutes: int
 
     @classmethod
@@ -95,6 +96,10 @@ class RuntimeSettings:
                 values.get("ENABLE_LIVE_READS"),
                 default=False,
             ),
+            enable_park_commands=_parse_bool(
+                values.get("ENABLE_PARK_COMMANDS"),
+                default=False,
+            ),
             park_lookahead_minutes=park_lookahead_minutes,
         )
 
@@ -116,12 +121,12 @@ class CycleResult:
 
 
 def ensure_heartbeat_only_mode(mode: ControlMode) -> None:
-    """Verhindert echte Steuerbefehle in der vorbereitenden Azure-Phase."""
+    """Lässt höchstens PARK_ONLY zu; automatische Starts bleiben gesperrt."""
 
-    if mode not in {ControlMode.OFF, ControlMode.DRY_RUN}:
+    if mode in {ControlMode.FULL_MOWER, ControlMode.FULL_FAILSAFE}:
         raise RuntimeError(
-            "Die Azure-Vorbereitung ist noch im Heartbeat-Stadium. "
-            f"CONTROL_MODE={mode.value} ist deshalb absichtlich gesperrt."
+            "Automatischer Start und Beregnungssteuerung sind noch gesperrt. "
+            f"CONTROL_MODE={mode.value} ist deshalb nicht zulässig."
         )
 
 

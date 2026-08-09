@@ -193,12 +193,39 @@ class ControllerPhase2Tests(unittest.TestCase):
         self.assertEqual(result.decision_code, "TEST_READ_ONLY")
         self.assertFalse(result.command_sent)
 
-    def test_live_control_modes_remain_blocked(self) -> None:
-        for mode in ("PARK_ONLY", "FULL_MOWER", "FULL_FAILSAFE"):
+    def test_park_only_is_available_but_write_gate_defaults_locked(self) -> None:
+        def park_runner(**kwargs):
+            self.assertEqual(kwargs["settings"].control_mode.value, "PARK_ONLY")
+            self.assertFalse(kwargs["settings"].enable_park_commands)
+            return CycleResult(
+                schema_version=2,
+                executed_at_utc=NOW.isoformat(),
+                source=kwargs["source"],
+                control_mode="PARK_ONLY",
+                past_due=False,
+                decision_code="TEST_PARK_ONLY_LOCKED",
+                command_sent=False,
+                message="locked",
+            )
+
+        result = run_control_cycle(
+            now_utc=NOW,
+            environment={
+                "CONTROL_MODE": "PARK_ONLY",
+                "ENABLE_LIVE_READS": "true",
+            },
+            past_due=False,
+            park_only_runner=park_runner,
+        )
+        self.assertEqual(result.decision_code, "TEST_PARK_ONLY_LOCKED")
+        self.assertFalse(result.command_sent)
+
+    def test_start_capable_modes_remain_blocked(self) -> None:
+        for mode in ("FULL_MOWER", "FULL_FAILSAFE"):
             with self.subTest(mode=mode):
                 with self.assertRaisesRegex(
                     RuntimeError,
-                    "Heartbeat-Stadium",
+                    "Automatischer Start",
                 ):
                     run_control_cycle(
                         now_utc=NOW,
