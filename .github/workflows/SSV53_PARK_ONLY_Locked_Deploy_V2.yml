@@ -1,0 +1,191 @@
+name: PARK_ONLY - Verriegelten Code nach Azure deployen V2
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Exakt SSV53-PARK-ONLY-LOCKED-DEPLOY eingeben"
+        required: true
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: ssv53-park-only-locked-deploy-v2
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: PARK_ONLY verriegelt deployen
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      RESOURCE_GROUP: rg-ssv53-platzpflege-prod
+      FUNCTION_APP: func-ssv53platzpflege-prod-q7kbw54s
+
+    steps:
+      - name: Sicherheitsfreigabe prüfen
+        shell: bash
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+          CLIENT_ID: ${{ vars.AZURE_BOOTSTRAP_CLIENT_ID }}
+          TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          set -euo pipefail
+
+          if [ "$GITHUB_REF_NAME" != "feature/azure-mower-migration" ]; then
+            echo "Dieser Deploy ist ausschließlich vom Azure-Migrationsbranch erlaubt." >&2
+            exit 1
+          fi
+
+          if [ "${CONFIRMATION:-}" != "SSV53-PARK-ONLY-LOCKED-DEPLOY" ]; then
+            echo "Explizite Bestätigung fehlt." >&2
+            exit 1
+          fi
+
+          for variable in CLIENT_ID TENANT_ID SUBSCRIPTION_ID; do
+            if [ -z "${!variable:-}" ]; then
+              echo "Erforderliche Azure-GitHub-Variable ${variable} fehlt." >&2
+              exit 1
+            fi
+          done
+
+      - name: Azure-Migrationsbranch laden
+        uses: actions/checkout@v7
+        with:
+          ref: feature/azure-mower-migration
+          fetch-depth: 1
+
+      - name: Python 3.12 einrichten
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Abhängigkeiten installieren und Gesamttests ausführen
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check -r requirements.txt
+          python -m compileall -q mower function_app.py scripts
+          python -m unittest discover -s tests -p "test_*.py" -v
+
+      - name: Verriegeltes PARK_ONLY-Paket bauen und prüfen
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf dist
+          mkdir -p dist
+
+          python scripts/build_azure_park_only_package.py \
+            --output dist/ssv53-platzpflege-park-only-locked.zip \
+            | tee dist/park-only-package-result.json
+
+          python - <<'PY'
+          import json
+          import zipfile
+
+          path = "dist/ssv53-platzpflege-park-only-locked.zip"
+          with zipfile.ZipFile(path) as archive:
+              manifest = json.loads(
+                  archive.read("package-manifest.json").decode("utf-8")
+              )
+              assert manifest["safety_stage"] == "PARK_ONLY_CAPABLE_LOCKED"
+              assert manifest["automatic_start_implemented"] is False
+              assert manifest["park_write_gate_required"] is True
+
+              names = set(archive.namelist())
+              assert "mower/husqvarna_actions.py" in names
+              assert "mower/park_only.py" in names
+
+              joined = b"\n".join(
+                  archive.read(name)
+                  for name in names
+                  if name.endswith(".py")
+              )
+              for forbidden in (
+                  b"ResumeSchedule",
+                  b"StartInWorkArea",
+                  b'def start_',
+                  b'"type": "Start"',
+              ):
+                  assert forbidden not in joined, forbidden
+
+          print("PARK_ONLY-Paket ist schreibbegrenzt und enthält keinen automatischen Start.")
+          PY
+
+      - name: Default-Verriegelung ohne Azure-Appsettings prüfen
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from mower.runtime import ControlMode, RuntimeSettings
+
+          settings = RuntimeSettings.from_mapping(
+              {
+                  "CONTROL_MODE": "DRY_RUN",
+                  "ENABLE_LIVE_READS": "true",
+              }
+          )
+
+          assert settings.control_mode is ControlMode.DRY_RUN
+          assert settings.enable_live_reads is True
+          assert settings.enable_park_commands is False
+          assert settings.control_mode.allows_park is False
+
+          print(
+              "Sicherheitsdefault bestätigt: "
+              "DRY_RUN + ENABLE_PARK_COMMANDS nicht gesetzt => keine Parkbefehle."
+          )
+          PY
+
+      - name: Per OIDC mit Azure anmelden
+        uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_BOOTSTRAP_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: PARK_ONLY-fähigen Code deployen
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Absichtlich KEINE App-Settings lesen oder ändern.
+          # ZIP-Deployment ersetzt nur den Function-Code.
+          az functionapp deployment source config-zip \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$FUNCTION_APP" \
+            --src dist/ssv53-platzpflege-park-only-locked.zip \
+            --build-remote true \
+            --timeout 900 \
+            --output none
+
+          echo "Azure Function ZIP-Deployment erfolgreich."
+
+      - name: Ergebnis zusammenfassen
+        shell: bash
+        run: |
+          {
+            echo "# PARK_ONLY Locked Deployment V2"
+            echo
+            echo "- Gesamttests: **bestanden**"
+            echo "- Sicherheitsstufe des Pakets: **PARK_ONLY_CAPABLE_LOCKED**"
+            echo "- PARK_ONLY-fähiger Code: **nach Azure deployed**"
+            echo "- Azure App-Settings durch diesen Workflow geändert: **nein**"
+            echo "- Bestehender CONTROL_MODE durch ZIP-Deploy geändert: **nein**"
+            echo "- ENABLE_PARK_COMMANDS im Code-Default: **false**"
+            echo "- Automatischer Start: **nicht implementiert**"
+            echo "- Echter Parkbefehl durch diesen Deploy ausgelöst: **nein**"
+            echo
+            echo "Nächster Schritt: neuesten Azure-Timerlauf ansehen; keine alten Gates erneut prüfen."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Azure-Sitzung beenden
+        if: ${{ always() }}
+        shell: bash
+        run: az logout || true
