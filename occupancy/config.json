@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "timezone": "Europe/Berlin",
+  "effective_from": "2026-08-11",
+  "effective_to": "2027-07-09",
+  "resources": [
+    {"id": "rasen", "title": "Rasen"},
+    {"id": "kunstrasen", "title": "Kunstrasen"}
+  ],
+  "seasons": {
+    "Sommer": {
+      "weekly": [
+        {"id": "som-ras-e1-di", "weekday": "Dienstag", "start": "17:00", "end": "18:30", "team": "E1", "resource_id": "rasen", "area": "vorne & hinten"},
+        {"id": "som-ras-a-di", "weekday": "Dienstag", "start": "18:30", "end": "20:00", "team": "A", "resource_id": "rasen", "area": "vorne & hinten"},
+        {"id": "som-ras-c-mi", "weekday": "Mittwoch", "start": "17:30", "end": "19:00", "team": "C", "resource_id": "rasen", "area": "vorne & hinten"},
+        {"id": "som-ras-e1-do", "weekday": "Donnerstag", "start": "17:00", "end": "18:30", "team": "E1", "resource_id": "rasen", "area": "vorne & hinten"},
+        {"id": "som-ras-a-do", "weekday": "Donnerstag", "start": "18:30", "end": "20:00", "team": "A", "resource_id": "rasen", "area": "vorne & hinten"},
+        {"id": "som-ras-herren-do", "weekday": "Donnerstag", "start": "20:00", "end": "21:30", "team": "Herren", "resource_id": "rasen", "area": "vorne & hinten"},
+        {"id": "som-ras-c-fr", "weekday": "Freitag", "start": "17:00", "end": "18:30", "team": "C", "resource_id": "rasen", "area": "vorne & hinten"},
+        {"id": "som-kr-e2-mo", "weekday": "Montag", "start": "17:00", "end": "18:30", "team": "E2", "resource_id": "kunstrasen", "area": "vorne & hinten"},
+        {"id": "som-kr-ue40-mo", "weekday": "Montag", "start": "19:30", "end": "21:00", "team": "Ü40 / Freizeit", "resource_id": "kunstrasen", "area": "vorne & hinten"},
+        {"id": "som-kr-g-di", "weekday": "Dienstag", "start": "16:30", "end": "17:30", "team": "G", "resource_id": "kunstrasen", "area": "vorne"},
+        {"id": "som-kr-f-di", "weekday": "Dienstag", "start": "16:45", "end": "18:15", "team": "F", "resource_id": "kunstrasen", "area": "hinten"},
+        {"id": "som-kr-minis-mi", "weekday": "Mittwoch", "start": "15:45", "end": "16:45", "team": "Minis", "resource_id": "kunstrasen", "area": "vorne & hinten"},
+        {"id": "som-kr-d-mi", "weekday": "Mittwoch", "start": "18:00", "end": "19:30", "team": "D", "resource_id": "kunstrasen", "area": "vorne & hinten"},
+        {"id": "som-kr-ue50-mi", "weekday": "Mittwoch", "start": "19:30", "end": "21:00", "team": "Ü50", "resource_id": "kunstrasen", "area": "vorne & hinten"},
+        {"id": "som-kr-f-do", "weekday": "Donnerstag", "start": "16:45", "end": "18:15", "team": "F", "resource_id": "kunstrasen", "area": "vorne & hinten"},
+        {"id": "som-kr-e2-fr", "weekday": "Freitag", "start": "15:30", "end": "17:00", "team": "E2", "resource_id": "kunstrasen", "area": "vorne & hinten"},
+        {"id": "som-kr-d-fr", "weekday": "Freitag", "start": "18:00", "end": "19:30", "team": "D", "resource_id": "kunstrasen", "area": "vorne & hinten"}
+      ]
+    },
+    "Winter": {
+      "weekly": [
+        {"id": "win-kr-e2-mo", "weekday": "Montag", "start": "17:00", "end": "18:30", "team": "E2", "resource_id": "kunstrasen", "area": "vorne & hinten"},
+        {"id": "win-kr-ue40-mo", "weekday": "Montag", "start": "19:30", "end": "21:00", "team": "Ü40 / Freizeit", "resource_id": "kunstrasen", "area": "vorne & hinten"},
+        {"id": "win-kr-g-di", "weekday": "Dienstag", "start": "16:30", "end": "17:30", "team": "G", "resource_id": "kunstrasen", "area": "vorne"},
+        {"id": "win-kr-f-di", "weekday": "Dienstag", "start": "16:45", "end": "18:15", "team": "F", "resource_id": "kunstrasen", "area": "hinten"},
+        {"id": "win-kr-e1-di-1", "weekday": "Dienstag", "start": "17:30", "end": "18:15", "team": "E1", "resource_id": "kunstrasen", "area": "vorne"},
+        {"id": "win-kr-e1-di-2", "weekday": "Dienstag", "start": "18:15", "end": "19:00", "team": "E1", "resource_id": "kunstrasen", "area": "vorne & hinten"},
+        {"id": "win-kr-a-di", "weekday": "Dienstag", "start": "19:00", "end": "20:30", "team": "A", "resource_id": "kunstrasen", "area": "vorne & hinten"},
+        {"id": "win-kr-minis-mi", "weekday": "Mittwoch", "start": "15:45", "end": "16:45", "team": "Minis", "resource_id": "kunstrasen", "area": "vorne & hinten"},
+        {"id": "win-kr-c-mi", "weekday": "Mittwoch", "start": "16:45", "end": "18:15", "team": "C", "resource_id": "kunstrasen", "area": "vorne & hinten"},
+        {"id": "win-kr-d-mi", "weekday": "Mittwoch", "start": "18:15", "end": "19:45", "team": "D", "resource_id": "kunstrasen", "area": "vorne & hinten"},
+        {"id": "win-kr-ue50-mi", "weekday": "Mittwoch", "start": "19:45", "end": "21:15", "team": "Ü50", "resource_id": "kunstrasen", "area": "vorne & hinten"},
+        {"id": "win-kr-f-do", "weekday": "Donnerstag", "start": "16:45", "end": "18:15", "team": "F", "resource_id": "kunstrasen", "area": "vorne"},
+        {"id": "win-kr-e1-do", "weekday": "Donnerstag", "start": "17:00", "end": "18:30", "team": "E1", "resource_id": "kunstrasen", "area": "hinten"},
+        {"id": "win-kr-a-do", "weekday": "Donnerstag", "start": "18:30", "end": "20:00", "team": "A", "resource_id": "kunstrasen", "area": "vorne & hinten"},
+        {"id": "win-kr-herren-do", "weekday": "Donnerstag", "start": "20:00", "end": "21:30", "team": "Herren", "resource_id": "kunstrasen", "area": "vorne & hinten"},
+        {"id": "win-kr-e2-fr", "weekday": "Freitag", "start": "15:30", "end": "17:00", "team": "E2", "resource_id": "kunstrasen", "area": "vorne & hinten"},
+        {"id": "win-kr-c-fr", "weekday": "Freitag", "start": "17:00", "end": "18:30", "team": "C", "resource_id": "kunstrasen", "area": "vorne & hinten"},
+        {"id": "win-kr-d-fr", "weekday": "Freitag", "start": "18:30", "end": "20:00", "team": "D", "resource_id": "kunstrasen", "area": "vorne & hinten"}
+      ]
+    }
+  },
+  "one_off_events": [],
+  "cancelled_occurrences": [],
+  "matches": {
+    "resource_id": "rasen",
+    "buffer_before_minutes": 60,
+    "buffer_after_minutes": 60
+  }
+}

@@ -10,6 +10,9 @@ from pathlib import Path, PurePosixPath
 REQUIRED_FILES = (
     "function_app.py",
     "host.json",
+    "occupancy/__init__.py",
+    "occupancy/config.json",
+    "occupancy/service.py",
     "requirements.txt",
     "mower/__init__.py",
     "mower/config.json",
