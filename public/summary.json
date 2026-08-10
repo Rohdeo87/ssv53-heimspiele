@@ -1,24 +1,24 @@
 {
-  "generated_at": "2026-08-10T11:31:06+00:00",
+  "generated_at": "2026-08-10T16:21:52+00:00",
   "selection_mode": "club-wide venue",
   "event_timing": {
     "before_minutes": 60,
     "after_minutes": 60,
     "default_match_duration_minutes": 90
   },
-  "total": 82,
+  "total": 83,
   "included": 30,
   "review": 0,
-  "excluded": 52,
+  "excluded": 53,
   "by_calendar": {
     "Rasen": 25,
     "Kunstrasen": 5
   },
   "by_team": {
     "Schönwalder SV": {
-      "total": 11,
+      "total": 12,
       "included": 5,
-      "excluded": 6,
+      "excluded": 7,
       "review": 0
     },
     "Schönwalder SV (9er)": {
@@ -72,7 +72,7 @@
     {
       "date_from": "2026-07-01",
       "date_to": "2026-09-30",
-      "competition_rows": 28
+      "competition_rows": 29
     },
     {
       "date_from": "2026-10-01",
