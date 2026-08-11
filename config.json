@@ -9,8 +9,75 @@
   "event_timing": {
     "before_minutes": 60,
     "after_minutes": 60,
-    "default_match_duration_minutes": 90,
-    "duration_rules": []
+    "format_rules": [
+      {
+        "id": "dfb-kinderfussball-g-festival-max-7x7",
+        "competition_format": "festival",
+        "age_class": "G",
+        "minutes": 49,
+        "source": "https://www.dfb.de/mehr-fussball/kinderfussball"
+      }
+    ],
+    "age_class_rules": {
+      "HERREN": {
+        "id": "dfb-regel-7-herren-2x45",
+        "minutes": 90,
+        "source": "https://www.dfb.de/mehr-fussball/fussball-regeln"
+      },
+      "UE40": {
+        "id": "fk-havelland-ue40-2026-27-dfb-standard",
+        "minutes": 90,
+        "source": "https://www.fk-havelland.de/db.php/anhang/384/20260722+-+Wettspielanweisung+%C3%9C-Mannschaften+2026-27.pdf"
+      },
+      "UE50": {
+        "id": "fk-havelland-ue50-2026-27-dfb-standard",
+        "minutes": 90,
+        "source": "https://www.fk-havelland.de/db.php/anhang/384/20260722+-+Wettspielanweisung+%C3%9C-Mannschaften+2026-27.pdf"
+      },
+      "A": {
+        "id": "flb-jugendordnung-2025-12-13-a-2x45",
+        "minutes": 90,
+        "cup_extension_minutes": 30,
+        "source": "https://www.flb.de/seite/447298/statuten.html"
+      },
+      "B": {
+        "id": "flb-jugendordnung-2025-12-13-b-2x40",
+        "minutes": 80,
+        "cup_extension_minutes": 20,
+        "source": "https://www.flb.de/seite/447298/statuten.html"
+      },
+      "C": {
+        "id": "flb-jugendordnung-2025-12-13-c-2x35",
+        "minutes": 70,
+        "cup_extension_minutes": 10,
+        "source": "https://www.flb.de/seite/447298/statuten.html"
+      },
+      "D": {
+        "id": "flb-jugendordnung-2025-12-13-d-2x30",
+        "minutes": 60,
+        "cup_extension_minutes": 10,
+        "source": "https://www.flb.de/seite/447298/statuten.html"
+      },
+      "E": {
+        "id": "flb-jugendordnung-2025-12-13-e-2x25",
+        "minutes": 50,
+        "cup_extension_minutes": 10,
+        "source": "https://www.flb.de/seite/447298/statuten.html"
+      },
+      "F": {
+        "id": "flb-jugendordnung-2025-12-13-f-2x20",
+        "minutes": 40,
+        "cup_extension_minutes": 10,
+        "source": "https://www.flb.de/seite/447298/statuten.html"
+      },
+      "G": {
+        "id": "flb-jugendordnung-2025-12-13-g-max-2x20",
+        "minutes": 40,
+        "cup_extension_minutes": 10,
+        "source": "https://www.flb.de/seite/447298/statuten.html"
+      }
+    },
+    "fallback_rules": []
   },
   "adaptive_windows": {
     "initial_window_months": 3,

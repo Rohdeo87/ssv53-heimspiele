@@ -8,6 +8,8 @@ import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 
+from occupancy.match_model import normalize_match_description, normalize_match_title
+
 
 def load_json(path: Path):
     return json.loads(path.read_text(encoding="utf-8"))
@@ -48,31 +50,47 @@ def main() -> int:
         if calendar not in {"Rasen", "Kunstrasen"}:
             continue
         external_id = str(item.get("external_id") or "").strip()
-        start = str(item.get("event_start") or "").strip()
-        end = str(item.get("event_end") or "").strip()
-        if not external_id or not start or not end:
+        start = str(item.get("kickoff") or "").strip()
+        end = str(item.get("match_end") or "").strip()
+        occupancy_start = str(item.get("event_start") or "").strip()
+        occupancy_end = str(item.get("event_end") or "").strip()
+        duration_minutes = int(item.get("match_duration_minutes") or 0)
+        duration_rule = str(item.get("duration_rule") or "").strip()
+        competition_format = str(item.get("competition_format") or "").strip()
+        if not all((external_id, start, end, occupancy_start, occupancy_end)):
             invalid.append(str(item.get("external_id") or "unbekannt"))
+            continue
+        if duration_minutes <= 0 or not duration_rule or not competition_format:
+            invalid.append(external_id)
             continue
         team = str(item.get("team_name") or "").strip()
         home = str(item.get("home_team") or "").strip()
         away = str(item.get("away_team") or "").strip()
-        title = f"Spiel {team}: {home} – {away}" if team else f"Spiel: {home} – {away}"
+        team_category = str(item.get("team_category") or "").strip()
+        competition = str(item.get("competition") or "").strip()
         matches.append({
             "id": "dfb:" + external_id,
-            "title": title,
+            "title": normalize_match_title(home, away),
             "start": start,
             "end": end,
-            "kickoff": item.get("kickoff", ""),
+            "occupancyStart": occupancy_start,
+            "occupancyEnd": occupancy_end,
+            "kickoff": start,
+            "matchDurationMinutes": duration_minutes,
+            "durationRule": duration_rule,
+            "competitionFormat": competition_format,
             "place": "rasen" if calendar == "Rasen" else "kunstrasen",
             "calendar": calendar,
             "team": team,
-            "teamCategory": item.get("team_category", ""),
+            "teamCategory": team_category,
             "teamRole": item.get("team_role", "unknown"),
             "homeTeam": home,
             "awayTeam": away,
-            "competition": item.get("competition", ""),
+            "competition": competition,
+            "description": normalize_match_description(team_category, competition),
             "status": item.get("status", ""),
             "detailLink": item.get("detail_url", ""),
+            "location": item.get("venue_raw", ""),
             "source": "fussball.de",
             "checksum": item.get("checksum", ""),
         })
@@ -90,7 +108,7 @@ def main() -> int:
     matches.sort(key=lambda value: (value.get("start", ""), value.get("id", "")))
     generated_at = summary.get("generated_at") or datetime.now(timezone.utc).isoformat()
     feed = {
-        "schemaVersion": 1,
+        "schemaVersion": 2,
         "generatedAt": generated_at,
         "status": "ok",
         "matches": matches,

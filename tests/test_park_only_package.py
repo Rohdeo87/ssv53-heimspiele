@@ -74,6 +74,9 @@ class ParkOnlyPackageTests(unittest.TestCase):
                 self.assertTrue(manifest["park_write_gate_required"])
                 self.assertIn("mower/husqvarna_actions.py", names)
                 self.assertIn("mower/park_only.py", names)
+                self.assertIn("occupancy/match_model.py", names)
+                self.assertIn("public/matches.json", names)
+                self.assertIn("public/kunstrasen.ics", names)
 
                 joined = b"\n".join(
                     archive.read(name)

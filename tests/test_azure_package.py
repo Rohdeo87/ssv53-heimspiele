@@ -41,6 +41,8 @@ class AzurePackageTests(unittest.TestCase):
                 self.assertIn("package-manifest.json", names)
                 self.assertIn("mower/controller.py", names)
                 self.assertIn("public/rasen.ics", names)
+                self.assertIn("public/kunstrasen.ics", names)
+                self.assertIn("public/matches.json", names)
 
                 self.assertFalse(
                     any(

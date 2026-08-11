@@ -139,7 +139,10 @@ jobs:
 
               for required in (
                   "occupancy/config.json",
+                  "occupancy/match_model.py",
                   "occupancy/service.py",
+                  "public/matches.json",
+                  "public/kunstrasen.ics",
                   "function_app.py",
                   "mower/husqvarna_actions.py",
                   "mower/park_only.py",
@@ -245,7 +248,7 @@ jobs:
             echo "- Zentrale Azure-Belegungsquelle: **installiert**"
             echo "- Sommer-Trainingsplan gültig ab: **11.08.2026**"
             echo "- Rasen + Kunstrasen: **enthalten**"
-            echo "- Heimspiele: **aus rasen.ics integriert**"
+            echo "- Heimspiele: **aus strukturiertem matches.json für Rasen und Kunstrasen integriert**"
             echo "- Öffentlicher /api/occupancy-Endpunkt: **live geprüft**"
             echo "- PARK_ONLY-Sicherheitsgrenzen: **unverändert verriegelt**"
             echo "- Automatischer Mäherstart: **nicht implementiert**"

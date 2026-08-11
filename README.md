@@ -45,9 +45,17 @@ Der gewünschte Puffer beträgt nun:
 - **60 Minuten vor dem Anstoß**
 - **60 Minuten nach dem Spiel**
 
-Da FUSSBALL.DE keine verlässliche Endzeit liefert, setzt Version 12.2 zunächst eine konservative Standardspieldauer von 90 Minuten an. Ein Spiel mit Anstoß um 10:00 Uhr blockiert den Platz daher von 09:00 bis 12:30 Uhr.
+Da FUSSBALL.DE keine verlässliche Endzeit liefert, bestimmt die zentrale
+Timing-Engine die nominelle Dauer aus Altersklasse, Wettbewerb und erkannter
+Spielform. Die Regeln sind in `event_timing.age_class_rules` und
+`event_timing.format_rules` nachvollziehbar konfiguriert. Es gibt keinen
+pauschalen 90-Minuten-Default: unbekannte oder nicht belastbar geregelte
+Sonderformate stoppen die Veröffentlichung fail-closed.
 
-Die Standardspieldauer kann später in `event_timing.duration_rules` für bestimmte Mannschaftsarten angepasst werden. Neue Mannschaften bleiben bis zu einer solchen Anpassung mit 90 Minuten sicher abgedeckt.
+`start`/`end` enthalten Anstoß und nominelles Spielende. Die getrennten Felder
+`occupancyStart`/`occupancyEnd` behalten für jedes Spiel zwingend den
+60-Minuten-Vor- und Nachlauf. Die ICS-Dateien verwenden weiterhin direkt den
+Sicherheitsblock und bleiben damit mit der bestehenden Mäherplanung kompatibel.
 
 ## Vereinsweiter und skalierbarer Abruf
 

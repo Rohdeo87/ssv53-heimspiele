@@ -6,6 +6,11 @@ from pathlib import Path
 from typing import Any, Iterable
 from zoneinfo import ZoneInfo
 
+from occupancy.match_model import (
+    normalize_legacy_ics_description,
+    normalize_legacy_ics_summary,
+)
+
 
 WEEKDAYS = {
     "monday": 0,
@@ -26,7 +31,6 @@ WEEKDAYS = {
 
 MAX_RANGE_DAYS = 63
 DEFAULT_SEASON = "Sommer"
-
 
 def load_config(path: str | Path) -> dict[str, Any]:
     with Path(path).open("r", encoding="utf-8") as handle:
@@ -86,8 +90,12 @@ def _config_date(config: dict[str, Any], name: str) -> date | None:
 
 
 def _event_overlaps(event: dict[str, Any], start: datetime, end: datetime) -> bool:
-    event_start = datetime.fromisoformat(str(event["start"]))
-    event_end = datetime.fromisoformat(str(event["end"]))
+    event_start = datetime.fromisoformat(
+        str(event.get("occupancyStart") or event["start"])
+    )
+    event_end = datetime.fromisoformat(
+        str(event.get("occupancyEnd") or event["end"])
+    )
     return event_end > start and event_start < end
 
 
@@ -202,7 +210,7 @@ def _iter_ics_events(path: str | Path) -> Iterable[dict[str, str]]:
     return parsed
 
 
-def _match_events(
+def _legacy_ics_match_events(
     config: dict[str, Any],
     *,
     matches_path: str | Path,
@@ -229,7 +237,12 @@ def _match_events(
             display_start = blocked_start
             display_end = blocked_end
         uid = _ics_unescape(raw.get("UID", ""))
-        title = _ics_unescape(raw.get("SUMMARY", "Heimspiel"))
+        title, team = normalize_legacy_ics_summary(
+            _ics_unescape(raw.get("SUMMARY", "Heimspiel"))
+        )
+        description, detail_link = normalize_legacy_ics_description(
+            _ics_unescape(raw.get("DESCRIPTION", ""))
+        )
         event = {
             "id": f"match:{uid or display_start.isoformat()}",
             "title": title,
@@ -238,9 +251,10 @@ def _match_events(
             "resourceId": resource_id,
             "source": "match",
             "season": None,
-            "team": "",
+            "team": team,
             "area": "vorne & hinten",
-            "description": _ics_unescape(raw.get("DESCRIPTION", "")),
+            "description": description,
+            "detailLink": detail_link,
             "location": _ics_unescape(raw.get("LOCATION", "")),
             "occupancyStart": blocked_start.isoformat(),
             "occupancyEnd": blocked_end.isoformat(),
@@ -248,6 +262,119 @@ def _match_events(
         if _event_overlaps(event, range_start, range_end):
             events.append(event)
     return events
+
+
+def _structured_match_events(
+    config: dict[str, Any],
+    *,
+    matches_path: str | Path,
+    range_start: datetime,
+    range_end: datetime,
+    tz: ZoneInfo,
+) -> list[dict[str, Any]]:
+    source = Path(matches_path)
+    with source.open("r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+    if not isinstance(payload, dict) or int(payload.get("schemaVersion", 0)) != 2:
+        raise ValueError("matches.json muss dem strukturierten Schema 2 entsprechen.")
+    if payload.get("status") != "ok" or not isinstance(payload.get("matches"), list):
+        raise ValueError("matches.json enthält keinen freigegebenen Matchbestand.")
+
+    match_config = config.get("matches", {})
+    required_before = timedelta(
+        minutes=int(match_config.get("buffer_before_minutes", 60))
+    )
+    required_after = timedelta(
+        minutes=int(match_config.get("buffer_after_minutes", 60))
+    )
+    events: list[dict[str, Any]] = []
+    for item in payload["matches"]:
+        if not isinstance(item, dict):
+            raise ValueError("matches.json enthält einen ungültigen Eintrag.")
+        calendar = str(item.get("calendar") or "").strip()
+        place = str(item.get("place") or "").strip().casefold()
+        resource_id = {
+            "Rasen": "rasen",
+            "Kunstrasen": "kunstrasen",
+        }.get(calendar, place)
+        if resource_id not in {"rasen", "kunstrasen"}:
+            raise ValueError(f"Unbekannte Spielressource: {calendar or place!r}")
+
+        display_start = _parse_request_datetime(str(item.get("start") or ""), tz)
+        display_end = _parse_request_datetime(str(item.get("end") or ""), tz)
+        blocked_start = _parse_request_datetime(
+            str(item.get("occupancyStart") or ""), tz
+        )
+        blocked_end = _parse_request_datetime(
+            str(item.get("occupancyEnd") or ""), tz
+        )
+        duration_minutes = int(item.get("matchDurationMinutes") or 0)
+        if display_end <= display_start or duration_minutes <= 0:
+            raise ValueError("matches.json enthält eine ungültige sichtbare Spielzeit.")
+        if display_end - display_start != timedelta(minutes=duration_minutes):
+            raise ValueError("Match-Dauer und sichtbare Spielzeit widersprechen sich.")
+        if display_start - blocked_start != required_before:
+            raise ValueError("Der verpflichtende 60-Minuten-Spielvorlauf fehlt.")
+        if blocked_end - display_end != required_after:
+            raise ValueError("Der verpflichtende 60-Minuten-Spielnachlauf fehlt.")
+
+        event = {
+            "id": "match:" + str(item.get("id") or "").removeprefix("dfb:"),
+            "title": str(item.get("title") or "Heimspiel"),
+            "start": display_start.isoformat(),
+            "end": display_end.isoformat(),
+            "resourceId": resource_id,
+            "source": "match",
+            "season": None,
+            "team": str(item.get("team") or ""),
+            "teamCategory": str(item.get("teamCategory") or ""),
+            "teamRole": str(item.get("teamRole") or "unknown"),
+            "homeTeam": str(item.get("homeTeam") or ""),
+            "awayTeam": str(item.get("awayTeam") or ""),
+            "competition": str(item.get("competition") or ""),
+            "competitionFormat": str(item.get("competitionFormat") or ""),
+            "matchDurationMinutes": duration_minutes,
+            "durationRule": str(item.get("durationRule") or ""),
+            "kickoff": str(item.get("kickoff") or item.get("start") or ""),
+            "area": "vorne & hinten",
+            "description": str(item.get("description") or ""),
+            "detailLink": str(item.get("detailLink") or ""),
+            "location": str(item.get("location") or ""),
+            "occupancyStart": blocked_start.isoformat(),
+            "occupancyEnd": blocked_end.isoformat(),
+        }
+        for field in ("id", "team", "durationRule", "competitionFormat"):
+            if not str(event.get(field) or "").strip():
+                raise ValueError(f"Strukturiertes Match-Feld fehlt: {field}")
+        if _event_overlaps(event, range_start, range_end):
+            events.append(event)
+    return events
+
+
+def _match_events(
+    config: dict[str, Any],
+    *,
+    matches_path: str | Path,
+    range_start: datetime,
+    range_end: datetime,
+    tz: ZoneInfo,
+) -> list[dict[str, Any]]:
+    source = Path(matches_path)
+    if source.suffix.casefold() == ".json":
+        return _structured_match_events(
+            config,
+            matches_path=source,
+            range_start=range_start,
+            range_end=range_end,
+            tz=tz,
+        )
+    return _legacy_ics_match_events(
+        config,
+        matches_path=source,
+        range_start=range_start,
+        range_end=range_end,
+        tz=tz,
+    )
 
 
 def _one_off_events(

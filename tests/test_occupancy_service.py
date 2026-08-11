@@ -62,9 +62,9 @@ class OccupancyServiceTests(unittest.TestCase):
                     "UID:test-match",
                     "DTSTART;TZID=Europe/Berlin:20260821T180000",
                     "DTEND;TZID=Europe/Berlin:20260821T213000",
-                    "SUMMARY:SSV 53 – Test",
+                    "SUMMARY:Schönwalder SV (Ü40): Schönwalder SV (Ü40) – SG Bornim Ü40",
                     "LOCATION:Rasenplatz\\, Schönwalde",
-                    "DESCRIPTION:Kreispokal",
+                    "DESCRIPTION:Fr\\, | Herren Ü40 | Kreispokal | https://www.fussball.de/spiel/test",
                     "END:VEVENT",
                     "END:VCALENDAR",
                 ]
@@ -104,6 +104,92 @@ class OccupancyServiceTests(unittest.TestCase):
         self.assertEqual(match["occupancyStart"], "2026-08-21T18:00:00+02:00")
         self.assertEqual(match["occupancyEnd"], "2026-08-21T21:30:00+02:00")
 
+    def test_duplicate_ue40_team_prefix_is_removed(self) -> None:
+        payload = self._payload("2026-08-21", "2026-08-22")
+        match = next(event for event in payload["events"] if event["source"] == "match")
+        self.assertEqual(match["title"], "Schönwalder SV (Ü40) – SG Bornim Ü40")
+        self.assertEqual(match["team"], "Schönwalder SV (Ü40)")
+
+    def test_duplicate_spielgemeinschaft_prefix_is_removed(self) -> None:
+        self.matches.write_text(
+            self.matches.read_text(encoding="utf-8").replace(
+                "Schönwalder SV (Ü40): Schönwalder SV (Ü40) – SG Bornim Ü40",
+                "Spielgemeinschaft Schönwalde-Perwenitz-Paaren: "
+                "Spielgemeinschaft Schönwalde-Perwenitz-Paaren – VfL Nauen II",
+            ),
+            encoding="utf-8",
+        )
+        payload = self._payload("2026-08-21", "2026-08-22")
+        match = next(event for event in payload["events"] if event["source"] == "match")
+        self.assertEqual(
+            match["title"],
+            "Spielgemeinschaft Schönwalde-Perwenitz-Paaren – VfL Nauen II",
+        )
+        self.assertEqual(
+            match["team"],
+            "Spielgemeinschaft Schönwalde-Perwenitz-Paaren",
+        )
+
+    def test_duplicate_youth_team_prefix_is_structured_without_opponent(self) -> None:
+        self.matches.write_text(
+            self.matches.read_text(encoding="utf-8").replace(
+                "Schönwalder SV (Ü40): Schönwalder SV (Ü40) – SG Bornim Ü40",
+                "Schönwalder SV E2: Schönwalder SV E2 – Gegnerische D1",
+            ),
+            encoding="utf-8",
+        )
+        payload = self._payload("2026-08-21", "2026-08-22")
+        match = next(event for event in payload["events"] if event["source"] == "match")
+        self.assertEqual(match["title"], "Schönwalder SV E2 – Gegnerische D1")
+        self.assertEqual(match["team"], "Schönwalder SV E2")
+
+    def test_summary_without_duplicate_prefix_is_unchanged(self) -> None:
+        self.matches.write_text(
+            self.matches.read_text(encoding="utf-8").replace(
+                "Schönwalder SV (Ü40): Schönwalder SV (Ü40) – SG Bornim Ü40",
+                "Schönwalder SV (Ü40) – SG Bornim Ü40",
+            ),
+            encoding="utf-8",
+        )
+        payload = self._payload("2026-08-21", "2026-08-22")
+        match = next(event for event in payload["events"] if event["source"] == "match")
+        self.assertEqual(match["title"], "Schönwalder SV (Ü40) – SG Bornim Ü40")
+        self.assertEqual(match["team"], "")
+
+    def test_description_url_is_extracted_and_cleaned(self) -> None:
+        payload = self._payload("2026-08-21", "2026-08-22")
+        match = next(event for event in payload["events"] if event["source"] == "match")
+        self.assertEqual(match["description"], "Herren Ü40 · Kreispokal")
+        self.assertEqual(match["detailLink"], "https://www.fussball.de/spiel/test")
+        self.assertNotIn("http", match["description"])
+
+        self.matches.write_text(
+            self.matches.read_text(encoding="utf-8").replace("https://", "http://"),
+            encoding="utf-8",
+        )
+        payload = self._payload("2026-08-21", "2026-08-22")
+        match = next(event for event in payload["events"] if event["source"] == "match")
+        self.assertEqual(match["detailLink"], "http://www.fussball.de/spiel/test")
+
+    def test_match_normalization_keeps_safety_times_unchanged(self) -> None:
+        payload = self._payload("2026-08-21", "2026-08-22")
+        match = next(event for event in payload["events"] if event["source"] == "match")
+        self.assertEqual(match["start"], "2026-08-21T19:00:00+02:00")
+        self.assertEqual(match["end"], "2026-08-21T20:30:00+02:00")
+        self.assertEqual(match["occupancyStart"], "2026-08-21T18:00:00+02:00")
+        self.assertEqual(match["occupancyEnd"], "2026-08-21T21:30:00+02:00")
+
+    def test_appack_maps_azure_detail_link_to_existing_popup_field(self) -> None:
+        appack = (
+            Path(__file__).resolve().parents[1]
+            / "appack-platzbelegungsplan-azure.html"
+        ).read_text(encoding="utf-8")
+        self.assertIn(
+            'detailLink: String(item.detailLink || "").trim()',
+            appack,
+        )
+        self.assertIn('source: source,\n          team: String(item.team || "")', appack)
+
     def test_unknown_season_is_rejected(self) -> None:
         with self.assertRaisesRegex(ValueError, "Unbekannte Saison"):
             self._payload("2026-08-10", "2026-08-12", season="Frühling")
@@ -111,6 +197,99 @@ class OccupancyServiceTests(unittest.TestCase):
     def test_range_is_limited(self) -> None:
         with self.assertRaisesRegex(ValueError, "Maximal 63 Tage"):
             self._payload("2026-08-10", "2026-11-01")
+
+    def test_structured_match_source_includes_rasen_and_kunstrasen(self) -> None:
+        structured = self.root / "matches.json"
+        base = {
+            "start": "2026-09-12T10:00+02:00",
+            "end": "2026-09-12T11:00+02:00",
+            "occupancyStart": "2026-09-12T09:00+02:00",
+            "occupancyEnd": "2026-09-12T12:00+02:00",
+            "kickoff": "2026-09-12T10:00+02:00",
+            "matchDurationMinutes": 60,
+            "durationRule": "flb-jugendordnung-2025-12-13-d-2x30",
+            "competitionFormat": "league",
+            "team": "Schönwalder SV",
+            "teamCategory": "D-Junioren | 1. Kreisklasse",
+            "teamRole": "home",
+            "homeTeam": "Schönwalder SV",
+            "awayTeam": "Gast",
+            "competition": "D-Junioren | 1. Kreisklasse",
+            "description": "D-Junioren · 1. Kreisklasse",
+            "detailLink": "https://www.fussball.de/spiel/test",
+        }
+        structured.write_text(
+            json.dumps(
+                {
+                    "schemaVersion": 2,
+                    "status": "ok",
+                    "matches": [
+                        {
+                            **base,
+                            "id": "dfb:rasen",
+                            "title": "Schönwalder SV – Gast Rasen",
+                            "calendar": "Rasen",
+                            "place": "rasen",
+                        },
+                        {
+                            **base,
+                            "id": "dfb:kunstrasen",
+                            "title": "Schönwalder SV – Gast Kunstrasen",
+                            "calendar": "Kunstrasen",
+                            "place": "kunstrasen",
+                        },
+                    ],
+                },
+                ensure_ascii=False,
+            ),
+            encoding="utf-8",
+        )
+        payload = build_occupancy_payload(
+            config_path=self.config,
+            matches_path=structured,
+            start="2026-09-12",
+            end="2026-09-13",
+            season="Sommer",
+        )
+        matches = [event for event in payload["events"] if event["source"] == "match"]
+        self.assertEqual({"rasen", "kunstrasen"}, {item["resourceId"] for item in matches})
+        self.assertTrue(all(item["start"].startswith("2026-09-12T10:00") for item in matches))
+        self.assertTrue(all(item["occupancyStart"].startswith("2026-09-12T09:00") for item in matches))
+
+    def test_structured_match_source_rejects_missing_safety_buffer(self) -> None:
+        structured = self.root / "matches.json"
+        structured.write_text(
+            json.dumps(
+                {
+                    "schemaVersion": 2,
+                    "status": "ok",
+                    "matches": [
+                        {
+                            "id": "dfb:unsafe",
+                            "title": "Schönwalder SV – Gast",
+                            "start": "2026-09-12T10:00+02:00",
+                            "end": "2026-09-12T11:00+02:00",
+                            "occupancyStart": "2026-09-12T09:30+02:00",
+                            "occupancyEnd": "2026-09-12T12:00+02:00",
+                            "matchDurationMinutes": 60,
+                            "durationRule": "test",
+                            "competitionFormat": "league",
+                            "team": "Schönwalder SV",
+                            "calendar": "Rasen",
+                        }
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+        with self.assertRaisesRegex(ValueError, "60-Minuten-Spielvorlauf"):
+            build_occupancy_payload(
+                config_path=self.config,
+                matches_path=structured,
+                start="2026-09-12",
+                end="2026-09-13",
+                season="Sommer",
+            )
 
 
 class ProductionScheduleTests(unittest.TestCase):

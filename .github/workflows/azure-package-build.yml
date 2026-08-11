@@ -10,7 +10,10 @@ on:
       - "host.json"
       - "requirements.txt"
       - "mower/**"
+      - "occupancy/**"
       - "public/rasen.ics"
+      - "public/kunstrasen.ics"
+      - "public/matches.json"
       - "scripts/build_azure_source_package.py"
       - "tests/test_azure_package.py"
       - ".github/workflows/azure-package-build.yml"
@@ -20,7 +23,10 @@ on:
       - "host.json"
       - "requirements.txt"
       - "mower/**"
+      - "occupancy/**"
       - "public/rasen.ics"
+      - "public/kunstrasen.ics"
+      - "public/matches.json"
       - "scripts/build_azure_source_package.py"
       - "tests/test_azure_package.py"
       - ".github/workflows/azure-package-build.yml"
@@ -90,7 +96,11 @@ jobs:
                   "package-manifest.json",
                   "mower/controller.py",
                   "mower/husqvarna.py",
+                  "occupancy/match_model.py",
+                  "occupancy/service.py",
                   "public/rasen.ics",
+                  "public/kunstrasen.ics",
+                  "public/matches.json",
               }
               missing = sorted(required - names)
               if missing:

@@ -12,6 +12,7 @@ REQUIRED_FILES = (
     "host.json",
     "occupancy/__init__.py",
     "occupancy/config.json",
+    "occupancy/match_model.py",
     "occupancy/service.py",
     "requirements.txt",
     "mower/__init__.py",
@@ -30,6 +31,8 @@ REQUIRED_FILES = (
     "mower/state.py",
     "mower/state_store.py",
     "public/rasen.ics",
+    "public/kunstrasen.ics",
+    "public/matches.json",
 )
 
 FORBIDDEN_PATH_PARTS = {
