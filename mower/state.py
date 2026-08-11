@@ -42,8 +42,13 @@ class AutomationState:
     last_mower_state: str | None = None
     last_error_code: int | None = None
     last_hydrawise_success_utc: str | None = None
+    last_hydrawise_observed_utc: str | None = None
+    hydrawise_clear_since_utc: str | None = None
+    last_hydrawise_active_count: int | None = None
     next_irrigation_start_utc: str | None = None
     parked_by_automation: bool = False
+    automation_park_source: str | None = None
+    automation_restart_allowed: bool = False
     park_command_sent_utc: str | None = None
     park_confirmed_utc: str | None = None
     automation_park_until_utc: str | None = None
@@ -63,6 +68,8 @@ class AutomationState:
             "last_cycle_started_utc",
             "last_success_utc",
             "last_hydrawise_success_utc",
+            "last_hydrawise_observed_utc",
+            "hydrawise_clear_since_utc",
             "next_irrigation_start_utc",
             "park_command_sent_utc",
             "park_confirmed_utc",
@@ -104,6 +111,21 @@ class AutomationState:
                 ),
                 "last_hydrawise_success_utc",
             ),
+            last_hydrawise_observed_utc=_require_utc_iso(
+                _normalize_optional_text(
+                    values.get("last_hydrawise_observed_utc")
+                ),
+                "last_hydrawise_observed_utc",
+            ),
+            hydrawise_clear_since_utc=_require_utc_iso(
+                _normalize_optional_text(
+                    values.get("hydrawise_clear_since_utc")
+                ),
+                "hydrawise_clear_since_utc",
+            ),
+            last_hydrawise_active_count=_normalize_optional_int(
+                values.get("last_hydrawise_active_count")
+            ),
             next_irrigation_start_utc=_require_utc_iso(
                 _normalize_optional_text(
                     values.get("next_irrigation_start_utc")
@@ -111,6 +133,12 @@ class AutomationState:
                 "next_irrigation_start_utc",
             ),
             parked_by_automation=bool(values.get("parked_by_automation", False)),
+            automation_park_source=_normalize_optional_text(
+                values.get("automation_park_source")
+            ),
+            automation_restart_allowed=bool(
+                values.get("automation_restart_allowed", False)
+            ),
             park_command_sent_utc=_require_utc_iso(
                 _normalize_optional_text(values.get("park_command_sent_utc")),
                 "park_command_sent_utc",
@@ -152,6 +180,9 @@ class AutomationState:
         mower_state: str | None = None,
         error_code: int | None = None,
         hydrawise_success_utc: datetime | None = None,
+        hydrawise_observed_utc: datetime | None = None,
+        hydrawise_clear: bool | None = None,
+        hydrawise_active_count: int | None = None,
         next_irrigation_start_utc: datetime | None = None,
     ) -> "AutomationState":
         started = _as_utc(started_utc, "started_utc")
@@ -165,6 +196,32 @@ class AutomationState:
             if next_irrigation_start_utc is not None
             else None
         )
+        hydrawise_observed = (
+            _as_utc(hydrawise_observed_utc, "hydrawise_observed_utc")
+            if hydrawise_observed_utc is not None
+            else None
+        )
+        if hydrawise_active_count is not None and hydrawise_active_count < 0:
+            raise ValueError("hydrawise_active_count darf nicht negativ sein.")
+
+        if hydrawise_clear is True:
+            # Die Bestätigung beginnt mit dem tatsächlichen Abrufzyklus und
+            # niemals rückdatiert mit dem Zeitstempel des API-Payloads.
+            clear_since = (
+                self.hydrawise_clear_since_utc or started.isoformat()
+            )
+        else:
+            # Auch ein fehlender Abruf unterbricht die Bestätigungskette.
+            clear_since = None
+
+        parked_activity = str(mower_activity or "").strip().upper()
+        park_confirmed = self.park_confirmed_utc
+        if (
+            self.parked_by_automation
+            and park_confirmed is None
+            and parked_activity in {"PARKED_IN_CS", "CHARGING"}
+        ):
+            park_confirmed = started.isoformat()
         return replace(
             self,
             revision=self.revision + 1,
@@ -181,11 +238,19 @@ class AutomationState:
                 if hydrawise is not None
                 else self.last_hydrawise_success_utc
             ),
+            last_hydrawise_observed_utc=(
+                hydrawise_observed.isoformat()
+                if hydrawise_observed is not None
+                else self.last_hydrawise_observed_utc
+            ),
+            hydrawise_clear_since_utc=clear_since,
+            last_hydrawise_active_count=hydrawise_active_count,
             next_irrigation_start_utc=(
                 next_irrigation.isoformat()
                 if next_irrigation is not None
                 else None
             ),
+            park_confirmed_utc=park_confirmed,
         )
 
     def record_command(
@@ -195,6 +260,8 @@ class AutomationState:
         sent_utc: datetime,
         action: str,
         park_until_utc: datetime | None = None,
+        park_source: str = "unknown",
+        restart_allowed: bool = False,
     ) -> "AutomationState":
         sent = _as_utc(sent_utc, "sent_utc")
         normalized_action = action.strip().upper()
@@ -202,6 +269,9 @@ class AutomationState:
             raise ValueError("fingerprint darf nicht leer sein.")
         if normalized_action not in {"PARK", "START"}:
             raise ValueError("action muss PARK oder START sein.")
+        normalized_source = park_source.strip().lower()
+        if normalized_action == "PARK" and not normalized_source:
+            raise ValueError("park_source darf bei PARK nicht leer sein.")
 
         changes: dict[str, Any] = {
             "revision": self.revision + 1,
@@ -211,7 +281,10 @@ class AutomationState:
         if normalized_action == "PARK":
             changes.update(
                 parked_by_automation=True,
+                automation_park_source=normalized_source,
+                automation_restart_allowed=bool(restart_allowed),
                 park_command_sent_utc=sent.isoformat(),
+                park_confirmed_utc=None,
                 automation_park_until_utc=(
                     _as_utc(park_until_utc, "park_until_utc").isoformat()
                     if park_until_utc is not None
@@ -221,10 +294,34 @@ class AutomationState:
         else:
             changes.update(
                 parked_by_automation=False,
+                automation_park_source=None,
+                automation_restart_allowed=False,
                 last_start_command_utc=sent.isoformat(),
+                park_command_sent_utc=None,
+                park_confirmed_utc=None,
                 automation_park_until_utc=None,
             )
         return replace(self, **changes)
+
+    def record_failed_park(self) -> "AutomationState":
+        """Gibt eine fehlgeschlagene PARK-Reservierung fail-closed frei.
+
+        Ein eventuell doch angekommenes PARK darf erneut gesendet werden; das
+        ist sicherer als eine fälschlich angenommene Automationsparkierung.
+        """
+
+        return replace(
+            self,
+            revision=self.revision + 1,
+            parked_by_automation=False,
+            automation_park_source=None,
+            automation_restart_allowed=False,
+            park_command_sent_utc=None,
+            park_confirmed_utc=None,
+            automation_park_until_utc=None,
+            last_command_fingerprint=None,
+            last_command_utc=None,
+        )
 
 
 def _as_utc(value: datetime, field_name: str) -> datetime:

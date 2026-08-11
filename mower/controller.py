@@ -19,6 +19,7 @@ from mower.runtime import (
 
 LiveCycleRunner = Callable[..., CycleResult]
 ParkOnlyRunner = Callable[..., CycleResult]
+FullMowerRunner = Callable[..., CycleResult]
 RuntimeInputResolver = Callable[..., Any]
 
 
@@ -66,6 +67,7 @@ def run_control_cycle(
     source: str = "azure-timer",
     live_cycle_runner: LiveCycleRunner = run_read_only_cycle,
     park_only_runner: ParkOnlyRunner = run_park_only_cycle,
+    full_mower_runner: FullMowerRunner | None = None,
     runtime_input_resolver: RuntimeInputResolver = resolve_runtime_inputs,
 ) -> CycleResult:
     """Führt genau einen sicheren Azure-Steuerungszyklus aus.
@@ -88,6 +90,23 @@ def run_control_cycle(
         return build_heartbeat_result(
             now_utc=now_utc,
             settings=settings,
+            past_due=past_due,
+            source=source,
+        )
+
+    if settings.control_mode is ControlMode.FULL_MOWER:
+        if not settings.enable_live_reads:
+            raise RuntimeError("FULL_MOWER benötigt ENABLE_LIVE_READS=true.")
+        if full_mower_runner is None:
+            # Startfähige Logik wird nur in dem expliziten FULL_MOWER-Paket
+            # ausgeliefert. DRY_RUN- und PARK_ONLY-Pakete bleiben startfrei.
+            from mower.full_mower import run_full_mower_cycle
+
+            full_mower_runner = run_full_mower_cycle
+        return full_mower_runner(
+            now_utc=now_utc,
+            settings=settings,
+            environment=environment,
             past_due=past_due,
             source=source,
         )

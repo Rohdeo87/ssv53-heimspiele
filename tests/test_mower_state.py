@@ -51,6 +51,27 @@ class AutomationStateTests(unittest.TestCase):
         self.assertFalse(started.parked_by_automation)
         self.assertEqual(started.last_start_command_utc, NOW.isoformat())
 
+    def test_hydrawise_clear_confirmation_starts_at_poll_time(self) -> None:
+        state = AutomationState().record_cycle(
+            started_utc=NOW,
+            success=True,
+            decision_code="HYDRAWISE_CLEAR",
+            hydrawise_success_utc=NOW,
+            hydrawise_observed_utc=NOW - timedelta(minutes=2),
+            hydrawise_clear=True,
+            hydrawise_active_count=0,
+        )
+        self.assertEqual(state.hydrawise_clear_since_utc, NOW.isoformat())
+
+        interrupted = state.record_cycle(
+            started_utc=NOW + timedelta(minutes=1),
+            success=True,
+            decision_code="HYDRAWISE_RUNNING",
+            hydrawise_clear=False,
+            hydrawise_active_count=1,
+        )
+        self.assertIsNone(interrupted.hydrawise_clear_since_utc)
+
 
 class StateStoreTests(unittest.TestCase):
     def test_in_memory_store_uses_optimistic_revision(self) -> None:

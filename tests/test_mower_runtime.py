@@ -35,6 +35,8 @@ class RuntimeSettingsTests(unittest.TestCase):
         self.assertEqual(settings.timer_schedule, "0 * * * * *")
         self.assertEqual(settings.timezone_name, "Europe/Berlin")
         self.assertFalse(settings.enable_park_commands)
+        self.assertFalse(settings.enable_start_commands)
+        self.assertFalse(settings.full_mower_write_gate_enabled)
 
 
 class ControlCycleTests(unittest.TestCase):
@@ -65,22 +67,21 @@ class ControlCycleTests(unittest.TestCase):
                 past_due=False,
             )
 
-    def test_start_capable_modes_remain_blocked(self) -> None:
-        for mode in ("FULL_MOWER", "FULL_FAILSAFE"):
-            with self.subTest(mode=mode):
-                with self.assertRaisesRegex(RuntimeError, "Automatischer Start"):
-                    run_control_cycle(
-                        now_utc=datetime(
-                            2026,
-                            8,
-                            2,
-                            12,
-                            0,
-                            tzinfo=timezone.utc,
-                        ),
-                        environment={"CONTROL_MODE": mode},
-                        past_due=False,
-                    )
+    def test_full_mower_requires_live_reads(self) -> None:
+        with self.assertRaisesRegex(RuntimeError, "ENABLE_LIVE_READS"):
+            run_control_cycle(
+                now_utc=datetime(2026, 8, 2, 12, 0, tzinfo=timezone.utc),
+                environment={"CONTROL_MODE": "FULL_MOWER"},
+                past_due=False,
+            )
+
+    def test_irrigation_control_remains_blocked(self) -> None:
+        with self.assertRaisesRegex(RuntimeError, "Beregnungssteuerung"):
+            run_control_cycle(
+                now_utc=datetime(2026, 8, 2, 12, 0, tzinfo=timezone.utc),
+                environment={"CONTROL_MODE": "FULL_FAILSAFE"},
+                past_due=False,
+            )
 
     def test_naive_time_is_rejected(self) -> None:
         with self.assertRaisesRegex(ValueError, "zeitzonenbewusste"):

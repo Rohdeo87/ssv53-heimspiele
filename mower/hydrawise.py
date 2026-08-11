@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import json
+import re
+from dataclasses import asdict, dataclass
+from datetime import datetime, timezone
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
@@ -13,6 +16,180 @@ USER_AGENT = "SSV53-Maehplan-Dry-Run/1.0 (+https://www.ssv53.de)"
 
 class HydrawiseError(RuntimeError):
     pass
+
+
+@dataclass(frozen=True)
+class HydrawiseSafetySnapshot:
+    """Fail-closed Sicht auf den aktuellen Beregnungszustand."""
+
+    available: bool
+    fresh: bool
+    clear_now: bool
+    observed_at_utc: str | None
+    age_seconds: int | None
+    selected_zone_count: int
+    active_zone_count: int
+    imminent_zone_count: int
+    active_relay_ids: tuple[int, ...]
+    imminent_relay_ids: tuple[int, ...]
+    reason: str
+
+    def to_dict(self) -> dict[str, Any]:
+        value = asdict(self)
+        value["active_relay_ids"] = list(self.active_relay_ids)
+        value["imminent_relay_ids"] = list(self.imminent_relay_ids)
+        return value
+
+
+def _relay_selected(
+    relay: dict[str, Any],
+    hydrawise_config: dict[str, Any],
+) -> bool:
+    include_all = bool(hydrawise_config.get("include_all_zones", False))
+    relay_ids = {
+        int(value)
+        for value in hydrawise_config.get("relay_ids", [])
+    }
+    patterns = [
+        re.compile(pattern, re.IGNORECASE)
+        for pattern in hydrawise_config.get("zone_name_patterns", [])
+    ]
+    relay_id = int(relay.get("relay_id", -1))
+    name = str(relay.get("name", f"Zone {relay.get('relay', '?')}"))
+    return (
+        include_all
+        or relay_id in relay_ids
+        or any(pattern.search(name) for pattern in patterns)
+    )
+
+
+def evaluate_safety_status(
+    status: dict[str, Any] | None,
+    hydrawise_config: dict[str, Any],
+    *,
+    now_utc: datetime,
+    max_age_seconds: int = 180,
+) -> HydrawiseSafetySnapshot:
+    """Bewertet Hydrawise konservativ als Startfreigabe oder Sperre.
+
+    ``clear_now`` ist nur eine Momentaufnahme. Die produktive Steuerung muss
+    zusätzlich mehrere aufeinanderfolgende klare Abrufe persistent bestätigen.
+    """
+
+    if now_utc.tzinfo is None or now_utc.utcoffset() is None:
+        raise ValueError("now_utc muss eine zeitzonenbewusste UTC-Zeit sein.")
+    if not 30 <= max_age_seconds <= 900:
+        raise ValueError("max_age_seconds muss zwischen 30 und 900 liegen.")
+    if not bool(hydrawise_config.get("enabled", True)):
+        return HydrawiseSafetySnapshot(
+            available=False,
+            fresh=False,
+            clear_now=False,
+            observed_at_utc=None,
+            age_seconds=None,
+            selected_zone_count=0,
+            active_zone_count=0,
+            imminent_zone_count=0,
+            active_relay_ids=(),
+            imminent_relay_ids=(),
+            reason="Hydrawise ist in der Laufzeitkonfiguration deaktiviert.",
+        )
+    if not isinstance(status, dict):
+        return HydrawiseSafetySnapshot(
+            available=False,
+            fresh=False,
+            clear_now=False,
+            observed_at_utc=None,
+            age_seconds=None,
+            selected_zone_count=0,
+            active_zone_count=0,
+            imminent_zone_count=0,
+            active_relay_ids=(),
+            imminent_relay_ids=(),
+            reason="Hydrawise lieferte keinen verwertbaren Live-Status.",
+        )
+
+    try:
+        observed = datetime.fromtimestamp(
+            int(status["time"]),
+            tz=timezone.utc,
+        )
+    except (KeyError, TypeError, ValueError, OSError):
+        observed = None
+
+    age_seconds = None
+    fresh = False
+    if observed is not None:
+        age_seconds = int(
+            (now_utc.astimezone(timezone.utc) - observed).total_seconds()
+        )
+        fresh = -60 <= age_seconds <= max_age_seconds
+
+    selected: list[dict[str, Any]] = []
+    for raw_relay in status.get("relays", []):
+        if not isinstance(raw_relay, dict):
+            continue
+        if _relay_selected(raw_relay, hydrawise_config):
+            selected.append(raw_relay)
+
+    before_seconds = max(
+        60,
+        int(hydrawise_config.get("before_minutes", 30)) * 60,
+    )
+    active_ids: list[int] = []
+    imminent_ids: list[int] = []
+    for relay in selected:
+        relay_id = int(relay.get("relay_id", -1))
+        try:
+            seconds_until = int(float(relay.get("time", 0) or 0))
+            run_seconds = int(float(relay.get("run", 0) or 0))
+        except (TypeError, ValueError):
+            # Ein unverständlicher ausgewählter Zonenstatus darf niemals als
+            # bestätigte Freigabe interpretiert werden.
+            imminent_ids.append(relay_id)
+            continue
+        if run_seconds <= 0 or seconds_until <= 0:
+            continue
+        if seconds_until == 1:
+            active_ids.append(relay_id)
+        elif seconds_until <= before_seconds:
+            imminent_ids.append(relay_id)
+
+    available = observed is not None and bool(selected)
+    clear_now = (
+        available
+        and fresh
+        and not active_ids
+        and not imminent_ids
+    )
+    if observed is None:
+        reason = "Hydrawise-Status enthält keinen gültigen Beobachtungszeitpunkt."
+    elif not selected:
+        reason = "Hydrawise lieferte keine ausgewählte Beregnungszone."
+    elif not fresh:
+        reason = (
+            f"Hydrawise-Status ist nicht frisch genug ({age_seconds} Sekunden)."
+        )
+    elif active_ids:
+        reason = "Mindestens eine Hydrawise-Zone läuft aktuell."
+    elif imminent_ids:
+        reason = "Mindestens eine Hydrawise-Zone steht innerhalb des Schutzvorlaufs an."
+    else:
+        reason = "Hydrawise meldet alle ausgewählten Zonen aktuell frei."
+
+    return HydrawiseSafetySnapshot(
+        available=available,
+        fresh=fresh,
+        clear_now=clear_now,
+        observed_at_utc=(observed.isoformat() if observed is not None else None),
+        age_seconds=age_seconds,
+        selected_zone_count=len(selected),
+        active_zone_count=len(active_ids),
+        imminent_zone_count=len(imminent_ids),
+        active_relay_ids=tuple(sorted(active_ids)),
+        imminent_relay_ids=tuple(sorted(imminent_ids)),
+        reason=reason,
+    )
 
 
 def _get_json(endpoint: str, parameters: dict[str, str | int], timeout: int = 20) -> dict[str, Any]:

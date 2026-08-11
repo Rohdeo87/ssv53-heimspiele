@@ -9,6 +9,8 @@ from zoneinfo import ZoneInfo
 from mower.config_source import resolve_runtime_inputs
 from mower.decision import (
     AUTOMATION_EXTERNAL_REASON,
+    PARKABLE_ACTIVITIES,
+    Decision,
     classify_decision,
     current_context,
     next_block_after,
@@ -20,7 +22,11 @@ from mower.husqvarna import (
     parse_snapshot,
     select_mower,
 )
-from mower.hydrawise import HydrawiseError, fetch_status
+from mower.hydrawise import (
+    HydrawiseError,
+    evaluate_safety_status,
+    fetch_status,
+)
 from mower.planner import create_plan, load_json, read_match_blocks
 from mower.runtime import CycleResult, RuntimeSettings
 
@@ -105,6 +111,7 @@ def run_read_only_cycle(
 
     config = load_json(config_path)
     planning = _as_dict(config.get("planning"))
+    hydrawise_config = _as_dict(config.get("hydrawise"))
     minimum_remaining = int(
         planning.get("minimum_mowing_window_minutes", 30)
     )
@@ -129,6 +136,15 @@ def run_read_only_cycle(
         except HydrawiseError as exc:
             hydrawise_label = "Abruf fehlgeschlagen"
             hydrawise_error = str(exc)
+
+    hydrawise_safety = evaluate_safety_status(
+        hydrawise_status,
+        hydrawise_config,
+        now_utc=now_utc,
+        max_age_seconds=int(
+            environment.get("HYDRAWISE_STATUS_MAX_AGE_SECONDS", "180")
+        ),
+    )
 
     match_blocks = read_match_blocks(matches_path, tz)
     plans, _merged = create_plan(
@@ -172,6 +188,33 @@ def run_read_only_cycle(
         minimum_remaining_minutes=minimum_remaining,
     )
 
+    # Hydrawise ist für jeden startfähigen Modus ein hartes Fail-closed-Gate.
+    # Bei fehlender, veralteter, laufender oder unmittelbar anstehender
+    # Beregnung wird ein aktiver Mäher vorsorglich zum Parken vorgeschlagen.
+    if not hydrawise_safety.clear_now and parking_block is None:
+        if snapshot.activity in PARKABLE_ACTIVITIES:
+            decision = Decision(
+                code="HYDRAWISE_UNCONFIRMED_WOULD_PARK",
+                title="Beregnungssicherheit nicht bestätigt",
+                reason=(
+                    f"{hydrawise_safety.reason} Der laufende Mäher muss "
+                    "vorsorglich geparkt bleiben, bis Hydrawise eindeutig frei meldet."
+                ),
+                hypothetical_command="PARK",
+            )
+        elif (
+            decision.hypothetical_command == "START_IN_WORK_AREA"
+            or automation_owned_park
+        ):
+            decision = Decision(
+                code="HYDRAWISE_UNCONFIRMED_HOLD",
+                title="Automatischen Start gesperrt halten",
+                reason=(
+                    f"{hydrawise_safety.reason} Ohne bestätigtes Beregnungsende "
+                    "darf der Mäher nicht auf den Platz fahren."
+                ),
+            )
+
     mower_details = snapshot.to_dict()
     mower_details["automation_owned_park"] = automation_owned_park
     mower_details["target_work_area"] = _target_work_area(
@@ -205,6 +248,7 @@ def run_read_only_cycle(
             "hydrawise": {
                 "status": hydrawise_label,
                 "error": hydrawise_error,
+                "safety": hydrawise_safety.to_dict(),
             },
             "mower": mower_details,
             "input_files": {

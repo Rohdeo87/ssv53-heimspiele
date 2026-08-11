@@ -220,21 +220,44 @@ class ControllerPhase2Tests(unittest.TestCase):
         self.assertEqual(result.decision_code, "TEST_PARK_ONLY_LOCKED")
         self.assertFalse(result.command_sent)
 
-    def test_start_capable_modes_remain_blocked(self) -> None:
-        for mode in ("FULL_MOWER", "FULL_FAILSAFE"):
-            with self.subTest(mode=mode):
-                with self.assertRaisesRegex(
-                    RuntimeError,
-                    "Automatischer Start",
-                ):
-                    run_control_cycle(
-                        now_utc=NOW,
-                        environment={
-                            "CONTROL_MODE": mode,
-                            "ENABLE_LIVE_READS": "true",
-                        },
-                        past_due=False,
-                    )
+    def test_full_mower_runner_is_available_but_write_gates_default_locked(self) -> None:
+        def full_runner(**kwargs):
+            self.assertFalse(kwargs["settings"].enable_start_commands)
+            self.assertFalse(
+                kwargs["settings"].full_mower_write_gate_enabled
+            )
+            return CycleResult(
+                schema_version=2,
+                executed_at_utc=NOW.isoformat(),
+                source=kwargs["source"],
+                control_mode="FULL_MOWER",
+                past_due=False,
+                decision_code="TEST_FULL_MOWER_LOCKED",
+                command_sent=False,
+                message="locked",
+            )
+
+        result = run_control_cycle(
+            now_utc=NOW,
+            environment={
+                "CONTROL_MODE": "FULL_MOWER",
+                "ENABLE_LIVE_READS": "true",
+            },
+            past_due=False,
+            full_mower_runner=full_runner,
+        )
+        self.assertEqual(result.decision_code, "TEST_FULL_MOWER_LOCKED")
+
+    def test_irrigation_control_mode_remains_blocked(self) -> None:
+        with self.assertRaisesRegex(RuntimeError, "Beregnungssteuerung"):
+            run_control_cycle(
+                now_utc=NOW,
+                environment={
+                    "CONTROL_MODE": "FULL_FAILSAFE",
+                    "ENABLE_LIVE_READS": "true",
+                },
+                past_due=False,
+            )
 
 
 if __name__ == "__main__":

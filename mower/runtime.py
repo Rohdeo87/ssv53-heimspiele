@@ -6,6 +6,9 @@ from enum import Enum
 from typing import Any, Mapping
 
 
+FULL_MOWER_CONFIRMATION = "SSV53-TRAINING-MATCH-PARK-START"
+
+
 class ControlMode(str, Enum):
     """Schrittweise freischaltbare Betriebsarten der Platzpflege-Automatik."""
 
@@ -64,6 +67,8 @@ class RuntimeSettings:
     timezone_name: str
     enable_live_reads: bool
     enable_park_commands: bool
+    enable_start_commands: bool
+    full_mower_confirmation: str
     park_lookahead_minutes: int
 
     @classmethod
@@ -100,7 +105,22 @@ class RuntimeSettings:
                 values.get("ENABLE_PARK_COMMANDS"),
                 default=False,
             ),
+            enable_start_commands=_parse_bool(
+                values.get("ENABLE_START_COMMANDS"),
+                default=False,
+            ),
+            full_mower_confirmation=str(
+                values.get("FULL_MOWER_CONFIRMATION", "")
+            ).strip(),
             park_lookahead_minutes=park_lookahead_minutes,
+        )
+
+    @property
+    def full_mower_write_gate_enabled(self) -> bool:
+        return (
+            self.enable_park_commands
+            and self.enable_start_commands
+            and self.full_mower_confirmation == FULL_MOWER_CONFIRMATION
         )
 
 
@@ -123,7 +143,7 @@ class CycleResult:
 def ensure_heartbeat_only_mode(mode: ControlMode) -> None:
     """Lässt höchstens PARK_ONLY zu; automatische Starts bleiben gesperrt."""
 
-    if mode in {ControlMode.FULL_MOWER, ControlMode.FULL_FAILSAFE}:
+    if mode is ControlMode.FULL_FAILSAFE:
         raise RuntimeError(
             "Automatischer Start und Beregnungssteuerung sind noch gesperrt. "
             f"CONTROL_MODE={mode.value} ist deshalb nicht zulässig."

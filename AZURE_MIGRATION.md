@@ -146,3 +146,21 @@ Azure-Bereitstellung:
 Es wurden weiterhin keine Azure-Ressourcen erstellt und keine Befehle an
 Mäher oder Beregnung gesendet.
 
+## Verriegelte FULL_MOWER-Stufe
+
+Die startfähige Stufe wird als separates Paket ausgeliefert und ist von den
+read-only- und PARK_ONLY-Paketen getrennt:
+
+- `scripts/build_azure_full_mower_package.py` erlaubt ausschließlich
+  `ParkUntilFurtherNotice` und den zeitlich begrenzten `StartInWorkArea`.
+- Automatischer Neustart ist nur nach einer persistent gespeicherten eigenen
+  Parkierung mit Ursache `training` oder `match` zulässig.
+- Hydrawise benötigt eine frische, fortlaufende Freimeldung; API-Ausfall,
+  veraltete Daten, laufende oder unmittelbar anstehende Zonen sperren Starts.
+- Beregnungsparkierungen und gemischte Sperren erhalten keine automatische
+  Startberechtigung.
+- `FULL_FAILSAFE` und sämtliche Hydrawise-Schreibfunktionen bleiben technisch
+  ausgeschlossen.
+- `SSV53_FULL_MOWER_Locked_Deploy.yml` deployt ausschließlich mit `DRY_RUN`,
+  deaktivierten Park-/Start-Gates und ungültiger Freigabephrase.
+
