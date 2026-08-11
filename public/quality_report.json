@@ -3,7 +3,7 @@
   "errors": [],
   "invalid_included": [],
   "by_calendar": {
-    "Rasen": 25,
+    "Rasen": 36,
     "Kunstrasen": 5
   },
   "event_timing": {
@@ -16,22 +16,22 @@
     {
       "date_from": "2026-07-01",
       "date_to": "2026-09-30",
-      "competition_rows": 29
+      "competition_rows": 33
     },
     {
       "date_from": "2026-10-01",
       "date_to": "2026-12-31",
-      "competition_rows": 26
+      "competition_rows": 33
     },
     {
       "date_from": "2027-01-01",
       "date_to": "2027-03-31",
-      "competition_rows": 9
+      "competition_rows": 12
     },
     {
       "date_from": "2027-04-01",
       "date_to": "2027-06-30",
-      "competition_rows": 20
+      "competition_rows": 28
     }
   ],
   "window_audits": [
@@ -41,11 +41,11 @@
       "depth": 0,
       "source_url": "https://www.fussball.de/ajax.club.matchplan/-/id/00ES8GNBL0000049VV0AG08LVUPGND5I/mode/PAGE/show-filter/false/show-venues/true/mime-type/HTML/datum-von/2026-07-01/datum-bis/2026-09-30/max/50",
       "source_scope": "all club teams; inclusion decided only by venue",
-      "competition_rows": 29,
-      "source_detail_ids": 25,
-      "parsed_matches_before_duplicate_merge": 29,
-      "parsed_matches": 28,
-      "parsed_detail_ids": 25,
+      "competition_rows": 33,
+      "source_detail_ids": 29,
+      "parsed_matches_before_duplicate_merge": 33,
+      "parsed_matches": 32,
+      "parsed_detail_ids": 29,
       "missing_detail_ids": [],
       "duplicate_detail_ids": [],
       "collapsed_duplicate_detail_ids": [
@@ -102,11 +102,11 @@
       "depth": 0,
       "source_url": "https://www.fussball.de/ajax.club.matchplan/-/id/00ES8GNBL0000049VV0AG08LVUPGND5I/mode/PAGE/show-filter/false/show-venues/true/mime-type/HTML/datum-von/2026-10-01/datum-bis/2026-12-31/max/50",
       "source_scope": "all club teams; inclusion decided only by venue",
-      "competition_rows": 26,
-      "source_detail_ids": 24,
-      "parsed_matches_before_duplicate_merge": 26,
-      "parsed_matches": 26,
-      "parsed_detail_ids": 24,
+      "competition_rows": 33,
+      "source_detail_ids": 31,
+      "parsed_matches_before_duplicate_merge": 33,
+      "parsed_matches": 33,
+      "parsed_detail_ids": 31,
       "missing_detail_ids": [],
       "duplicate_detail_ids": [],
       "collapsed_duplicate_detail_ids": [],
@@ -123,11 +123,11 @@
       "depth": 0,
       "source_url": "https://www.fussball.de/ajax.club.matchplan/-/id/00ES8GNBL0000049VV0AG08LVUPGND5I/mode/PAGE/show-filter/false/show-venues/true/mime-type/HTML/datum-von/2027-01-01/datum-bis/2027-03-31/max/50",
       "source_scope": "all club teams; inclusion decided only by venue",
-      "competition_rows": 9,
-      "source_detail_ids": 6,
-      "parsed_matches_before_duplicate_merge": 9,
-      "parsed_matches": 9,
-      "parsed_detail_ids": 6,
+      "competition_rows": 12,
+      "source_detail_ids": 9,
+      "parsed_matches_before_duplicate_merge": 12,
+      "parsed_matches": 12,
+      "parsed_detail_ids": 9,
       "missing_detail_ids": [],
       "duplicate_detail_ids": [],
       "collapsed_duplicate_detail_ids": [],
@@ -144,11 +144,11 @@
       "depth": 0,
       "source_url": "https://www.fussball.de/ajax.club.matchplan/-/id/00ES8GNBL0000049VV0AG08LVUPGND5I/mode/PAGE/show-filter/false/show-venues/true/mime-type/HTML/datum-von/2027-04-01/datum-bis/2027-06-30/max/50",
       "source_scope": "all club teams; inclusion decided only by venue",
-      "competition_rows": 20,
-      "source_detail_ids": 19,
-      "parsed_matches_before_duplicate_merge": 20,
-      "parsed_matches": 20,
-      "parsed_detail_ids": 19,
+      "competition_rows": 28,
+      "source_detail_ids": 27,
+      "parsed_matches_before_duplicate_merge": 28,
+      "parsed_matches": 28,
+      "parsed_detail_ids": 27,
       "missing_detail_ids": [],
       "duplicate_detail_ids": [],
       "collapsed_duplicate_detail_ids": [],
