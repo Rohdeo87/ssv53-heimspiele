@@ -1,0 +1,209 @@
+name: FULL_MOWER - Park und Start verriegelt deployen
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Exakt SSV53-FULL-MOWER-LOCKED-DEPLOY eingeben"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: ssv53-full-mower-locked-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Park-/Start-Code vollständig verriegelt deployen
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      MIGRATION_BRANCH: feature/azure-mower-migration
+      RESOURCE_GROUP: rg-ssv53-platzpflege-prod
+      FUNCTION_APP: func-ssv53platzpflege-prod-q7kbw54s
+
+    steps:
+      - name: Harte Freigabesperren prüfen
+        shell: bash
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+          CLIENT_ID: ${{ vars.AZURE_BOOTSTRAP_CLIENT_ID }}
+          TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          set -euo pipefail
+          [ "$GITHUB_REF_NAME" = "$MIGRATION_BRANCH" ]
+          [ "$CONFIRMATION" = "SSV53-FULL-MOWER-LOCKED-DEPLOY" ]
+          for variable in CLIENT_ID TENANT_ID SUBSCRIPTION_ID; do
+            [ -n "${!variable:-}" ] || {
+              echo "Erforderliche GitHub-Variable $variable fehlt." >&2
+              exit 1
+            }
+          done
+
+      - name: Migrationsstand laden
+        uses: actions/checkout@v7
+        with:
+          ref: feature/azure-mower-migration
+          fetch-depth: 1
+
+      - name: Python einrichten
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Abhängigkeiten installieren
+        run: python -m pip install -r requirements.txt
+
+      - name: Vollständigen Testbestand ausführen
+        run: python -m unittest discover -s tests -p "test_*.py" -v
+
+      - name: Verriegeltes FULL_MOWER-Paket bauen
+        run: |
+          python scripts/build_azure_full_mower_package.py \
+            --repository-root . \
+            --output dist/ssv53-platzpflege-full-mower-locked-source.zip
+
+      - name: Paket und Beregnungssperren hart prüfen
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          import zipfile
+
+          path = "dist/ssv53-platzpflege-full-mower-locked-source.zip"
+          with zipfile.ZipFile(path) as archive:
+              names = set(archive.namelist())
+              manifest = json.loads(
+                  archive.read("package-manifest.json").decode("utf-8")
+              )
+              assert manifest["safety_stage"] == "FULL_MOWER_CAPABLE_LOCKED"
+              assert manifest["automatic_start_implemented"] is True
+              assert manifest["automatic_restart_sources"] == ["match", "training"]
+              assert manifest["hydrawise_continuous_clear_confirmation_required"] is True
+              assert manifest["hydrawise_write_functions_present"] is False
+              assert manifest["park_write_gate_required"] is True
+              assert manifest["start_write_gate_required"] is True
+              assert manifest["exact_confirmation_required"] is True
+              assert "mower/full_mower.py" in names
+              assert "mower/husqvarna_start_actions.py" in names
+              joined = b"\n".join(
+                  archive.read(name)
+                  for name in names
+                  if name.endswith(".py")
+              )
+              assert b"StartInWorkArea" in joined
+              assert b"ParkUntilFurtherNotice" in joined
+              for forbidden in (
+                  b"manualrun.php",
+                  b"stopzone.php",
+                  b"ResumeSchedule",
+              ):
+                  assert forbidden not in joined
+          print("FULL_MOWER-Paket ist startfähig, dreifach verriegelt und Hydrawise-read-only.")
+          PY
+
+      - name: Verriegelte Laufzeiteinstellungen beweisen
+        shell: bash
+        run: |
+          python - <<'PY'
+          from mower.runtime import ControlMode, RuntimeSettings
+
+          settings = RuntimeSettings.from_mapping({
+              "CONTROL_MODE": "DRY_RUN",
+              "ENABLE_LIVE_READS": "true",
+              "ENABLE_PARK_COMMANDS": "false",
+              "ENABLE_START_COMMANDS": "false",
+              "FULL_MOWER_CONFIRMATION": "LOCKED",
+          })
+          assert settings.control_mode is ControlMode.DRY_RUN
+          assert settings.enable_live_reads is True
+          assert settings.enable_park_commands is False
+          assert settings.enable_start_commands is False
+          assert settings.full_mower_write_gate_enabled is False
+          print("DRY_RUN aktiv; Park und Start bleiben vor Deployment verriegelt.")
+          PY
+
+      - name: Mit begrenzter Azure-Identität anmelden
+        uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_BOOTSTRAP_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Schreib-Gates vor Deployment schließen
+        shell: bash
+        run: |
+          set -euo pipefail
+          az functionapp config appsettings set \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$FUNCTION_APP" \
+            --settings \
+              CONTROL_MODE=DRY_RUN \
+              ENABLE_LIVE_READS=true \
+              ENABLE_PARK_COMMANDS=false \
+              ENABLE_START_COMMANDS=false \
+              FULL_MOWER_CONFIRMATION=LOCKED \
+              HYDRAWISE_CLEAR_CONFIRMATION_MINUTES=2 \
+              MOWER_PARK_CONFIRMATION_MINUTES=1 \
+              MAX_AUTOMATIC_START_MINUTES=360 \
+            --output none
+
+      - name: Verriegelten Code deployen
+        shell: bash
+        run: |
+          set -euo pipefail
+          az functionapp deployment source config-zip \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$FUNCTION_APP" \
+            --src dist/ssv53-platzpflege-full-mower-locked-source.zip \
+            --build-remote true \
+            --timeout 900 \
+            --output none
+
+      - name: Verriegelung nach Deployment zurückprüfen
+        shell: bash
+        run: |
+          set -euo pipefail
+          SETTINGS="$(az functionapp config appsettings list \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$FUNCTION_APP" \
+            --output json)"
+          export SETTINGS
+          python - <<'PY'
+          import json
+          import os
+
+          values = {item["name"]: item.get("value", "") for item in json.loads(os.environ["SETTINGS"])}
+          assert values.get("CONTROL_MODE") == "DRY_RUN"
+          assert values.get("ENABLE_LIVE_READS", "").lower() == "true"
+          assert values.get("ENABLE_PARK_COMMANDS", "").lower() == "false"
+          assert values.get("ENABLE_START_COMMANDS", "").lower() == "false"
+          assert values.get("FULL_MOWER_CONFIRMATION") != "SSV53-TRAINING-MATCH-PARK-START"
+          print("Nach Deployment: DRY_RUN, Park aus, Start aus, Bestätigung ungültig.")
+          PY
+
+      - name: Azure-Sitzung beenden
+        if: always()
+        run: az logout
+
+      - name: Sicherheitszusammenfassung
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "# FULL_MOWER Locked Deployment"
+            echo
+            echo "- Park-/Start-Code: **vorhanden**"
+            echo "- Automatischer Neustart: **nur Training/Spiel**"
+            echo "- Hydrawise-Ende: **fortlaufende Live-Bestätigung erforderlich**"
+            echo "- Hydrawise-Schreibfunktionen: **keine**"
+            echo "- CONTROL_MODE: **DRY_RUN**"
+            echo "- Parkbefehle: **verriegelt**"
+            echo "- Startbefehle: **dreifach verriegelt**"
+          } >> "$GITHUB_STEP_SUMMARY"
