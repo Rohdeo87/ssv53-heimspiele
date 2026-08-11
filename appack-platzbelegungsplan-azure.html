@@ -2466,7 +2466,9 @@
          * D1, E 2, D-Jugend, Ü40, U11, Herren, Minis usw.
          */
         extractTeamKeys(value, true).forEach(function (key) {
-          if (key.startsWith("team:")) keys.add(key);
+          if (key.startsWith("team:") || key.startsWith("year:")) {
+            keys.add(key);
+          }
         });
 
         /*
@@ -2756,6 +2758,11 @@
       function extractContactCategoryTeamKeys(value) {
         const keys = new Set();
         splitContactValues(value).forEach(function (token) {
+          extractTeamKeys(token, true).forEach(function (key) {
+            if (key.startsWith("team:") || key.startsWith("year:")) {
+              keys.add(key);
+            }
+          });
           extractContactTeamKeys(token).forEach(function (key) {
             keys.add(key);
           });
@@ -2799,6 +2806,11 @@
             return;
           }
 
+          if (functionKey.startsWith("year:")) {
+            result.add(functionKey);
+            return;
+          }
+
           const functionYouth = parseYouthTeamKey(functionKey);
           if (!functionYouth) return;
 
@@ -2834,7 +2846,7 @@
            * Nur eine echte Oberkategorie „Fussball“ macht die Zeile relevant.
            * „Handball; D-Jugend; Weitere Funktionen“ bleibt ausgeschlossen.
            */
-          if (!categoryProfile.topCategories.has("Fussball")) return;
+          if (!isFootballContactCategory(row.ansKat)) return;
 
           const categoryKeys = extractContactCategoryTeamKeys(row.ansKat);
 
@@ -2850,6 +2862,18 @@
             categoryKeys,
             functionKeys
           );
+
+          /*
+           * Der ursprüngliche Plan ordnete Jugendkontakte auch über explizite
+           * Jahrgänge zu. Diese Angaben stehen im Workbook teils im Infotext
+           * statt in Kategorie/Funktion (z. B. „Jahrgang 2012/2013“).
+           */
+          extractTeamKeys(plainTextFromHtml(getFirstContactText(row.ansInfo)), true)
+            .forEach(function (key) {
+              if (key.startsWith("team:") || key.startsWith("year:")) {
+                teamKeys.add(key);
+              }
+            });
           if (!teamKeys.size) return;
 
           const name = getFirstContactText(row.ansName);
@@ -3194,7 +3218,9 @@
 
       function getEventContactProfile(event) {
         const props = event.extendedProps || {};
-        const isAzureMatch = String(props.source || "") === "match";
+        const isAzureMatch =
+          String(props.eventKind || "") === "match" ||
+          String(props.sourceType || "") === "official-match-feed";
 
         /*
          * Bei Azure-Heimspielen wird die eigene Mannschaft ausschließlich aus
@@ -3207,20 +3233,36 @@
           const matchKeys = new Set();
 
           if (ownTeam) {
-            extractEventTeamKeys(ownTeam + " " + ownTeamCategory).forEach(function (key) {
+            extractEventTeamKeys(ownTeam).forEach(function (key) {
+              matchKeys.add(key);
+            });
+            /*
+             * teamCategory enthält nach „|“/„·“ den Wettbewerb. Würde beides
+             * als ein Text analysiert, würde „D-Junioren | 1. Kreisklasse“
+             * fälschlich als Mannschaft D1 gelesen. Nur der strukturierte
+             * Altersklassenabschnitt darf die Mannschaft bestimmen.
+             */
+            const categoryIdentity = ownTeamCategory.split(/[|·]/, 1)[0];
+            extractEventTeamKeys(categoryIdentity).forEach(function (key) {
               matchKeys.add(key);
             });
           }
 
           const reducedMatchKeys = reduceEventTeamKeys(matchKeys);
           const matchText = normalizeMatchText(ownTeam + " " + ownTeamCategory);
+          const derivedYears = new Set();
+          reducedMatchKeys.forEach(function (key) {
+            getYouthYearsFromTeamKey(key, event.start).forEach(function (year) {
+              derivedYears.add("year:" + year);
+            });
+          });
 
           return {
             title: normalizeMatchText(event.title || ""),
             primaryText: matchText,
             fullText: matchText,
             keys: reducedMatchKeys,
-            derivedYears: new Set(),
+            derivedYears: derivedYears,
             eventDate: event.start,
             eligible: reducedMatchKeys.size > 0
           };
@@ -3251,6 +3293,12 @@
         });
 
         const reducedKeys = reduceEventTeamKeys(keys);
+        const derivedYears = new Set();
+        reducedKeys.forEach(function (key) {
+          getYouthYearsFromTeamKey(key, event.start).forEach(function (year) {
+            derivedYears.add("year:" + year);
+          });
+        });
         const excludedMarkers = [
           "punktspiel",
           "freundschaftsspiel",
@@ -3278,7 +3326,7 @@
           primaryText: primaryText,
           fullText: fullText,
           keys: reducedKeys,
-          derivedYears: new Set(),
+          derivedYears: derivedYears,
           eventDate: event.start,
           eligible: !isExcluded && (explicitlyTraining || reducedKeys.size > 0)
         };
@@ -3286,7 +3334,10 @@
 
       function findTrainerContacts(event) {
         const profile = getEventContactProfile(event);
-        if (!profile.eligible || !profile.keys.size) return [];
+        if (
+          !profile.eligible ||
+          (!profile.keys.size && !profile.derivedYears.size)
+        ) return [];
 
         /*
          * Ausschließlich exakte Mannschaftszuordnung:
@@ -3298,7 +3349,7 @@
         return state.trainerContacts
           .filter(function (contact) {
             return Array.from(contact.keys).some(function (key) {
-              return profile.keys.has(key);
+              return profile.keys.has(key) || profile.derivedYears.has(key);
             });
           })
           .sort(function (a, b) {
@@ -3994,6 +4045,40 @@
           throw new Error("Azure enthält einen Termin mit ungültiger Platzbelegung");
         }
 
+        if (isOfficialMatch && (
+          publicStart.getTime() - occupancyStart.getTime() !== 60 * 60 * 1000 ||
+          occupancyEnd.getTime() - publicEnd.getTime() !== 60 * 60 * 1000
+        )) {
+          throw new Error("Azure-Spiel enthält nicht den vorgeschriebenen 60-Minuten-Puffer");
+        }
+
+        const extendedProps = {
+          calendarId: resourceId,
+          appackEventId: "",
+          detailLink: String(item.detailLink || "").trim(),
+          categories: isOfficialMatch ? [{
+            id: "official-match",
+            title: "Spiel",
+            color: "#e0aa3f"
+          }] : [],
+          sourceType: isOfficialMatch
+            ? "official-match-feed"
+            : "azure-occupancy",
+          eventKind: source,
+          team: String(item.team || ""),
+          teamCategory: String(item.teamCategory || ""),
+          area: String(item.area || ""),
+          kickoff: isOfficialMatch ? String(item.kickoff || item.start || "") : "",
+          displayStart: publicStart.toISOString(),
+          displayEnd: publicEnd.toISOString(),
+          occupancyStart: occupancyStart.toISOString(),
+          occupancyEnd: occupancyEnd.toISOString(),
+          matchDurationMinutes: Number(item.matchDurationMinutes || 0),
+          durationRule: String(item.durationRule || ""),
+          competitionFormat: String(item.competitionFormat || ""),
+          matchType: String(item.matchType || "")
+        };
+
         return {
           id: "azure::" + String(item.id || [
             resourceId,
@@ -4010,30 +4095,26 @@
           appackEventId: "",
           color: backgroundColor,
           textColor: textColor,
-          detailLink: String(item.detailLink || "").trim(),
-          categories: isOfficialMatch ? [{
-            id: "official-match",
-            title: "Spiel",
-            color: "#e0aa3f"
-          }] : [],
           classNames: isOfficialMatch ? ["ssv-official-match"] : [],
-          sourceType: isOfficialMatch
-            ? "official-match-feed"
-            : "azure-occupancy",
-          source: source,
-          team: String(item.team || ""),
-          teamCategory: String(item.teamCategory || ""),
-          area: String(item.area || ""),
-          kickoff: isOfficialMatch ? String(item.kickoff || item.start || "") : "",
-          displayStart: publicStart.toISOString(),
-          displayEnd: publicEnd.toISOString(),
-          occupancyStart: occupancyStart.toISOString(),
-          occupancyEnd: occupancyEnd.toISOString(),
-          matchDurationMinutes: Number(item.matchDurationMinutes || 0),
-          durationRule: String(item.durationRule || ""),
-          competitionFormat: String(item.competitionFormat || ""),
-          matchType: String(item.matchType || "")
+          sourceType: extendedProps.sourceType,
+          extendedProps: extendedProps
         };
+      }
+
+      function enforceOccupancyGeometry(eventData) {
+        if (!eventData || typeof eventData !== "object") return eventData;
+        const props = eventData.extendedProps || eventData;
+        const isOfficialMatch =
+          String(props.eventKind || "") === "match" ||
+          String(props.sourceType || "") === "official-match-feed";
+        if (!isOfficialMatch) return eventData;
+
+        const start = new Date(props.occupancyStart || "");
+        const end = new Date(props.occupancyEnd || "");
+        if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
+          throw new Error("Spiel enthält keine gültige Sperrzeit");
+        }
+        return Object.assign({}, eventData, { start: start, end: end });
       }
 
       function filterMappedEventsToRange(list, rangeStart, rangeEnd) {
@@ -4239,11 +4320,11 @@
         const root = document.createElement("div");
         root.className = "event-content";
 
-        const visibleTimes = getVisibleEventTimes(event);
-        if (!event.allDay && visibleTimes.start && visibleTimes.end) {
+        const eventTimeText = getCalendarEventTimeText(event);
+        if (!event.allDay && eventTimeText) {
           const time = document.createElement("div");
           time.className = "event-time";
-          time.textContent = formatTimeRange(visibleTimes.start, visibleTimes.end);
+          time.textContent = eventTimeText;
           root.appendChild(time);
         }
 
@@ -4300,6 +4381,40 @@
         };
       }
 
+      function getOccupancyEventTimes(event) {
+        const props = event && event.extendedProps || {};
+        if (props.sourceType === "official-match-feed") {
+          const start = new Date(props.occupancyStart || "");
+          const end = new Date(props.occupancyEnd || "");
+          if (!Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime())) {
+            return { start: start, end: end };
+          }
+        }
+        return {
+          start: event && event.start || null,
+          end: event && event.end || null
+        };
+      }
+
+      function getCalendarEventTimeText(event) {
+        const props = event && event.extendedProps || {};
+        if (props.sourceType === "official-match-feed") {
+          const occupancy = getOccupancyEventTimes(event);
+          const kickoff = new Date(props.kickoff || props.displayStart || "");
+          if (
+            occupancy.start && occupancy.end &&
+            !Number.isNaN(kickoff.getTime())
+          ) {
+            return "Gesperrt " + formatTimeRange(occupancy.start, occupancy.end) +
+              " · Anstoß " + formatTime(kickoff) + " Uhr";
+          }
+        }
+        const visible = getVisibleEventTimes(event);
+        return visible.start && visible.end
+          ? formatTimeRange(visible.start, visible.end)
+          : "";
+      }
+
       function getPopupTimeText(event) {
         const visibleTimes = getVisibleEventTimes(event);
         if (event && event.allDay) return "Ganztägig";
@@ -4308,9 +4423,15 @@
         const props = event && event.extendedProps || {};
         if (props.sourceType === "official-match-feed") {
           const kickoff = new Date(props.kickoff || props.displayStart || "");
-          if (!Number.isNaN(kickoff.getTime())) {
+          const occupancy = getOccupancyEventTimes(event);
+          if (
+            !Number.isNaN(kickoff.getTime()) &&
+            occupancy.start && occupancy.end
+          ) {
             return "Anstoß: " + formatTime(kickoff) + " Uhr · Spielzeit: " +
-              formatTimeRange(visibleTimes.start, visibleTimes.end);
+              formatTimeRange(visibleTimes.start, visibleTimes.end) +
+              " · Platz gesperrt: " +
+              formatTimeRange(occupancy.start, occupancy.end);
           }
         }
         return formatTimeRange(visibleTimes.start, visibleTimes.end);
@@ -5198,6 +5319,7 @@
           },
           resources: state.resources,
           events: [],
+          eventDataTransform: enforceOccupancyGeometry,
           eventMinHeight: 22,
           eventShortHeight: 24,
           eventDisplay: "block",
@@ -5237,10 +5359,10 @@
           },
           eventContent: createEventContent,
           eventDidMount: function (info) {
-            const visibleTimes = getVisibleEventTimes(info.event);
-            const time = !info.event.allDay && visibleTimes.start && visibleTimes.end
-              ? formatTimeRange(visibleTimes.start, visibleTimes.end) + ", "
+            const timeText = !info.event.allDay
+              ? getCalendarEventTimeText(info.event)
               : "";
+            const time = timeText ? timeText + ", " : "";
             info.el.setAttribute(
               "aria-label",
               time +

@@ -7,6 +7,10 @@ const html = fs.readFileSync(
   path.join(__dirname, "..", "appack-platzbelegungsplan-azure.html"),
   "utf8"
 );
+const productionMatches = JSON.parse(fs.readFileSync(
+  path.join(__dirname, "..", "public", "matches.json"),
+  "utf8"
+)).matches;
 
 function extractFunction(name) {
   const marker = `function ${name}(`;
@@ -37,16 +41,19 @@ function extractFunction(name) {
 
 function harness() {
   const source = [
-    "const state = { calendars: { rasen: { color: '#285ea7', textColor: '#fff' } } };",
+    "const state = { calendars: { rasen: { color: '#285ea7', textColor: '#fff' }, kunstrasen: { color: '#285ea7', textColor: '#fff' } } };",
     "function normalizeCssColor(value, fallback) { return value || fallback; }",
     "function getContrastColor() { return '#fff'; }",
     "function buildAzureEventDescription(item) { return item.description || ''; }",
     extractFunction("mapAzureOccupancyEvent"),
+    extractFunction("enforceOccupancyGeometry"),
     extractFunction("getVisibleEventTimes"),
+    extractFunction("getOccupancyEventTimes"),
+    extractFunction("getCalendarEventTimeText"),
     extractFunction("formatTime"),
     extractFunction("formatTimeRange"),
     extractFunction("getPopupTimeText"),
-    "return { mapAzureOccupancyEvent, getVisibleEventTimes, getPopupTimeText };"
+    "return { mapAzureOccupancyEvent, enforceOccupancyGeometry, getVisibleEventTimes, getCalendarEventTimeText, getPopupTimeText };"
   ].join("\n\n");
   return new Function(source)();
 }
@@ -70,17 +77,73 @@ test("Spiel blockiert occupancyStart bis occupancyEnd, zeigt aber start bis end"
 
   assert.equal(mapped.start.toISOString(), "2026-08-21T16:00:00.000Z");
   assert.equal(mapped.end.toISOString(), "2026-08-21T19:30:00.000Z");
+  assert.equal(mapped.extendedProps.eventKind, "match");
+  assert.equal(Object.hasOwn(mapped, "source"), false);
   const visible = api.getVisibleEventTimes({
     start: mapped.start,
     end: mapped.end,
-    extendedProps: mapped
+    extendedProps: mapped.extendedProps
   });
   assert.equal(visible.start.toISOString(), "2026-08-21T17:00:00.000Z");
   assert.equal(visible.end.toISOString(), "2026-08-21T18:30:00.000Z");
   assert.equal(
-    api.getPopupTimeText({ start: mapped.start, end: mapped.end, extendedProps: mapped }),
-    "Anstoß: 19:00 Uhr · Spielzeit: 19:00–20:30 Uhr"
+    api.getPopupTimeText({ start: mapped.start, end: mapped.end, extendedProps: mapped.extendedProps }),
+    "Anstoß: 19:00 Uhr · Spielzeit: 19:00–20:30 Uhr · Platz gesperrt: 18:00–21:30 Uhr"
   );
+  assert.equal(
+    api.getCalendarEventTimeText({
+      start: mapped.start,
+      end: mapped.end,
+      extendedProps: mapped.extendedProps
+    }),
+    "Gesperrt 18:00–21:30 Uhr · Anstoß 19:00 Uhr"
+  );
+});
+
+test("FullCalendar-Transformation erzwingt occupancyStart bis occupancyEnd", () => {
+  const api = harness();
+  const transformed = api.enforceOccupancyGeometry({
+    start: "2026-08-21T19:00:00+02:00",
+    end: "2026-08-21T20:30:00+02:00",
+    extendedProps: {
+      eventKind: "match",
+      sourceType: "official-match-feed",
+      occupancyStart: "2026-08-21T18:00:00+02:00",
+      occupancyEnd: "2026-08-21T21:30:00+02:00"
+    }
+  });
+
+  assert.equal(transformed.start.toISOString(), "2026-08-21T16:00:00.000Z");
+  assert.equal(transformed.end.toISOString(), "2026-08-21T19:30:00.000Z");
+  assert.match(html, /eventDataTransform:\s*enforceOccupancyGeometry/);
+});
+
+test("reale C- und D-Juniorenspiele behalten jeweils Spiel- und Sperrzeit", () => {
+  const api = harness();
+  const samples = ["C-Junioren", "D-Junioren"].map((category) =>
+    productionMatches.find((item) => item.teamCategory.startsWith(category))
+  );
+  assert.ok(samples.every(Boolean), "C- und D-Produktionsbeispiele fehlen");
+
+  samples.forEach((item) => {
+    const mapped = api.mapAzureOccupancyEvent({
+      ...item,
+      resourceId: item.place,
+      source: "match"
+    });
+    assert.equal(mapped.start.toISOString(), new Date(item.occupancyStart).toISOString());
+    assert.equal(mapped.end.toISOString(), new Date(item.occupancyEnd).toISOString());
+    const event = {
+      start: mapped.start,
+      end: mapped.end,
+      extendedProps: mapped.extendedProps
+    };
+    assert.equal(
+      api.getVisibleEventTimes(event).start.toISOString(),
+      new Date(item.start).toISOString()
+    );
+    assert.match(api.getPopupTimeText(event), /Platz gesperrt:/);
+  });
 });
 
 test("Training behält seine echte Kalendergeometrie", () => {
@@ -107,4 +170,18 @@ test("Spiel ohne gültigen Sicherheitsblock wird abgelehnt", () => {
     start: "2026-08-21T19:00:00+02:00",
     end: "2026-08-21T20:30:00+02:00"
   }), /ungültiger Platzbelegung/);
+});
+
+test("Spiel mit verkürztem Puffer wird abgelehnt", () => {
+  const api = harness();
+  assert.throws(() => api.mapAzureOccupancyEvent({
+    id: "match:unsafe-buffer",
+    resourceId: "rasen",
+    source: "match",
+    title: "Unsicher",
+    start: "2026-08-21T19:00:00+02:00",
+    end: "2026-08-21T20:30:00+02:00",
+    occupancyStart: "2026-08-21T18:30:00+02:00",
+    occupancyEnd: "2026-08-21T21:30:00+02:00"
+  }), /60-Minuten-Puffer/);
 });

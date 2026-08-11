@@ -34,9 +34,11 @@ function createHarness(contacts) {
     "extractFunctionTeamKeys",
     "extractEventTeamKeys",
     "reduceEventTeamKeys",
+    "getYouthYearsFromTeamKey",
     "collectContactValueTexts",
     "splitContactValues",
     "mapContactTopCategory",
+    "isFootballContactCategory",
     "getContactCategoryProfile",
     "extractContactCategoryTeamKeys",
     "getContactFunctionValues",
@@ -69,7 +71,7 @@ function event({ source, title, team = "", teamCategory = "", description = "" }
     title,
     start: new Date("2026-08-21T19:00:00+02:00"),
     extendedProps: {
-      source,
+      eventKind: source,
       sourceType: source === "match" ? "official-match-feed" : "azure-occupancy",
       team,
       teamCategory,
@@ -145,12 +147,77 @@ test("C-Jugend-Kontakt aus hierarchischer Appack-Kategorie wird gefunden", () =>
     source: "match",
     title: "Schönwalder SV (9er) – Gast",
     team: "Schönwalder SV (9er)",
-    teamCategory: "C-Junioren | Kreisfreundschaftsspiele"
+    teamCategory: "C-Junioren | 2.Kreisklasse"
   });
 
   assert.deepEqual(
     harness.findTrainerContacts(match).map((item) => item.name),
     ["Kontakt C"]
+  );
+});
+
+test("C-Junioren finden die im ursprünglichen Code genutzte Jahrgangszuordnung", () => {
+  const parser = createHarness([]);
+  const contacts = parser.parseTrainerContacts([{
+    ansKat: ["Fussball", "Jugend"],
+    ansFunc: "Trainerin",
+    ansInfo: "<p>Jahrgang 2012 / 2013</p>",
+    ansName: "Kontakt C Jahrgang"
+  }]);
+  const harness = createHarness(contacts);
+  const match = event({
+    source: "match",
+    title: "Schönwalder SV (9er) – Gast",
+    team: "Schönwalder SV (9er)",
+    teamCategory: "C-Junioren | 2.Kreisklasse"
+  });
+
+  assert.deepEqual(
+    harness.findTrainerContacts(match).map((item) => item.name),
+    ["Kontakt C Jahrgang"]
+  );
+});
+
+test("D-Junioren finden Kontakt über D-Kategorie und Jahrgänge", () => {
+  const parser = createHarness([]);
+  const contacts = parser.parseTrainerContacts([
+    {
+      ansKat: ["Fussball", "Jugend", "D"],
+      ansFunc: "Trainer",
+      ansName: "Kontakt D"
+    },
+    {
+      ansKat: ["Handball", "D-Jugend"],
+      ansFunc: "Trainer D",
+      ansName: "Falscher Handballkontakt"
+    }
+  ]);
+  const harness = createHarness(contacts);
+  const match = event({
+    source: "match",
+    title: "Schönwalder SV – Gast",
+    team: "Schönwalder SV",
+    teamCategory: "D-Junioren | 1. Kreisklasse"
+  });
+
+  assert.deepEqual(
+    harness.findTrainerContacts(match).map((item) => item.name),
+    ["Kontakt D"]
+  );
+});
+
+test("Match-Erkennung hängt nicht am reservierten FullCalendar-source-Feld", () => {
+  const harness = createHarness([contact("Kontakt D", "team:d")]);
+  const match = event({
+    source: "match",
+    title: "Schönwalder SV – Gast D1",
+    team: "Schönwalder SV",
+    teamCategory: "D-Junioren | Kreisliga"
+  });
+  assert.equal(Object.hasOwn(match.extendedProps, "source"), false);
+  assert.deepEqual(
+    harness.findTrainerContacts(match).map((item) => item.name),
+    ["Kontakt D"]
   );
 });
 

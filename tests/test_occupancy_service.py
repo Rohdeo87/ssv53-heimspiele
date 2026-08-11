@@ -188,7 +188,9 @@ class OccupancyServiceTests(unittest.TestCase):
             'detailLink: String(item.detailLink || "").trim()',
             appack,
         )
-        self.assertIn('source: source,\n          team: String(item.team || "")', appack)
+        self.assertIn('eventKind: source,', appack)
+        self.assertIn('team: String(item.team || "")', appack)
+        self.assertIn('extendedProps: extendedProps', appack)
 
     def test_unknown_season_is_rejected(self) -> None:
         with self.assertRaisesRegex(ValueError, "Unbekannte Saison"):
