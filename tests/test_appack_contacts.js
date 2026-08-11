@@ -30,8 +30,22 @@ function createHarness(contacts) {
     "addMatchesToSet",
     "extractTeamKeys",
     "extractContactTeamKeys",
+    "hasTrainerFunctionMarker",
+    "extractFunctionTeamKeys",
     "extractEventTeamKeys",
     "reduceEventTeamKeys",
+    "collectContactValueTexts",
+    "splitContactValues",
+    "mapContactTopCategory",
+    "getContactCategoryProfile",
+    "extractContactCategoryTeamKeys",
+    "getContactFunctionValues",
+    "getFirstContactText",
+    "parseYouthTeamKey",
+    "reconcileContactTeamKeys",
+    "getContactIdentity",
+    "firstContactValue",
+    "parseTrainerContacts",
     "getEventContactProfile",
     "findTrainerContacts"
   ];
@@ -40,7 +54,8 @@ function createHarness(contacts) {
     "  return String(value || '').replace(/<[^>]*>/g, ' ');",
     "}",
     ...functionNames.map(extractFunction),
-    "return { getEventContactProfile, findTrainerContacts };"
+    "function sanitizeDescription(value) { return String(value || ''); }",
+    "return { parseTrainerContacts, getEventContactProfile, findTrainerContacts };"
   ].join("\n\n");
   return new Function("state", source)(state);
 }
@@ -115,6 +130,27 @@ test("Training E2 behält die bestehende Ansprechpartnerzuordnung", () => {
   assert.deepEqual(
     harness.findTrainerContacts(training).map((item) => item.name),
     ["Kontakt E2"]
+  );
+});
+
+test("C-Jugend-Kontakt aus hierarchischer Appack-Kategorie wird gefunden", () => {
+  const parser = createHarness([]);
+  const contacts = parser.parseTrainerContacts([{
+    ansKat: "Fussball / Jugend / C",
+    ansFunc: "Trainerin C-Jugend",
+    ansName: "Kontakt C"
+  }]);
+  const harness = createHarness(contacts);
+  const match = event({
+    source: "match",
+    title: "Schönwalder SV (9er) – Gast",
+    team: "Schönwalder SV (9er)",
+    teamCategory: "C-Junioren | Kreisfreundschaftsspiele"
+  });
+
+  assert.deepEqual(
+    harness.findTrainerContacts(match).map((item) => item.name),
+    ["Kontakt C"]
   );
 });
 

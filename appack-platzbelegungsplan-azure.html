@@ -2753,6 +2753,21 @@
         };
       }
 
+      function extractContactCategoryTeamKeys(value) {
+        const keys = new Set();
+        splitContactValues(value).forEach(function (token) {
+          extractContactTeamKeys(token).forEach(function (key) {
+            keys.add(key);
+          });
+          String(token).split(/\s*(?:\/|>|›|→|\|)\s*/).forEach(function (part) {
+            extractContactTeamKeys(part).forEach(function (key) {
+              keys.add(key);
+            });
+          });
+        });
+        return keys;
+      }
+
       function parseYouthTeamKey(key) {
         const match = String(key || "").match(/^team:([a-g])(\d{1,2})?$/);
         if (!match) return null;
@@ -2821,12 +2836,7 @@
            */
           if (!categoryProfile.topCategories.has("Fussball")) return;
 
-          const categoryKeys = new Set();
-          categoryProfile.subcategories.forEach(function (subcategory) {
-            extractContactTeamKeys(subcategory).forEach(function (key) {
-              categoryKeys.add(key);
-            });
-          });
+          const categoryKeys = extractContactCategoryTeamKeys(row.ansKat);
 
           const functionValues = getContactFunctionValues(row.ansFunc);
           const functionKeys = new Set();
@@ -4021,7 +4031,8 @@
           occupancyEnd: occupancyEnd.toISOString(),
           matchDurationMinutes: Number(item.matchDurationMinutes || 0),
           durationRule: String(item.durationRule || ""),
-          competitionFormat: String(item.competitionFormat || "")
+          competitionFormat: String(item.competitionFormat || ""),
+          matchType: String(item.matchType || "")
         };
       }
 
@@ -4287,6 +4298,22 @@
           start: event && event.start || null,
           end: event && event.end || null
         };
+      }
+
+      function getPopupTimeText(event) {
+        const visibleTimes = getVisibleEventTimes(event);
+        if (event && event.allDay) return "Ganztägig";
+        if (!visibleTimes.start || !visibleTimes.end) return "";
+
+        const props = event && event.extendedProps || {};
+        if (props.sourceType === "official-match-feed") {
+          const kickoff = new Date(props.kickoff || props.displayStart || "");
+          if (!Number.isNaN(kickoff.getTime())) {
+            return "Anstoß: " + formatTime(kickoff) + " Uhr · Spielzeit: " +
+              formatTimeRange(visibleTimes.start, visibleTimes.end);
+          }
+        }
+        return formatTimeRange(visibleTimes.start, visibleTimes.end);
       }
 
       function getInitialScrollTime() {
@@ -5270,12 +5297,7 @@
         elements.dialog.style.setProperty("--dialog-accent", accent);
         elements.dialog.style.setProperty("--dialog-accent-text", accentText);
         elements.popupTitle.textContent = event.title || "Belegung";
-        const visibleTimes = getVisibleEventTimes(event);
-        elements.popupTime.textContent = event.allDay
-          ? "Ganztägig"
-          : (visibleTimes.start && visibleTimes.end
-              ? formatTimeRange(visibleTimes.start, visibleTimes.end)
-              : "");
+        elements.popupTime.textContent = getPopupTimeText(event);
         elements.popupDescription.innerHTML = sanitizePopupDescription(props.description);
 
         const detailLink = String(props.detailLink || "").trim();

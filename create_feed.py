@@ -79,6 +79,7 @@ def main() -> int:
             "matchDurationMinutes": duration_minutes,
             "durationRule": duration_rule,
             "competitionFormat": competition_format,
+            "matchType": str(item.get("match_type") or "").strip(),
             "place": "rasen" if calendar == "Rasen" else "kunstrasen",
             "calendar": calendar,
             "team": team,

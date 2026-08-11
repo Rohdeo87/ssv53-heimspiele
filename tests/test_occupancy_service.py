@@ -269,6 +269,7 @@ class OccupancyServiceTests(unittest.TestCase):
                             "title": "Schönwalder SV – Gast",
                             "start": "2026-09-12T10:00+02:00",
                             "end": "2026-09-12T11:00+02:00",
+                            "kickoff": "2026-09-12T10:00+02:00",
                             "occupancyStart": "2026-09-12T09:30+02:00",
                             "occupancyEnd": "2026-09-12T12:00+02:00",
                             "matchDurationMinutes": 60,

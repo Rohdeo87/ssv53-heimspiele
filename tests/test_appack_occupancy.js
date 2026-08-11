@@ -43,7 +43,10 @@ function harness() {
     "function buildAzureEventDescription(item) { return item.description || ''; }",
     extractFunction("mapAzureOccupancyEvent"),
     extractFunction("getVisibleEventTimes"),
-    "return { mapAzureOccupancyEvent, getVisibleEventTimes };"
+    extractFunction("formatTime"),
+    extractFunction("formatTimeRange"),
+    extractFunction("getPopupTimeText"),
+    "return { mapAzureOccupancyEvent, getVisibleEventTimes, getPopupTimeText };"
   ].join("\n\n");
   return new Function(source)();
 }
@@ -74,6 +77,10 @@ test("Spiel blockiert occupancyStart bis occupancyEnd, zeigt aber start bis end"
   });
   assert.equal(visible.start.toISOString(), "2026-08-21T17:00:00.000Z");
   assert.equal(visible.end.toISOString(), "2026-08-21T18:30:00.000Z");
+  assert.equal(
+    api.getPopupTimeText({ start: mapped.start, end: mapped.end, extendedProps: mapped }),
+    "Anstoß: 19:00 Uhr · Spielzeit: 19:00–20:30 Uhr"
+  );
 });
 
 test("Training behält seine echte Kalendergeometrie", () => {

@@ -302,6 +302,7 @@ def _structured_match_events(
 
         display_start = _parse_request_datetime(str(item.get("start") or ""), tz)
         display_end = _parse_request_datetime(str(item.get("end") or ""), tz)
+        kickoff = _parse_request_datetime(str(item.get("kickoff") or ""), tz)
         blocked_start = _parse_request_datetime(
             str(item.get("occupancyStart") or ""), tz
         )
@@ -313,6 +314,8 @@ def _structured_match_events(
             raise ValueError("matches.json enthält eine ungültige sichtbare Spielzeit.")
         if display_end - display_start != timedelta(minutes=duration_minutes):
             raise ValueError("Match-Dauer und sichtbare Spielzeit widersprechen sich.")
+        if kickoff != display_start:
+            raise ValueError("Anstoß und Beginn der sichtbaren Spielzeit widersprechen sich.")
         if display_start - blocked_start != required_before:
             raise ValueError("Der verpflichtende 60-Minuten-Spielvorlauf fehlt.")
         if blocked_end - display_end != required_after:
@@ -333,9 +336,10 @@ def _structured_match_events(
             "awayTeam": str(item.get("awayTeam") or ""),
             "competition": str(item.get("competition") or ""),
             "competitionFormat": str(item.get("competitionFormat") or ""),
+            "matchType": str(item.get("matchType") or ""),
             "matchDurationMinutes": duration_minutes,
             "durationRule": str(item.get("durationRule") or ""),
-            "kickoff": str(item.get("kickoff") or item.get("start") or ""),
+            "kickoff": kickoff.isoformat(),
             "area": "vorne & hinten",
             "description": str(item.get("description") or ""),
             "detailLink": str(item.get("detailLink") or ""),
