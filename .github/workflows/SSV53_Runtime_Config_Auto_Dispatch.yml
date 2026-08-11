@@ -1,0 +1,59 @@
+name: SSV53 Runtime-Config automatisch aktualisieren
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows:
+      - SSV53 Heimspiele aktualisieren
+    types:
+      - completed
+  schedule:
+    - cron: "47 1,7,13,19 * * *"
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: ssv53-runtime-config-auto-dispatch
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    name: Geprüften Publish auf dem Migrationsbranch anstoßen
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Runtime-Config-Workflow sicher starten
+        uses: actions/github-script@v8
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: "azure-runtime-config-rollout.yml",
+              ref: "feature/azure-mower-migration",
+              inputs: {
+                operation: "publish",
+                publish_confirmation: "SSV53-RUNTIME-CONFIG-PUBLISH",
+              },
+            });
+
+      - name: Ergebnis zusammenfassen
+        shell: bash
+        run: |
+          {
+            echo "# Runtime-Config-Aktualisierung angestoßen"
+            echo
+            echo "- Anlass: **${GITHUB_EVENT_NAME}**"
+            echo "- Zielbranch: **feature/azure-mower-migration**"
+            echo "- Quelldaten: **neuester freigegebener Stand aus main**"
+            echo "- Altersgrenze der Quelldaten: **12 Stunden**"
+            echo "- Azure-Betriebsmodus wird verändert: **nein**"
+            echo "- Mäher-/Beregnungsbefehle: **keine**"
+          } >> "$GITHUB_STEP_SUMMARY"
