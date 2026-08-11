@@ -4213,7 +4213,7 @@
 
       async function loadRangeEvents(rangeStart, rangeEnd) {
         const token = ++state.fetchToken;
-        setStatus("loading", "Belegungen werden aus Azure geladen …", false);
+        setStatus("loading", "Daten werden geladen", false);
 
         try {
           const payload = await fetchOccupancyPayload(rangeStart, rangeEnd);
