@@ -32,6 +32,8 @@ class FullMowerWorkflowTests(unittest.TestCase):
             "ENABLE_PARK_COMMANDS=false",
             "ENABLE_START_COMMANDS=false",
             "FULL_MOWER_CONFIRMATION=LOCKED",
+            "PARK_LOOKAHEAD_MINUTES=10",
+            "HYDRAWISE_CLEAR_CONFIRMATION_MINUTES=10",
         ):
             with self.subTest(required=required):
                 self.assertIn(required, self.content)

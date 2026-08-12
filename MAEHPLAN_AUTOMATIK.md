@@ -8,7 +8,7 @@ Die Automatik befindet sich noch im sicheren Dry-Run-Betrieb. Sie liest alle ben
 
 - `public/rasen.ics`: Heimspiele auf dem Rasenplatz; die Termine enthalten bereits 60 Minuten Vorlauf und 60 Minuten Nachlauf.
 - `mower/config.json`: wiederkehrende Trainingszeiten mit 30 Minuten Vorlauf und 30 Minuten Nachlauf.
-- Hydrawise API: aktuelle und nächste Beregnungen; derzeit 30 Minuten Vorlauf und 30 Minuten Nachlauf.
+- Hydrawise API: aktuelle und nächste Beregnungen; 30 Minuten Vorlauf und nach dem gemeldeten Ende 10 Minuten fortlaufend bestätigte Freigabe.
 - Husqvarna Authentication API und Automower Connect API: aktueller Status von „Schaf“, Akku, Aktivität, Fehlerzustand, Planner-Override und EPOS-Arbeitsbereich.
 
 ## Dauerhafte Workflows
@@ -40,7 +40,8 @@ Freie Mähfenster werden über Mitternacht hinweg verbunden.
 
 - Heimspiele: 60 Minuten vor und 60 Minuten nach dem Spiel; bereits in `public/rasen.ics` enthalten.
 - Training: 30 Minuten vor und 30 Minuten nach dem Training.
-- Hydrawise: 30 Minuten vor und 30 Minuten nach der Beregnung.
+- Hydrawise: 30 Minuten vor der Beregnung; danach bleibt der Platz gesperrt, bis Hydrawise 10 Minuten fortlaufend frei gemeldet und diese Kette persistent gespeichert hat.
+- Vor Training, Spielen und Beregnung gilt zusätzlich ein Park-Lookahead von 10 Minuten.
 - Überlappende Sperren werden zusammengeführt.
 - Freie Fenster unter 30 Minuten werden nicht für einen neuen Mähstart verwendet.
 
@@ -66,7 +67,7 @@ vollständig verriegelt:
   SSV53-Automatik ausgelöste Trainings- oder Spielparkierung gespeichert.
 - Eine Parkierung wegen Beregnung, gemischter Sperre, fehlendem Hydrawise-
   Status oder unbekannter Ursache darf niemals automatisch gestartet werden.
-- Hydrawise muss live, frisch und mindestens zwei Minuten durchgehend frei
+- Hydrawise muss live, frisch und mindestens zehn Minuten durchgehend frei
   melden. Eine aktive oder unmittelbar anstehende Zone setzt diese
   Bestätigung sofort zurück.
 - Ein Beregnungsblock setzt die Bestätigung auch dann zurück, wenn ein

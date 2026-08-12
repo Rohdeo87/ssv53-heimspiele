@@ -72,6 +72,30 @@ class AutomationStateTests(unittest.TestCase):
         )
         self.assertIsNone(interrupted.hydrawise_clear_since_utc)
 
+    def test_hydrawise_clear_chain_restarts_after_cycle_gap(self) -> None:
+        first = AutomationState().record_cycle(
+            started_utc=NOW,
+            success=True,
+            decision_code="HYDRAWISE_CLEAR",
+            hydrawise_success_utc=NOW,
+            hydrawise_observed_utc=NOW,
+            hydrawise_clear=True,
+            hydrawise_active_count=0,
+        )
+        after_gap = first.record_cycle(
+            started_utc=NOW + timedelta(minutes=4),
+            success=True,
+            decision_code="HYDRAWISE_CLEAR",
+            hydrawise_success_utc=NOW + timedelta(minutes=4),
+            hydrawise_observed_utc=NOW + timedelta(minutes=4),
+            hydrawise_clear=True,
+            hydrawise_active_count=0,
+        )
+        self.assertEqual(
+            after_gap.hydrawise_clear_since_utc,
+            (NOW + timedelta(minutes=4)).isoformat(),
+        )
+
 
 class StateStoreTests(unittest.TestCase):
     def test_in_memory_store_uses_optimistic_revision(self) -> None:

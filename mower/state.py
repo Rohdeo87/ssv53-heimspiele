@@ -184,6 +184,7 @@ class AutomationState:
         hydrawise_clear: bool | None = None,
         hydrawise_active_count: int | None = None,
         next_irrigation_start_utc: datetime | None = None,
+        hydrawise_continuity_max_gap_seconds: int = 180,
     ) -> "AutomationState":
         started = _as_utc(started_utc, "started_utc")
         hydrawise = (
@@ -203,12 +204,33 @@ class AutomationState:
         )
         if hydrawise_active_count is not None and hydrawise_active_count < 0:
             raise ValueError("hydrawise_active_count darf nicht negativ sein.")
+        if not 60 <= hydrawise_continuity_max_gap_seconds <= 900:
+            raise ValueError(
+                "hydrawise_continuity_max_gap_seconds muss zwischen 60 und 900 liegen."
+            )
 
         if hydrawise_clear is True:
             # Die Bestätigung beginnt mit dem tatsächlichen Abrufzyklus und
-            # niemals rückdatiert mit dem Zeitstempel des API-Payloads.
+            # niemals rückdatiert mit dem Zeitstempel des API-Payloads. Eine
+            # Lücke in den Kontrollzyklen unterbricht die Kette ebenfalls.
+            previous_success = (
+                datetime.fromisoformat(
+                    self.last_hydrawise_success_utc.replace("Z", "+00:00")
+                ).astimezone(timezone.utc)
+                if self.last_hydrawise_success_utc
+                else None
+            )
+            continuity_preserved = (
+                self.hydrawise_clear_since_utc is not None
+                and previous_success is not None
+                and 0
+                <= (started - previous_success).total_seconds()
+                <= hydrawise_continuity_max_gap_seconds
+            )
             clear_since = (
-                self.hydrawise_clear_since_utc or started.isoformat()
+                self.hydrawise_clear_since_utc
+                if continuity_preserved
+                else started.isoformat()
             )
         else:
             # Auch ein fehlender Abruf unterbricht die Bestätigungskette.

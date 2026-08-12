@@ -149,7 +149,8 @@ jobs:
               ENABLE_PARK_COMMANDS=false \
               ENABLE_START_COMMANDS=false \
               FULL_MOWER_CONFIRMATION=LOCKED \
-              HYDRAWISE_CLEAR_CONFIRMATION_MINUTES=2 \
+              PARK_LOOKAHEAD_MINUTES=10 \
+              HYDRAWISE_CLEAR_CONFIRMATION_MINUTES=10 \
               MOWER_PARK_CONFIRMATION_MINUTES=1 \
               MAX_AUTOMATIC_START_MINUTES=360 \
             --output none
@@ -185,6 +186,8 @@ jobs:
           assert values.get("ENABLE_PARK_COMMANDS", "").lower() == "false"
           assert values.get("ENABLE_START_COMMANDS", "").lower() == "false"
           assert values.get("FULL_MOWER_CONFIRMATION") != "SSV53-TRAINING-MATCH-PARK-START"
+          assert values.get("PARK_LOOKAHEAD_MINUTES") == "10"
+          assert values.get("HYDRAWISE_CLEAR_CONFIRMATION_MINUTES") == "10"
           print("Nach Deployment: DRY_RUN, Park aus, Start aus, Bestätigung ungültig.")
           PY
 

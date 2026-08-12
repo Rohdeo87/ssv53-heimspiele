@@ -8,6 +8,10 @@ from typing import Any, Mapping
 from mower.dry_run import run_read_only_cycle
 from mower.husqvarna_actions import park_until_further_notice
 from mower.husqvarna_start_actions import start_in_work_area
+from mower.hydrawise import (
+    HydrawiseContinuousClearSnapshot,
+    evaluate_continuous_clear_confirmation,
+)
 from mower.runtime import ControlMode, CycleResult, RuntimeSettings
 from mower.safety import CommandIntent, evaluate_command_gate
 from mower.state import AutomationState
@@ -223,34 +227,26 @@ def _persist_cycle_only(
     )
 
 
-def _hydrawise_release_confirmed(
+def _hydrawise_release_confirmation(
     *,
     cycle_state: AutomationState,
     details: dict[str, Any],
     now_utc: datetime,
     confirmation_minutes: int,
-) -> tuple[bool, str]:
+) -> HydrawiseContinuousClearSnapshot:
     safety = _as_dict(_as_dict(details.get("hydrawise")).get("safety"))
-    if not bool(safety.get("available")):
-        return False, "Hydrawise ist nicht live verfügbar."
-    if not bool(safety.get("fresh")):
-        return False, "Der Hydrawise-Status ist nicht frisch."
-    if not bool(safety.get("clear_now")):
-        return False, str(safety.get("reason") or "Hydrawise ist nicht frei.")
-    clear_since = _parse_time(cycle_state.hydrawise_clear_since_utc)
-    if clear_since is None:
-        return False, "Die fortlaufende Hydrawise-Freigabe hat noch nicht begonnen."
-    confirmed_for = (
-        now_utc.astimezone(timezone.utc) - clear_since
-    ).total_seconds() / 60
-    if confirmed_for < confirmation_minutes:
-        return (
-            False,
-            "Hydrawise meldet erst seit "
-            f"{confirmed_for:.1f} Minuten frei; benötigt werden "
-            f"{confirmation_minutes} Minuten.",
-        )
-    return True, "Hydrawise hat das Beregnungsende fortlaufend bestätigt."
+    return evaluate_continuous_clear_confirmation(
+        available=bool(safety.get("available")),
+        fresh=bool(safety.get("fresh")),
+        clear_now=bool(safety.get("clear_now")),
+        physical_reason=str(
+            safety.get("reason") or "Hydrawise ist nicht frei."
+        ),
+        clear_since_utc=cycle_state.hydrawise_clear_since_utc,
+        now_utc=now_utc,
+        required_clear_minutes=confirmation_minutes,
+        persistent_state_available=True,
+    )
 
 
 def run_full_mower_cycle(
@@ -502,22 +498,18 @@ def run_full_mower_cycle(
     confirmation_minutes = _positive_int(
         environment,
         "HYDRAWISE_CLEAR_CONFIRMATION_MINUTES",
-        2,
+        10,
         minimum=1,
-        maximum=15,
+        maximum=60,
     )
-    hydrawise_confirmed, hydrawise_reason = _hydrawise_release_confirmed(
+    hydrawise_release = _hydrawise_release_confirmation(
         cycle_state=cycle_state,
         details=details,
         now_utc=now_utc,
         confirmation_minutes=confirmation_minutes,
     )
-    details["hydrawise_release_gate"] = {
-        "allowed": hydrawise_confirmed,
-        "reason": hydrawise_reason,
-        "required_clear_minutes": confirmation_minutes,
-    }
-    if not hydrawise_confirmed:
+    details["hydrawise_release_gate"] = hydrawise_release.to_dict()
+    if not hydrawise_release.allowed:
         return _persist_cycle_only(
             store=store,
             original=state,
@@ -526,7 +518,7 @@ def run_full_mower_cycle(
             settings=settings,
             result=result,
             decision_code="HYDRAWISE_RELEASE_NOT_CONFIRMED",
-            message=hydrawise_reason,
+            message=hydrawise_release.reason,
         )
 
     park_confirmed = _parse_time(cycle_state.park_confirmed_utc)

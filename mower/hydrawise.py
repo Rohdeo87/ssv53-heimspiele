@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
@@ -39,6 +39,127 @@ class HydrawiseSafetySnapshot:
         value["active_relay_ids"] = list(self.active_relay_ids)
         value["imminent_relay_ids"] = list(self.imminent_relay_ids)
         return value
+
+
+@dataclass(frozen=True)
+class HydrawiseContinuousClearSnapshot:
+    """Persistently confirmed release after the physical irrigation end."""
+
+    allowed: bool
+    physical_clear_now: bool
+    persistent_state_available: bool
+    required_clear_minutes: int
+    clear_since_utc: str | None
+    confirmed_for_seconds: int
+    release_at_utc: str | None
+    reason: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+def evaluate_continuous_clear_confirmation(
+    *,
+    available: bool,
+    fresh: bool,
+    clear_now: bool,
+    physical_reason: str,
+    clear_since_utc: str | None,
+    now_utc: datetime,
+    required_clear_minutes: int,
+    persistent_state_available: bool,
+) -> HydrawiseContinuousClearSnapshot:
+    """Release only after an uninterrupted, persistently stored clear period.
+
+    A missing or invalid state is deliberately interpreted fail-closed. The
+    clear period starts with the first successful control cycle after the last
+    active/imminent irrigation status; it is never backdated from API data.
+    """
+
+    if now_utc.tzinfo is None or now_utc.utcoffset() is None:
+        raise ValueError("now_utc muss eine zeitzonenbewusste UTC-Zeit sein.")
+    if not 1 <= required_clear_minutes <= 60:
+        raise ValueError(
+            "required_clear_minutes muss zwischen 1 und 60 liegen."
+        )
+
+    required_seconds = required_clear_minutes * 60
+    common = {
+        "physical_clear_now": bool(available and fresh and clear_now),
+        "persistent_state_available": persistent_state_available,
+        "required_clear_minutes": required_clear_minutes,
+        "clear_since_utc": clear_since_utc,
+        "confirmed_for_seconds": 0,
+        "release_at_utc": None,
+    }
+    if not available or not fresh or not clear_now:
+        return HydrawiseContinuousClearSnapshot(
+            allowed=False,
+            reason=physical_reason,
+            **common,
+        )
+    if not persistent_state_available:
+        return HydrawiseContinuousClearSnapshot(
+            allowed=False,
+            reason=(
+                "Die fortlaufende Hydrawise-Freigabe konnte nicht sicher "
+                "gespeichert werden."
+            ),
+            **common,
+        )
+    if not clear_since_utc:
+        return HydrawiseContinuousClearSnapshot(
+            allowed=False,
+            reason="Die fortlaufende Hydrawise-Freigabe hat noch nicht begonnen.",
+            **common,
+        )
+
+    try:
+        clear_since = datetime.fromisoformat(
+            clear_since_utc.replace("Z", "+00:00")
+        )
+        if clear_since.tzinfo is None or clear_since.utcoffset() is None:
+            raise ValueError
+        clear_since = clear_since.astimezone(timezone.utc)
+    except (AttributeError, TypeError, ValueError):
+        return HydrawiseContinuousClearSnapshot(
+            allowed=False,
+            reason="Die gespeicherte Hydrawise-Freigabezeit ist ungültig.",
+            **common,
+        )
+
+    now = now_utc.astimezone(timezone.utc)
+    if clear_since > now:
+        return HydrawiseContinuousClearSnapshot(
+            allowed=False,
+            reason="Die gespeicherte Hydrawise-Freigabezeit liegt in der Zukunft.",
+            **common,
+        )
+
+    confirmed_seconds = int((now - clear_since).total_seconds())
+    release_at = clear_since + timedelta(minutes=required_clear_minutes)
+    confirmed = confirmed_seconds >= required_seconds
+    if confirmed:
+        reason = (
+            "Hydrawise hat das Beregnungsende fortlaufend für "
+            f"mindestens {required_clear_minutes} Minuten bestätigt."
+        )
+    else:
+        reason = (
+            "Hydrawise meldet erst seit "
+            f"{confirmed_seconds / 60:.1f} Minuten fortlaufend frei; benötigt "
+            f"werden {required_clear_minutes} Minuten."
+        )
+    return HydrawiseContinuousClearSnapshot(
+        allowed=confirmed,
+        physical_clear_now=True,
+        persistent_state_available=True,
+        required_clear_minutes=required_clear_minutes,
+        clear_since_utc=clear_since.isoformat(),
+        confirmed_for_seconds=confirmed_seconds,
+        release_at_utc=release_at.isoformat(),
+        reason=reason,
+    )
 
 
 def _relay_selected(

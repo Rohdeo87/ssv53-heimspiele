@@ -36,7 +36,7 @@ def settings(
 ENVIRONMENT = {
     "HUSQVARNA_CLIENT_ID": "client",
     "HUSQVARNA_CLIENT_SECRET": "secret",
-    "HYDRAWISE_CLEAR_CONFIRMATION_MINUTES": "2",
+    "HYDRAWISE_CLEAR_CONFIRMATION_MINUTES": "10",
     "MOWER_PARK_CONFIRMATION_MINUTES": "1",
     "MAX_AUTOMATIC_START_MINUTES": "360",
 }
@@ -123,7 +123,8 @@ def parked_state(source: str) -> AutomationState:
         automation_restart_allowed=source in {"training", "match"},
         park_command_sent_utc=(NOW - timedelta(minutes=10)).isoformat(),
         park_confirmed_utc=(NOW - timedelta(minutes=5)).isoformat(),
-        hydrawise_clear_since_utc=(NOW - timedelta(minutes=5)).isoformat(),
+        hydrawise_clear_since_utc=(NOW - timedelta(minutes=15)).isoformat(),
+        last_hydrawise_success_utc=(NOW - timedelta(minutes=1)).isoformat(),
         last_hydrawise_observed_utc=(NOW - timedelta(minutes=1)).isoformat(),
         last_hydrawise_active_count=0,
     )
@@ -323,7 +324,7 @@ class FullMowerStartTests(unittest.TestCase):
             {
                 **state.to_dict(),
                 "hydrawise_clear_since_utc": (
-                    NOW - timedelta(minutes=1)
+                    NOW - timedelta(minutes=9)
                 ).isoformat(),
             }
         )

@@ -191,13 +191,16 @@ def _validate_mower_config(
         raise RuntimeBundleError("Für die Sicherheitsplanung müssen alle Hydrawise-Zonen gelten.")
     if int(hydrawise.get("before_minutes", -1)) < 30:
         raise RuntimeBundleError("Der Beregnungs-Vorlauf darf nicht unter 30 Minuten liegen.")
-    if int(hydrawise.get("after_minutes", -1)) < 30:
-        raise RuntimeBundleError("Der Beregnungs-Nachlauf darf nicht unter 30 Minuten liegen.")
+    hydrawise_after = int(hydrawise.get("after_minutes", -1))
+    if hydrawise_after < 10:
+        raise RuntimeBundleError("Der Beregnungs-Nachlauf darf nicht unter 10 Minuten liegen.")
 
     return training_blocks, {
         "minimum_mowing_window_minutes": minimum_window,
         "training_before_minutes": before,
         "training_after_minutes": after,
+        "hydrawise_before_minutes": int(hydrawise.get("before_minutes", -1)),
+        "hydrawise_after_minutes": hydrawise_after,
         "training_ranges": [
             {"from": start.isoformat(), "to": end.isoformat()}
             for start, end in parsed_ranges

@@ -15,7 +15,7 @@ class RuntimeSettingsPhase2Tests(unittest.TestCase):
     def test_live_reads_default_to_off(self) -> None:
         settings = RuntimeSettings.from_mapping({})
         self.assertFalse(settings.enable_live_reads)
-        self.assertEqual(settings.park_lookahead_minutes, 15)
+        self.assertEqual(settings.park_lookahead_minutes, 10)
 
     def test_invalid_live_read_value_is_rejected(self) -> None:
         with self.assertRaisesRegex(ValueError, "boolescher"):

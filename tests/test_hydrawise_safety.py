@@ -3,7 +3,10 @@ from __future__ import annotations
 import unittest
 from datetime import datetime, timedelta, timezone
 
-from mower.hydrawise import evaluate_safety_status
+from mower.hydrawise import (
+    evaluate_continuous_clear_confirmation,
+    evaluate_safety_status,
+)
 
 
 NOW = datetime(2026, 8, 11, 17, 0, tzinfo=timezone.utc)
@@ -97,6 +100,67 @@ class HydrawiseSafetyTests(unittest.TestCase):
                 )
                 self.assertFalse(result.clear_now)
                 self.assertFalse(result.available)
+
+    def test_release_stays_locked_until_ten_continuous_minutes(self) -> None:
+        result = evaluate_continuous_clear_confirmation(
+            available=True,
+            fresh=True,
+            clear_now=True,
+            physical_reason="Hydrawise ist frei.",
+            clear_since_utc=(NOW - timedelta(minutes=9, seconds=59)).isoformat(),
+            now_utc=NOW,
+            required_clear_minutes=10,
+            persistent_state_available=True,
+        )
+        self.assertFalse(result.allowed)
+        self.assertEqual(result.confirmed_for_seconds, 599)
+        self.assertEqual(
+            result.release_at_utc,
+            (NOW + timedelta(seconds=1)).isoformat(),
+        )
+
+    def test_release_opens_after_ten_continuous_minutes(self) -> None:
+        result = evaluate_continuous_clear_confirmation(
+            available=True,
+            fresh=True,
+            clear_now=True,
+            physical_reason="Hydrawise ist frei.",
+            clear_since_utc=(NOW - timedelta(minutes=10)).isoformat(),
+            now_utc=NOW,
+            required_clear_minutes=10,
+            persistent_state_available=True,
+        )
+        self.assertTrue(result.allowed)
+        self.assertEqual(result.confirmed_for_seconds, 600)
+
+    def test_missing_persistent_state_fails_closed(self) -> None:
+        result = evaluate_continuous_clear_confirmation(
+            available=True,
+            fresh=True,
+            clear_now=True,
+            physical_reason="Hydrawise ist frei.",
+            clear_since_utc=(NOW - timedelta(hours=1)).isoformat(),
+            now_utc=NOW,
+            required_clear_minutes=10,
+            persistent_state_available=False,
+        )
+        self.assertFalse(result.allowed)
+        self.assertIn("gespeichert", result.reason)
+
+    def test_new_irrigation_interrupts_an_existing_release_chain(self) -> None:
+        result = evaluate_continuous_clear_confirmation(
+            available=True,
+            fresh=True,
+            clear_now=False,
+            physical_reason="Mindestens eine Hydrawise-Zone läuft aktuell.",
+            clear_since_utc=(NOW - timedelta(hours=1)).isoformat(),
+            now_utc=NOW,
+            required_clear_minutes=10,
+            persistent_state_available=True,
+        )
+        self.assertFalse(result.allowed)
+        self.assertFalse(result.physical_clear_now)
+        self.assertIn("läuft", result.reason)
 
 
 if __name__ == "__main__":

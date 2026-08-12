@@ -82,7 +82,7 @@ class RuntimeSettings:
 
         try:
             park_lookahead_minutes = int(
-                values.get("PARK_LOOKAHEAD_MINUTES", "15").strip()
+                values.get("PARK_LOOKAHEAD_MINUTES", "10").strip()
             )
         except ValueError as exc:
             raise ValueError(

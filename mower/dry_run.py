@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import asdict
+from collections.abc import Callable
+from dataclasses import asdict, replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping
@@ -24,11 +25,17 @@ from mower.husqvarna import (
 )
 from mower.hydrawise import (
     HydrawiseError,
+    HydrawiseContinuousClearSnapshot,
+    evaluate_continuous_clear_confirmation,
     evaluate_safety_status,
     fetch_status,
 )
 from mower.planner import create_plan, load_json, read_match_blocks
-from mower.runtime import CycleResult, RuntimeSettings
+from mower.runtime import ControlMode, CycleResult, RuntimeSettings
+from mower.state_store import AzureTableStateStore, StateStore
+
+
+StateStoreFactory = Callable[[Mapping[str, str]], StateStore]
 
 
 def _as_dict(value: Any) -> dict[str, Any]:
@@ -77,6 +84,51 @@ def _target_work_area(
     return work_areas[0] if len(work_areas) == 1 else None
 
 
+def _parse_utc(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise ValueError("Zeitangaben müssen eine Zeitzone enthalten.")
+    return parsed.astimezone(timezone.utc)
+
+
+def _apply_hydrawise_gate(
+    *,
+    decision: Decision,
+    hydrawise_clear: bool,
+    hydrawise_reason: str,
+    parking_block: Any | None,
+    mower_activity: str,
+    automation_owned_park: bool,
+) -> Decision:
+    if hydrawise_clear or parking_block is not None:
+        return decision
+    if mower_activity in PARKABLE_ACTIVITIES:
+        return Decision(
+            code="HYDRAWISE_UNCONFIRMED_WOULD_PARK",
+            title="Beregnungssicherheit nicht bestätigt",
+            reason=(
+                f"{hydrawise_reason} Der laufende Mäher muss vorsorglich "
+                "geparkt bleiben, bis Hydrawise eindeutig frei meldet."
+            ),
+            hypothetical_command="PARK",
+        )
+    if (
+        decision.hypothetical_command == "START_IN_WORK_AREA"
+        or automation_owned_park
+    ):
+        return Decision(
+            code="HYDRAWISE_UNCONFIRMED_HOLD",
+            title="Automatischen Start gesperrt halten",
+            reason=(
+                f"{hydrawise_reason} Ohne bestätigtes Beregnungsende darf der "
+                "Mäher nicht auf den Platz fahren."
+            ),
+        )
+    return decision
+
+
 def run_read_only_cycle(
     *,
     now_utc: datetime,
@@ -84,6 +136,7 @@ def run_read_only_cycle(
     environment: Mapping[str, str],
     past_due: bool,
     source: str,
+    state_store_factory: StateStoreFactory = AzureTableStateStore.from_environment,
 ) -> CycleResult:
     """Führt die komplette Live-Abfrage aus, sendet aber keinerlei Befehle."""
 
@@ -174,7 +227,7 @@ def run_read_only_cycle(
         snapshot.external_reason_id == AUTOMATION_EXTERNAL_REASON
         and snapshot.override_action == "FORCE_PARK"
     )
-    decision = classify_decision(
+    base_decision = classify_decision(
         now=now_local,
         active_block=active_block,
         parking_block=parking_block,
@@ -188,32 +241,115 @@ def run_read_only_cycle(
         minimum_remaining_minutes=minimum_remaining,
     )
 
-    # Hydrawise ist für jeden startfähigen Modus ein hartes Fail-closed-Gate.
-    # Bei fehlender, veralteter, laufender oder unmittelbar anstehender
-    # Beregnung wird ein aktiver Mäher vorsorglich zum Parken vorgeschlagen.
-    if not hydrawise_safety.clear_now and parking_block is None:
-        if snapshot.activity in PARKABLE_ACTIVITIES:
-            decision = Decision(
-                code="HYDRAWISE_UNCONFIRMED_WOULD_PARK",
-                title="Beregnungssicherheit nicht bestätigt",
-                reason=(
-                    f"{hydrawise_safety.reason} Der laufende Mäher muss "
-                    "vorsorglich geparkt bleiben, bis Hydrawise eindeutig frei meldet."
+    release_confirmation: HydrawiseContinuousClearSnapshot | None = None
+    automation_state_details: dict[str, Any] | None = None
+    if settings.control_mode is ControlMode.DRY_RUN:
+        # Der verriegelte Dry Run speichert ausschließlich die binäre
+        # Hydrawise-Freigabekette. So bleibt die Nachlaufsperre auch sichtbar,
+        # nachdem eine beendete Zone aus der Live-Antwort verschwunden ist.
+        required_clear_minutes = int(
+            environment.get("HYDRAWISE_CLEAR_CONFIRMATION_MINUTES", "10")
+        )
+        projected_state = None
+        state_error: str | None = None
+        try:
+            store = state_store_factory(environment)
+            original_state = store.load()
+            projected_state = original_state.record_cycle(
+                started_utc=now_utc,
+                success=True,
+                decision_code=base_decision.code,
+                mower_activity=snapshot.activity,
+                mower_state=snapshot.state,
+                error_code=snapshot.error_code,
+                hydrawise_success_utc=(
+                    now_utc if hydrawise_safety.fresh else None
                 ),
-                hypothetical_command="PARK",
-            )
-        elif (
-            decision.hypothetical_command == "START_IN_WORK_AREA"
-            or automation_owned_park
-        ):
-            decision = Decision(
-                code="HYDRAWISE_UNCONFIRMED_HOLD",
-                title="Automatischen Start gesperrt halten",
-                reason=(
-                    f"{hydrawise_safety.reason} Ohne bestätigtes Beregnungsende "
-                    "darf der Mäher nicht auf den Platz fahren."
+                hydrawise_observed_utc=_parse_utc(
+                    hydrawise_safety.observed_at_utc
                 ),
+                hydrawise_clear=(
+                    hydrawise_safety.available
+                    and hydrawise_safety.fresh
+                    and hydrawise_safety.clear_now
+                ),
+                hydrawise_active_count=hydrawise_safety.active_zone_count,
             )
+            release_confirmation = evaluate_continuous_clear_confirmation(
+                available=hydrawise_safety.available,
+                fresh=hydrawise_safety.fresh,
+                clear_now=hydrawise_safety.clear_now,
+                physical_reason=hydrawise_safety.reason,
+                clear_since_utc=projected_state.hydrawise_clear_since_utc,
+                now_utc=now_utc,
+                required_clear_minutes=required_clear_minutes,
+                persistent_state_available=True,
+            )
+            decision = _apply_hydrawise_gate(
+                decision=base_decision,
+                hydrawise_clear=release_confirmation.allowed,
+                hydrawise_reason=release_confirmation.reason,
+                parking_block=parking_block,
+                mower_activity=snapshot.activity,
+                automation_owned_park=automation_owned_park,
+            )
+            projected_state = replace(
+                projected_state,
+                last_decision_code=decision.code,
+            )
+            store.save(
+                projected_state,
+                expected_revision=original_state.revision,
+            )
+            state_persisted = True
+        except Exception as exc:
+            state_persisted = False
+            state_error = f"{type(exc).__name__}: {exc}"
+            release_confirmation = evaluate_continuous_clear_confirmation(
+                available=hydrawise_safety.available,
+                fresh=hydrawise_safety.fresh,
+                clear_now=hydrawise_safety.clear_now,
+                physical_reason=hydrawise_safety.reason,
+                clear_since_utc=(
+                    projected_state.hydrawise_clear_since_utc
+                    if projected_state is not None
+                    else None
+                ),
+                now_utc=now_utc,
+                required_clear_minutes=required_clear_minutes,
+                persistent_state_available=False,
+            )
+            decision = _apply_hydrawise_gate(
+                decision=base_decision,
+                hydrawise_clear=False,
+                hydrawise_reason=release_confirmation.reason,
+                parking_block=parking_block,
+                mower_activity=snapshot.activity,
+                automation_owned_park=automation_owned_park,
+            )
+        automation_state_details = {
+            "revision": (
+                projected_state.revision
+                if projected_state is not None
+                else None
+            ),
+            "hydrawise_clear_since_utc": (
+                projected_state.hydrawise_clear_since_utc
+                if projected_state is not None
+                else None
+            ),
+            "persisted": state_persisted,
+            "error": state_error,
+        }
+    else:
+        decision = _apply_hydrawise_gate(
+            decision=base_decision,
+            hydrawise_clear=hydrawise_safety.clear_now,
+            hydrawise_reason=hydrawise_safety.reason,
+            parking_block=parking_block,
+            mower_activity=snapshot.activity,
+            automation_owned_park=automation_owned_park,
+        )
 
     mower_details = snapshot.to_dict()
     mower_details["automation_owned_park"] = automation_owned_park
@@ -249,7 +385,13 @@ def run_read_only_cycle(
                 "status": hydrawise_label,
                 "error": hydrawise_error,
                 "safety": hydrawise_safety.to_dict(),
+                "release_confirmation": (
+                    release_confirmation.to_dict()
+                    if release_confirmation is not None
+                    else None
+                ),
             },
+            "automation_state": automation_state_details,
             "mower": mower_details,
             "input_files": {
                 "config": str(Path(config_path)),
@@ -266,6 +408,9 @@ def run_read_only_cycle(
                 "read_only": True,
                 "command_functions_present": False,
                 "command_sent": False,
+                "persistent_safety_state_write": (
+                    settings.control_mode is ControlMode.DRY_RUN
+                ),
             },
         },
     )

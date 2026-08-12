@@ -91,7 +91,7 @@ jobs:
               "WAIT_POWER_UP",
           }
           NO_OVERRIDE = {"", "NOT_ACTIVE", "NONE", "null", "None"}
-          PARK_LOOKAHEAD_MINUTES = 15
+          PARK_LOOKAHEAD_MINUTES = 10
 
           @dataclass(frozen=True)
           class Decision:

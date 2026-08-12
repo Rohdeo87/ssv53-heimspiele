@@ -72,6 +72,6 @@
     "relay_ids": [],
     "zone_name_patterns": [],
     "before_minutes": 30,
-    "after_minutes": 30
+    "after_minutes": 10
   }
 }

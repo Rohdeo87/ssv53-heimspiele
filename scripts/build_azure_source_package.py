@@ -122,6 +122,8 @@ def build_package(repository_root: Path, output_path: Path) -> dict[str, object]
         "schema_version": 1,
         "package_type": "azure-functions-python-source",
         "safety_stage": "DRY_RUN_READ_ONLY",
+        "device_interfaces_read_only": True,
+        "persistent_safety_state_write": True,
         "remote_build_required": True,
         "files": manifest_files,
     }

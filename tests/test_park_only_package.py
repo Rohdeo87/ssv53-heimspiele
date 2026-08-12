@@ -41,6 +41,8 @@ class ParkOnlyPackageTests(unittest.TestCase):
                     manifest["safety_stage"],
                     "DRY_RUN_READ_ONLY",
                 )
+                self.assertTrue(manifest["device_interfaces_read_only"])
+                self.assertTrue(manifest["persistent_safety_state_write"])
                 self.assertNotIn("mower/husqvarna_actions.py", names)
                 self.assertNotIn("mower/park_only.py", names)
 
