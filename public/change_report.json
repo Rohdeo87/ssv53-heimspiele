@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-12T11:16:03+00:00",
+  "generatedAt": "2026-08-12T16:15:06+00:00",
   "status": "ok",
   "counts": {
     "before": 41,
-    "after": 41,
-    "added": 0,
+    "after": 42,
+    "added": 1,
     "changed": 0,
     "removed": 0
   },
@@ -15,7 +15,27 @@
     "maxRemovalRatio": 0.6,
     "reasons": []
   },
-  "added": [],
+  "added": [
+    {
+      "id": "dfb:031O4JQIM4000000VS5489BUVT2M8LCU",
+      "title": "Spiel Schönwalder SV 53: Schönwalder SV 53 – SV Concordia Nowawes 06",
+      "start": "2026-09-27T09:30+02:00",
+      "end": "2026-09-27T13:00+02:00",
+      "kickoff": "2026-09-27T10:30+02:00",
+      "place": "rasen",
+      "calendar": "Rasen",
+      "team": "Schönwalder SV 53",
+      "teamCategory": "A-Junioren | Brandenburg-Pokal",
+      "teamRole": "home",
+      "homeTeam": "Schönwalder SV 53",
+      "awayTeam": "SV Concordia Nowawes 06",
+      "competition": "A-Junioren | Brandenburg-Pokal",
+      "status": "",
+      "detailLink": "https://www.fussball.de/spiel/schoenwalder-sv-sv-concordia-nowawes-06/-/spiel/031O4JQIM4000000VS5489BUVT2M8LCU",
+      "source": "fussball.de",
+      "checksum": "4dabd9c2ad28213ca6fbfe3f8b2b6b5efd1b6e0f484a6130f9c7519952463edd"
+    }
+  ],
   "changed": [],
   "removed": []
 }

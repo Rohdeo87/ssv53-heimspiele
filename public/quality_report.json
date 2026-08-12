@@ -3,7 +3,7 @@
   "errors": [],
   "invalid_included": [],
   "by_calendar": {
-    "Rasen": 36,
+    "Rasen": 37,
     "Kunstrasen": 5
   },
   "event_timing": {
@@ -16,7 +16,7 @@
     {
       "date_from": "2026-07-01",
       "date_to": "2026-09-30",
-      "competition_rows": 33
+      "competition_rows": 34
     },
     {
       "date_from": "2026-10-01",
@@ -41,11 +41,11 @@
       "depth": 0,
       "source_url": "https://www.fussball.de/ajax.club.matchplan/-/id/00ES8GNBL0000049VV0AG08LVUPGND5I/mode/PAGE/show-filter/false/show-venues/true/mime-type/HTML/datum-von/2026-07-01/datum-bis/2026-09-30/max/50",
       "source_scope": "all club teams; inclusion decided only by venue",
-      "competition_rows": 33,
-      "source_detail_ids": 29,
-      "parsed_matches_before_duplicate_merge": 33,
-      "parsed_matches": 32,
-      "parsed_detail_ids": 29,
+      "competition_rows": 34,
+      "source_detail_ids": 30,
+      "parsed_matches_before_duplicate_merge": 34,
+      "parsed_matches": 33,
+      "parsed_detail_ids": 30,
       "missing_detail_ids": [],
       "duplicate_detail_ids": [],
       "collapsed_duplicate_detail_ids": [
