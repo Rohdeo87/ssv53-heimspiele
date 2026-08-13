@@ -110,12 +110,12 @@ def _training_events(
 ) -> list[dict[str, Any]]:
     effective_from = _config_date(config, "effective_from")
     effective_to = _config_date(config, "effective_to")
-    cancelled = {
+    statically_cancelled = {
         (str(item.get("schedule_id", "")), str(item.get("date", "")))
         for item in config.get("cancelled_occurrences", [])
         if isinstance(item, dict)
     }
-    cancelled.update(cancelled_occurrences or set())
+    dynamically_cancelled = cancelled_occurrences or set()
     weekly = list(config.get("seasons", {}).get(season, {}).get("weekly", []))
     first_day = range_start.date() - timedelta(days=1)
     last_day = range_end.date() + timedelta(days=1)
@@ -133,7 +133,8 @@ def _training_events(
             if _weekday_number(session["weekday"]) != day.weekday():
                 continue
             schedule_id = str(session["id"])
-            if (schedule_id, day.isoformat()) in cancelled:
+            occurrence_key = (schedule_id, day.isoformat())
+            if occurrence_key in statically_cancelled:
                 continue
             start = datetime.combine(day, _clock(session["start"]), tzinfo=tz)
             end = datetime.combine(day, _clock(session["end"]), tzinfo=tz)
@@ -151,6 +152,7 @@ def _training_events(
                 "team": str(session.get("team", "Training")),
                 "area": str(session.get("area", "")),
                 "description": str(session.get("description", "")),
+                "cancelled": occurrence_key in dynamically_cancelled,
             }
             if _event_overlaps(event, range_start, range_end):
                 events.append(event)

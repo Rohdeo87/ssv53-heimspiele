@@ -160,6 +160,38 @@ test("Training behält seine echte Kalendergeometrie", () => {
   assert.equal(mapped.end.toISOString(), "2026-08-21T16:30:00.000Z");
 });
 
+test("abgesagtes Training bleibt grau mit Status und stabiler Termin-ID sichtbar", () => {
+  const api = harness();
+  const mapped = api.mapAzureOccupancyEvent({
+    id: "training:sommer:som-ras-c-mi:2026-08-26",
+    resourceId: "rasen",
+    source: "training",
+    title: "C",
+    start: "2026-08-26T17:30:00+02:00",
+    end: "2026-08-26T19:00:00+02:00",
+    cancelled: true
+  });
+  assert.equal(mapped.extendedProps.cancelled, true);
+  assert.equal(
+    mapped.extendedProps.occurrenceId,
+    "training:sommer:som-ras-c-mi:2026-08-26"
+  );
+  assert.deepEqual(mapped.classNames, ["ssv-training-cancelled"]);
+  assert.equal(mapped.color, "#8a8f8c");
+  assert.match(html, /cancelledBadge\.textContent = "Abgesagt"/);
+  assert.match(html, /"Absage widerrufen" : "Training absagen"/);
+  assert.match(html, /window\.confirm\(question\)/);
+});
+
+test("Absageaktionen sind ausschließlich an Trainingsereignisse gebunden", () => {
+  assert.match(
+    html,
+    /props\.eventKind === "training" && Boolean\(props\.occurrenceId\)/
+  );
+  assert.match(html, /TRAINING_FAELLT_AUS/);
+  assert.match(html, /TRAINING_WIEDER_AKTIV/);
+});
+
 test("Spiel ohne gültigen Sicherheitsblock wird abgelehnt", () => {
   const api = harness();
   assert.throws(() => api.mapAzureOccupancyEvent({

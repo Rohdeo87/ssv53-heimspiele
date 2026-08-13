@@ -862,6 +862,13 @@
         0 1px 4px rgba(25, 34, 44, 0.18);
     }
 
+    .fc .fc-v-event.ssv-training-cancelled {
+      border-color: #737875 !important;
+      background: #8a8f8c !important;
+      opacity: 0.78;
+      filter: grayscale(1);
+    }
+
     .fc .fc-timegrid-event .fc-event-main {
       padding: 3px 5px;
     }
@@ -1255,6 +1262,39 @@
       color: var(--dialog-accent-text);
     }
 
+    .dialog-button--training-action {
+      border-color: var(--dialog-accent);
+      background: var(--dialog-accent);
+      color: var(--dialog-accent-text);
+    }
+
+    .dialog-button--training-action[data-cancelled="true"] {
+      border-color: #646967;
+      background: #646967;
+      color: #ffffff;
+    }
+
+    .dialog-button:disabled {
+      opacity: 0.58;
+      cursor: wait;
+    }
+
+    .training-cancellation-status {
+      margin: 0 0 10px;
+      padding: 9px 11px;
+      border: 1px solid #bfc5c1;
+      border-radius: 9px;
+      background: #f0f2f1;
+      color: #4d5350;
+      font-size: 0.86rem;
+      font-weight: 750;
+      line-height: 1.35;
+    }
+
+    .training-cancellation-status[hidden] {
+      display: none;
+    }
+
     .dialog-button[hidden] {
       display: none;
     }
@@ -1451,6 +1491,8 @@
        */
       const OCCUPANCY_API_URL =
         "https://func-ssv53platzpflege-prod-q7kbw54s.azurewebsites.net/api/occupancy";
+      const TRAINING_CANCELLATION_API_URL =
+        "https://func-ssv53platzpflege-prod-q7kbw54s.azurewebsites.net/api/training-cancellations";
       const OCCUPANCY_FETCH_TIMEOUT = 15000;
       const OCCUPANCY_FETCH_RETRIES = 2;
       const OCCUPANCY_RETRY_DELAY = 500;
@@ -1579,7 +1621,9 @@
         trainerContactList: document.getElementById("trainer-contact-list"),
         trainerContactStatus: document.getElementById("trainer-contact-status"),
         trainerContactRetry: document.getElementById("trainer-contact-retry"),
-        popupLink: document.getElementById("popup-link")
+        popupLink: document.getElementById("popup-link"),
+        trainingCancellationAction: document.getElementById("training-cancellation-action"),
+        trainingCancellationStatus: document.getElementById("training-cancellation-status")
       };
 
       function syncCalendarViewport() {
@@ -4026,6 +4070,8 @@
         );
         const source = String(item.source || "").trim();
         const isOfficialMatch = source === "match";
+        const isTraining = source === "training";
+        const isCancelledTraining = isTraining && item.cancelled === true;
         const title = String(item.title || "Belegung").trim() || "Belegung";
         const occupancyStart = isOfficialMatch
           ? new Date(item.occupancyStart)
@@ -4065,6 +4111,8 @@
             ? "official-match-feed"
             : "azure-occupancy",
           eventKind: source,
+          occurrenceId: String(item.id || ""),
+          cancelled: isCancelledTraining,
           team: String(item.team || ""),
           teamCategory: String(item.teamCategory || ""),
           area: String(item.area || ""),
@@ -4093,9 +4141,11 @@
           resourceId: resourceId,
           calendarId: resourceId,
           appackEventId: "",
-          color: backgroundColor,
-          textColor: textColor,
-          classNames: isOfficialMatch ? ["ssv-official-match"] : [],
+          color: isCancelledTraining ? "#8a8f8c" : backgroundColor,
+          textColor: isCancelledTraining ? "#ffffff" : textColor,
+          classNames: isOfficialMatch
+            ? ["ssv-official-match"]
+            : (isCancelledTraining ? ["ssv-training-cancelled"] : []),
           sourceType: extendedProps.sourceType,
           extendedProps: extendedProps
         };
@@ -4332,6 +4382,17 @@
         title.className = "event-title";
         title.textContent = event.title || "Belegung";
         root.appendChild(title);
+
+        if (event.extendedProps.cancelled === true) {
+          const cancelledStatus = document.createElement("div");
+          cancelledStatus.className = "event-categories";
+          const cancelledBadge = document.createElement("span");
+          cancelledBadge.className = "event-category";
+          cancelledBadge.textContent = "Abgesagt";
+          cancelledBadge.style.backgroundColor = "#e3e5e4";
+          cancelledStatus.appendChild(cancelledBadge);
+          root.appendChild(cancelledStatus);
+        }
 
         const categories = event.extendedProps.categories;
         if (Array.isArray(categories) && categories.length) {
@@ -5421,6 +5482,7 @@
         elements.popupTitle.textContent = event.title || "Belegung";
         elements.popupTime.textContent = getPopupTimeText(event);
         elements.popupDescription.innerHTML = sanitizePopupDescription(props.description);
+        renderTrainingCancellationAction(event);
 
         const detailLink = String(props.detailLink || "").trim();
         if (isSafeLink(detailLink)) {
@@ -5437,6 +5499,76 @@
         window.requestAnimationFrame(function () {
           elements.closeDialogTop.focus();
         });
+      }
+
+      function isTrainingCancellationEvent(event) {
+        const props = event && event.extendedProps || {};
+        return props.eventKind === "training" && Boolean(props.occurrenceId);
+      }
+
+      function renderTrainingCancellationAction(event) {
+        const action = elements.trainingCancellationAction;
+        const status = elements.trainingCancellationStatus;
+        action.hidden = true;
+        action.disabled = false;
+        action.removeAttribute("data-cancelled");
+        status.hidden = true;
+        status.textContent = "";
+        if (!isTrainingCancellationEvent(event)) return;
+
+        const cancelled = event.extendedProps.cancelled === true;
+        action.hidden = false;
+        action.setAttribute("data-cancelled", cancelled ? "true" : "false");
+        action.textContent = cancelled ? "Absage widerrufen" : "Training absagen";
+        if (cancelled) {
+          status.textContent = "Dieses Training ist abgesagt.";
+          status.hidden = false;
+        }
+      }
+
+      async function changeTrainingCancellation() {
+        const event = state.currentDialogEvent;
+        if (!isTrainingCancellationEvent(event)) return;
+        const cancelled = event.extendedProps.cancelled === true;
+        const question = cancelled
+          ? "Soll die Absage wirklich widerrufen werden? Das Training wird wieder als Platzbelegung berücksichtigt."
+          : "Soll dieses Training wirklich abgesagt werden?";
+        if (!window.confirm(question)) return;
+
+        elements.trainingCancellationAction.disabled = true;
+        elements.trainingCancellationAction.textContent = "Bitte warten …";
+        try {
+          const response = await fetch(TRAINING_CANCELLATION_API_URL, {
+            method: "POST",
+            mode: "cors",
+            cache: "no-store",
+            credentials: "omit",
+            headers: {
+              "Accept": "application/json",
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              action: cancelled ? "restore" : "cancel",
+              eventId: event.extendedProps.occurrenceId,
+              confirmation: cancelled
+                ? "TRAINING_WIEDER_AKTIV"
+                : "TRAINING_FAELLT_AUS"
+            })
+          });
+          const payload = await response.json().catch(function () { return {}; });
+          if (!response.ok) {
+            throw new Error(payload.error || "Die Änderung konnte nicht gespeichert werden.");
+          }
+          closeEventDetails();
+          loadCurrentRange(true);
+        } catch (error) {
+          renderTrainingCancellationAction(event);
+          elements.trainingCancellationStatus.textContent =
+            error && error.message
+              ? error.message
+              : "Die Änderung ist fehlgeschlagen. Die Platzsperre bleibt bestehen.";
+          elements.trainingCancellationStatus.hidden = false;
+        }
       }
 
       function closeEventDetails() {
@@ -5596,6 +5728,10 @@
 
         elements.closeDialogTop.addEventListener("click", closeEventDetails);
         elements.closeDialogBottom.addEventListener("click", closeEventDetails);
+        elements.trainingCancellationAction.addEventListener(
+          "click",
+          changeTrainingCancellation
+        );
         elements.dialogLayer.addEventListener("click", function (event) {
           if (event.target.hasAttribute("data-dialog-close")) {
             closeEventDetails();
@@ -5855,6 +5991,12 @@
       </header>
 
       <div class="dialog-body">
+        <div
+          id="training-cancellation-status"
+          class="training-cancellation-status"
+          role="status"
+          aria-live="polite"
+          hidden></div>
         <div id="popup-description"></div>
 
         <section
@@ -5901,6 +6043,13 @@
       <footer class="dialog-footer">
         <button id="close-dialog-bottom" type="button" class="dialog-button">
           Schließen
+        </button>
+        <button
+          id="training-cancellation-action"
+          type="button"
+          class="dialog-button dialog-button--training-action"
+          hidden>
+          Training absagen
         </button>
         <a id="popup-link" class="dialog-button dialog-button--primary" href="" hidden>
           Weitere Informationen

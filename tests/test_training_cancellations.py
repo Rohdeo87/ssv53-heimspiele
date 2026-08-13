@@ -54,7 +54,7 @@ class TrainingCancellationTests(unittest.TestCase):
         self.assertFalse(store.restore(item.event_id, now_utc=now + timedelta(hours=2)))
         self.assertEqual([entry["action"] for entry in store.audit], ["cancel", "restore"])
 
-    def test_calendar_removes_cancelled_training_but_keeps_other_sources(self) -> None:
+    def test_calendar_marks_cancelled_training_but_keeps_it_visible(self) -> None:
         target = next(item for item in self.occurrences if item["team"] == "C")
         before = build_occupancy_payload(
             config_path=ROOT / "occupancy" / "config.json",
@@ -71,8 +71,12 @@ class TrainingCancellationTests(unittest.TestCase):
             season="Sommer",
             cancelled_occurrences={(target["scheduleId"], target["start"][:10])},
         )
-        self.assertEqual(len(before["events"]), len(after["events"]) + 1)
-        self.assertNotIn(target["id"], {item["id"] for item in after["events"]})
+        self.assertEqual(len(before["events"]), len(after["events"]))
+        marked = next(item for item in after["events"] if item["id"] == target["id"])
+        self.assertTrue(marked["cancelled"])
+        self.assertFalse(
+            next(item for item in before["events"] if item["id"] == target["id"])["cancelled"]
+        )
         self.assertEqual(
             [item for item in before["events"] if item["source"] != "training"],
             [item for item in after["events"] if item["source"] != "training"],
@@ -157,8 +161,8 @@ class TrainingCancellationTests(unittest.TestCase):
         self.assertEqual(unresolved, [cancellation.event_id])
         self.assertTrue(build_training_blocks(training, cancellation.day, 1, TZ, keys))
 
-    def test_appack_page_has_no_secret_and_requires_confirmation(self) -> None:
-        source = (ROOT / "appack-training-absagen-azure.html").read_text(encoding="utf-8")
+    def test_existing_appack_plan_has_no_secret_and_requires_confirmation(self) -> None:
+        source = (ROOT / "appack-platzbelegungsplan-azure.html").read_text(encoding="utf-8")
         self.assertIn("TRAINING_FAELLT_AUS", source)
         self.assertIn("TRAINING_WIEDER_AKTIV", source)
         self.assertIn("Daten werden geladen", source)
