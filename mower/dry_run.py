@@ -33,7 +33,12 @@ from mower.hydrawise import (
     selected_zone_observations,
     selected_zone_schedule,
 )
-from mower.planner import create_plan, load_json, read_match_blocks
+from mower.planner import (
+    create_plan,
+    load_json,
+    read_match_blocks,
+    resolve_training_cancellation_keys,
+)
 from mower.runtime import ControlMode, CycleResult, RuntimeSettings
 from mower.state_store import AzureTableStateStore, StateStore
 from training_cancellations import AzureTableCancellationStore
@@ -229,17 +234,20 @@ def run_read_only_cycle(
 
     cancellation_error: str | None = None
     effective_cancellations: set[tuple[str, str]] = set()
+    unresolved_cancellations: list[str] = []
     try:
         cancellation_store = cancellation_store_factory(environment)
         cancellations = cancellation_store.list_active(
             now_local.date(),
             now_local.date() + timedelta(days=2),
         )
-        effective_cancellations = {
-            item.occurrence_key
-            for item in cancellations
-            if item.is_effective(now_utc)
-        }
+        effective_cancellations, unresolved_cancellations = (
+            resolve_training_cancellation_keys(
+                _as_dict(config.get("training")),
+                [item for item in cancellations if item.is_effective(now_utc)],
+                tz,
+            )
+        )
     except Exception as exc:
         # Fail closed: Ohne verlässliche Absagen bleiben alle Trainings gesperrt.
         cancellation_error = f"{type(exc).__name__}: {exc}"
@@ -443,6 +451,7 @@ def run_read_only_cycle(
             "training_cancellations": {
                 "available": cancellation_error is None,
                 "effective_count": len(effective_cancellations),
+                "unresolved_event_ids": unresolved_cancellations,
                 "error": cancellation_error,
                 "fail_closed": cancellation_error is not None,
             },

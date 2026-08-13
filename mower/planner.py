@@ -173,6 +173,59 @@ def _is_in_active_ranges(day: date, active_ranges: list[dict[str, str]]) -> bool
     return False
 
 
+def training_schedule_id(session: dict[str, Any]) -> str:
+    return str(session.get("id", "")).strip() or (
+        "legacy:"
+        + ":".join(
+            str(session.get(key, "")).strip().casefold()
+            for key in ("weekday", "start", "end", "team")
+        )
+    )
+
+
+def resolve_training_cancellation_keys(
+    training_config: dict[str, Any],
+    cancellations: Iterable[Any],
+    tz: ZoneInfo,
+) -> tuple[set[tuple[str, str]], list[str]]:
+    """Ordnet Absagen auch einer älteren Runtime-Konfiguration ohne IDs zu.
+
+    Nur genau ein Treffer aus Mannschaft, Wochentag und nomineller Zeit wird
+    akzeptiert. Keine oder mehrere Übereinstimmungen bleiben fail-closed belegt.
+    """
+    weekly = list(training_config.get("weekly", []))
+    configured_ids = {
+        str(session.get("id", "")).strip()
+        for session in weekly
+        if str(session.get("id", "")).strip()
+    }
+    resolved: set[tuple[str, str]] = set()
+    unresolved: list[str] = []
+    for item in cancellations:
+        if str(getattr(item, "resource_id", "")).casefold() != "rasen":
+            continue
+        day = item.day
+        if item.schedule_id in configured_ids:
+            resolved.add((item.schedule_id, day.isoformat()))
+            continue
+        nominal_start = item.start.astimezone(tz)
+        nominal_end = item.end.astimezone(tz)
+        matches = [
+            session
+            for session in weekly
+            if _weekday_number(session["weekday"]) == day.weekday()
+            and str(session.get("team", "")).strip().casefold()
+            == str(item.team).strip().casefold()
+            and parse_clock(session["start"]) == nominal_start.timetz().replace(tzinfo=None)
+            and parse_clock(session["end"]) == nominal_end.timetz().replace(tzinfo=None)
+        ]
+        if len(matches) == 1:
+            resolved.add((training_schedule_id(matches[0]), day.isoformat()))
+        else:
+            unresolved.append(item.event_id)
+    return resolved, unresolved
+
+
 def build_training_blocks(
     training_config: dict[str, Any],
     start_day: date,
@@ -193,13 +246,7 @@ def build_training_blocks(
         for session in weekly:
             if _weekday_number(session["weekday"]) != day.weekday():
                 continue
-            schedule_id = str(session.get("id", "")).strip() or (
-                "legacy:"
-                + ":".join(
-                    str(session.get(key, "")).strip().casefold()
-                    for key in ("weekday", "start", "end", "team")
-                )
-            )
+            schedule_id = training_schedule_id(session)
             if (schedule_id, day.isoformat()) in (cancelled_occurrences or set()):
                 continue
             start = datetime.combine(day, parse_clock(session["start"]), tzinfo=tz) - before

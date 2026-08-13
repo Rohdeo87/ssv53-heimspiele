@@ -6,7 +6,7 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from mower.planner import build_training_blocks
+from mower.planner import build_training_blocks, resolve_training_cancellation_keys
 from occupancy.service import build_occupancy_payload, build_training_occurrences
 from training_cancellations import InMemoryCancellationStore
 
@@ -106,6 +106,56 @@ class TrainingCancellationTests(unittest.TestCase):
             {("som-ras-c-mi", day.isoformat())},
         )
         self.assertEqual(cancelled, [])
+
+    def test_legacy_runtime_without_ids_is_resolved_by_exact_occurrence(self) -> None:
+        config = json.loads((ROOT / "mower" / "config.json").read_text(encoding="utf-8"))
+        training = config["training"]
+        for session in training["weekly"]:
+            session.pop("id", None)
+        occurrence = next(
+            item
+            for item in self.occurrences
+            if item["scheduleId"] == "som-ras-c-mi"
+        )
+        store = InMemoryCancellationStore()
+        cancellation = store.cancel(
+            occurrence,
+            now_utc=datetime(2026, 8, 12, 10, tzinfo=timezone.utc),
+            release_delay_minutes=0,
+        )
+        keys, unresolved = resolve_training_cancellation_keys(
+            training,
+            [cancellation],
+            TZ,
+        )
+        self.assertEqual(unresolved, [])
+        self.assertEqual(len(keys), 1)
+        self.assertEqual(
+            build_training_blocks(training, cancellation.day, 1, TZ, keys),
+            [],
+        )
+
+    def test_changed_or_ambiguous_legacy_runtime_stays_blocked(self) -> None:
+        config = json.loads((ROOT / "mower" / "config.json").read_text(encoding="utf-8"))
+        training = config["training"]
+        for session in training["weekly"]:
+            session.pop("id", None)
+        occurrence = next(
+            item
+            for item in self.occurrences
+            if item["scheduleId"] == "som-ras-c-mi"
+        )
+        store = InMemoryCancellationStore()
+        cancellation = store.cancel(
+            occurrence,
+            now_utc=datetime(2026, 8, 12, 10, tzinfo=timezone.utc),
+            release_delay_minutes=0,
+        )
+        training["weekly"][2]["start"] = "17:31"
+        keys, unresolved = resolve_training_cancellation_keys(training, [cancellation], TZ)
+        self.assertEqual(keys, set())
+        self.assertEqual(unresolved, [cancellation.event_id])
+        self.assertTrue(build_training_blocks(training, cancellation.day, 1, TZ, keys))
 
     def test_appack_page_has_no_secret_and_requires_confirmation(self) -> None:
         source = (ROOT / "appack-training-absagen-azure.html").read_text(encoding="utf-8")
