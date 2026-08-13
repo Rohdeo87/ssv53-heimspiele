@@ -32,6 +32,24 @@ class FullFailsafePackageTests(unittest.TestCase):
             )
             self.assertEqual(manifest["hydrawise_continuous_clear_minutes"], 90)
             self.assertEqual(manifest["irrigation_plan_lease_minutes"], 3)
+            self.assertEqual(
+                manifest["irrigation_plan_change_confirmation_minutes"],
+                2,
+            )
+            self.assertTrue(
+                manifest["hydrawise_app_suspension_releases_unused_window"]
+            )
+            self.assertTrue(
+                manifest["hydrawise_future_zone_duration_changes_supported"]
+            )
+            self.assertTrue(
+                manifest["hydrawise_active_zone_command_remains_immutable"]
+            )
+            self.assertTrue(
+                manifest[
+                    "hydrawise_confirmed_early_stop_cancels_remaining_zones"
+                ]
+            )
             self.assertTrue(manifest["manual_failed_irrigation_reset_implemented"])
             self.assertTrue(manifest["manual_reset_requires_function_auth"])
             self.assertFalse(manifest["manual_reset_sends_device_commands"])

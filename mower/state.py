@@ -60,6 +60,7 @@ class AutomationState:
     irrigation_plan_id: str | None = None
     irrigation_plan_json: str | None = None
     irrigation_suspended_relay_ids_json: str | None = None
+    irrigation_suspension_until_utc: str | None = None
     irrigation_suspension_completed_utc: str | None = None
     irrigation_completed_relay_ids_json: str | None = None
     irrigation_current_relay_id: int | None = None
@@ -68,6 +69,9 @@ class AutomationState:
     irrigation_zone_clear_since_utc: str | None = None
     irrigation_completed_utc: str | None = None
     irrigation_failed_reason: str | None = None
+    irrigation_change_candidate_hash: str | None = None
+    irrigation_change_candidate_since_utc: str | None = None
+    irrigation_cancelled_without_run_utc: str | None = None
     last_command_fingerprint: str | None = None
     last_command_utc: str | None = None
     maintenance_mode: bool = False
@@ -92,10 +96,13 @@ class AutomationState:
             "last_start_command_utc",
             "continuous_mowing_window_end_utc",
             "irrigation_zone_start_reserved_utc",
+            "irrigation_suspension_until_utc",
             "irrigation_suspension_completed_utc",
             "irrigation_zone_started_utc",
             "irrigation_zone_clear_since_utc",
             "irrigation_completed_utc",
+            "irrigation_change_candidate_since_utc",
+            "irrigation_cancelled_without_run_utc",
             "last_command_utc",
         ):
             _require_utc_iso(getattr(self, field_name), field_name)
@@ -202,6 +209,12 @@ class AutomationState:
             irrigation_suspended_relay_ids_json=_normalize_optional_text(
                 values.get("irrigation_suspended_relay_ids_json")
             ),
+            irrigation_suspension_until_utc=_require_utc_iso(
+                _normalize_optional_text(
+                    values.get("irrigation_suspension_until_utc")
+                ),
+                "irrigation_suspension_until_utc",
+            ),
             irrigation_suspension_completed_utc=_require_utc_iso(
                 _normalize_optional_text(
                     values.get("irrigation_suspension_completed_utc")
@@ -238,6 +251,21 @@ class AutomationState:
             ),
             irrigation_failed_reason=_normalize_optional_text(
                 values.get("irrigation_failed_reason")
+            ),
+            irrigation_change_candidate_hash=_normalize_optional_text(
+                values.get("irrigation_change_candidate_hash")
+            ),
+            irrigation_change_candidate_since_utc=_require_utc_iso(
+                _normalize_optional_text(
+                    values.get("irrigation_change_candidate_since_utc")
+                ),
+                "irrigation_change_candidate_since_utc",
+            ),
+            irrigation_cancelled_without_run_utc=_require_utc_iso(
+                _normalize_optional_text(
+                    values.get("irrigation_cancelled_without_run_utc")
+                ),
+                "irrigation_cancelled_without_run_utc",
             ),
             last_command_fingerprint=_normalize_optional_text(
                 values.get("last_command_fingerprint")

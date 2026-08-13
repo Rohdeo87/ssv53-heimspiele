@@ -8,6 +8,8 @@ from mower.hydrawise import (
     evaluate_continuous_clear_confirmation,
     evaluate_safety_status,
     parse_relay_id_allowlist,
+    selected_zone_observations,
+    selected_zone_schedule,
 )
 
 
@@ -27,6 +29,49 @@ def status(*relays: dict, observed: datetime = NOW) -> dict:
 
 
 class HydrawiseSafetyTests(unittest.TestCase):
+    def test_suspended_zone_remains_observable_but_leaves_upcoming_schedule(self) -> None:
+        payload = status(
+            {
+                "relay_id": 1,
+                "relay": 1,
+                "name": "Zone 1",
+                "time": 0,
+                "run": 900,
+            },
+            {
+                "relay_id": 2,
+                "relay": 2,
+                "name": "Zone 2",
+                "time": 3600,
+                "run": 1200,
+            },
+        )
+        observations = selected_zone_observations(payload, CONFIG)
+        schedule = selected_zone_schedule(payload, CONFIG)
+        self.assertEqual(len(observations), 2)
+        self.assertFalse(observations[0]["scheduled"])
+        self.assertEqual(observations[0]["run_seconds"], 900)
+        self.assertEqual([zone["relay_id"] for zone in schedule], [2])
+
+    def test_malformed_zone_identifiers_are_reported_invalid_not_raised(self) -> None:
+        payload = status(
+            {
+                "relay_id": "not-a-number",
+                "relay": "also-invalid",
+                "name": "Defekte Zone",
+                "time": 0,
+                "run": 900,
+            },
+        )
+        observations = selected_zone_observations(
+            payload,
+            {**CONFIG, "include_all_zones": True},
+        )
+        self.assertEqual(len(observations), 1)
+        self.assertFalse(observations[0]["valid"])
+        self.assertEqual(observations[0]["relay_id"], 0)
+        self.assertEqual(observations[0]["zone"], 0)
+
     def test_exact_relay_allowlist_is_required_even_when_count_is_unchanged(self) -> None:
         allowlist = [1, 2, 3, 4, 5, 6, 7]
         config = {**CONFIG, "expected_relay_ids": allowlist}

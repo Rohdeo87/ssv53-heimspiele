@@ -19,7 +19,12 @@ NOW = datetime(2026, 8, 2, 12, 0, tzinfo=timezone.utc)
 
 class AutomationStateTests(unittest.TestCase):
     def test_roundtrip_preserves_state(self) -> None:
-        state = AutomationState().record_cycle(
+        state = AutomationState(
+            irrigation_suspension_until_utc=(NOW + timedelta(hours=4)).isoformat(),
+            irrigation_change_candidate_hash="candidate",
+            irrigation_change_candidate_since_utc=NOW.isoformat(),
+            irrigation_cancelled_without_run_utc=NOW.isoformat(),
+        ).record_cycle(
             started_utc=NOW,
             success=True,
             decision_code="ALREADY_MOWING",

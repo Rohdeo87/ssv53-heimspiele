@@ -30,6 +30,7 @@ from mower.hydrawise import (
     evaluate_safety_status,
     parse_relay_id_allowlist,
     fetch_status,
+    selected_zone_observations,
     selected_zone_schedule,
 )
 from mower.planner import create_plan, load_json, read_match_blocks
@@ -216,6 +217,10 @@ def run_read_only_cycle(
         ),
     )
     hydrawise_zones = selected_zone_schedule(
+        hydrawise_status,
+        hydrawise_config,
+    )
+    hydrawise_zone_observations = selected_zone_observations(
         hydrawise_status,
         hydrawise_config,
     )
@@ -407,6 +412,7 @@ def run_read_only_cycle(
                 "error": hydrawise_error,
                 "safety": hydrawise_safety.to_dict(),
                 "zones": hydrawise_zones,
+                "zone_observations": hydrawise_zone_observations,
                 "release_confirmation": (
                     release_confirmation.to_dict()
                     if release_confirmation is not None

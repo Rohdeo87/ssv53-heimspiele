@@ -83,6 +83,22 @@ vollständig verriegelt:
   einem vorgezogenen Lauf werden alle sieben ursprünglichen Planstarts bis
   hinter ihr ursprüngliches Ende suspendiert; so kann kein zweiter Lauf
   entstehen.
+- Änderungen in der Hydrawise-App bleiben maßgeblich: Wird der komplette
+  bevorstehende Lauf beispielsweise für drei Tage ausgesetzt, wird kein
+  Beregnungsplan übernommen und das freie Zeitfenster darf wieder zum Mähen
+  verwendet werden. Eine Änderung während der kurzen Planübernahme muss zwei
+  Minuten lang in frischen Abrufen stabil sein; bis dahin wird weder eine Zone
+  gestartet noch eine zweifelhafte Freigabe erteilt.
+- Verlängerte oder verkürzte Laufzeiten werden für jede noch nicht gestartete
+  Zone ebenfalls nach zwei Minuten stabiler Bestätigung übernommen. Der bereits
+  gesendete Auftrag der aktuell laufenden Zone bleibt unverändert. Reicht eine
+  starke Verlängerung über den bestätigten Suspendierungszeitraum hinaus, bleibt
+  die Steuerung fail-closed im Dock.
+- Wird eine bereits manuell durch die Automatik gestartete Zone in Hydrawise
+  vorzeitig gestoppt, werden nach bestätigtem Ende keine weiteren Zonen
+  gestartet. Weil bereits Wasser geflossen sein kann, beginnt trotzdem der
+  vollständige 90-Minuten-Nachlauf. Eine vor Beginn komplett ausgesetzte Folge
+  benötigt dagegen keinen Trocknungsnachlauf.
 - Doppelte Funktionsaufrufe können keinen doppelten Zonenstart auslösen: jeder
   Start wird vor dem API-Aufruf persistent reserviert. Ein unbestätigter Start,
   eine unerwartete aktive Zone oder parallele Zonen führen in einen

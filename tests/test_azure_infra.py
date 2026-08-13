@@ -110,6 +110,16 @@ class AzureInfrastructureTests(unittest.TestCase):
         self.assertIn("persisted == false", self.bicep)
         self.assertIn("allowlist == false", self.bicep)
         self.assertIn("IRRIGATION_PLAN_LEASE_MINUTES: '3'", self.bicep)
+        self.assertIn(
+            "IRRIGATION_PLAN_CHANGE_CONFIRMATION_MINUTES: '2'",
+            self.bicep,
+        )
+        self.assertIn(
+            "IRRIGATION_EARLY_STOP_TOLERANCE_SECONDS: '120'",
+            self.bicep,
+        )
+        self.assertIn("IRRIGATION_DURATION_CHANGE_UNSAFE", self.bicep)
+        self.assertIn("IRRIGATION_RUN_CANCELLED_EARLY", self.bicep)
 
     def test_alert_email_is_parameterized_not_hardcoded(self) -> None:
         self.assertIn("param alertEmail string", self.bicep)

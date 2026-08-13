@@ -43,6 +43,8 @@ ENV = {
     "MOWER_PARK_PROGRESS_GRACE_MINUTES": "3",
     "IRRIGATION_FAILSAFE_DOCK_LEAD_MINUTES": "40",
     "IRRIGATION_PLAN_LEASE_MINUTES": "3",
+    "IRRIGATION_PLAN_CHANGE_CONFIRMATION_MINUTES": "2",
+    "IRRIGATION_EARLY_STOP_TOLERANCE_SECONDS": "120",
     "MAX_AUTOMATIC_START_MINUTES": "720",
     "MOWER_CONTINUE_MIN_BATTERY_PERCENT": "60",
     "MOWER_RESTART_BATTERY_PERCENT": "90",
@@ -101,6 +103,18 @@ def result(
         }
     active_ids = active_ids or []
     observed_relay_ids = RELAYS if relay_ids is None else relay_ids
+    zone_schedule = zones(
+        start_utc=irrigation_start or NOW + timedelta(hours=13),
+        relay_ids=observed_relay_ids,
+    )
+    zone_observations = [
+        {
+            **zone,
+            "valid": True,
+            "scheduled": True,
+        }
+        for zone in zone_schedule
+    ]
     relay_set_valid = (
         len(observed_relay_ids) == len(set(observed_relay_ids))
         and set(observed_relay_ids) == set(RELAYS)
@@ -128,10 +142,8 @@ def result(
             "hydrawise": {
                 "status": "live (7 Zonen)",
                 "error": None,
-                "zones": zones(
-                    start_utc=irrigation_start or NOW + timedelta(hours=13),
-                    relay_ids=observed_relay_ids,
-                ),
+                "zones": zone_schedule,
+                "zone_observations": zone_observations,
                 "safety": {
                     "available": True,
                     "fresh": True,
@@ -181,6 +193,11 @@ def irrigation_state(*, phase: str, current: int | None = None) -> AutomationSta
         irrigation_plan_id="plan",
         irrigation_plan_json=__import__("json").dumps(plan),
         irrigation_suspended_relay_ids_json=__import__("json").dumps(RELAYS),
+        irrigation_suspension_until_utc=(
+            (NOW + timedelta(hours=4)).isoformat()
+            if phase not in {"PLANNED", "SUSPENDING", "FAILED"}
+            else None
+        ),
         irrigation_suspension_completed_utc=(
             (NOW - timedelta(minutes=1)).isoformat()
             if phase not in {"PLANNED", "SUSPENDING", "FAILED"}
@@ -189,6 +206,11 @@ def irrigation_state(*, phase: str, current: int | None = None) -> AutomationSta
         irrigation_completed_relay_ids_json="[]",
         irrigation_current_relay_id=current,
         irrigation_zone_start_reserved_utc=(NOW - timedelta(minutes=1)).isoformat() if current else None,
+        irrigation_zone_started_utc=(
+            (NOW - timedelta(minutes=5)).isoformat()
+            if phase == "RUNNING" and current
+            else None
+        ),
     )
 
 
@@ -597,7 +619,7 @@ class FullFailsafeTests(unittest.TestCase):
         self.assertEqual(len(calls), 1)
         self.assertIsNone(store.load().park_confirmed_utc)
 
-    def test_deleted_plan_before_first_suspension_fails_without_zone_command(self) -> None:
+    def test_three_day_suspension_is_confirmed_then_releases_unused_window(self) -> None:
         suspend_calls = []
         zone_calls = []
         state = irrigation_state(phase="PLANNED")
@@ -606,20 +628,62 @@ class FullFailsafeTests(unittest.TestCase):
         )
         cycle = result(block_source="irrigation")
         details = dict(cycle.details)
-        details["hydrawise"] = {**details["hydrawise"], "zones": []}
+        observations = [
+            {
+                **observation,
+                "scheduled": False,
+                "scheduled_start_utc": None,
+                "scheduled_end_utc": None,
+                "seconds_until": 0,
+            }
+            for observation in details["hydrawise"]["zone_observations"]
+        ]
+        details["hydrawise"] = {
+            **details["hydrawise"],
+            "zones": [],
+            "zone_observations": observations,
+        }
         cycle = __import__("dataclasses").replace(cycle, details=details)
-        output, store = self._run(
+        first, store = self._run(
             state,
             cycle,
             suspend=lambda *args: suspend_calls.append(args) or {},
             zone=lambda *args: zone_calls.append(args) or {},
         )
-        self.assertEqual(output.decision_code, "IRRIGATION_PLAN_CHANGED")
+        self.assertEqual(first.decision_code, "IRRIGATION_PLAN_CHANGE_CONFIRMING")
+        second = run_full_failsafe_cycle(
+            now_utc=NOW + timedelta(minutes=1),
+            settings=settings(),
+            environment=ENV,
+            past_due=False,
+            source="test",
+            read_only_runner=lambda **_: cycle,
+            state_store_factory=lambda _env: store,
+            suspend_zone_sender=lambda *args: suspend_calls.append(args) or {},
+            start_zone_sender=lambda *args: zone_calls.append(args) or {},
+        )
+        self.assertEqual(second.decision_code, "IRRIGATION_PLAN_CHANGE_CONFIRMING")
+        third = run_full_failsafe_cycle(
+            now_utc=NOW + timedelta(minutes=2),
+            settings=settings(),
+            environment=ENV,
+            past_due=False,
+            source="test",
+            read_only_runner=lambda **_: cycle,
+            state_store_factory=lambda _env: store,
+            suspend_zone_sender=lambda *args: suspend_calls.append(args) or {},
+            start_zone_sender=lambda *args: zone_calls.append(args) or {},
+        )
+        self.assertEqual(third.decision_code, "IRRIGATION_PLAN_CANCELLED_OR_DEFERRED")
         self.assertEqual(suspend_calls, [])
         self.assertEqual(zone_calls, [])
-        self.assertEqual(store.load().irrigation_phase, "FAILED")
+        self.assertIsNone(store.load().irrigation_phase)
+        self.assertEqual(
+            store.load().irrigation_cancelled_without_run_utc,
+            (NOW + timedelta(minutes=2)).isoformat(),
+        )
 
-    def test_changed_pending_zone_after_partial_suspension_fails_closed(self) -> None:
+    def test_changed_pending_zone_duration_is_confirmed_and_adopted(self) -> None:
         suspend_calls = []
         state = irrigation_state(phase="SUSPENDING")
         state = AutomationState.from_mapping(
@@ -635,16 +699,288 @@ class FullFailsafeTests(unittest.TestCase):
             irrigation_start=NOW + timedelta(minutes=30),
         )
         details = dict(cycle.details)
-        details["hydrawise"] = {**details["hydrawise"], "zones": live}
+        observations = [
+            {**zone, "valid": True, "scheduled": True}
+            for zone in live
+        ]
+        details["hydrawise"] = {
+            **details["hydrawise"],
+            "zones": live,
+            "zone_observations": observations,
+        }
         cycle = __import__("dataclasses").replace(cycle, details=details)
-        output, store = self._run(
+        first, store = self._run(
             state,
             cycle,
             suspend=lambda *args: suspend_calls.append(args) or {},
         )
-        self.assertEqual(output.decision_code, "IRRIGATION_PLAN_CHANGED")
+        self.assertEqual(first.decision_code, "IRRIGATION_PLAN_CHANGE_CONFIRMING")
+        second = run_full_failsafe_cycle(
+            now_utc=NOW + timedelta(minutes=2),
+            settings=settings(),
+            environment=ENV,
+            past_due=False,
+            source="test",
+            read_only_runner=lambda **_: cycle,
+            state_store_factory=lambda _env: store,
+            suspend_zone_sender=lambda *args: suspend_calls.append(args) or {},
+        )
+        self.assertEqual(second.decision_code, "IRRIGATION_PLAN_UPDATED")
         self.assertEqual(suspend_calls, [])
+        saved_plan = __import__("json").loads(store.load().irrigation_plan_json)
+        self.assertEqual(saved_plan[3]["run_seconds"], RUN_SECONDS[3] + 60)
+        self.assertEqual(store.load().irrigation_phase, "SUSPENDING")
+
+    def test_confirmed_unused_irrigation_window_can_mow_without_drying_hold(self) -> None:
+        start_calls = []
+        state = AutomationState(
+            parked_by_automation=True,
+            automation_park_source="irrigation",
+            automation_restart_allowed=True,
+            park_command_sent_utc=(NOW - timedelta(minutes=10)).isoformat(),
+            park_confirmed_utc=(NOW - timedelta(minutes=5)).isoformat(),
+            irrigation_cancelled_without_run_utc=NOW.isoformat(),
+            hydrawise_clear_since_utc=NOW.isoformat(),
+        )
+        output, store = self._run(
+            state,
+            result(activity="PARKED_IN_CS", battery=100),
+            start=lambda *args: start_calls.append(args) or {"accepted": True},
+        )
+        self.assertEqual(output.decision_code, "CONTINUOUS_MOWING_START_SENT")
+        self.assertEqual(len(start_calls), 1)
+        self.assertTrue(
+            output.details["hydrawise_release_gate"][
+                "cancelled_without_run_release"
+            ]
+        )
+        self.assertIsNone(store.load().irrigation_cancelled_without_run_utc)
+
+    def test_running_sequence_adopts_changed_future_duration_after_confirmation(self) -> None:
+        for delta_seconds in (-300, 300):
+            with self.subTest(delta_seconds=delta_seconds):
+                state = irrigation_state(phase="RUNNING", current=RELAYS[0])
+                cycle = result(
+                    block_source="irrigation",
+                    active_ids=[RELAYS[0]],
+                    clear=False,
+                )
+                details = dict(cycle.details)
+                observations = list(details["hydrawise"]["zone_observations"])
+                observations[1] = {
+                    **observations[1],
+                    "run_seconds": RUN_SECONDS[1] + delta_seconds,
+                }
+                details["hydrawise"] = {
+                    **details["hydrawise"],
+                    "zone_observations": observations,
+                }
+                cycle = __import__("dataclasses").replace(cycle, details=details)
+                first, store = self._run(state, cycle)
+                self.assertEqual(
+                    first.decision_code,
+                    "IRRIGATION_DURATION_CHANGE_CONFIRMING",
+                )
+                confirmed = run_full_failsafe_cycle(
+                    now_utc=NOW + timedelta(minutes=2),
+                    settings=settings(),
+                    environment=ENV,
+                    past_due=False,
+                    source="test",
+                    read_only_runner=lambda **_: cycle,
+                    state_store_factory=lambda _env: store,
+                )
+                self.assertEqual(
+                    confirmed.decision_code,
+                    "IRRIGATION_REMAINING_DURATIONS_UPDATED",
+                )
+                saved_plan = __import__("json").loads(
+                    store.load().irrigation_plan_json
+                )
+                self.assertEqual(
+                    saved_plan[1]["run_seconds"],
+                    RUN_SECONDS[1] + delta_seconds,
+                )
+                self.assertEqual(
+                    saved_plan[0]["run_seconds"],
+                    RUN_SECONDS[0],
+                )
+
+                ready = AutomationState.from_mapping(
+                    {
+                        **store.load().to_dict(),
+                        "irrigation_phase": "READY",
+                        "irrigation_completed_relay_ids_json": __import__("json").dumps(
+                            [RELAYS[0]]
+                        ),
+                        "irrigation_current_relay_id": None,
+                        "irrigation_zone_start_reserved_utc": None,
+                        "irrigation_zone_started_utc": None,
+                    }
+                )
+                zone_calls = []
+                ready_details = dict(cycle.details)
+                ready_hydrawise = dict(ready_details["hydrawise"])
+                ready_hydrawise["safety"] = {
+                    **ready_hydrawise["safety"],
+                    "clear_now": True,
+                    "active_zone_count": 0,
+                    "active_relay_ids": [],
+                }
+                ready_details["hydrawise"] = ready_hydrawise
+                ready_cycle = __import__("dataclasses").replace(
+                    cycle,
+                    details=ready_details,
+                )
+                started, _ = self._run(
+                    ready,
+                    ready_cycle,
+                    now=NOW + timedelta(minutes=3),
+                    zone=lambda *args: zone_calls.append(args) or {},
+                )
+                self.assertEqual(started.decision_code, "IRRIGATION_ZONE_START_SENT")
+                self.assertEqual(
+                    zone_calls[0][1:3],
+                    (RELAYS[1], RUN_SECONDS[1] + delta_seconds),
+                )
+
+    def test_confirmed_early_manual_stop_cancels_remaining_zones_and_starts_hold(self) -> None:
+        state = irrigation_state(phase="RUNNING", current=RELAYS[0])
+        state = AutomationState.from_mapping(
+            {
+                **state.to_dict(),
+                "irrigation_zone_started_utc": (NOW - timedelta(minutes=5)).isoformat(),
+                "irrigation_zone_clear_since_utc": (NOW - timedelta(minutes=3)).isoformat(),
+            }
+        )
+        zone_calls = []
+        output, store = self._run(
+            state,
+            result(block_source="irrigation"),
+            zone=lambda *args: zone_calls.append(args) or {},
+        )
+        saved = store.load()
+        self.assertEqual(output.decision_code, "IRRIGATION_RUN_CANCELLED_EARLY")
+        self.assertEqual(saved.irrigation_phase, "COMPLETE_HOLD")
+        self.assertEqual(saved.hydrawise_clear_since_utc, NOW.isoformat())
+        self.assertEqual(zone_calls, [])
+
+        held, _ = self._run(
+            saved,
+            result(),
+            now=NOW + timedelta(minutes=89),
+            start=lambda *args: zone_calls.append(args) or {},
+        )
+        self.assertEqual(held.decision_code, "HYDRAWISE_90_MINUTE_HOLD")
+        self.assertEqual(zone_calls, [])
+
+    def test_excessive_duration_extension_fails_before_any_future_zone_start(self) -> None:
+        state = irrigation_state(phase="RUNNING", current=RELAYS[0])
+        cycle = result(
+            block_source="irrigation",
+            active_ids=[RELAYS[0]],
+            clear=False,
+        )
+        details = dict(cycle.details)
+        observations = [
+            (
+                {**observation, "run_seconds": 7200}
+                if int(observation["relay_id"]) != RELAYS[0]
+                else observation
+            )
+            for observation in details["hydrawise"]["zone_observations"]
+        ]
+        details["hydrawise"] = {
+            **details["hydrawise"],
+            "zone_observations": observations,
+        }
+        cycle = __import__("dataclasses").replace(cycle, details=details)
+        first, store = self._run(state, cycle)
+        self.assertEqual(
+            first.decision_code,
+            "IRRIGATION_DURATION_CHANGE_CONFIRMING",
+        )
+        confirmed = run_full_failsafe_cycle(
+            now_utc=NOW + timedelta(minutes=2),
+            settings=settings(),
+            environment=ENV,
+            past_due=False,
+            source="test",
+            read_only_runner=lambda **_: cycle,
+            state_store_factory=lambda _env: store,
+        )
+        self.assertEqual(
+            confirmed.decision_code,
+            "IRRIGATION_DURATION_CHANGE_UNSAFE",
+        )
         self.assertEqual(store.load().irrigation_phase, "FAILED")
+
+    def test_shifted_start_time_is_confirmed_and_adopted_before_suspend(self) -> None:
+        state = irrigation_state(phase="PLANNED")
+        state = AutomationState.from_mapping(
+            {**state.to_dict(), "irrigation_suspended_relay_ids_json": "[]"}
+        )
+        shifted = zones(start_utc=NOW + timedelta(minutes=40))
+        cycle = result(
+            block_source="irrigation",
+            irrigation_start=NOW + timedelta(minutes=40),
+        )
+        first, store = self._run(state, cycle)
+        self.assertEqual(first.decision_code, "IRRIGATION_PLAN_CHANGE_CONFIRMING")
+        confirmed = run_full_failsafe_cycle(
+            now_utc=NOW + timedelta(minutes=2),
+            settings=settings(),
+            environment=ENV,
+            past_due=False,
+            source="test",
+            read_only_runner=lambda **_: cycle,
+            state_store_factory=lambda _env: store,
+        )
+        self.assertEqual(confirmed.decision_code, "IRRIGATION_PLAN_UPDATED")
+        saved_plan = __import__("json").loads(store.load().irrigation_plan_json)
+        self.assertEqual(
+            saved_plan[0]["scheduled_start_utc"],
+            shifted[0]["scheduled_start_utc"],
+        )
+
+    def test_unstable_plan_edits_restart_confirmation_and_send_no_command(self) -> None:
+        calls = []
+        state = irrigation_state(phase="PLANNED")
+        state = AutomationState.from_mapping(
+            {**state.to_dict(), "irrigation_suspended_relay_ids_json": "[]"}
+        )
+        first_cycle = result(
+            block_source="irrigation",
+            irrigation_start=NOW + timedelta(minutes=35),
+        )
+        first, store = self._run(
+            state,
+            first_cycle,
+            suspend=lambda *args: calls.append(args) or {},
+        )
+        first_hash = store.load().irrigation_change_candidate_hash
+        second_cycle = result(
+            block_source="irrigation",
+            irrigation_start=NOW + timedelta(minutes=40),
+        )
+        second = run_full_failsafe_cycle(
+            now_utc=NOW + timedelta(minutes=1),
+            settings=settings(),
+            environment=ENV,
+            past_due=False,
+            source="test",
+            read_only_runner=lambda **_: second_cycle,
+            state_store_factory=lambda _env: store,
+            suspend_zone_sender=lambda *args: calls.append(args) or {},
+        )
+        self.assertEqual(first.decision_code, "IRRIGATION_PLAN_CHANGE_CONFIRMING")
+        self.assertEqual(second.decision_code, "IRRIGATION_PLAN_CHANGE_CONFIRMING")
+        self.assertNotEqual(store.load().irrigation_change_candidate_hash, first_hash)
+        self.assertEqual(
+            store.load().irrigation_change_candidate_since_utc,
+            (NOW + timedelta(minutes=1)).isoformat(),
+        )
+        self.assertEqual(calls, [])
 
     def test_last_suspend_creates_short_lived_start_proof(self) -> None:
         suspend_calls = []

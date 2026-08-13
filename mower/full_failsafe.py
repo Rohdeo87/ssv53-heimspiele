@@ -230,39 +230,299 @@ def _live_zone_by_relay(details: dict[str, Any]) -> dict[int, dict[str, Any]]:
     return zones
 
 
-def _pending_plan_matches_live_schedule(
+def _zone_observation_by_relay(details: dict[str, Any]) -> dict[int, dict[str, Any]]:
+    hydrawise = _as_dict(details.get("hydrawise"))
+    raw_observations = hydrawise.get("zone_observations")
+    if not isinstance(raw_observations, list):
+        # Abwärtskompatibilität für Tests und ältere Read-only-Payloads.
+        raw_observations = [
+            {
+                **_as_dict(zone),
+                "valid": True,
+                "scheduled": True,
+            }
+            for zone in hydrawise.get("zones", [])
+            if isinstance(zone, dict)
+        ]
+    observations: dict[int, dict[str, Any]] = {}
+    for raw in raw_observations:
+        observation = _as_dict(raw)
+        try:
+            relay_id = int(observation.get("relay_id") or 0)
+        except (TypeError, ValueError):
+            continue
+        if relay_id > 0:
+            observations[relay_id] = observation
+    return observations
+
+
+def _plan_change_fingerprint(kind: str, payload: Any) -> str:
+    canonical = json.dumps(
+        {"kind": kind, "payload": payload},
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _candidate_confirmation(
+    state: AutomationState,
+    *,
+    fingerprint: str,
+    now_utc: datetime,
+    required_minutes: int,
+) -> tuple[AutomationState, bool]:
+    since = _parse_time(state.irrigation_change_candidate_since_utc)
+    if state.irrigation_change_candidate_hash != fingerprint or since is None:
+        return (
+            replace(
+                state,
+                revision=state.revision + 1,
+                irrigation_change_candidate_hash=fingerprint,
+                irrigation_change_candidate_since_utc=now_utc.isoformat(),
+            ),
+            False,
+        )
+    return state, now_utc - since >= timedelta(minutes=required_minutes)
+
+
+def _clear_change_candidate(state: AutomationState) -> AutomationState:
+    if (
+        state.irrigation_change_candidate_hash is None
+        and state.irrigation_change_candidate_since_utc is None
+    ):
+        return state
+    return replace(
+        state,
+        revision=state.revision + 1,
+        irrigation_change_candidate_hash=None,
+        irrigation_change_candidate_since_utc=None,
+    )
+
+
+def _reconcile_prestart_plan(
     *,
     plan: list[dict[str, Any]],
     suspended_relay_ids: set[int],
     details: dict[str, Any],
+    now_utc: datetime,
+    expected_relay_ids: frozenset[int],
+    capture_max_lead_minutes: int,
     tolerance_seconds: int = 120,
-) -> tuple[bool, str | None]:
-    """Erkennt Löschungen und Änderungen vor der jeweils eigenen Suspendierung."""
+) -> tuple[str, list[dict[str, Any]] | None, str]:
+    """Ordnet bestätigbare Hydrawise-Änderungen vor dem ersten Wasserstart ein."""
 
     live_by_relay = _live_zone_by_relay(details)
+    observations = _zone_observation_by_relay(details)
+    if set(observations) != set(expected_relay_ids) or any(
+        observation.get("valid") is not True
+        for observation in observations.values()
+    ):
+        return (
+            "INVALID",
+            None,
+            "Die sieben Relay-Beobachtungen sind für eine Planänderung nicht vollständig.",
+        )
+
+    pending_ids = set(expected_relay_ids) - set(suspended_relay_ids)
+    stored_ends = [
+        end
+        for zone in plan
+        if (end := _parse_time(zone.get("scheduled_end_utc"))) is not None
+    ]
+    stored_end = max(stored_ends, default=None)
+    if stored_end is None:
+        return "INVALID", None, "Der gespeicherte Beregnungsplan besitzt kein Ende."
+
+    if pending_ids:
+        pending_starts = {
+            relay_id: _parse_time(
+                _as_dict(live_by_relay.get(relay_id)).get("scheduled_start_utc")
+            )
+            for relay_id in pending_ids
+        }
+        all_pending_deferred = all(
+            start is None or start > stored_end + timedelta(minutes=30)
+            for start in pending_starts.values()
+        )
+        no_suspension_yet = not suspended_relay_ids
+        future_starts = [start for start in pending_starts.values() if start is not None]
+        first_live_start = min(future_starts, default=None)
+        stored_first_start = min(
+            (
+                start
+                for zone in plan
+                if int(zone["relay_id"]) in pending_ids
+                and (start := _parse_time(zone.get("scheduled_start_utc"))) is not None
+            ),
+            default=None,
+        )
+        moved_outside_capture = (
+            no_suspension_yet
+            and first_live_start is not None
+            and stored_first_start is not None
+            and abs((first_live_start - stored_first_start).total_seconds())
+            > tolerance_seconds
+            and first_live_start - now_utc
+            > timedelta(minutes=capture_max_lead_minutes)
+        )
+        if all_pending_deferred or moved_outside_capture:
+            return (
+                "CANCELLED_OR_DEFERRED",
+                None,
+                "Hydrawise hat den übernommenen Lauf vollständig ausgesetzt oder aus dem Übernahmefenster verschoben.",
+            )
+        if any(start is None for start in pending_starts.values()):
+            return (
+                "INVALID",
+                None,
+                "Nur ein Teil der noch nicht suspendierten Zonen besitzt einen nachvollziehbaren nächsten Lauf.",
+            )
+
+    reconciled: list[dict[str, Any]] = []
     for planned in plan:
         relay_id = int(planned["relay_id"])
-        if relay_id in suspended_relay_ids:
-            continue
-        live = live_by_relay.get(relay_id)
-        if live is None:
-            return False, f"Relay {relay_id} fehlt vor seiner bestätigten Suspendierung."
+        observation = observations[relay_id]
         try:
-            live_zone = int(live.get("zone") or 0)
-            live_duration = int(live.get("run_seconds") or 0)
-            live_start = _parse_time(live.get("scheduled_start_utc"))
+            live_zone = int(observation.get("zone") or 0)
+            live_duration = int(observation.get("run_seconds") or 0)
+            planned_start = _parse_time(planned["scheduled_start_utc"])
+        except (TypeError, ValueError) as exc:
+            return "INVALID", None, f"Relay {relay_id} besitzt ungültige Live-Werte: {exc}"
+        if live_zone != int(planned["zone"]) or not 60 <= live_duration <= 7200:
+            return "INVALID", None, f"Relay {relay_id} besitzt ungültige Zonen- oder Laufzeitwerte."
+        if planned_start is None:
+            return "INVALID", None, f"Relay {relay_id} besitzt keine gespeicherte Startzeit."
+        live_start = _parse_time(
+            _as_dict(live_by_relay.get(relay_id)).get("scheduled_start_utc")
+        )
+        if relay_id not in suspended_relay_ids:
+            if live_start is None:
+                return "INVALID", None, f"Relay {relay_id} fehlt im aktuellen Restplan."
+            start = live_start
+        else:
+            start = planned_start
+        reconciled.append(
+            {
+                **planned,
+                "name": str(observation.get("name") or planned.get("name")),
+                "run_seconds": live_duration,
+                "scheduled_start_utc": start.isoformat(),
+                "scheduled_end_utc": (
+                    start + timedelta(seconds=live_duration)
+                ).isoformat(),
+            }
+        )
+
+    changed = False
+    for old, new in zip(plan, reconciled, strict=True):
+        old_start = _parse_time(old.get("scheduled_start_utc"))
+        new_start = _parse_time(new.get("scheduled_start_utc"))
+        if (
+            int(old.get("run_seconds") or 0) != int(new["run_seconds"])
+            or old_start is None
+            or new_start is None
+            or abs((old_start - new_start).total_seconds()) > tolerance_seconds
+        ):
+            changed = True
+            break
+    if not changed:
+        return "UNCHANGED", plan, "Der Hydrawise-Plan entspricht weiterhin der Übernahme."
+    return (
+        "UPDATED",
+        reconciled,
+        "Hydrawise hat Startzeiten oder Laufzeiten nachvollziehbar geändert.",
+    )
+
+
+def _reconcile_remaining_durations(
+    *,
+    plan: list[dict[str, Any]],
+    completed_relay_ids: set[int],
+    current_relay_id: int | None,
+    details: dict[str, Any],
+    expected_relay_ids: frozenset[int],
+) -> tuple[str, list[dict[str, Any]] | None, str]:
+    """Übernimmt App-Laufzeitänderungen nur für noch nicht gestartete Zonen."""
+
+    observations = _zone_observation_by_relay(details)
+    if set(observations) != set(expected_relay_ids) or any(
+        observation.get("valid") is not True
+        for observation in observations.values()
+    ):
+        return (
+            "INVALID",
+            None,
+            "Die sieben Relay-Beobachtungen sind für die Laufzeitänderung nicht vollständig.",
+        )
+
+    immutable_ids = set(completed_relay_ids)
+    if current_relay_id is not None:
+        immutable_ids.add(int(current_relay_id))
+    reconciled: list[dict[str, Any]] = []
+    changed = False
+    for planned in plan:
+        relay_id = int(planned["relay_id"])
+        observation = observations[relay_id]
+        try:
+            live_zone = int(observation.get("zone") or 0)
+            live_duration = int(observation.get("run_seconds") or 0)
             planned_start = _parse_time(planned.get("scheduled_start_utc"))
         except (TypeError, ValueError) as exc:
-            return False, f"Relay {relay_id} besitzt ungültige Live-Planwerte: {exc}"
-        if (
-            live_zone != int(planned["zone"])
-            or live_duration != int(planned["run_seconds"])
-            or live_start is None
-            or planned_start is None
-            or abs((live_start - planned_start).total_seconds()) > tolerance_seconds
-        ):
-            return False, f"Relay {relay_id} wurde nach der Planübernahme verändert."
-    return True, None
+            return "INVALID", None, f"Relay {relay_id} besitzt ungültige Live-Werte: {exc}"
+        if live_zone != int(planned["zone"]) or not 60 <= live_duration <= 7200:
+            return "INVALID", None, f"Relay {relay_id} besitzt ungültige Zonen- oder Laufzeitwerte."
+        if relay_id in immutable_ids:
+            reconciled.append(dict(planned))
+            continue
+        if planned_start is None:
+            return "INVALID", None, f"Relay {relay_id} besitzt keine gespeicherte Startzeit."
+        updated = {
+            **planned,
+            "name": str(observation.get("name") or planned.get("name")),
+            "run_seconds": live_duration,
+            "scheduled_end_utc": (
+                planned_start + timedelta(seconds=live_duration)
+            ).isoformat(),
+        }
+        changed = changed or int(planned.get("run_seconds") or 0) != live_duration
+        reconciled.append(updated)
+
+    if not changed:
+        return "UNCHANGED", plan, "Die Laufzeiten der verbleibenden Zonen sind unverändert."
+    return (
+        "UPDATED",
+        reconciled,
+        "Hydrawise hat die Laufzeit mindestens einer noch nicht gestarteten Zone geändert.",
+    )
+
+
+def _projected_irrigation_end(
+    *,
+    plan: list[dict[str, Any]],
+    completed_relay_ids: set[int],
+    current_relay_id: int | None,
+    current_started_utc: datetime | None,
+    now_utc: datetime,
+    end_confirmation_minutes: int,
+) -> datetime:
+    """Berechnet konservativ das Ende der bereits übernommenen manuellen Folge."""
+
+    seconds = 0
+    remaining_zone_count = 0
+    for zone in plan:
+        relay_id = int(zone["relay_id"])
+        if relay_id in completed_relay_ids:
+            continue
+        duration = int(zone["run_seconds"])
+        if relay_id == current_relay_id and current_started_utc is not None:
+            elapsed = max(0, int((now_utc - current_started_utc).total_seconds()))
+            duration = max(0, duration - elapsed)
+        seconds += duration
+        remaining_zone_count += 1
+    seconds += remaining_zone_count * end_confirmation_minutes * 60
+    return now_utc + timedelta(seconds=seconds)
 
 
 def _next_scheduled_irrigation_start(
@@ -339,6 +599,9 @@ def _state_details(state: AutomationState, *, persisted: bool, error: str | None
         "irrigation_suspended_relay_ids": _json_ints(
             state.irrigation_suspended_relay_ids_json
         ),
+        "irrigation_suspension_until_utc": (
+            state.irrigation_suspension_until_utc
+        ),
         "irrigation_suspension_completed_utc": (
             state.irrigation_suspension_completed_utc
         ),
@@ -347,6 +610,12 @@ def _state_details(state: AutomationState, *, persisted: bool, error: str | None
         ),
         "irrigation_completed_utc": state.irrigation_completed_utc,
         "irrigation_failed_reason": state.irrigation_failed_reason,
+        "irrigation_change_candidate_since_utc": (
+            state.irrigation_change_candidate_since_utc
+        ),
+        "irrigation_cancelled_without_run_utc": (
+            state.irrigation_cancelled_without_run_utc
+        ),
         "hydrawise_clear_since_utc": state.hydrawise_clear_since_utc,
     }
 
@@ -430,6 +699,7 @@ def _clear_irrigation(state: AutomationState) -> AutomationState:
         irrigation_plan_id=None,
         irrigation_plan_json=None,
         irrigation_suspended_relay_ids_json=None,
+        irrigation_suspension_until_utc=None,
         irrigation_suspension_completed_utc=None,
         irrigation_completed_relay_ids_json=None,
         irrigation_current_relay_id=None,
@@ -438,6 +708,38 @@ def _clear_irrigation(state: AutomationState) -> AutomationState:
         irrigation_zone_clear_since_utc=None,
         irrigation_completed_utc=None,
         irrigation_failed_reason=None,
+        irrigation_change_candidate_hash=None,
+        irrigation_change_candidate_since_utc=None,
+        irrigation_cancelled_without_run_utc=None,
+    )
+
+
+def _cancel_irrigation_without_run(
+    state: AutomationState,
+    *,
+    now_utc: datetime,
+) -> AutomationState:
+    """Verwirft einen bestätigten, noch nicht gestarteten Hydrawise-Lauf."""
+
+    return replace(
+        state,
+        revision=state.revision + 1,
+        irrigation_phase=None,
+        irrigation_plan_id=None,
+        irrigation_plan_json=None,
+        irrigation_suspended_relay_ids_json=None,
+        irrigation_suspension_until_utc=None,
+        irrigation_suspension_completed_utc=None,
+        irrigation_completed_relay_ids_json=None,
+        irrigation_current_relay_id=None,
+        irrigation_zone_start_reserved_utc=None,
+        irrigation_zone_started_utc=None,
+        irrigation_zone_clear_since_utc=None,
+        irrigation_completed_utc=None,
+        irrigation_failed_reason=None,
+        irrigation_change_candidate_hash=None,
+        irrigation_change_candidate_since_utc=None,
+        irrigation_cancelled_without_run_utc=now_utc.isoformat(),
     )
 
 
@@ -611,6 +913,7 @@ def run_full_failsafe_cycle(
                     separators=(",", ":"),
                 ),
                 irrigation_suspended_relay_ids_json="[]",
+                irrigation_suspension_until_utc=None,
                 irrigation_suspension_completed_utc=None,
                 irrigation_completed_relay_ids_json="[]",
                 irrigation_current_relay_id=None,
@@ -619,6 +922,9 @@ def run_full_failsafe_cycle(
                 irrigation_zone_clear_since_utc=None,
                 irrigation_completed_utc=None,
                 irrigation_failed_reason=None,
+                irrigation_change_candidate_hash=None,
+                irrigation_change_candidate_since_utc=None,
+                irrigation_cancelled_without_run_utc=None,
             )
         except Exception as exc:
             state = _failed_irrigation(state, f"{type(exc).__name__}: {exc}")
@@ -960,22 +1266,136 @@ def run_full_failsafe_cycle(
                     message=failed.irrigation_failed_reason
                     or "Beregnung läuft bereits während der Suspendierung.",
                 )
-            plan_matches, plan_error = _pending_plan_matches_live_schedule(
+            capture_max_lead_minutes = _env_int(
+                environment,
+                "IRRIGATION_CAPTURE_MAX_LEAD_MINUTES",
+                45,
+                minimum=30,
+                maximum=120,
+            )
+            change_kind, reconciled_plan, change_reason = _reconcile_prestart_plan(
                 plan=zones,
                 suspended_relay_ids=set(suspended),
                 details=details,
+                now_utc=now,
+                expected_relay_ids=expected_relay_ids,
+                capture_max_lead_minutes=capture_max_lead_minutes,
             )
-            if not plan_matches:
-                failed = _failed_irrigation(
-                    state,
-                    "Hydrawise-Plan wurde nach der sicheren Übernahme gelöscht oder verändert: "
-                    f"{plan_error}",
+            if change_kind == "UNCHANGED":
+                state = _clear_change_candidate(state)
+            else:
+                observations = _zone_observation_by_relay(details)
+                fingerprint_payload: Any = (
+                    reconciled_plan
+                    if reconciled_plan is not None
+                    else [
+                        {
+                            "relay_id": relay_id,
+                            "scheduled": observation.get("scheduled"),
+                            "run_seconds": observation.get("run_seconds"),
+                            "scheduled_start_utc": observation.get(
+                                "scheduled_start_utc"
+                            ),
+                        }
+                        for relay_id, observation in sorted(observations.items())
+                    ]
                 )
-                details["irrigation_plan_revalidation"] = {
-                    "valid": False,
-                    "reason": plan_error,
+                fingerprint = _plan_change_fingerprint(
+                    change_kind,
+                    fingerprint_payload,
+                )
+                confirmation_minutes = _env_int(
+                    environment,
+                    "IRRIGATION_PLAN_CHANGE_CONFIRMATION_MINUTES",
+                    2,
+                    minimum=1,
+                    maximum=10,
+                )
+                candidate_state, confirmed = _candidate_confirmation(
+                    state,
+                    fingerprint=fingerprint,
+                    now_utc=now,
+                    required_minutes=confirmation_minutes,
+                )
+                details["irrigation_plan_reconciliation"] = {
+                    "kind": change_kind,
+                    "confirmed": confirmed,
+                    "required_minutes": confirmation_minutes,
+                    "reason": change_reason,
                     "suspended_relay_ids": sorted(set(suspended)),
                 }
+                if not confirmed:
+                    return _persist_result(
+                        store=store,
+                        original=original,
+                        state=candidate_state,
+                        result=result,
+                        details=details,
+                        settings=settings,
+                        decision_code="IRRIGATION_PLAN_CHANGE_CONFIRMING",
+                        message=(
+                            "Hydrawise-Änderung erkannt; sie wird vor jeder Aktion "
+                            "über mehrere frische Minutenzyklen bestätigt."
+                        ),
+                    )
+                if change_kind == "CANCELLED_OR_DEFERRED":
+                    cancelled = _cancel_irrigation_without_run(
+                        candidate_state,
+                        now_utc=now,
+                    )
+                    return _persist_result(
+                        store=store,
+                        original=original,
+                        state=cancelled,
+                        result=result,
+                        details=details,
+                        settings=settings,
+                        decision_code="IRRIGATION_PLAN_CANCELLED_OR_DEFERRED",
+                        message=(
+                            "Die bestätigte Hydrawise-Aussetzung gibt das bisherige "
+                            "Beregnungsfenster ohne Wasserlauf wieder zum Mähen frei."
+                        ),
+                    )
+                if change_kind == "UPDATED" and reconciled_plan is not None:
+                    canonical = json.dumps(
+                        reconciled_plan,
+                        ensure_ascii=False,
+                        sort_keys=True,
+                        separators=(",", ":"),
+                    )
+                    updated = replace(
+                        candidate_state,
+                        revision=candidate_state.revision + 1,
+                        irrigation_plan_id=hashlib.sha256(
+                            canonical.encode("utf-8")
+                        ).hexdigest(),
+                        irrigation_plan_json=json.dumps(
+                            reconciled_plan,
+                            ensure_ascii=False,
+                            sort_keys=True,
+                            separators=(",", ":"),
+                        ),
+                        irrigation_change_candidate_hash=None,
+                        irrigation_change_candidate_since_utc=None,
+                    )
+                    return _persist_result(
+                        store=store,
+                        original=original,
+                        state=updated,
+                        result=result,
+                        details=details,
+                        settings=settings,
+                        decision_code="IRRIGATION_PLAN_UPDATED",
+                        message=(
+                            "Die bestätigten Hydrawise-Start- und Laufzeiten wurden "
+                            "für den noch nicht gestarteten Lauf übernommen."
+                        ),
+                    )
+                failed = _failed_irrigation(
+                    candidate_state,
+                    "Hydrawise-Plan blieb nach der Änderungsbestätigung unvollständig: "
+                    f"{change_reason}",
+                )
                 return _persist_result(
                     store=store,
                     original=original,
@@ -984,7 +1404,7 @@ def run_full_failsafe_cycle(
                     details=details,
                     settings=settings,
                     decision_code="IRRIGATION_PLAN_CHANGED",
-                    message=failed.irrigation_failed_reason or "Beregnungsplan verändert.",
+                    message=failed.irrigation_failed_reason or "Beregnungsplan unklar.",
                 )
             pending = next((zone for zone in zones if int(zone["relay_id"]) not in suspended), None)
             if pending is None:
@@ -1007,15 +1427,34 @@ def run_full_failsafe_cycle(
             )
             if original_end is None:
                 raise RuntimeError("Beregnungsende fehlt.")
-            suspend_until = original_end + timedelta(
-                minutes=_env_int(
-                    environment,
-                    "IRRIGATION_SUSPEND_MARGIN_MINUTES",
-                    60,
-                    minimum=15,
-                    maximum=180,
-                )
+            suspension_margin_minutes = _env_int(
+                environment,
+                "IRRIGATION_SUSPEND_MARGIN_MINUTES",
+                60,
+                minimum=15,
+                maximum=180,
             )
+            stored_suspend_until = _parse_time(
+                state.irrigation_suspension_until_utc
+            )
+            suspend_until = stored_suspend_until or (
+                original_end + timedelta(minutes=suspension_margin_minutes)
+            )
+            if original_end > suspend_until:
+                failed = _failed_irrigation(
+                    state,
+                    "Die geänderten Laufzeiten überschreiten den bereits bestätigten Suspendierungszeitraum.",
+                )
+                return _persist_result(
+                    store=store,
+                    original=original,
+                    state=failed,
+                    result=result,
+                    details=details,
+                    settings=settings,
+                    decision_code="IRRIGATION_DURATION_CHANGE_UNSAFE",
+                    message=failed.irrigation_failed_reason or "Suspendierungszeitraum zu kurz.",
+                )
             api_key = str(environment.get("HYDRAWISE_API_KEY", "")).strip()
             controller_id = str(environment.get("HYDRAWISE_CONTROLLER_ID", "")).strip() or None
             response = suspend_zone_sender(
@@ -1030,6 +1469,7 @@ def run_full_failsafe_cycle(
                 revision=state.revision + 1,
                 irrigation_phase="READY" if len(suspended) == expected_zones else "SUSPENDING",
                 irrigation_suspended_relay_ids_json=json.dumps(sorted(set(suspended))),
+                irrigation_suspension_until_utc=suspend_until.isoformat(),
                 irrigation_suspension_completed_utc=(
                     now.isoformat() if len(set(suspended)) == expected_zones else None
                 ),
@@ -1110,7 +1550,263 @@ def run_full_failsafe_cycle(
                 message=failed.irrigation_failed_reason or "Unerwartete Zone.",
             )
 
+        if state.irrigation_phase in {"READY", "RUNNING"} and (
+            completed or current_id is not None
+        ):
+            duration_kind, duration_plan, duration_reason = (
+                _reconcile_remaining_durations(
+                    plan=zones,
+                    completed_relay_ids=set(completed),
+                    current_relay_id=current_id,
+                    details=details,
+                    expected_relay_ids=expected_relay_ids,
+                )
+            )
+            if duration_kind == "UNCHANGED":
+                state = _clear_change_candidate(state)
+            else:
+                observations = _zone_observation_by_relay(details)
+                fingerprint = _plan_change_fingerprint(
+                    f"REMAINING_DURATIONS_{duration_kind}",
+                    duration_plan
+                    if duration_plan is not None
+                    else [
+                        {
+                            "relay_id": relay_id,
+                            "valid": observation.get("valid"),
+                            "run_seconds": observation.get("run_seconds"),
+                        }
+                        for relay_id, observation in sorted(observations.items())
+                    ],
+                )
+                duration_confirmation_minutes = _env_int(
+                    environment,
+                    "IRRIGATION_PLAN_CHANGE_CONFIRMATION_MINUTES",
+                    2,
+                    minimum=1,
+                    maximum=10,
+                )
+                candidate_state, confirmed = _candidate_confirmation(
+                    state,
+                    fingerprint=fingerprint,
+                    now_utc=now,
+                    required_minutes=duration_confirmation_minutes,
+                )
+                details["irrigation_duration_reconciliation"] = {
+                    "kind": duration_kind,
+                    "confirmed": confirmed,
+                    "required_minutes": duration_confirmation_minutes,
+                    "reason": duration_reason,
+                    "current_relay_id": current_id,
+                    "completed_relay_ids": sorted(set(completed)),
+                }
+                if not confirmed:
+                    if state.irrigation_phase == "RUNNING" and active_ids == {
+                        int(current_id or 0)
+                    }:
+                        candidate_state = replace(
+                            candidate_state,
+                            revision=candidate_state.revision + 1,
+                            irrigation_zone_clear_since_utc=None,
+                        )
+                    return _persist_result(
+                        store=store,
+                        original=original,
+                        state=candidate_state,
+                        result=result,
+                        details=details,
+                        settings=settings,
+                        decision_code="IRRIGATION_DURATION_CHANGE_CONFIRMING",
+                        message=(
+                            "Eine geänderte Laufzeit für eine noch nicht gestartete "
+                            "Zone wird über mehrere frische Zyklen bestätigt."
+                        ),
+                    )
+                if duration_kind != "UPDATED" or duration_plan is None:
+                    failed = _failed_irrigation(candidate_state, duration_reason)
+                    return _persist_result(
+                        store=store,
+                        original=original,
+                        state=failed,
+                        result=result,
+                        details=details,
+                        settings=settings,
+                        decision_code="IRRIGATION_PLAN_CHANGED",
+                        message=failed.irrigation_failed_reason or "Beregnungsplan unklar.",
+                    )
+                end_confirmation_minutes = _env_int(
+                    environment,
+                    "IRRIGATION_ZONE_END_CONFIRMATION_MINUTES",
+                    2,
+                    minimum=1,
+                    maximum=10,
+                )
+                projected_end = _projected_irrigation_end(
+                    plan=duration_plan,
+                    completed_relay_ids=set(completed),
+                    current_relay_id=current_id,
+                    current_started_utc=_parse_time(
+                        state.irrigation_zone_started_utc
+                    ),
+                    now_utc=now,
+                    end_confirmation_minutes=end_confirmation_minutes,
+                )
+                suspension_until = _parse_time(
+                    state.irrigation_suspension_until_utc
+                )
+                details["irrigation_duration_reconciliation"].update(
+                    {
+                        "projected_end_utc": projected_end.isoformat(),
+                        "suspension_until_utc": (
+                            suspension_until.isoformat()
+                            if suspension_until is not None
+                            else None
+                        ),
+                    }
+                )
+                if suspension_until is None or projected_end > suspension_until:
+                    failed = _failed_irrigation(
+                        candidate_state,
+                        "Die geänderten Restlaufzeiten reichen über die bestätigte Suspendierung hinaus.",
+                    )
+                    return _persist_result(
+                        store=store,
+                        original=original,
+                        state=failed,
+                        result=result,
+                        details=details,
+                        settings=settings,
+                        decision_code="IRRIGATION_DURATION_CHANGE_UNSAFE",
+                        message=failed.irrigation_failed_reason or "Laufzeitänderung nicht sicher.",
+                    )
+                canonical = json.dumps(
+                    duration_plan,
+                    ensure_ascii=False,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                )
+                updated = replace(
+                    candidate_state,
+                    revision=candidate_state.revision + 1,
+                    irrigation_plan_id=hashlib.sha256(
+                        canonical.encode("utf-8")
+                    ).hexdigest(),
+                    irrigation_plan_json=canonical,
+                    irrigation_change_candidate_hash=None,
+                    irrigation_change_candidate_since_utc=None,
+                    irrigation_zone_clear_since_utc=(
+                        None
+                        if state.irrigation_phase == "RUNNING"
+                        else state.irrigation_zone_clear_since_utc
+                    ),
+                )
+                return _persist_result(
+                    store=store,
+                    original=original,
+                    state=updated,
+                    result=result,
+                    details=details,
+                    settings=settings,
+                    decision_code="IRRIGATION_REMAINING_DURATIONS_UPDATED",
+                    message=(
+                        "Die bestätigten App-Laufzeiten der noch nicht gestarteten "
+                        "Zonen wurden übernommen."
+                    ),
+                )
+
         if state.irrigation_phase == "READY":
+            if not completed and current_id is None:
+                change_kind, reconciled_plan, change_reason = _reconcile_prestart_plan(
+                    plan=zones,
+                    suspended_relay_ids=set(suspended),
+                    details=details,
+                    now_utc=now,
+                    expected_relay_ids=expected_relay_ids,
+                    capture_max_lead_minutes=_env_int(
+                        environment,
+                        "IRRIGATION_CAPTURE_MAX_LEAD_MINUTES",
+                        45,
+                        minimum=30,
+                        maximum=120,
+                    ),
+                )
+                if change_kind == "UNCHANGED":
+                    state = _clear_change_candidate(state)
+                else:
+                    fingerprint = _plan_change_fingerprint(
+                        change_kind,
+                        reconciled_plan
+                        if reconciled_plan is not None
+                        else change_reason,
+                    )
+                    confirmation_minutes = _env_int(
+                        environment,
+                        "IRRIGATION_PLAN_CHANGE_CONFIRMATION_MINUTES",
+                        2,
+                        minimum=1,
+                        maximum=10,
+                    )
+                    candidate_state, confirmed = _candidate_confirmation(
+                        state,
+                        fingerprint=fingerprint,
+                        now_utc=now,
+                        required_minutes=confirmation_minutes,
+                    )
+                    details["irrigation_plan_reconciliation"] = {
+                        "kind": change_kind,
+                        "confirmed": confirmed,
+                        "required_minutes": confirmation_minutes,
+                        "reason": change_reason,
+                    }
+                    if not confirmed:
+                        return _persist_result(
+                            store=store,
+                            original=original,
+                            state=candidate_state,
+                            result=result,
+                            details=details,
+                            settings=settings,
+                            decision_code="IRRIGATION_PLAN_CHANGE_CONFIRMING",
+                            message="Eine Hydrawise-Laufzeitänderung wird stabil bestätigt.",
+                        )
+                    if change_kind == "UPDATED" and reconciled_plan is not None:
+                        canonical = json.dumps(
+                            reconciled_plan,
+                            ensure_ascii=False,
+                            sort_keys=True,
+                            separators=(",", ":"),
+                        )
+                        updated = replace(
+                            candidate_state,
+                            revision=candidate_state.revision + 1,
+                            irrigation_plan_id=hashlib.sha256(
+                                canonical.encode("utf-8")
+                            ).hexdigest(),
+                            irrigation_plan_json=canonical,
+                            irrigation_change_candidate_hash=None,
+                            irrigation_change_candidate_since_utc=None,
+                        )
+                        return _persist_result(
+                            store=store,
+                            original=original,
+                            state=updated,
+                            result=result,
+                            details=details,
+                            settings=settings,
+                            decision_code="IRRIGATION_PLAN_UPDATED",
+                            message="Die bestätigten neuen Zonenlaufzeiten wurden übernommen.",
+                        )
+                    failed = _failed_irrigation(candidate_state, change_reason)
+                    return _persist_result(
+                        store=store,
+                        original=original,
+                        state=failed,
+                        result=result,
+                        details=details,
+                        settings=settings,
+                        decision_code="IRRIGATION_PLAN_CHANGED",
+                        message=failed.irrigation_failed_reason or "Beregnungsplan unklar.",
+                    )
             next_zone = next((zone for zone in zones if int(zone["relay_id"]) not in completed), None)
             if next_zone is None:
                 complete = replace(
@@ -1175,6 +1871,47 @@ def run_full_failsafe_cycle(
                         decision_code="IRRIGATION_PLAN_LEASE_EXPIRED",
                         message=failed.irrigation_failed_reason or "Beregnungsfreigabe abgelaufen.",
                     )
+            end_confirmation_minutes = _env_int(
+                environment,
+                "IRRIGATION_ZONE_END_CONFIRMATION_MINUTES",
+                2,
+                minimum=1,
+                maximum=10,
+            )
+            projected_end = _projected_irrigation_end(
+                plan=zones,
+                completed_relay_ids=set(completed),
+                current_relay_id=None,
+                current_started_utc=None,
+                now_utc=now,
+                end_confirmation_minutes=end_confirmation_minutes,
+            )
+            suspension_until = _parse_time(
+                state.irrigation_suspension_until_utc
+            )
+            details["irrigation_sequence_window"] = {
+                "projected_end_utc": projected_end.isoformat(),
+                "suspension_until_utc": (
+                    suspension_until.isoformat()
+                    if suspension_until is not None
+                    else None
+                ),
+            }
+            if suspension_until is None or projected_end > suspension_until:
+                failed = _failed_irrigation(
+                    state,
+                    "Die verbleibende Zonenfolge passt nicht vollständig in den bestätigten Suspendierungszeitraum.",
+                )
+                return _persist_result(
+                    store=store,
+                    original=original,
+                    state=failed,
+                    result=result,
+                    details=details,
+                    settings=settings,
+                    decision_code="IRRIGATION_DURATION_CHANGE_UNSAFE",
+                    message=failed.irrigation_failed_reason or "Beregnungsfenster zu kurz.",
+                )
             if active_ids:
                 failed = _failed_irrigation(state, "Vor dem Zonenstart läuft bereits eine Zone.")
                 return _persist_result(
@@ -1355,6 +2092,79 @@ def run_full_failsafe_cycle(
                     decision_code="IRRIGATION_CONFIRM_ZONE_END",
                     message="Das Zonenende wird fortlaufend bestätigt.",
                 )
+            started_at = _parse_time(state.irrigation_zone_started_utc)
+            current_zone = next(
+                (
+                    zone
+                    for zone in zones
+                    if int(zone["relay_id"]) == int(current_id or 0)
+                ),
+                None,
+            )
+            if started_at is None or current_zone is None:
+                failed = _failed_irrigation(
+                    state,
+                    "Der Beginn oder die Laufzeit der aktiven Zone fehlt im persistenten Nachweis.",
+                )
+                return _persist_result(
+                    store=store,
+                    original=original,
+                    state=failed,
+                    result=result,
+                    details=details,
+                    settings=settings,
+                    decision_code="IRRIGATION_ZONE_END_UNCLEAR",
+                    message=failed.irrigation_failed_reason or "Zonenende unklar.",
+                )
+            early_stop_tolerance_seconds = _env_int(
+                environment,
+                "IRRIGATION_EARLY_STOP_TOLERANCE_SECONDS",
+                120,
+                minimum=30,
+                maximum=600,
+            )
+            earliest_normal_end = started_at + timedelta(
+                seconds=(
+                    int(current_zone["run_seconds"])
+                    - early_stop_tolerance_seconds
+                )
+            )
+            if now < earliest_normal_end:
+                cancelled = replace(
+                    state,
+                    revision=state.revision + 1,
+                    irrigation_phase="COMPLETE_HOLD",
+                    irrigation_current_relay_id=None,
+                    irrigation_zone_start_reserved_utc=None,
+                    irrigation_zone_started_utc=None,
+                    irrigation_zone_clear_since_utc=None,
+                    irrigation_completed_utc=now.isoformat(),
+                    hydrawise_clear_since_utc=now.isoformat(),
+                    irrigation_change_candidate_hash=None,
+                    irrigation_change_candidate_since_utc=None,
+                )
+                details["irrigation_early_stop"] = {
+                    "relay_id": int(current_id or 0),
+                    "started_utc": started_at.isoformat(),
+                    "planned_run_seconds": int(current_zone["run_seconds"]),
+                    "confirmed_clear_utc": now.isoformat(),
+                    "remaining_zones_cancelled": (
+                        expected_zones - len(set(completed))
+                    ),
+                }
+                return _persist_result(
+                    store=store,
+                    original=original,
+                    state=cancelled,
+                    result=result,
+                    details=details,
+                    settings=settings,
+                    decision_code="IRRIGATION_RUN_CANCELLED_EARLY",
+                    message=(
+                        "Die laufende Hydrawise-Folge wurde bestätigt vorzeitig beendet; "
+                        "keine weitere Zone startet und der 90-Minuten-Nachlauf beginnt."
+                    ),
+                )
             completed.append(int(current_id or 0))
             all_complete = len(set(completed)) == expected_zones
             advanced = replace(
@@ -1418,8 +2228,21 @@ def run_full_failsafe_cycle(
         required_clear_minutes=release_minutes,
         persistent_state_available=True,
     )
-    details["hydrawise_release_gate"] = release.to_dict()
-    if not release.allowed:
+    cancelled_without_run_release = (
+        state.irrigation_cancelled_without_run_utc is not None
+        and bool(hydra_safety.get("available"))
+        and bool(hydra_safety.get("fresh"))
+        and bool(hydra_safety.get("clear_now"))
+        and relay_allowlist_valid
+        and int(hydra_safety.get("active_zone_count") or 0) == 0
+        and int(hydra_safety.get("imminent_zone_count") or 0) == 0
+    )
+    details["hydrawise_release_gate"] = {
+        **release.to_dict(),
+        "cancelled_without_run_release": cancelled_without_run_release,
+        "effective_allowed": release.allowed or cancelled_without_run_release,
+    }
+    if not release.allowed and not cancelled_without_run_release:
         if activity in PARKABLE_ACTIVITIES and settings.enable_park_commands:
             intent = CommandIntent(
                 action="PARK",
@@ -1789,7 +2612,10 @@ def run_full_failsafe_cycle(
         mowing_window_end_utc=command_end,
         continuous_mowing=True,
     )
-    if state.irrigation_phase == "COMPLETE_HOLD":
+    if (
+        state.irrigation_phase == "COMPLETE_HOLD"
+        or state.irrigation_cancelled_without_run_utc is not None
+    ):
         command_state = _clear_irrigation(command_state)
     client_id = str(environment.get("HUSQVARNA_CLIENT_ID", "")).strip()
     client_secret = str(environment.get("HUSQVARNA_CLIENT_SECRET", "")).strip()

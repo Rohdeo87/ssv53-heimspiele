@@ -371,6 +371,8 @@ resource functionAppSettings 'Microsoft.Web/sites/config@2024-04-01' = {
     IRRIGATION_START_CONFIRMATION_MINUTES: '5'
     IRRIGATION_ZONE_END_CONFIRMATION_MINUTES: '2'
     IRRIGATION_PLAN_LEASE_MINUTES: '3'
+    IRRIGATION_PLAN_CHANGE_CONFIRMATION_MINUTES: '2'
+    IRRIGATION_EARLY_STOP_TOLERANCE_SECONDS: '120'
     MOWER_CONTINUE_MIN_BATTERY_PERCENT: '60'
     MOWER_RESTART_BATTERY_PERCENT: '90'
     MAX_AUTOMATIC_START_MINUTES: '720'
@@ -492,7 +494,7 @@ resource safetyStateAlert 'Microsoft.Insights/scheduledQueryRules@2023-12-01' = 
     criteria: {
       allOf: [
         {
-          query: 'traces | where message startswith "SSV53_CONTROL_CYCLE " | extend p=parse_json(substring(message, strlen("SSV53_CONTROL_CYCLE "))) | extend decision=tostring(p.decision_code), persisted=tobool(p.details.automation_state.persisted), allowlist=tobool(p.details.hydrawise_relay_allowlist.valid) | where decision in ("IRRIGATION_FAILED_HOLD", "IRRIGATION_STATUS_NOT_SAFE", "IRRIGATION_PLAN_INVALID", "IRRIGATION_PLAN_CHANGED", "IRRIGATION_SUSPENSION_PROOF_MISSING", "IRRIGATION_PLAN_LEASE_EXPIRED", "IRRIGATION_ACTIVE_DURING_SUSPENSION", "IRRIGATION_UNEXPECTED_ACTIVE_ZONE", "IRRIGATION_START_COLLISION", "IRRIGATION_START_RESERVATION_FAILED", "IRRIGATION_ZONE_START_UNCONFIRMED", "IRRIGATION_ZONE_END_UNCLEAR", "MOWER_NOT_SAFE_FOR_PARK_COMMAND", "MOWER_START_RESERVATION_FAILED") or persisted == false or allowlist == false'
+          query: 'traces | where message startswith "SSV53_CONTROL_CYCLE " | extend p=parse_json(substring(message, strlen("SSV53_CONTROL_CYCLE "))) | extend decision=tostring(p.decision_code), persisted=tobool(p.details.automation_state.persisted), allowlist=tobool(p.details.hydrawise_relay_allowlist.valid) | where decision in ("IRRIGATION_FAILED_HOLD", "IRRIGATION_STATUS_NOT_SAFE", "IRRIGATION_PLAN_INVALID", "IRRIGATION_PLAN_CHANGED", "IRRIGATION_DURATION_CHANGE_UNSAFE", "IRRIGATION_RUN_CANCELLED_EARLY", "IRRIGATION_SUSPENSION_PROOF_MISSING", "IRRIGATION_PLAN_LEASE_EXPIRED", "IRRIGATION_ACTIVE_DURING_SUSPENSION", "IRRIGATION_UNEXPECTED_ACTIVE_ZONE", "IRRIGATION_START_COLLISION", "IRRIGATION_START_RESERVATION_FAILED", "IRRIGATION_ZONE_START_UNCONFIRMED", "IRRIGATION_ZONE_END_UNCLEAR", "MOWER_NOT_SAFE_FOR_PARK_COMMAND", "MOWER_START_RESERVATION_FAILED") or persisted == false or allowlist == false'
           timeAggregation: 'Count'
           operator: 'GreaterThan'
           threshold: 0

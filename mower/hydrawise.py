@@ -216,7 +216,10 @@ def _relay_selected(
         re.compile(pattern, re.IGNORECASE)
         for pattern in hydrawise_config.get("zone_name_patterns", [])
     ]
-    relay_id = int(relay.get("relay_id", -1))
+    try:
+        relay_id = int(relay.get("relay_id", -1))
+    except (TypeError, ValueError):
+        relay_id = -1
     name = str(relay.get("name", f"Zone {relay.get('relay', '?')}"))
     return (
         include_all
@@ -389,16 +392,17 @@ def evaluate_safety_status(
     )
 
 
-def selected_zone_schedule(
+def selected_zone_observations(
     status: dict[str, Any] | None,
     hydrawise_config: dict[str, Any],
 ) -> list[dict[str, Any]]:
-    """Liefert ausschließlich den geprüften, nicht geheimen Zonenfahrplan.
+    """Liefert alle ausgewählten Zonen samt aktuellem Planstatus.
 
-    ``time == 1`` kennzeichnet eine bereits laufende Zone. Für einen
-    zukünftigen Lauf werden Start und Ende aus demselben Hydrawise-Snapshot
-    berechnet, damit die sieben Laufzeiten später unverändert vorgezogen
-    werden können.
+    Anders als :func:`selected_zone_schedule` bleiben auch ausgesetzte oder
+    aktuell nicht eingeplante Zonen enthalten. Dadurch kann die Steuerung eine
+    bewusst in Hydrawise gesetzte Pause von einer unvollständigen Relay-Liste
+    unterscheiden und Laufzeitänderungen für noch nicht gestartete Zonen
+    übernehmen.
     """
 
     if not isinstance(status, dict):
@@ -408,7 +412,7 @@ def selected_zone_schedule(
     except (KeyError, TypeError, ValueError, OSError):
         return []
 
-    zones: list[dict[str, Any]] = []
+    observations: list[dict[str, Any]] = []
     for raw_relay in status.get("relays", []):
         if not isinstance(raw_relay, dict) or not _relay_selected(
             raw_relay,
@@ -421,21 +425,87 @@ def selected_zone_schedule(
             seconds_until = int(float(raw_relay.get("time", 0) or 0))
             run_seconds = int(float(raw_relay.get("run", 0) or 0))
         except (KeyError, TypeError, ValueError):
+            try:
+                invalid_relay_id = int(raw_relay.get("relay_id") or 0)
+            except (TypeError, ValueError):
+                invalid_relay_id = 0
+            try:
+                invalid_zone_number = int(raw_relay.get("relay") or 0)
+            except (TypeError, ValueError):
+                invalid_zone_number = 0
+            observations.append(
+                {
+                    "relay_id": invalid_relay_id,
+                    "zone": invalid_zone_number,
+                    "name": str(raw_relay.get("name") or "Unbekannte Zone"),
+                    "valid": False,
+                    "scheduled": False,
+                    "running": False,
+                    "seconds_until": None,
+                    "run_seconds": None,
+                    "scheduled_start_utc": None,
+                    "scheduled_end_utc": None,
+                }
+            )
             continue
-        if relay_id <= 0 or zone_number <= 0 or seconds_until <= 0 or run_seconds <= 0:
-            continue
-        running = seconds_until == 1
-        start = observed if running else observed + timedelta(seconds=seconds_until)
-        zones.append(
+        valid = relay_id > 0 and zone_number > 0 and 60 <= run_seconds <= 7200
+        scheduled = valid and seconds_until > 0
+        running = scheduled and seconds_until == 1
+        start = observed if running else (
+            observed + timedelta(seconds=seconds_until) if scheduled else None
+        )
+        observations.append(
             {
                 "relay_id": relay_id,
                 "zone": zone_number,
                 "name": str(raw_relay.get("name") or f"Zone {zone_number}"),
+                "valid": valid,
+                "scheduled": scheduled,
                 "running": running,
                 "seconds_until": seconds_until,
                 "run_seconds": run_seconds,
-                "scheduled_start_utc": start.isoformat(),
-                "scheduled_end_utc": (start + timedelta(seconds=run_seconds)).isoformat(),
+                "scheduled_start_utc": start.isoformat() if start is not None else None,
+                "scheduled_end_utc": (
+                    (start + timedelta(seconds=run_seconds)).isoformat()
+                    if start is not None
+                    else None
+                ),
+            }
+        )
+    return sorted(observations, key=lambda item: int(item.get("zone") or 0))
+
+
+def selected_zone_schedule(
+    status: dict[str, Any] | None,
+    hydrawise_config: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Liefert ausschließlich den geprüften, nicht geheimen Zonenfahrplan.
+
+    ``time == 1`` kennzeichnet eine bereits laufende Zone. Für einen
+    zukünftigen Lauf werden Start und Ende aus demselben Hydrawise-Snapshot
+    berechnet, damit die sieben Laufzeiten später unverändert vorgezogen
+    werden können.
+    """
+
+    zones: list[dict[str, Any]] = []
+    for observation in selected_zone_observations(status, hydrawise_config):
+        if (
+            not observation.get("valid")
+            or not observation.get("scheduled")
+            or observation.get("scheduled_start_utc") is None
+            or observation.get("scheduled_end_utc") is None
+        ):
+            continue
+        zones.append(
+            {
+                "relay_id": int(observation["relay_id"]),
+                "zone": int(observation["zone"]),
+                "name": str(observation["name"]),
+                "running": bool(observation["running"]),
+                "seconds_until": int(observation["seconds_until"]),
+                "run_seconds": int(observation["run_seconds"]),
+                "scheduled_start_utc": str(observation["scheduled_start_utc"]),
+                "scheduled_end_utc": str(observation["scheduled_end_utc"]),
             }
         )
     return sorted(
