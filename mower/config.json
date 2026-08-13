@@ -71,7 +71,7 @@
     "include_all_zones": true,
     "expected_zone_count": 7,
     "start_after_confirmed_park": true,
-    "relay_ids": [],
+    "relay_ids": [9104894, 9104906, 9104909, 9104911, 9104913, 9104920, 9104921],
     "zone_name_patterns": [],
     "before_minutes": 30,
     "after_minutes": 0

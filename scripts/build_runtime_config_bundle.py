@@ -196,6 +196,14 @@ def _validate_mower_config(
         raise RuntimeBundleError("Der Beregnungs-Nachlauf darf nicht negativ sein.")
     if int(hydrawise.get("expected_zone_count", 0)) != 7:
         raise RuntimeBundleError("Hydrawise muss exakt sieben Zonen erwarten.")
+    try:
+        relay_ids = [int(value) for value in hydrawise.get("relay_ids", [])]
+    except (TypeError, ValueError) as exc:
+        raise RuntimeBundleError("Hydrawise-Relay-IDs sind ungültig.") from exc
+    if len(relay_ids) != 7 or len(set(relay_ids)) != 7 or any(value <= 0 for value in relay_ids):
+        raise RuntimeBundleError(
+            "Hydrawise muss exakt sieben eindeutige positive Relay-IDs freigeben."
+        )
     if hydrawise.get("start_after_confirmed_park") is not True:
         raise RuntimeBundleError(
             "Der vorgezogene Hydrawise-Lauf muss an die bestätigte Parkposition gebunden sein."

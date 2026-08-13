@@ -28,6 +28,7 @@ from mower.hydrawise import (
     HydrawiseContinuousClearSnapshot,
     evaluate_continuous_clear_confirmation,
     evaluate_safety_status,
+    parse_relay_id_allowlist,
     fetch_status,
     selected_zone_schedule,
 )
@@ -166,6 +167,21 @@ def run_read_only_cycle(
     config = load_json(config_path)
     planning = _as_dict(config.get("planning"))
     hydrawise_config = _as_dict(config.get("hydrawise"))
+    expected_zone_count = int(
+        environment.get(
+            "HYDRAWISE_EXPECTED_ZONE_COUNT",
+            hydrawise_config.get("expected_zone_count", 7),
+        )
+    )
+    expected_relay_ids = parse_relay_id_allowlist(
+        environment.get("HYDRAWISE_EXPECTED_RELAY_IDS"),
+        expected_count=expected_zone_count,
+        required=settings.control_mode is ControlMode.FULL_FAILSAFE,
+    )
+    hydrawise_config = {
+        **hydrawise_config,
+        "expected_relay_ids": list(expected_relay_ids),
+    }
     minimum_remaining = int(
         planning.get("minimum_mowing_window_minutes", 30)
     )

@@ -26,6 +26,10 @@ class FullFailsafePackageTests(unittest.TestCase):
                 "FULL_FAILSAFE_7_ZONES_90_MIN_CAPABLE_LOCKED",
             )
             self.assertEqual(manifest["expected_hydrawise_zone_count"], 7)
+            self.assertEqual(
+                manifest["expected_hydrawise_relay_ids"],
+                [9104894, 9104906, 9104909, 9104911, 9104913, 9104920, 9104921],
+            )
             self.assertEqual(manifest["hydrawise_continuous_clear_minutes"], 90)
             self.assertIn("mower/full_failsafe.py", names)
             self.assertIn("mower/hydrawise_actions.py", names)

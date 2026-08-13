@@ -4,6 +4,7 @@ import unittest
 from datetime import datetime, timedelta, timezone
 
 from mower.full_failsafe import run_full_failsafe_cycle
+from mower.hydrawise import HydrawiseError
 from mower.runtime import CycleResult, RuntimeSettings
 from mower.safety import CommandIntent
 from mower.state import AutomationState
@@ -36,6 +37,7 @@ ENV = {
     "HYDRAWISE_API_KEY": "key",
     "HYDRAWISE_CONTROLLER_ID": "controller",
     "HYDRAWISE_EXPECTED_ZONE_COUNT": "7",
+    "HYDRAWISE_EXPECTED_RELAY_IDS": ",".join(str(value) for value in RELAYS),
     "HYDRAWISE_CLEAR_CONFIRMATION_MINUTES": "90",
     "MOWER_PARK_CONFIRMATION_MINUTES": "1",
     "MOWER_PARK_PROGRESS_GRACE_MINUTES": "3",
@@ -46,10 +48,18 @@ ENV = {
 }
 
 
-def zones(*, start_utc: datetime | None = None) -> list[dict]:
+def zones(
+    *,
+    start_utc: datetime | None = None,
+    relay_ids: list[int] | None = None,
+) -> list[dict]:
     start = start_utc or NOW + timedelta(minutes=30)
+    selected_relay_ids = RELAYS if relay_ids is None else relay_ids
     result = []
-    for index, (relay_id, run_seconds) in enumerate(zip(RELAYS, RUN_SECONDS, strict=True), start=1):
+    for index, (relay_id, run_seconds) in enumerate(
+        zip(selected_relay_ids, RUN_SECONDS, strict=True),
+        start=1,
+    ):
         end = start + timedelta(seconds=run_seconds)
         result.append(
             {
@@ -78,6 +88,7 @@ def result(
     external_reason_id: int | None = 253053,
     window_end: datetime | None = None,
     irrigation_start: datetime | None = None,
+    relay_ids: list[int] | None = None,
 ) -> CycleResult:
     block = None
     if block_source:
@@ -88,6 +99,11 @@ def result(
             "source": block_source,
         }
     active_ids = active_ids or []
+    observed_relay_ids = RELAYS if relay_ids is None else relay_ids
+    relay_set_valid = (
+        len(observed_relay_ids) == len(set(observed_relay_ids))
+        and set(observed_relay_ids) == set(RELAYS)
+    )
     return CycleResult(
         schema_version=2,
         executed_at_utc=NOW.isoformat(),
@@ -112,14 +128,18 @@ def result(
                 "status": "live (7 Zonen)",
                 "error": None,
                 "zones": zones(
-                    start_utc=irrigation_start or NOW + timedelta(hours=13)
+                    start_utc=irrigation_start or NOW + timedelta(hours=13),
+                    relay_ids=observed_relay_ids,
                 ),
                 "safety": {
                     "available": True,
                     "fresh": True,
                     "clear_now": clear,
                     "observed_at_utc": NOW.isoformat(),
-                    "selected_zone_count": 7,
+                    "selected_zone_count": len(observed_relay_ids),
+                    "observed_relay_ids": observed_relay_ids,
+                    "expected_relay_ids": RELAYS,
+                    "relay_set_valid": relay_set_valid,
                     "active_zone_count": len(active_ids),
                     "active_relay_ids": active_ids,
                     "reason": "frei" if clear else "läuft",
@@ -183,6 +203,26 @@ class FullFailsafeTests(unittest.TestCase):
             start_zone_sender=senders.get("zone", lambda *_: {"message_type": "info"}),
         )
         return output, store
+
+    def test_missing_relay_allowlist_fails_before_reads_or_commands(self) -> None:
+        calls = {"read": [], "park": [], "start": [], "suspend": [], "zone": []}
+        environment = dict(ENV)
+        environment.pop("HYDRAWISE_EXPECTED_RELAY_IDS")
+        with self.assertRaises(HydrawiseError):
+            run_full_failsafe_cycle(
+                now_utc=NOW,
+                settings=settings(),
+                environment=environment,
+                past_due=False,
+                source="test",
+                read_only_runner=lambda **kwargs: calls["read"].append(kwargs),
+                state_store_factory=lambda _env: InMemoryStateStore(),
+                park_sender=lambda *args: calls["park"].append(args),
+                start_sender=lambda *args: calls["start"].append(args),
+                suspend_zone_sender=lambda *args: calls["suspend"].append(args),
+                start_zone_sender=lambda *args: calls["zone"].append(args),
+            )
+        self.assertEqual(calls, {"read": [], "park": [], "start": [], "suspend": [], "zone": []})
 
     def test_external_station_park_is_not_taken_over_for_training_or_match(self) -> None:
         for source in ("training", "match", "training+match"):
@@ -439,6 +479,74 @@ class FullFailsafeTests(unittest.TestCase):
         self.assertEqual(len(park_calls), 1)
         self.assertEqual(zone_calls, [])
         self.assertEqual(store.load().irrigation_phase, "PLANNED")
+
+    def test_substituted_relay_fails_plan_capture_and_only_parks_mower(self) -> None:
+        park_calls = []
+        suspend_calls = []
+        zone_calls = []
+        substituted = [*RELAYS[:-1], 999999]
+        output, store = self._run(
+            AutomationState(),
+            result(
+                command="PARK",
+                block_source="irrigation",
+                activity="MOWING",
+                clear=False,
+                irrigation_start=NOW + timedelta(minutes=30),
+                relay_ids=substituted,
+            ),
+            park=lambda *args: park_calls.append(args) or {"accepted": True},
+            suspend=lambda *args: suspend_calls.append(args) or {},
+            zone=lambda *args: zone_calls.append(args) or {},
+        )
+        self.assertEqual(output.decision_code, "PARK_COMMAND_SENT")
+        self.assertEqual(len(park_calls), 1)
+        self.assertEqual(suspend_calls, [])
+        self.assertEqual(zone_calls, [])
+        self.assertEqual(store.load().irrigation_phase, "FAILED")
+        self.assertIn("Relay-ID-Liste", store.load().irrigation_failed_reason)
+        self.assertFalse(output.details["hydrawise_relay_allowlist"]["valid"])
+
+    def test_stored_plan_with_substituted_relay_fails_before_zone_action(self) -> None:
+        suspend_calls = []
+        zone_calls = []
+        state = irrigation_state(phase="PLANNED")
+        substituted_plan = zones(relay_ids=[*RELAYS[:-1], 999999])
+        state = AutomationState.from_mapping(
+            {
+                **state.to_dict(),
+                "irrigation_plan_json": __import__("json").dumps(substituted_plan),
+                "irrigation_suspended_relay_ids_json": "[]",
+            }
+        )
+        output, store = self._run(
+            state,
+            result(block_source="irrigation"),
+            suspend=lambda *args: suspend_calls.append(args) or {},
+            zone=lambda *args: zone_calls.append(args) or {},
+        )
+        self.assertEqual(output.decision_code, "IRRIGATION_PLAN_INVALID")
+        self.assertEqual(suspend_calls, [])
+        self.assertEqual(zone_calls, [])
+        self.assertEqual(store.load().irrigation_phase, "FAILED")
+
+    def test_relay_allowlist_mismatch_prevents_mower_start_and_parks(self) -> None:
+        park_calls = []
+        start_calls = []
+        substituted = [*RELAYS[:-1], 999999]
+        output, _store = self._run(
+            AutomationState(hydrawise_clear_since_utc=(NOW - timedelta(hours=4)).isoformat()),
+            result(activity="MOWING", clear=False, relay_ids=substituted),
+            park=lambda *args: park_calls.append(args) or {"accepted": True},
+            start=lambda *args: start_calls.append(args) or {},
+        )
+        self.assertEqual(
+            output.decision_code,
+            "PARK_COMMAND_SENT_FOR_HYDRAWISE_HOLD",
+        )
+        self.assertEqual(len(park_calls), 1)
+        self.assertEqual(start_calls, [])
+        self.assertFalse(output.details["hydrawise_relay_allowlist"]["valid"])
 
     def test_suspends_one_scheduled_zone_per_cycle(self) -> None:
         calls = []

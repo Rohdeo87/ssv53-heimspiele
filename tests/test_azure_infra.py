@@ -29,6 +29,10 @@ class AzureInfrastructureTests(unittest.TestCase):
         self.assertIn("ENABLE_IRRIGATION_COMMANDS: 'false'", self.bicep)
         self.assertIn("FULL_FAILSAFE_CONFIRMATION: 'LOCKED'", self.bicep)
         self.assertIn("HYDRAWISE_EXPECTED_ZONE_COUNT: '7'", self.bicep)
+        self.assertIn(
+            "HYDRAWISE_EXPECTED_RELAY_IDS: '9104894,9104906,9104909,9104911,9104913,9104920,9104921'",
+            self.bicep,
+        )
         self.assertIn("HYDRAWISE_CLEAR_CONFIRMATION_MINUTES: '90'", self.bicep)
 
     def test_storage_uses_managed_identity_without_shared_key(self) -> None:

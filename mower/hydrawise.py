@@ -28,6 +28,9 @@ class HydrawiseSafetySnapshot:
     observed_at_utc: str | None
     age_seconds: int | None
     selected_zone_count: int
+    observed_relay_ids: tuple[int, ...]
+    expected_relay_ids: tuple[int, ...]
+    relay_set_valid: bool
     active_zone_count: int
     imminent_zone_count: int
     active_relay_ids: tuple[int, ...]
@@ -36,9 +39,47 @@ class HydrawiseSafetySnapshot:
 
     def to_dict(self) -> dict[str, Any]:
         value = asdict(self)
+        value["observed_relay_ids"] = list(self.observed_relay_ids)
+        value["expected_relay_ids"] = list(self.expected_relay_ids)
         value["active_relay_ids"] = list(self.active_relay_ids)
         value["imminent_relay_ids"] = list(self.imminent_relay_ids)
         return value
+
+
+def parse_relay_id_allowlist(
+    value: Any,
+    *,
+    expected_count: int,
+    required: bool,
+) -> tuple[int, ...]:
+    """Parst die unveränderliche Relay-ID-Freigabeliste fail-closed."""
+
+    text = str(value or "").strip()
+    if not text:
+        if required:
+            raise HydrawiseError("HYDRAWISE_EXPECTED_RELAY_IDS fehlt.")
+        return ()
+    raw_values = [item.strip() for item in text.split(",")]
+    if any(not item for item in raw_values):
+        raise HydrawiseError("HYDRAWISE_EXPECTED_RELAY_IDS enthält einen leeren Wert.")
+    try:
+        relay_ids = tuple(int(item) for item in raw_values)
+    except ValueError as exc:
+        raise HydrawiseError(
+            "HYDRAWISE_EXPECTED_RELAY_IDS darf nur positive Ganzzahlen enthalten."
+        ) from exc
+    if any(relay_id <= 0 for relay_id in relay_ids):
+        raise HydrawiseError(
+            "HYDRAWISE_EXPECTED_RELAY_IDS darf nur positive Ganzzahlen enthalten."
+        )
+    if len(relay_ids) != len(set(relay_ids)):
+        raise HydrawiseError("HYDRAWISE_EXPECTED_RELAY_IDS enthält Duplikate.")
+    if len(relay_ids) != expected_count:
+        raise HydrawiseError(
+            "HYDRAWISE_EXPECTED_RELAY_IDS muss exakt "
+            f"{expected_count} eindeutige Relay-IDs enthalten."
+        )
+    return tuple(sorted(relay_ids))
 
 
 @dataclass(frozen=True)
@@ -201,6 +242,12 @@ def evaluate_safety_status(
         raise ValueError("now_utc muss eine zeitzonenbewusste UTC-Zeit sein.")
     if not 30 <= max_age_seconds <= 900:
         raise ValueError("max_age_seconds muss zwischen 30 und 900 liegen.")
+    expected_relay_ids = tuple(
+        sorted(
+            int(value)
+            for value in hydrawise_config.get("expected_relay_ids", [])
+        )
+    )
     if not bool(hydrawise_config.get("enabled", True)):
         return HydrawiseSafetySnapshot(
             available=False,
@@ -209,6 +256,9 @@ def evaluate_safety_status(
             observed_at_utc=None,
             age_seconds=None,
             selected_zone_count=0,
+            observed_relay_ids=(),
+            expected_relay_ids=expected_relay_ids,
+            relay_set_valid=False,
             active_zone_count=0,
             imminent_zone_count=0,
             active_relay_ids=(),
@@ -223,6 +273,9 @@ def evaluate_safety_status(
             observed_at_utc=None,
             age_seconds=None,
             selected_zone_count=0,
+            observed_relay_ids=(),
+            expected_relay_ids=expected_relay_ids,
+            relay_set_valid=False,
             active_zone_count=0,
             imminent_zone_count=0,
             active_relay_ids=(),
@@ -246,12 +299,26 @@ def evaluate_safety_status(
         )
         fresh = -60 <= age_seconds <= max_age_seconds
 
+    observed_relay_ids: list[int] = []
     selected: list[dict[str, Any]] = []
     for raw_relay in status.get("relays", []):
         if not isinstance(raw_relay, dict):
             continue
+        try:
+            observed_relay_ids.append(int(raw_relay.get("relay_id", -1)))
+        except (TypeError, ValueError):
+            observed_relay_ids.append(-1)
         if _relay_selected(raw_relay, hydrawise_config):
             selected.append(raw_relay)
+
+    observed_relay_set = tuple(sorted(observed_relay_ids))
+    relay_set_valid = (
+        not expected_relay_ids
+        or (
+            len(observed_relay_set) == len(set(observed_relay_set))
+            and observed_relay_set == expected_relay_ids
+        )
+    )
 
     before_seconds = max(
         60,
@@ -280,6 +347,7 @@ def evaluate_safety_status(
     clear_now = (
         available
         and fresh
+        and relay_set_valid
         and not active_ids
         and not imminent_ids
     )
@@ -290,6 +358,11 @@ def evaluate_safety_status(
     elif not fresh:
         reason = (
             f"Hydrawise-Status ist nicht frisch genug ({age_seconds} Sekunden)."
+        )
+    elif not relay_set_valid:
+        reason = (
+            "Die von Hydrawise gemeldeten Relay-IDs entsprechen nicht exakt "
+            "der freigegebenen Sieben-Zonen-Liste."
         )
     elif active_ids:
         reason = "Mindestens eine Hydrawise-Zone läuft aktuell."
@@ -305,6 +378,9 @@ def evaluate_safety_status(
         observed_at_utc=(observed.isoformat() if observed is not None else None),
         age_seconds=age_seconds,
         selected_zone_count=len(selected),
+        observed_relay_ids=observed_relay_set,
+        expected_relay_ids=expected_relay_ids,
+        relay_set_valid=relay_set_valid,
         active_zone_count=len(active_ids),
         imminent_zone_count=len(imminent_ids),
         active_relay_ids=tuple(sorted(active_ids)),

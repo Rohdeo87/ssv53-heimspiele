@@ -4,8 +4,10 @@ import unittest
 from datetime import datetime, timedelta, timezone
 
 from mower.hydrawise import (
+    HydrawiseError,
     evaluate_continuous_clear_confirmation,
     evaluate_safety_status,
+    parse_relay_id_allowlist,
 )
 
 
@@ -25,6 +27,64 @@ def status(*relays: dict, observed: datetime = NOW) -> dict:
 
 
 class HydrawiseSafetyTests(unittest.TestCase):
+    def test_exact_relay_allowlist_is_required_even_when_count_is_unchanged(self) -> None:
+        allowlist = [1, 2, 3, 4, 5, 6, 7]
+        config = {**CONFIG, "expected_relay_ids": allowlist}
+        exact = evaluate_safety_status(
+            status(
+                *(
+                    {"relay_id": relay_id, "name": f"Zone {relay_id}", "time": 3600, "run": 600}
+                    for relay_id in allowlist
+                )
+            ),
+            config,
+            now_utc=NOW,
+        )
+        substituted = evaluate_safety_status(
+            status(
+                *(
+                    {"relay_id": relay_id, "name": f"Zone {relay_id}", "time": 3600, "run": 600}
+                    for relay_id in [1, 2, 3, 4, 5, 6, 999]
+                )
+            ),
+            config,
+            now_utc=NOW,
+        )
+        self.assertTrue(exact.relay_set_valid)
+        self.assertTrue(exact.clear_now)
+        self.assertFalse(substituted.relay_set_valid)
+        self.assertFalse(substituted.clear_now)
+        self.assertEqual(substituted.selected_zone_count, 7)
+        self.assertEqual(substituted.expected_relay_ids, tuple(allowlist))
+        self.assertIn(999, substituted.observed_relay_ids)
+
+    def test_duplicate_or_extra_relay_fails_exact_allowlist(self) -> None:
+        config = {**CONFIG, "expected_relay_ids": [1, 2, 3, 4, 5, 6, 7]}
+        for relay_ids in ([1, 2, 3, 4, 5, 6, 7, 8], [1, 2, 3, 4, 5, 6, 6]):
+            with self.subTest(relay_ids=relay_ids):
+                snapshot = evaluate_safety_status(
+                    status(
+                        *(
+                            {"relay_id": relay_id, "name": str(relay_id), "time": 3600, "run": 600}
+                            for relay_id in relay_ids
+                        )
+                    ),
+                    config,
+                    now_utc=NOW,
+                )
+                self.assertFalse(snapshot.relay_set_valid)
+                self.assertFalse(snapshot.clear_now)
+
+    def test_relay_allowlist_parser_rejects_missing_duplicate_and_wrong_count(self) -> None:
+        self.assertEqual(
+            parse_relay_id_allowlist("3,1,2", expected_count=3, required=True),
+            (1, 2, 3),
+        )
+        for value in (None, "1,1,2", "1,2", "1,x,3", "1,,3"):
+            with self.subTest(value=value):
+                with self.assertRaises(HydrawiseError):
+                    parse_relay_id_allowlist(value, expected_count=3, required=True)
+
     def test_running_zone_is_never_clear(self) -> None:
         result = evaluate_safety_status(
             status(

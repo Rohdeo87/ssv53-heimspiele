@@ -17,7 +17,10 @@ from mower.decision import (
 from mower.dry_run import run_read_only_cycle
 from mower.husqvarna_actions import park_until_further_notice
 from mower.husqvarna_start_actions import start_in_work_area
-from mower.hydrawise import evaluate_continuous_clear_confirmation
+from mower.hydrawise import (
+    evaluate_continuous_clear_confirmation,
+    parse_relay_id_allowlist,
+)
 from mower.hydrawise_actions import start_zone_for, suspend_zone_until
 from mower.runtime import ControlMode, CycleResult, RuntimeSettings
 from mower.safety import CommandIntent, evaluate_command_gate
@@ -139,6 +142,7 @@ def _validated_upcoming_plan(
     *,
     now_utc: datetime,
     expected_zone_count: int,
+    expected_relay_ids: frozenset[int],
     max_lead_minutes: int,
 ) -> tuple[str, list[dict[str, Any]]]:
     raw_zones = _as_dict(details.get("hydrawise")).get("zones")
@@ -176,6 +180,10 @@ def _validated_upcoming_plan(
                 "scheduled_start_utc": start.isoformat(),
                 "scheduled_end_utc": (start + timedelta(seconds=run_seconds)).isoformat(),
             }
+        )
+    if relay_ids != expected_relay_ids:
+        raise RuntimeError(
+            "Hydrawise-Zonenplan entspricht nicht exakt der freigegebenen Relay-ID-Liste."
         )
     zones.sort(key=lambda item: (_parse_time(item["scheduled_start_utc"]), item["zone"]))
     first_start = _parse_time(zones[0]["scheduled_start_utc"])
@@ -402,6 +410,21 @@ def run_full_failsafe_cycle(
         raise ValueError("now_utc muss zeitzonenbewusst sein.")
     now = now_utc.astimezone(timezone.utc)
 
+    expected_zones = _env_int(
+        environment,
+        "HYDRAWISE_EXPECTED_ZONE_COUNT",
+        7,
+        minimum=1,
+        maximum=24,
+    )
+    expected_relay_ids = frozenset(
+        parse_relay_id_allowlist(
+            environment.get("HYDRAWISE_EXPECTED_RELAY_IDS"),
+            expected_count=expected_zones,
+            required=True,
+        )
+    )
+
     result = read_only_runner(
         now_utc=now,
         settings=settings,
@@ -443,13 +466,23 @@ def run_full_failsafe_cycle(
 
     block_source = str(parking_block.get("source") or "").strip().lower()
     irrigation_due = "irrigation" in _source_parts(block_source)
-    expected_zones = _env_int(
-        environment,
-        "HYDRAWISE_EXPECTED_ZONE_COUNT",
-        7,
-        minimum=1,
-        maximum=24,
+    hydra_safety = _as_dict(_as_dict(details.get("hydrawise")).get("safety"))
+    observed_relay_ids = {
+        int(value) for value in hydra_safety.get("observed_relay_ids", [])
+    }
+    reported_expected_relay_ids = {
+        int(value) for value in hydra_safety.get("expected_relay_ids", [])
+    }
+    relay_allowlist_valid = (
+        hydra_safety.get("relay_set_valid") is True
+        and observed_relay_ids == expected_relay_ids
+        and reported_expected_relay_ids == expected_relay_ids
     )
+    details["hydrawise_relay_allowlist"] = {
+        "valid": relay_allowlist_valid,
+        "expected_relay_ids": sorted(expected_relay_ids),
+        "observed_relay_ids": sorted(observed_relay_ids),
+    }
     irrigation_failsafe_lead_minutes = _env_int(
         environment,
         "IRRIGATION_FAILSAFE_DOCK_LEAD_MINUTES",
@@ -502,6 +535,7 @@ def run_full_failsafe_cycle(
                 details,
                 now_utc=now,
                 expected_zone_count=expected_zones,
+                expected_relay_ids=expected_relay_ids,
                 max_lead_minutes=_env_int(
                     environment,
                     "IRRIGATION_CAPTURE_MAX_LEAD_MINUTES",
@@ -809,6 +843,7 @@ def run_full_failsafe_cycle(
         if (
             not hydra_safety.get("available")
             or not hydra_safety.get("fresh")
+            or not relay_allowlist_valid
             or int(hydra_safety.get("selected_zone_count") or 0) != expected_zones
         ):
             return _persist_result(
@@ -827,8 +862,15 @@ def run_full_failsafe_cycle(
         completed = _json_ints(state.irrigation_completed_relay_ids_json)
         suspended = _json_ints(state.irrigation_suspended_relay_ids_json)
         all_ids = [int(zone["relay_id"]) for zone in zones]
-        if len(zones) != expected_zones or len(set(all_ids)) != expected_zones:
-            failed = _failed_irrigation(state, "Gespeicherter Sieben-Zonen-Plan ist unvollständig.")
+        if (
+            len(zones) != expected_zones
+            or len(set(all_ids)) != expected_zones
+            or set(all_ids) != expected_relay_ids
+        ):
+            failed = _failed_irrigation(
+                state,
+                "Gespeicherter Sieben-Zonen-Plan ist unvollständig oder nicht freigegeben.",
+            )
             return _persist_result(
                 store=store,
                 original=original,
