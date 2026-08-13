@@ -102,3 +102,25 @@ Für die Gesamtsteuerung sind gleichzeitig `CONTROL_MODE=FULL_FAILSAFE`,
 `ENABLE_PARK_COMMANDS=true`, `ENABLE_START_COMMANDS=true`,
 `ENABLE_IRRIGATION_COMMANDS=true` sowie beide exakten Bestätigungsphrasen
 erforderlich. Ein fehlendes Gate lässt die zugehörige Aktion gesperrt.
+
+## Alarmierung und kontrollierter Fehler-Reset
+
+Zusätzlich zu Timer- und Exception-Alarmen meldet Azure semantische
+Sicherheitszustände mit hoher Priorität. Dazu gehören insbesondere ein
+gespeicherter Beregnungsfehler, eine veränderte oder gelöschte Planfolge,
+ein abgelaufener Suspendierungsnachweis, eine falsche Relay-Liste und eine
+fehlgeschlagene Zustandspersistierung.
+
+Ein gespeicherter Beregnungszustand `FAILED` darf nur über den mit einem
+Function-Key geschützten `POST /api/irrigation/recover-failed` zurückgesetzt
+werden. Der Request muss die aktuelle Zustandsrevision und die exakte Phrase
+`SSV53-RESET-FAILED-IRRIGATION` enthalten. Vor dem Reset werden Mäherstatus,
+Dockposition, Fehlerfreiheit, Automationsbesitz, Hydrawise-Frische sowie die
+exakte Freigabe aller sieben Relay-IDs erneut live geprüft. Ein Konflikt oder
+eine aktive beziehungsweise bevorstehende Zone lehnt den Reset ab.
+
+Der Reset selbst sendet weder einen Husqvarna- noch einen Hydrawise-Befehl.
+Der Mäher bleibt im Dock und die fortlaufende 90-Minuten-Freigabekette beginnt
+neu. Die erwartete Revision muss unmittelbar vor dem Request aus dem aktuellen
+Sicherheitsbericht oder der Telemetrie entnommen werden; bei HTTP 409 darf kein
+zweiter Request mit geratenen Werten erfolgen, bevor die Ursache geprüft wurde.

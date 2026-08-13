@@ -60,6 +60,7 @@ class AutomationState:
     irrigation_plan_id: str | None = None
     irrigation_plan_json: str | None = None
     irrigation_suspended_relay_ids_json: str | None = None
+    irrigation_suspension_completed_utc: str | None = None
     irrigation_completed_relay_ids_json: str | None = None
     irrigation_current_relay_id: int | None = None
     irrigation_zone_start_reserved_utc: str | None = None
@@ -91,6 +92,7 @@ class AutomationState:
             "last_start_command_utc",
             "continuous_mowing_window_end_utc",
             "irrigation_zone_start_reserved_utc",
+            "irrigation_suspension_completed_utc",
             "irrigation_zone_started_utc",
             "irrigation_zone_clear_since_utc",
             "irrigation_completed_utc",
@@ -199,6 +201,12 @@ class AutomationState:
             ),
             irrigation_suspended_relay_ids_json=_normalize_optional_text(
                 values.get("irrigation_suspended_relay_ids_json")
+            ),
+            irrigation_suspension_completed_utc=_require_utc_iso(
+                _normalize_optional_text(
+                    values.get("irrigation_suspension_completed_utc")
+                ),
+                "irrigation_suspension_completed_utc",
             ),
             irrigation_completed_relay_ids_json=_normalize_optional_text(
                 values.get("irrigation_completed_relay_ids_json")

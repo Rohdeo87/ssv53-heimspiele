@@ -9,6 +9,10 @@ from zoneinfo import ZoneInfo
 import azure.functions as func
 
 from mower.controller import run_control_cycle
+from mower.irrigation_recovery import (
+    IrrigationRecoveryError,
+    reset_failed_irrigation,
+)
 from occupancy.service import build_occupancy_payload
 
 
@@ -78,6 +82,94 @@ def _occupancy_headers(*, cache: bool) -> dict[str, str]:
         "Cache-Control": "public, max-age=60" if cache else "no-store",
         "X-Content-Type-Options": "nosniff",
     }
+
+
+def _json_response(payload: dict, *, status_code: int) -> func.HttpResponse:
+    return func.HttpResponse(
+        json.dumps(payload, ensure_ascii=False, sort_keys=True),
+        status_code=status_code,
+        mimetype="application/json",
+        charset="utf-8",
+        headers={
+            "Cache-Control": "no-store",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
+@app.route(
+    route="irrigation/recover-failed",
+    methods=["POST"],
+    auth_level=func.AuthLevel.FUNCTION,
+)
+def ssv53_irrigation_recover_failed(req: func.HttpRequest) -> func.HttpResponse:
+    """Manueller, befehlsfreier Reset nach vollständiger Live-Sicherheitsprüfung."""
+
+    try:
+        body = req.get_json()
+    except ValueError:
+        return _json_response(
+            {
+                "code": "RESET_REQUEST_INVALID",
+                "error": "Der Request muss ein JSON-Objekt enthalten.",
+            },
+            status_code=400,
+        )
+    if not isinstance(body, dict):
+        return _json_response(
+            {
+                "code": "RESET_REQUEST_INVALID",
+                "error": "Der Request muss ein JSON-Objekt enthalten.",
+            },
+            status_code=400,
+        )
+    try:
+        expected_revision = int(body.get("expected_revision"))
+    except (TypeError, ValueError):
+        return _json_response(
+            {
+                "code": "RESET_REVISION_INVALID",
+                "error": "expected_revision muss eine positive Ganzzahl sein.",
+            },
+            status_code=400,
+        )
+
+    try:
+        result = reset_failed_irrigation(
+            now_utc=datetime.now(timezone.utc),
+            environment=os.environ,
+            expected_revision=expected_revision,
+            confirmation=str(body.get("confirmation") or ""),
+        )
+    except IrrigationRecoveryError as exc:
+        LOGGER.warning(
+            "SSV53_IRRIGATION_RESET_REJECTED %s",
+            json.dumps(
+                {"code": exc.code, "message": str(exc)},
+                ensure_ascii=False,
+                sort_keys=True,
+            ),
+        )
+        return _json_response(
+            {"code": exc.code, "error": str(exc)},
+            status_code=exc.status_code,
+        )
+    except Exception:
+        LOGGER.exception("SSV53_IRRIGATION_RESET_ERROR")
+        return _json_response(
+            {
+                "code": "RESET_INTERNAL_ERROR",
+                "error": "Der sichere Beregnungsreset ist fehlgeschlagen.",
+            },
+            status_code=500,
+        )
+
+    payload = result.to_dict()
+    LOGGER.warning(
+        "SSV53_IRRIGATION_RESET %s",
+        json.dumps(payload, ensure_ascii=False, sort_keys=True),
+    )
+    return _json_response(payload, status_code=200)
 
 
 @app.route(

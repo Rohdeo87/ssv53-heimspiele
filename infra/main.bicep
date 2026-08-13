@@ -72,6 +72,7 @@ var stateTableName = 'MowerAutomationState'
 var actionGroupName = take('ag-${namePrefix}-${environmentName}-${resourceToken}', 64)
 var heartbeatAlertName = take('alert-${namePrefix}-${environmentName}-heartbeat-${resourceToken}', 260)
 var failureAlertName = take('alert-${namePrefix}-${environmentName}-failure-${resourceToken}', 260)
+var safetyStateAlertName = take('alert-${namePrefix}-${environmentName}-safety-state-${resourceToken}', 260)
 
 var storageBlobDataOwnerRoleId = 'b7e6dc6d-f1e8-4753-8033-0f276bb0955b'
 var storageQueueDataContributorRoleId = '974c5e8b-45b9-4653-ba55-5f855dd0fb88'
@@ -369,6 +370,7 @@ resource functionAppSettings 'Microsoft.Web/sites/config@2024-04-01' = {
     IRRIGATION_SUSPEND_MARGIN_MINUTES: '60'
     IRRIGATION_START_CONFIRMATION_MINUTES: '5'
     IRRIGATION_ZONE_END_CONFIRMATION_MINUTES: '2'
+    IRRIGATION_PLAN_LEASE_MINUTES: '3'
     MOWER_CONTINUE_MIN_BATTERY_PERCENT: '60'
     MOWER_RESTART_BATTERY_PERCENT: '90'
     MAX_AUTOMATIC_START_MINUTES: '720'
@@ -469,6 +471,46 @@ resource failureAlert 'Microsoft.Insights/scheduledQueryRules@2023-12-01' = {
   }
 }
 
+resource safetyStateAlert 'Microsoft.Insights/scheduledQueryRules@2023-12-01' = {
+  name: safetyStateAlertName
+  location: location
+  kind: 'LogAlert'
+  tags: tags
+  properties: {
+    displayName: 'SSV53 Platzpflege – Sicherheitszustand'
+    description: 'Alarm bei gespeichertem Beregnungsfehler, ungültiger Relay-Liste, Planänderung oder fehlgeschlagener Zustandspersistierung.'
+    enabled: alertsEnabled
+    severity: 1
+    evaluationFrequency: 'PT1M'
+    windowSize: 'PT5M'
+    autoMitigate: true
+    checkWorkspaceAlertsStorageConfigured: false
+    skipQueryValidation: true
+    scopes: [
+      applicationInsights.id
+    ]
+    criteria: {
+      allOf: [
+        {
+          query: 'traces | where message startswith "SSV53_CONTROL_CYCLE " | extend p=parse_json(substring(message, strlen("SSV53_CONTROL_CYCLE "))) | extend decision=tostring(p.decision_code), persisted=tobool(p.details.automation_state.persisted), allowlist=tobool(p.details.hydrawise_relay_allowlist.valid) | where decision in ("IRRIGATION_FAILED_HOLD", "IRRIGATION_STATUS_NOT_SAFE", "IRRIGATION_PLAN_INVALID", "IRRIGATION_PLAN_CHANGED", "IRRIGATION_SUSPENSION_PROOF_MISSING", "IRRIGATION_PLAN_LEASE_EXPIRED", "IRRIGATION_ACTIVE_DURING_SUSPENSION", "IRRIGATION_UNEXPECTED_ACTIVE_ZONE", "IRRIGATION_START_COLLISION", "IRRIGATION_START_RESERVATION_FAILED", "IRRIGATION_ZONE_START_UNCONFIRMED", "IRRIGATION_ZONE_END_UNCLEAR", "MOWER_NOT_SAFE_FOR_PARK_COMMAND", "MOWER_START_RESERVATION_FAILED") or persisted == false or allowlist == false'
+          timeAggregation: 'Count'
+          operator: 'GreaterThan'
+          threshold: 0
+          failingPeriods: {
+            minFailingPeriodsToAlert: 1
+            numberOfEvaluationPeriods: 1
+          }
+        }
+      ]
+    }
+    actions: {
+      actionGroups: [
+        actionGroup.id
+      ]
+    }
+  }
+}
+
 output deployedFunctionAppName string = functionApp.name
 output functionAppResourceId string = functionApp.id
 output managedIdentityClientId string = managedIdentity.properties.clientId
@@ -478,4 +520,5 @@ output deployedStateTableName string = stateTableName
 output deploymentContainerName string = deploymentContainer.name
 output runtimeConfigContainerName string = runtimeConfigContainer.name
 output alertActionGroupName string = actionGroup.name
+output safetyStateAlertName string = safetyStateAlert.name
 output deployedApplicationInsightsName string = applicationInsights.name

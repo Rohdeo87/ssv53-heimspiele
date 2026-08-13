@@ -214,6 +214,57 @@ def _active_relay_ids(details: dict[str, Any]) -> set[int]:
     return {int(value) for value in values}
 
 
+def _live_zone_by_relay(details: dict[str, Any]) -> dict[int, dict[str, Any]]:
+    raw_zones = _as_dict(details.get("hydrawise")).get("zones")
+    if not isinstance(raw_zones, list):
+        return {}
+    zones: dict[int, dict[str, Any]] = {}
+    for raw_zone in raw_zones:
+        zone = _as_dict(raw_zone)
+        try:
+            relay_id = int(zone.get("relay_id") or 0)
+        except (TypeError, ValueError):
+            continue
+        if relay_id > 0:
+            zones[relay_id] = zone
+    return zones
+
+
+def _pending_plan_matches_live_schedule(
+    *,
+    plan: list[dict[str, Any]],
+    suspended_relay_ids: set[int],
+    details: dict[str, Any],
+    tolerance_seconds: int = 120,
+) -> tuple[bool, str | None]:
+    """Erkennt Löschungen und Änderungen vor der jeweils eigenen Suspendierung."""
+
+    live_by_relay = _live_zone_by_relay(details)
+    for planned in plan:
+        relay_id = int(planned["relay_id"])
+        if relay_id in suspended_relay_ids:
+            continue
+        live = live_by_relay.get(relay_id)
+        if live is None:
+            return False, f"Relay {relay_id} fehlt vor seiner bestätigten Suspendierung."
+        try:
+            live_zone = int(live.get("zone") or 0)
+            live_duration = int(live.get("run_seconds") or 0)
+            live_start = _parse_time(live.get("scheduled_start_utc"))
+            planned_start = _parse_time(planned.get("scheduled_start_utc"))
+        except (TypeError, ValueError) as exc:
+            return False, f"Relay {relay_id} besitzt ungültige Live-Planwerte: {exc}"
+        if (
+            live_zone != int(planned["zone"])
+            or live_duration != int(planned["run_seconds"])
+            or live_start is None
+            or planned_start is None
+            or abs((live_start - planned_start).total_seconds()) > tolerance_seconds
+        ):
+            return False, f"Relay {relay_id} wurde nach der Planübernahme verändert."
+    return True, None
+
+
 def _next_scheduled_irrigation_start(
     details: dict[str, Any],
     *,
@@ -287,6 +338,9 @@ def _state_details(state: AutomationState, *, persisted: bool, error: str | None
         "irrigation_current_relay_id": state.irrigation_current_relay_id,
         "irrigation_suspended_relay_ids": _json_ints(
             state.irrigation_suspended_relay_ids_json
+        ),
+        "irrigation_suspension_completed_utc": (
+            state.irrigation_suspension_completed_utc
         ),
         "irrigation_completed_relay_ids": _json_ints(
             state.irrigation_completed_relay_ids_json
@@ -376,6 +430,7 @@ def _clear_irrigation(state: AutomationState) -> AutomationState:
         irrigation_plan_id=None,
         irrigation_plan_json=None,
         irrigation_suspended_relay_ids_json=None,
+        irrigation_suspension_completed_utc=None,
         irrigation_completed_relay_ids_json=None,
         irrigation_current_relay_id=None,
         irrigation_zone_start_reserved_utc=None,
@@ -556,6 +611,7 @@ def run_full_failsafe_cycle(
                     separators=(",", ":"),
                 ),
                 irrigation_suspended_relay_ids_json="[]",
+                irrigation_suspension_completed_utc=None,
                 irrigation_completed_relay_ids_json="[]",
                 irrigation_current_relay_id=None,
                 irrigation_zone_start_reserved_utc=None,
@@ -904,18 +960,47 @@ def run_full_failsafe_cycle(
                     message=failed.irrigation_failed_reason
                     or "Beregnung läuft bereits während der Suspendierung.",
                 )
-            pending = next((zone for zone in zones if int(zone["relay_id"]) not in suspended), None)
-            if pending is None:
-                ready = replace(state, revision=state.revision + 1, irrigation_phase="READY")
+            plan_matches, plan_error = _pending_plan_matches_live_schedule(
+                plan=zones,
+                suspended_relay_ids=set(suspended),
+                details=details,
+            )
+            if not plan_matches:
+                failed = _failed_irrigation(
+                    state,
+                    "Hydrawise-Plan wurde nach der sicheren Übernahme gelöscht oder verändert: "
+                    f"{plan_error}",
+                )
+                details["irrigation_plan_revalidation"] = {
+                    "valid": False,
+                    "reason": plan_error,
+                    "suspended_relay_ids": sorted(set(suspended)),
+                }
                 return _persist_result(
                     store=store,
                     original=original,
-                    state=ready,
+                    state=failed,
                     result=result,
                     details=details,
                     settings=settings,
-                    decision_code="IRRIGATION_SCHEDULE_SUSPENDED",
-                    message="Alle sieben späteren Planstarts sind suspendiert; der vorgezogene Lauf ist bereit.",
+                    decision_code="IRRIGATION_PLAN_CHANGED",
+                    message=failed.irrigation_failed_reason or "Beregnungsplan verändert.",
+                )
+            pending = next((zone for zone in zones if int(zone["relay_id"]) not in suspended), None)
+            if pending is None:
+                failed = _failed_irrigation(
+                    state,
+                    "Alle Relay-IDs gelten als suspendiert, aber der Abschlussnachweis fehlt.",
+                )
+                return _persist_result(
+                    store=store,
+                    original=original,
+                    state=failed,
+                    result=result,
+                    details=details,
+                    settings=settings,
+                    decision_code="IRRIGATION_SUSPENSION_PROOF_MISSING",
+                    message=failed.irrigation_failed_reason or "Suspendierungsnachweis fehlt.",
                 )
             original_end = max(
                 _parse_time(zone["scheduled_end_utc"]) for zone in zones
@@ -945,6 +1030,9 @@ def run_full_failsafe_cycle(
                 revision=state.revision + 1,
                 irrigation_phase="READY" if len(suspended) == expected_zones else "SUSPENDING",
                 irrigation_suspended_relay_ids_json=json.dumps(sorted(set(suspended))),
+                irrigation_suspension_completed_utc=(
+                    now.isoformat() if len(set(suspended)) == expected_zones else None
+                ),
             )
             details["irrigation_action"] = {
                 "type": "SuspendScheduledZone",
@@ -1042,6 +1130,51 @@ def run_full_failsafe_cycle(
                     decision_code="IRRIGATION_ALL_ZONES_CONFIRMED_COMPLETE",
                     message="Alle sieben Zonen sind bestätigt beendet; der 90-Minuten-Nachlauf beginnt.",
                 )
+            if not completed:
+                suspension_completed = _parse_time(
+                    state.irrigation_suspension_completed_utc
+                )
+                plan_lease_minutes = _env_int(
+                    environment,
+                    "IRRIGATION_PLAN_LEASE_MINUTES",
+                    3,
+                    minimum=2,
+                    maximum=10,
+                )
+                first_planned_start = min(
+                    _parse_time(zone["scheduled_start_utc"]) for zone in zones
+                )
+                suspension_proof_valid = (
+                    set(suspended) == expected_relay_ids
+                    and suspension_completed is not None
+                    and timedelta(0)
+                    <= now - suspension_completed
+                    <= timedelta(minutes=plan_lease_minutes)
+                    and first_planned_start is not None
+                    and now < first_planned_start
+                )
+                if not suspension_proof_valid:
+                    failed = _failed_irrigation(
+                        state,
+                        "Der bestätigte Suspendierungsnachweis ist unvollständig, abgelaufen "
+                        "oder der ursprüngliche Beregnungsstart ist bereits erreicht.",
+                    )
+                    details["irrigation_plan_lease"] = {
+                        "valid": False,
+                        "required_minutes": plan_lease_minutes,
+                        "suspension_completed_utc": state.irrigation_suspension_completed_utc,
+                        "suspended_relay_ids": sorted(set(suspended)),
+                    }
+                    return _persist_result(
+                        store=store,
+                        original=original,
+                        state=failed,
+                        result=result,
+                        details=details,
+                        settings=settings,
+                        decision_code="IRRIGATION_PLAN_LEASE_EXPIRED",
+                        message=failed.irrigation_failed_reason or "Beregnungsfreigabe abgelaufen.",
+                    )
             if active_ids:
                 failed = _failed_irrigation(state, "Vor dem Zonenstart läuft bereits eine Zone.")
                 return _persist_result(

@@ -104,6 +104,12 @@ class AzureInfrastructureTests(unittest.TestCase):
         self.assertNotIn("AppTraces", self.bicep)
         self.assertNotIn("AppExceptions", self.bicep)
         self.assertIn("emailAddress: alertEmail", self.bicep)
+        self.assertIn("SSV53 Platzpflege – Sicherheitszustand", self.bicep)
+        self.assertIn("IRRIGATION_PLAN_CHANGED", self.bicep)
+        self.assertIn("IRRIGATION_FAILED_HOLD", self.bicep)
+        self.assertIn("persisted == false", self.bicep)
+        self.assertIn("allowlist == false", self.bicep)
+        self.assertIn("IRRIGATION_PLAN_LEASE_MINUTES: '3'", self.bicep)
 
     def test_alert_email_is_parameterized_not_hardcoded(self) -> None:
         self.assertIn("param alertEmail string", self.bicep)

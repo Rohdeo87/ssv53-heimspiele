@@ -42,6 +42,7 @@ ENV = {
     "MOWER_PARK_CONFIRMATION_MINUTES": "1",
     "MOWER_PARK_PROGRESS_GRACE_MINUTES": "3",
     "IRRIGATION_FAILSAFE_DOCK_LEAD_MINUTES": "40",
+    "IRRIGATION_PLAN_LEASE_MINUTES": "3",
     "MAX_AUTOMATIC_START_MINUTES": "720",
     "MOWER_CONTINUE_MIN_BATTERY_PERCENT": "60",
     "MOWER_RESTART_BATTERY_PERCENT": "90",
@@ -180,6 +181,11 @@ def irrigation_state(*, phase: str, current: int | None = None) -> AutomationSta
         irrigation_plan_id="plan",
         irrigation_plan_json=__import__("json").dumps(plan),
         irrigation_suspended_relay_ids_json=__import__("json").dumps(RELAYS),
+        irrigation_suspension_completed_utc=(
+            (NOW - timedelta(minutes=1)).isoformat()
+            if phase not in {"PLANNED", "SUSPENDING", "FAILED"}
+            else None
+        ),
         irrigation_completed_relay_ids_json="[]",
         irrigation_current_relay_id=current,
         irrigation_zone_start_reserved_utc=(NOW - timedelta(minutes=1)).isoformat() if current else None,
@@ -555,7 +561,10 @@ class FullFailsafeTests(unittest.TestCase):
         state = AutomationState.from_mapping({**state.to_dict(), "irrigation_suspended_relay_ids_json": "[]"})
         output, store = self._run(
             state,
-            result(block_source="irrigation"),
+            result(
+                block_source="irrigation",
+                irrigation_start=NOW + timedelta(minutes=30),
+            ),
             suspend=lambda *args: calls.append(args) or {"message_type": "info"},
         )
         self.assertEqual(output.decision_code, "IRRIGATION_ZONE_SUSPENDED")
@@ -569,17 +578,115 @@ class FullFailsafeTests(unittest.TestCase):
             {
                 **state.to_dict(),
                 "park_confirmed_utc": None,
+                "irrigation_plan_json": __import__("json").dumps(
+                    zones(start_utc=NOW + timedelta(hours=2))
+                ),
                 "irrigation_suspended_relay_ids_json": "[]",
             }
         )
         output, store = self._run(
             state,
-            result(block_source="irrigation", activity="GOING_HOME"),
+            result(
+                block_source="irrigation",
+                activity="GOING_HOME",
+                irrigation_start=NOW + timedelta(hours=2),
+            ),
             suspend=lambda *args: calls.append(args) or {"message_type": "info"},
         )
         self.assertEqual(output.decision_code, "IRRIGATION_ZONE_SUSPENDED")
         self.assertEqual(len(calls), 1)
         self.assertIsNone(store.load().park_confirmed_utc)
+
+    def test_deleted_plan_before_first_suspension_fails_without_zone_command(self) -> None:
+        suspend_calls = []
+        zone_calls = []
+        state = irrigation_state(phase="PLANNED")
+        state = AutomationState.from_mapping(
+            {**state.to_dict(), "irrigation_suspended_relay_ids_json": "[]"}
+        )
+        cycle = result(block_source="irrigation")
+        details = dict(cycle.details)
+        details["hydrawise"] = {**details["hydrawise"], "zones": []}
+        cycle = __import__("dataclasses").replace(cycle, details=details)
+        output, store = self._run(
+            state,
+            cycle,
+            suspend=lambda *args: suspend_calls.append(args) or {},
+            zone=lambda *args: zone_calls.append(args) or {},
+        )
+        self.assertEqual(output.decision_code, "IRRIGATION_PLAN_CHANGED")
+        self.assertEqual(suspend_calls, [])
+        self.assertEqual(zone_calls, [])
+        self.assertEqual(store.load().irrigation_phase, "FAILED")
+
+    def test_changed_pending_zone_after_partial_suspension_fails_closed(self) -> None:
+        suspend_calls = []
+        state = irrigation_state(phase="SUSPENDING")
+        state = AutomationState.from_mapping(
+            {
+                **state.to_dict(),
+                "irrigation_suspended_relay_ids_json": __import__("json").dumps(RELAYS[:3]),
+            }
+        )
+        live = zones(start_utc=NOW + timedelta(minutes=30))
+        live[3] = {**live[3], "run_seconds": live[3]["run_seconds"] + 60}
+        cycle = result(
+            block_source="irrigation",
+            irrigation_start=NOW + timedelta(minutes=30),
+        )
+        details = dict(cycle.details)
+        details["hydrawise"] = {**details["hydrawise"], "zones": live}
+        cycle = __import__("dataclasses").replace(cycle, details=details)
+        output, store = self._run(
+            state,
+            cycle,
+            suspend=lambda *args: suspend_calls.append(args) or {},
+        )
+        self.assertEqual(output.decision_code, "IRRIGATION_PLAN_CHANGED")
+        self.assertEqual(suspend_calls, [])
+        self.assertEqual(store.load().irrigation_phase, "FAILED")
+
+    def test_last_suspend_creates_short_lived_start_proof(self) -> None:
+        suspend_calls = []
+        state = irrigation_state(phase="SUSPENDING")
+        state = AutomationState.from_mapping(
+            {
+                **state.to_dict(),
+                "irrigation_suspended_relay_ids_json": __import__("json").dumps(RELAYS[:-1]),
+                "irrigation_suspension_completed_utc": None,
+            }
+        )
+        output, store = self._run(
+            state,
+            result(
+                block_source="irrigation",
+                irrigation_start=NOW + timedelta(minutes=30),
+            ),
+            suspend=lambda *args: suspend_calls.append(args) or {"message_type": "info"},
+        )
+        saved = store.load()
+        self.assertEqual(output.decision_code, "IRRIGATION_ZONE_SUSPENDED")
+        self.assertEqual(len(suspend_calls), 1)
+        self.assertEqual(saved.irrigation_phase, "READY")
+        self.assertEqual(saved.irrigation_suspension_completed_utc, NOW.isoformat())
+
+    def test_expired_first_start_proof_never_starts_zone(self) -> None:
+        zone_calls = []
+        state = irrigation_state(phase="READY")
+        state = AutomationState.from_mapping(
+            {
+                **state.to_dict(),
+                "irrigation_suspension_completed_utc": (NOW - timedelta(minutes=4)).isoformat(),
+            }
+        )
+        output, store = self._run(
+            state,
+            result(block_source="irrigation"),
+            zone=lambda *args: zone_calls.append(args) or {},
+        )
+        self.assertEqual(output.decision_code, "IRRIGATION_PLAN_LEASE_EXPIRED")
+        self.assertEqual(zone_calls, [])
+        self.assertEqual(store.load().irrigation_phase, "FAILED")
 
     def test_active_zone_during_suspension_fails_without_hydrawise_command(self) -> None:
         for phase, activity in (("PLANNED", "GOING_HOME"), ("SUSPENDING", "PARKED_IN_CS")):

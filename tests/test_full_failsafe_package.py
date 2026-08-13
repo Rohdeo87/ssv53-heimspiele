@@ -31,7 +31,12 @@ class FullFailsafePackageTests(unittest.TestCase):
                 [9104894, 9104906, 9104909, 9104911, 9104913, 9104920, 9104921],
             )
             self.assertEqual(manifest["hydrawise_continuous_clear_minutes"], 90)
+            self.assertEqual(manifest["irrigation_plan_lease_minutes"], 3)
+            self.assertTrue(manifest["manual_failed_irrigation_reset_implemented"])
+            self.assertTrue(manifest["manual_reset_requires_function_auth"])
+            self.assertFalse(manifest["manual_reset_sends_device_commands"])
             self.assertIn("mower/full_failsafe.py", names)
+            self.assertIn("mower/irrigation_recovery.py", names)
             self.assertIn("mower/hydrawise_actions.py", names)
             self.assertIn(b"setzone.php", joined)
             self.assertNotIn(b"ResumeSchedule", joined)

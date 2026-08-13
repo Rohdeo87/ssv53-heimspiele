@@ -24,6 +24,7 @@ REQUIRED_FILES = (
     "mower/husqvarna.py",
     "mower/husqvarna_actions.py",
     "mower/hydrawise.py",
+    "mower/irrigation_recovery.py",
     "mower/park_only.py",
     "mower/planner.py",
     "mower/runtime.py",
