@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import inspect
 import unittest
+from unittest.mock import patch
 
 import mower.husqvarna as husqvarna
 from mower.husqvarna import (
     HusqvarnaError,
+    clear_access_token_cache,
+    get_access_token,
     parse_snapshot,
     select_mower,
 )
@@ -48,6 +51,9 @@ def mower_item(
 
 
 class HusqvarnaParsingTests(unittest.TestCase):
+    def tearDown(self) -> None:
+        clear_access_token_cache()
+
     def test_snapshot_contains_required_safety_data(self) -> None:
         snapshot = parse_snapshot(
             mower_item("abc", name="Schaf", model="AUTOMOWER 580 EPOS")
@@ -80,6 +86,27 @@ class HusqvarnaParsingTests(unittest.TestCase):
         source = inspect.getsource(husqvarna)
         self.assertNotIn("/actions", source)
         self.assertFalse(hasattr(husqvarna, "send_mower_action"))
+
+    @patch("mower.husqvarna._request_json")
+    def test_status_and_followup_action_share_one_access_token(self, request) -> None:
+        request.return_value = {
+            "access_token": "shared-token",
+            "expires_in": 3600,
+        }
+        first = get_access_token("client", "secret")
+        second = get_access_token("client", "secret")
+        self.assertEqual(first, "shared-token")
+        self.assertEqual(second, "shared-token")
+        self.assertEqual(request.call_count, 1)
+
+    def test_action_modules_use_shared_token_provider(self) -> None:
+        import mower.husqvarna_actions as park_actions
+        import mower.husqvarna_start_actions as start_actions
+
+        for module in (park_actions, start_actions):
+            source = inspect.getsource(module)
+            self.assertIn("get_access_token", source)
+            self.assertNotIn("AUTH_URL", source)
 
 
 if __name__ == "__main__":

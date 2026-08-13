@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import threading
+import time
 from dataclasses import asdict, dataclass
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -11,6 +13,8 @@ from urllib.request import Request, urlopen
 AUTH_URL = "https://api.authentication.husqvarnagroup.dev/v1/oauth2/token"
 MOWERS_URL = "https://api.amc.husqvarna.dev/v1/mowers/"
 USER_AGENT = "SSV53-Azure-Dry-Run/1.0"
+_TOKEN_LOCK = threading.Lock()
+_TOKEN_CACHE: dict[tuple[str, str], tuple[str, float]] = {}
 
 
 class HusqvarnaError(RuntimeError):
@@ -73,6 +77,68 @@ def _request_json(
     return parsed
 
 
+def get_access_token(
+    client_id: str,
+    client_secret: str,
+    *,
+    timeout: int = 30,
+) -> str:
+    """Teilt ein kurzlebiges Token zwischen Statusabruf und Folgeaktion."""
+
+    normalized_id = client_id.strip()
+    normalized_secret = client_secret.strip()
+    if not normalized_id or not normalized_secret:
+        raise HusqvarnaError(
+            "HUSQVARNA_CLIENT_ID und HUSQVARNA_CLIENT_SECRET werden benötigt."
+        )
+    cache_key = (normalized_id, normalized_secret)
+    now = time.monotonic()
+    with _TOKEN_LOCK:
+        cached = _TOKEN_CACHE.get(cache_key)
+        if cached is not None and now < cached[1]:
+            return cached[0]
+
+        token_body = urlencode(
+            {
+                "grant_type": "client_credentials",
+                "client_id": normalized_id,
+                "client_secret": normalized_secret,
+            }
+        ).encode("utf-8")
+        token_request = Request(
+            AUTH_URL,
+            data=token_body,
+            method="POST",
+            headers={
+                "Accept": "application/json",
+                "Content-Type": "application/x-www-form-urlencoded",
+                "User-Agent": USER_AGENT,
+            },
+        )
+        token_data = _request_json(
+            token_request,
+            "Husqvarna-Anmeldung",
+            timeout=timeout,
+        )
+        token = str(token_data.get("access_token", "")).strip()
+        if not token:
+            raise HusqvarnaError("Husqvarna lieferte kein Zugriffstoken.")
+        try:
+            expires_in = int(token_data.get("expires_in") or 3600)
+        except (TypeError, ValueError):
+            expires_in = 3600
+        usable_seconds = max(1, min(expires_in - 60, 3300))
+        _TOKEN_CACHE[cache_key] = (token, now + usable_seconds)
+        return token
+
+
+def clear_access_token_cache() -> None:
+    """Leert den nur im Arbeitsspeicher gehaltenen Token-Cache."""
+
+    with _TOKEN_LOCK:
+        _TOKEN_CACHE.clear()
+
+
 def fetch_mowers(
     client_id: str,
     client_secret: str,
@@ -81,36 +147,7 @@ def fetch_mowers(
 ) -> list[dict[str, Any]]:
     """Liest Mäherdaten. Diese Phase enthält bewusst keine Aktions-Endpunkte."""
 
-    if not client_id.strip() or not client_secret.strip():
-        raise HusqvarnaError(
-            "HUSQVARNA_CLIENT_ID und HUSQVARNA_CLIENT_SECRET werden benötigt."
-        )
-
-    token_body = urlencode(
-        {
-            "grant_type": "client_credentials",
-            "client_id": client_id,
-            "client_secret": client_secret,
-        }
-    ).encode("utf-8")
-    token_request = Request(
-        AUTH_URL,
-        data=token_body,
-        method="POST",
-        headers={
-            "Accept": "application/json",
-            "Content-Type": "application/x-www-form-urlencoded",
-            "User-Agent": USER_AGENT,
-        },
-    )
-    token_data = _request_json(
-        token_request,
-        "Husqvarna-Anmeldung",
-        timeout=timeout,
-    )
-    token = str(token_data.get("access_token", "")).strip()
-    if not token:
-        raise HusqvarnaError("Husqvarna lieferte kein Zugriffstoken.")
+    token = get_access_token(client_id, client_secret, timeout=timeout)
 
     mower_request = Request(
         MOWERS_URL,

@@ -3,15 +3,13 @@ from __future__ import annotations
 import json
 from typing import Any
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 from mower.husqvarna import (
-    AUTH_URL,
     MOWERS_URL,
     USER_AGENT,
     HusqvarnaError,
-    _request_json,
+    get_access_token,
 )
 
 
@@ -40,31 +38,7 @@ def start_in_work_area(
             "Die Startdauer muss zwischen 1 und 1440 Minuten liegen."
         )
 
-    token_body = urlencode(
-        {
-            "grant_type": "client_credentials",
-            "client_id": client_id,
-            "client_secret": client_secret,
-        }
-    ).encode("utf-8")
-    token_request = Request(
-        AUTH_URL,
-        data=token_body,
-        method="POST",
-        headers={
-            "Accept": "application/json",
-            "Content-Type": "application/x-www-form-urlencoded",
-            "User-Agent": USER_AGENT,
-        },
-    )
-    token_data = _request_json(
-        token_request,
-        "Husqvarna-Anmeldung für Startbefehl",
-        timeout=timeout,
-    )
-    token = str(token_data.get("access_token", "")).strip()
-    if not token:
-        raise HusqvarnaError("Husqvarna lieferte kein Zugriffstoken.")
+    token = get_access_token(client_id, client_secret, timeout=timeout)
 
     payload = json.dumps(
         {
