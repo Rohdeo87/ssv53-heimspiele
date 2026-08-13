@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 
 from mower.full_failsafe import run_full_failsafe_cycle
 from mower.runtime import CycleResult, RuntimeSettings
+from mower.safety import CommandIntent
 from mower.state import AutomationState
 from mower.state_store import InMemoryStateStore
 
@@ -252,6 +253,68 @@ class FullFailsafeTests(unittest.TestCase):
         self.assertEqual(output.decision_code, "CONTINUOUS_MOWING_START_SENT")
         self.assertEqual(len(calls), 1)
         self.assertTrue(store.load().continuous_mowing_owned)
+
+    def test_owned_mower_turns_around_before_dock_when_battery_is_sufficient(self) -> None:
+        window_end = NOW + timedelta(hours=12)
+        clear_since = NOW - timedelta(minutes=120)
+        initial_start = CommandIntent(
+            action="START",
+            target="mower-1",
+            reason=f"continuous|{window_end.isoformat()}|hydrawise-clear:{clear_since.isoformat()}",
+            valid_until_utc=window_end,
+        )
+        state = AutomationState(
+            continuous_mowing_owned=True,
+            continuous_mowing_work_area_id=849199,
+            continuous_mowing_window_end_utc=window_end.isoformat(),
+            last_mower_activity="MOWING",
+            hydrawise_clear_since_utc=clear_since.isoformat(),
+            last_hydrawise_success_utc=(NOW - timedelta(minutes=1)).isoformat(),
+            last_command_fingerprint=initial_start.fingerprint,
+            last_command_utc=(NOW - timedelta(minutes=1)).isoformat(),
+        )
+        calls = []
+        output, store = self._run(
+            state,
+            result(activity="GOING_HOME", battery=65),
+            start=lambda *args: calls.append(args) or {"accepted": True},
+        )
+        self.assertEqual(output.decision_code, "CONTINUOUS_MOWING_TURNAROUND_SENT")
+        self.assertEqual(len(calls), 1)
+        self.assertTrue(output.details["start_action"]["turnaround_before_dock"])
+        self.assertTrue(store.load().continuous_mowing_owned)
+
+    def test_low_battery_homeward_mower_is_never_turned_around(self) -> None:
+        state = AutomationState(
+            continuous_mowing_owned=True,
+            continuous_mowing_work_area_id=849199,
+            continuous_mowing_window_end_utc=(NOW + timedelta(hours=12)).isoformat(),
+            last_mower_activity="MOWING",
+            hydrawise_clear_since_utc=(NOW - timedelta(minutes=120)).isoformat(),
+            last_hydrawise_success_utc=(NOW - timedelta(minutes=1)).isoformat(),
+        )
+        calls = []
+        output, _store = self._run(
+            state,
+            result(activity="GOING_HOME", battery=59),
+            start=lambda *args: calls.append(args) or {"accepted": True},
+        )
+        self.assertEqual(output.decision_code, "MOWER_LOW_BATTERY_HOME_ALLOWED")
+        self.assertEqual(calls, [])
+
+    def test_unowned_homeward_mower_is_not_interrupted(self) -> None:
+        state = AutomationState(
+            hydrawise_clear_since_utc=(NOW - timedelta(minutes=120)).isoformat(),
+            last_hydrawise_success_utc=(NOW - timedelta(minutes=1)).isoformat(),
+        )
+        calls = []
+        output, _store = self._run(
+            state,
+            result(activity="GOING_HOME", battery=100),
+            start=lambda *args: calls.append(args) or {"accepted": True},
+        )
+        self.assertEqual(output.decision_code, "WAIT_FOR_MOWER_AT_STATION")
+        self.assertEqual(calls, [])
 
     def test_training_match_and_irrigation_always_prevent_continuous_start(self) -> None:
         for source in ("training", "match", "irrigation"):

@@ -1086,29 +1086,6 @@ def run_full_failsafe_cycle(
             decision_code="CONTINUOUS_MOWING_ACTIVE",
             message="Der Mäher arbeitet bereits und mäht bis zur nächsten sicheren Sperre weiter.",
         )
-    if activity == "GOING_HOME":
-        return _persist_result(
-            store=store,
-            original=original,
-            state=state,
-            result=result,
-            details=details,
-            settings=settings,
-            decision_code="WAIT_FOR_MOWER_AT_STATION",
-            message="Die Rückfahrt wird nicht unterbrochen; danach entscheidet der Akkustand.",
-        )
-    if activity not in PARKED_ACTIVITIES:
-        return _persist_result(
-            store=store,
-            original=original,
-            state=state,
-            result=result,
-            details=details,
-            settings=settings,
-            decision_code="MOWER_STATE_UNCLEAR_HOLD",
-            message="Der Mäherzustand ist für einen automatischen Start nicht eindeutig.",
-        )
-
     continue_threshold = _env_int(
         environment,
         "MOWER_CONTINUE_MIN_BATTERY_PERCENT",
@@ -1127,6 +1104,31 @@ def run_full_failsafe_cycle(
         state.continuous_mowing_owned
         or previous_activity in MOWING_ACTIVITIES
     )
+    turnaround_before_dock = activity == "GOING_HOME" and state.continuous_mowing_owned
+
+    if activity == "GOING_HOME" and not turnaround_before_dock:
+        return _persist_result(
+            store=store,
+            original=original,
+            state=state,
+            result=result,
+            details=details,
+            settings=settings,
+            decision_code="WAIT_FOR_MOWER_AT_STATION",
+            message="Die Rückfahrt wird nicht unterbrochen; danach entscheidet der Akkustand.",
+        )
+    if activity not in PARKED_ACTIVITIES and not turnaround_before_dock:
+        return _persist_result(
+            store=store,
+            original=original,
+            state=state,
+            result=result,
+            details=details,
+            settings=settings,
+            decision_code="MOWER_STATE_UNCLEAR_HOLD",
+            message="Der Mäherzustand ist für einen automatischen Start nicht eindeutig.",
+        )
+
     required_battery = continue_threshold if continuing_owned_job else restart_threshold
     if battery < required_battery:
         return _persist_result(
@@ -1136,8 +1138,16 @@ def run_full_failsafe_cycle(
             result=result,
             details=details,
             settings=settings,
-            decision_code="MOWER_BATTERY_CHARGING",
-            message=f"Der Akku liegt bei {battery} %; Start ab {required_battery} %.",
+            decision_code=(
+                "MOWER_LOW_BATTERY_HOME_ALLOWED"
+                if turnaround_before_dock
+                else "MOWER_BATTERY_CHARGING"
+            ),
+            message=(
+                f"Der Akku liegt bei {battery} %; die Heimfahrt zum Laden wird nicht unterbrochen."
+                if turnaround_before_dock
+                else f"Der Akku liegt bei {battery} %; Start ab {required_battery} %."
+            ),
         )
 
     window = _as_dict(current_plan.get("mowing_window_now"))
@@ -1252,7 +1262,12 @@ def run_full_failsafe_cycle(
     intent = CommandIntent(
         action="START",
         target=mower_id,
-        reason=f"continuous|{window_end.isoformat()}|hydrawise-clear:{state.hydrawise_clear_since_utc}",
+        reason=(
+            "continuous-turnaround"
+            if turnaround_before_dock
+            else "continuous"
+        )
+        + f"|{window_end.isoformat()}|hydrawise-clear:{state.hydrawise_clear_since_utc}",
         valid_until_utc=window_end,
     )
     gate = evaluate_command_gate(state=state, intent=intent, now_utc=now)
@@ -1317,12 +1332,21 @@ def run_full_failsafe_cycle(
         "duration_minutes": duration,
         "work_area_id": work_area_id,
         "continuous_mowing": True,
+        "turnaround_before_dock": turnaround_before_dock,
         "hydrawise_release_minutes": release_minutes,
     }
     return replace(
         result,
-        decision_code="CONTINUOUS_MOWING_START_SENT",
-        message="Der Mäher wurde im sicheren freien Fenster zum kontinuierlichen Mähen gestartet.",
+        decision_code=(
+            "CONTINUOUS_MOWING_TURNAROUND_SENT"
+            if turnaround_before_dock
+            else "CONTINUOUS_MOWING_START_SENT"
+        ),
+        message=(
+            "Der ausreichend geladene Mäher wurde vor der Station sicher erneut in die Rasenfläche geschickt."
+            if turnaround_before_dock
+            else "Der Mäher wurde im sicheren freien Fenster zum kontinuierlichen Mähen gestartet."
+        ),
         command_sent=True,
         details=_decorate(
             details,
