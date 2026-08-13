@@ -482,6 +482,53 @@ def run_full_failsafe_cycle(
         except Exception as exc:
             state = _failed_irrigation(state, f"{type(exc).__name__}: {exc}")
 
+    occupancy_sources = _source_parts(block_source) & frozenset({"training", "match"})
+    external_park_evidence = (
+        override_action in PARK_OVERRIDE_ACTIONS
+        or (
+            activity in PARKED_ACTIVITIES
+            and not state.continuous_mowing_owned
+        )
+    )
+    if (
+        parking_block
+        and occupancy_sources
+        and not state.parked_by_automation
+        and external_park_evidence
+    ):
+        respected = state
+        if state.continuous_mowing_owned:
+            respected = replace(
+                state,
+                revision=state.revision + 1,
+                continuous_mowing_owned=False,
+                continuous_mowing_work_area_id=None,
+                continuous_mowing_window_end_utc=None,
+            )
+        details["external_park_guard"] = {
+            "active": True,
+            "sources": sorted(occupancy_sources),
+            "activity": activity,
+            "override_action": override_action,
+            "automation_ownership_acquired": False,
+            "continuous_mowing_ownership_relinquished": bool(
+                state.continuous_mowing_owned
+            ),
+        }
+        return _persist_result(
+            store=store,
+            original=original,
+            state=respected,
+            result=result,
+            details=details,
+            settings=settings,
+            decision_code="EXTERNAL_PARK_RESPECTED_DURING_OCCUPANCY",
+            message=(
+                "Der vorhandene externe Parkzustand bleibt unangetastet; "
+                "die Automatik erwirbt kein späteres Startrecht."
+            ),
+        )
+
     wants_park = str(decision.get("hypothetical_command") or "").upper() == "PARK"
     owns_matching_park = (
         state.parked_by_automation

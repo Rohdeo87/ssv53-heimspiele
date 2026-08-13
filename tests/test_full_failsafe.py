@@ -73,6 +73,8 @@ def result(
     battery: int = 100,
     active_ids: list[int] | None = None,
     clear: bool = True,
+    override_action: str | None = None,
+    external_reason_id: int | None = 253053,
 ) -> CycleResult:
     block = None
     if block_source:
@@ -122,8 +124,16 @@ def result(
                 "mower_id": "mower-1",
                 "activity": activity,
                 "state": "IN_OPERATION",
-                "override_action": "FORCE_PARK" if activity in {"PARKED_IN_CS", "CHARGING"} else "NOT_ACTIVE",
-                "external_reason_id": 253053,
+                "override_action": (
+                    override_action
+                    if override_action is not None
+                    else (
+                        "FORCE_PARK"
+                        if activity in {"PARKED_IN_CS", "CHARGING"}
+                        else "NOT_ACTIVE"
+                    )
+                ),
+                "external_reason_id": external_reason_id,
                 "error_code": 0,
                 "battery_percent": battery,
                 "target_work_area": {"id": 849199, "name": "Rasenfläche", "enabled": True},
@@ -168,6 +178,121 @@ class FullFailsafeTests(unittest.TestCase):
             start_zone_sender=senders.get("zone", lambda *_: {"message_type": "info"}),
         )
         return output, store
+
+    def test_external_station_park_is_not_taken_over_for_training_or_match(self) -> None:
+        for source in ("training", "match", "training+match"):
+            for activity in ("PARKED_IN_CS", "CHARGING"):
+                with self.subTest(source=source, activity=activity):
+                    calls = []
+                    state = AutomationState(
+                        continuous_mowing_owned=True,
+                        continuous_mowing_work_area_id=849199,
+                        continuous_mowing_window_end_utc=(
+                            NOW + timedelta(hours=12)
+                        ).isoformat(),
+                    )
+                    output, store = self._run(
+                        state,
+                        result(block_source=source, activity=activity),
+                        park=lambda *args: calls.append(args) or {"accepted": True},
+                    )
+                    saved = store.load()
+                    self.assertEqual(
+                        output.decision_code,
+                        "EXTERNAL_PARK_RESPECTED_DURING_OCCUPANCY",
+                    )
+                    self.assertEqual(calls, [])
+                    self.assertFalse(saved.parked_by_automation)
+                    self.assertFalse(saved.automation_restart_allowed)
+                    self.assertFalse(saved.continuous_mowing_owned)
+
+    def test_external_homeward_override_is_not_replaced_by_automation_park(self) -> None:
+        calls = []
+        output, store = self._run(
+            AutomationState(),
+            result(
+                block_source="training",
+                activity="GOING_HOME",
+                override_action="PARK_UNTIL_FURTHER_NOTICE",
+                external_reason_id=None,
+            ),
+            park=lambda *args: calls.append(args) or {"accepted": True},
+        )
+        self.assertEqual(
+            output.decision_code,
+            "EXTERNAL_PARK_RESPECTED_DURING_OCCUPANCY",
+        )
+        self.assertEqual(calls, [])
+        self.assertFalse(store.load().parked_by_automation)
+
+    def test_external_park_never_creates_a_later_start_right(self) -> None:
+        park_calls = []
+        start_calls = []
+        _blocked, store = self._run(
+            AutomationState(
+                continuous_mowing_owned=True,
+                continuous_mowing_work_area_id=849199,
+                continuous_mowing_window_end_utc=(NOW + timedelta(hours=12)).isoformat(),
+                hydrawise_clear_since_utc=(NOW - timedelta(minutes=120)).isoformat(),
+                last_hydrawise_success_utc=(NOW - timedelta(minutes=1)).isoformat(),
+            ),
+            result(block_source="training", activity="PARKED_IN_CS"),
+            park=lambda *args: park_calls.append(args) or {"accepted": True},
+            start=lambda *args: start_calls.append(args) or {"accepted": True},
+        )
+        released = run_full_failsafe_cycle(
+            now_utc=NOW + timedelta(minutes=1),
+            settings=settings(),
+            environment=ENV,
+            past_due=False,
+            source="test",
+            read_only_runner=lambda **_: result(activity="PARKED_IN_CS"),
+            state_store_factory=lambda _env: store,
+            park_sender=lambda *args: park_calls.append(args) or {"accepted": True},
+            start_sender=lambda *args: start_calls.append(args) or {"accepted": True},
+        )
+        self.assertEqual(released.decision_code, "MANUAL_OR_ERROR_HOLD")
+        self.assertEqual(park_calls, [])
+        self.assertEqual(start_calls, [])
+        self.assertFalse(store.load().parked_by_automation)
+
+    def test_unowned_homeward_mower_without_external_park_override_is_secured(self) -> None:
+        calls = []
+        output, store = self._run(
+            AutomationState(),
+            result(
+                block_source="training",
+                activity="GOING_HOME",
+                override_action="NOT_ACTIVE",
+                external_reason_id=None,
+            ),
+            park=lambda *args: calls.append(args) or {"accepted": True},
+        )
+        self.assertEqual(output.decision_code, "PARK_COMMAND_SENT")
+        self.assertEqual(len(calls), 1)
+        self.assertTrue(store.load().parked_by_automation)
+
+    def test_owned_battery_charge_is_not_misclassified_as_manual_park(self) -> None:
+        calls = []
+        state = AutomationState(
+            continuous_mowing_owned=True,
+            continuous_mowing_work_area_id=849199,
+            continuous_mowing_window_end_utc=(NOW + timedelta(hours=12)).isoformat(),
+        )
+        output, store = self._run(
+            state,
+            result(
+                block_source="training",
+                activity="CHARGING",
+                override_action="FORCE_MOW",
+                external_reason_id=253053,
+            ),
+            park=lambda *args: calls.append(args) or {"accepted": True},
+        )
+        self.assertEqual(output.decision_code, "PARK_COMMAND_SENT")
+        self.assertEqual(len(calls), 1)
+        self.assertTrue(store.load().parked_by_automation)
+        self.assertTrue(store.load().automation_restart_allowed)
 
     def test_reasserts_owned_park_if_mower_reenters_training_or_match(self) -> None:
         for source in ("training", "match"):
