@@ -12,8 +12,12 @@ test("alle eingebetteten Appack-Skripte sind syntaktisch gültig", () => {
   const scripts = Array.from(html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi));
   assert.ok(scripts.length > 0, "Kein eingebettetes Skript gefunden");
   scripts.forEach((match, index) => {
+    const renderedScript = match[1].replace(
+      /\[#if profile_json\?has_content\]\$\{profile_json\}\[#else\]\{\}\[\/#if\]/g,
+      "{}"
+    );
     assert.doesNotThrow(
-      () => new vm.Script(match[1], { filename: `appack-inline-${index + 1}.js` })
+      () => new vm.Script(renderedScript, { filename: `appack-inline-${index + 1}.js` })
     );
   });
 });

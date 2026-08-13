@@ -1445,6 +1445,8 @@
   </style>
 
   <script>
+    var profileJSON = [#if profile_json?has_content]${profile_json}[#else]{}[/#if];
+
     document.addEventListener("DOMContentLoaded", function () {
       "use strict";
 
@@ -1588,7 +1590,8 @@
         weekLandingTimer: 0,
         currentDateInfo: null,
         currentDialogEvent: null,
-        currentDialogEventKey: ""
+        currentDialogEventKey: "",
+        canManageTrainingCancellations: hasActiveTrainerRole(profileJSON)
       };
 
       const elements = {
@@ -2797,6 +2800,50 @@
           topCategories: topCategories,
           subcategories: subcategories
         };
+      }
+
+      function normalizeAppackRoleText(value) {
+        return String(value || "")
+          .trim()
+          .toLocaleLowerCase("de-DE")
+          .replace(/ä/g, "ae")
+          .replace(/ö/g, "oe")
+          .replace(/ü/g, "ue")
+          .replace(/ß/g, "ss");
+      }
+
+      function hasActiveTrainerRole(profile) {
+        try {
+          if (!profile || typeof profile !== "object") return false;
+
+          if (Array.isArray(profile.roleKeys)) {
+            const keys = profile.roleKeys.map(function (value) {
+              return String(value || "").trim().toUpperCase();
+            });
+            if (keys.includes("TR")) return true;
+          }
+
+          if (Array.isArray(profile.roles)) {
+            return profile.roles.some(function (role) {
+              const activeRole = role || {};
+              const enumKey = String(activeRole.enumKey || "")
+                .trim()
+                .toUpperCase();
+              const value = normalizeAppackRoleText(activeRole.value);
+              return enumKey === "TR" ||
+                value.includes("trainer") ||
+                value.includes("mitarbeiter");
+            });
+          }
+
+          /* requestedRoles sind noch nicht aktiv und werden nie ausgewertet. */
+          return false;
+        } catch (error) {
+          if (window.console && typeof window.console.warn === "function") {
+            console.warn("[SSV53] Rollenprüfung fehlgeschlagen:", error);
+          }
+          return false;
+        }
       }
 
       function extractContactCategoryTeamKeys(value) {
@@ -5514,7 +5561,10 @@
         action.removeAttribute("data-cancelled");
         status.hidden = true;
         status.textContent = "";
-        if (!isTrainingCancellationEvent(event)) return;
+        if (
+          !state.canManageTrainingCancellations ||
+          !isTrainingCancellationEvent(event)
+        ) return;
 
         const cancelled = event.extendedProps.cancelled === true;
         action.hidden = false;
@@ -5528,7 +5578,10 @@
 
       async function changeTrainingCancellation() {
         const event = state.currentDialogEvent;
-        if (!isTrainingCancellationEvent(event)) return;
+        if (
+          !state.canManageTrainingCancellations ||
+          !isTrainingCancellationEvent(event)
+        ) return;
         const cancelled = event.extendedProps.cancelled === true;
         const question = cancelled
           ? "Soll die Absage wirklich widerrufen werden? Das Training wird wieder als Platzbelegung berücksichtigt."
