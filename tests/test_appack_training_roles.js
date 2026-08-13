@@ -76,3 +76,15 @@ test("Belegungsplan nutzt Appacks profile_json und prüft auch den Handler", () 
   );
   assert.match(html, /id="training-cancellation-action"[\s\S]*?hidden/);
 });
+
+test("Trainingsabsage verwendet einen CORS-safelisted POST ohne Preflight", () => {
+  const cancellationHandler = extractFunction("changeTrainingCancellation");
+  assert.match(
+    cancellationHandler,
+    /"Content-Type": "text\/plain;charset=UTF-8"/
+  );
+  assert.doesNotMatch(
+    cancellationHandler,
+    /"Content-Type": "application\/json"/
+  );
+});

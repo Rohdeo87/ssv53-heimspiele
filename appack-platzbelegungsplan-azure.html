@@ -5598,7 +5598,14 @@
             credentials: "omit",
             headers: {
               "Accept": "application/json",
-              "Content-Type": "application/json"
+              /*
+               * Azure beantwortet vorgeschaltete OPTIONS-Requests ohne die
+               * nötigen CORS-Header. text/plain ist ein CORS-safelisted
+               * Content-Type und übermittelt denselben JSON-Text deshalb
+               * ohne Preflight; die Function validiert ihn weiterhin mit
+               * req.get_json().
+               */
+              "Content-Type": "text/plain;charset=UTF-8"
             },
             body: JSON.stringify({
               action: cancelled ? "restore" : "cancel",

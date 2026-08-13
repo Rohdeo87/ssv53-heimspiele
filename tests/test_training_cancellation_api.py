@@ -14,11 +14,17 @@ from training_cancellations import InMemoryCancellationStore
 FIXED_NOW = datetime(2026, 8, 13, 10, 0, tzinfo=timezone.utc)
 
 
-def request(method: str, *, params=None, body=None) -> func.HttpRequest:
+def request(
+    method: str,
+    *,
+    params=None,
+    body=None,
+    content_type: str = "application/json",
+) -> func.HttpRequest:
     return func.HttpRequest(
         method=method,
         url="https://example.test/api/training-cancellations",
-        headers={"Content-Type": "application/json"},
+        headers={"Content-Type": content_type},
         params=params or {},
         body=(json.dumps(body).encode("utf-8") if body is not None else b""),
     )
@@ -106,6 +112,23 @@ class TrainingCancellationApiTests(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 400)
         self.assertEqual(self.store.items, {})
+
+    def test_text_plain_simple_request_is_parsed_without_cors_preflight(self) -> None:
+        listing = function_app.ssv53_training_cancellations(request("GET"))
+        event_id = json.loads(listing.get_body())["items"][0]["id"]
+        response = function_app.ssv53_training_cancellations(
+            request(
+                "POST",
+                content_type="text/plain;charset=UTF-8",
+                body={
+                    "action": "cancel",
+                    "eventId": event_id,
+                    "confirmation": "TRAINING_FAELLT_AUS",
+                },
+            )
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(json.loads(response.get_body())["cancelled"])
 
 
 if __name__ == "__main__":
