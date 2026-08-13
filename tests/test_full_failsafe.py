@@ -473,6 +473,66 @@ class FullFailsafeTests(unittest.TestCase):
         self.assertEqual(len(calls), 1)
         self.assertIsNone(store.load().park_confirmed_utc)
 
+    def test_active_zone_during_suspension_fails_without_hydrawise_command(self) -> None:
+        for phase, activity in (("PLANNED", "GOING_HOME"), ("SUSPENDING", "PARKED_IN_CS")):
+            with self.subTest(phase=phase, activity=activity):
+                suspend_calls = []
+                zone_calls = []
+                state = irrigation_state(phase=phase)
+                state = AutomationState.from_mapping(
+                    {
+                        **state.to_dict(),
+                        "park_confirmed_utc": None if activity == "GOING_HOME" else state.park_confirmed_utc,
+                        "irrigation_suspended_relay_ids_json": "[]",
+                    }
+                )
+                output, store = self._run(
+                    state,
+                    result(
+                        block_source="irrigation",
+                        activity=activity,
+                        active_ids=[RELAYS[0]],
+                        clear=False,
+                    ),
+                    suspend=lambda *args: suspend_calls.append(args) or {},
+                    zone=lambda *args: zone_calls.append(args) or {},
+                )
+                self.assertEqual(
+                    output.decision_code,
+                    "IRRIGATION_ACTIVE_DURING_SUSPENSION",
+                )
+                self.assertFalse(output.command_sent)
+                self.assertEqual(suspend_calls, [])
+                self.assertEqual(zone_calls, [])
+                self.assertEqual(store.load().irrigation_phase, "FAILED")
+                self.assertIn("läuft bereits", store.load().irrigation_failed_reason)
+                self.assertEqual(
+                    output.details["irrigation_active_during_suspension"]["active_relay_ids"],
+                    [RELAYS[0]],
+                )
+
+    def test_unknown_active_zone_also_fails_closed_during_suspension(self) -> None:
+        suspend_calls = []
+        zone_calls = []
+        state = irrigation_state(phase="PLANNED")
+        state = AutomationState.from_mapping(
+            {**state.to_dict(), "irrigation_suspended_relay_ids_json": "[]"}
+        )
+        output, store = self._run(
+            state,
+            result(active_ids=[999999], clear=False),
+            suspend=lambda *args: suspend_calls.append(args) or {},
+            zone=lambda *args: zone_calls.append(args) or {},
+        )
+        self.assertEqual(output.decision_code, "IRRIGATION_ACTIVE_DURING_SUSPENSION")
+        self.assertEqual(suspend_calls, [])
+        self.assertEqual(zone_calls, [])
+        self.assertEqual(store.load().irrigation_phase, "FAILED")
+        self.assertEqual(
+            output.details["irrigation_active_during_suspension"]["active_relay_ids"],
+            [999999],
+        )
+
     def test_irrigation_start_waits_for_training_or_match_to_clear(self) -> None:
         for source in ("irrigation+training", "irrigation+match"):
             with self.subTest(source=source):

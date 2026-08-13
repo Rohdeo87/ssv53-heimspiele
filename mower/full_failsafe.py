@@ -841,6 +841,27 @@ def run_full_failsafe_cycle(
             )
 
         if state.irrigation_phase in {"PLANNED", "SUSPENDING"}:
+            if active_ids:
+                failed = _failed_irrigation(
+                    state,
+                    "Mindestens eine Hydrawise-Zone läuft bereits, bevor der reguläre "
+                    "Sieben-Zonen-Plan vollständig suspendiert wurde.",
+                )
+                details["irrigation_active_during_suspension"] = {
+                    "active_relay_ids": sorted(active_ids),
+                    "suspended_relay_ids": sorted(set(suspended)),
+                }
+                return _persist_result(
+                    store=store,
+                    original=original,
+                    state=failed,
+                    result=result,
+                    details=details,
+                    settings=settings,
+                    decision_code="IRRIGATION_ACTIVE_DURING_SUSPENSION",
+                    message=failed.irrigation_failed_reason
+                    or "Beregnung läuft bereits während der Suspendierung.",
+                )
             pending = next((zone for zone in zones if int(zone["relay_id"]) not in suspended), None)
             if pending is None:
                 ready = replace(state, revision=state.revision + 1, irrigation_phase="READY")
