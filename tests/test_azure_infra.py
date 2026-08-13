@@ -26,6 +26,10 @@ class AzureInfrastructureTests(unittest.TestCase):
         self.assertIn("param timerSchedule string = '0 * * * * *'", self.bicep)
         self.assertIn("param maximumInstanceCount int = 40", self.bicep)
         self.assertIn("param instanceMemoryMB int = 512", self.bicep)
+        self.assertIn("ENABLE_IRRIGATION_COMMANDS: 'false'", self.bicep)
+        self.assertIn("FULL_FAILSAFE_CONFIRMATION: 'LOCKED'", self.bicep)
+        self.assertIn("HYDRAWISE_EXPECTED_ZONE_COUNT: '7'", self.bicep)
+        self.assertIn("HYDRAWISE_CLEAR_CONFIRMATION_MINUTES: '90'", self.bicep)
 
     def test_storage_uses_managed_identity_without_shared_key(self) -> None:
         self.assertIn("allowSharedKeyAccess: false", self.bicep)

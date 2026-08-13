@@ -248,16 +248,30 @@ class ControllerPhase2Tests(unittest.TestCase):
         )
         self.assertEqual(result.decision_code, "TEST_FULL_MOWER_LOCKED")
 
-    def test_irrigation_control_mode_remains_blocked(self) -> None:
-        with self.assertRaisesRegex(RuntimeError, "Beregnungssteuerung"):
-            run_control_cycle(
-                now_utc=NOW,
-                environment={
-                    "CONTROL_MODE": "FULL_FAILSAFE",
-                    "ENABLE_LIVE_READS": "true",
-                },
+    def test_irrigation_control_mode_uses_explicit_runner(self) -> None:
+        def failsafe_runner(**kwargs):
+            self.assertEqual(kwargs["settings"].control_mode.value, "FULL_FAILSAFE")
+            return CycleResult(
+                schema_version=2,
+                executed_at_utc=NOW.isoformat(),
+                source=kwargs["source"],
+                control_mode="FULL_FAILSAFE",
                 past_due=False,
+                decision_code="TEST_FULL_FAILSAFE_LOCKED",
+                command_sent=False,
+                message="locked",
             )
+
+        result = run_control_cycle(
+            now_utc=NOW,
+            environment={
+                "CONTROL_MODE": "FULL_FAILSAFE",
+                "ENABLE_LIVE_READS": "true",
+            },
+            past_due=False,
+            full_failsafe_runner=failsafe_runner,
+        )
+        self.assertEqual(result.decision_code, "TEST_FULL_FAILSAFE_LOCKED")
 
 
 if __name__ == "__main__":

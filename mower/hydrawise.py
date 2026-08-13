@@ -78,9 +78,9 @@ def evaluate_continuous_clear_confirmation(
 
     if now_utc.tzinfo is None or now_utc.utcoffset() is None:
         raise ValueError("now_utc muss eine zeitzonenbewusste UTC-Zeit sein.")
-    if not 1 <= required_clear_minutes <= 60:
+    if not 1 <= required_clear_minutes <= 1440:
         raise ValueError(
-            "required_clear_minutes muss zwischen 1 und 60 liegen."
+            "required_clear_minutes muss zwischen 1 und 1440 liegen."
         )
 
     required_seconds = required_clear_minutes * 60
@@ -310,6 +310,64 @@ def evaluate_safety_status(
         active_relay_ids=tuple(sorted(active_ids)),
         imminent_relay_ids=tuple(sorted(imminent_ids)),
         reason=reason,
+    )
+
+
+def selected_zone_schedule(
+    status: dict[str, Any] | None,
+    hydrawise_config: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Liefert ausschließlich den geprüften, nicht geheimen Zonenfahrplan.
+
+    ``time == 1`` kennzeichnet eine bereits laufende Zone. Für einen
+    zukünftigen Lauf werden Start und Ende aus demselben Hydrawise-Snapshot
+    berechnet, damit die sieben Laufzeiten später unverändert vorgezogen
+    werden können.
+    """
+
+    if not isinstance(status, dict):
+        return []
+    try:
+        observed = datetime.fromtimestamp(int(status["time"]), tz=timezone.utc)
+    except (KeyError, TypeError, ValueError, OSError):
+        return []
+
+    zones: list[dict[str, Any]] = []
+    for raw_relay in status.get("relays", []):
+        if not isinstance(raw_relay, dict) or not _relay_selected(
+            raw_relay,
+            hydrawise_config,
+        ):
+            continue
+        try:
+            relay_id = int(raw_relay["relay_id"])
+            zone_number = int(raw_relay["relay"])
+            seconds_until = int(float(raw_relay.get("time", 0) or 0))
+            run_seconds = int(float(raw_relay.get("run", 0) or 0))
+        except (KeyError, TypeError, ValueError):
+            continue
+        if relay_id <= 0 or zone_number <= 0 or seconds_until <= 0 or run_seconds <= 0:
+            continue
+        running = seconds_until == 1
+        start = observed if running else observed + timedelta(seconds=seconds_until)
+        zones.append(
+            {
+                "relay_id": relay_id,
+                "zone": zone_number,
+                "name": str(raw_relay.get("name") or f"Zone {zone_number}"),
+                "running": running,
+                "seconds_until": seconds_until,
+                "run_seconds": run_seconds,
+                "scheduled_start_utc": start.isoformat(),
+                "scheduled_end_utc": (start + timedelta(seconds=run_seconds)).isoformat(),
+            }
+        )
+    return sorted(
+        zones,
+        key=lambda item: (
+            str(item["scheduled_start_utc"]),
+            int(item["zone"]),
+        ),
     )
 
 

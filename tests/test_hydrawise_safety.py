@@ -133,6 +133,30 @@ class HydrawiseSafetyTests(unittest.TestCase):
         self.assertTrue(result.allowed)
         self.assertEqual(result.confirmed_for_seconds, 600)
 
+    def test_release_opens_only_after_ninety_continuous_minutes(self) -> None:
+        before = evaluate_continuous_clear_confirmation(
+            available=True,
+            fresh=True,
+            clear_now=True,
+            physical_reason="Hydrawise ist frei.",
+            clear_since_utc=(NOW - timedelta(minutes=89, seconds=59)).isoformat(),
+            now_utc=NOW,
+            required_clear_minutes=90,
+            persistent_state_available=True,
+        )
+        after = evaluate_continuous_clear_confirmation(
+            available=True,
+            fresh=True,
+            clear_now=True,
+            physical_reason="Hydrawise ist frei.",
+            clear_since_utc=(NOW - timedelta(minutes=90)).isoformat(),
+            now_utc=NOW,
+            required_clear_minutes=90,
+            persistent_state_available=True,
+        )
+        self.assertFalse(before.allowed)
+        self.assertTrue(after.allowed)
+
     def test_missing_persistent_state_fails_closed(self) -> None:
         result = evaluate_continuous_clear_confirmation(
             available=True,

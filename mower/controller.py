@@ -20,6 +20,7 @@ from mower.runtime import (
 LiveCycleRunner = Callable[..., CycleResult]
 ParkOnlyRunner = Callable[..., CycleResult]
 FullMowerRunner = Callable[..., CycleResult]
+FullFailsafeRunner = Callable[..., CycleResult]
 RuntimeInputResolver = Callable[..., Any]
 
 
@@ -68,6 +69,7 @@ def run_control_cycle(
     live_cycle_runner: LiveCycleRunner = run_read_only_cycle,
     park_only_runner: ParkOnlyRunner = run_park_only_cycle,
     full_mower_runner: FullMowerRunner | None = None,
+    full_failsafe_runner: FullFailsafeRunner | None = None,
     runtime_input_resolver: RuntimeInputResolver = resolve_runtime_inputs,
 ) -> CycleResult:
     """Führt genau einen sicheren Azure-Steuerungszyklus aus.
@@ -104,6 +106,21 @@ def run_control_cycle(
 
             full_mower_runner = run_full_mower_cycle
         return full_mower_runner(
+            now_utc=now_utc,
+            settings=settings,
+            environment=environment,
+            past_due=past_due,
+            source=source,
+        )
+
+    if settings.control_mode is ControlMode.FULL_FAILSAFE:
+        if not settings.enable_live_reads:
+            raise RuntimeError("FULL_FAILSAFE benötigt ENABLE_LIVE_READS=true.")
+        if full_failsafe_runner is None:
+            from mower.full_failsafe import run_full_failsafe_cycle
+
+            full_failsafe_runner = run_full_failsafe_cycle
+        return full_failsafe_runner(
             now_utc=now_utc,
             settings=settings,
             environment=environment,

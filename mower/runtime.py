@@ -7,6 +7,7 @@ from typing import Any, Mapping
 
 
 FULL_MOWER_CONFIRMATION = "SSV53-TRAINING-MATCH-PARK-START"
+FULL_FAILSAFE_CONFIRMATION = "SSV53-MOWER-HYDRAWISE-7-ZONES-90-MINUTES"
 
 
 class ControlMode(str, Enum):
@@ -68,7 +69,9 @@ class RuntimeSettings:
     enable_live_reads: bool
     enable_park_commands: bool
     enable_start_commands: bool
+    enable_irrigation_commands: bool
     full_mower_confirmation: str
+    full_failsafe_confirmation: str
     park_lookahead_minutes: int
 
     @classmethod
@@ -109,8 +112,15 @@ class RuntimeSettings:
                 values.get("ENABLE_START_COMMANDS"),
                 default=False,
             ),
+            enable_irrigation_commands=_parse_bool(
+                values.get("ENABLE_IRRIGATION_COMMANDS"),
+                default=False,
+            ),
             full_mower_confirmation=str(
                 values.get("FULL_MOWER_CONFIRMATION", "")
+            ).strip(),
+            full_failsafe_confirmation=str(
+                values.get("FULL_FAILSAFE_CONFIRMATION", "")
             ).strip(),
             park_lookahead_minutes=park_lookahead_minutes,
         )
@@ -121,6 +131,14 @@ class RuntimeSettings:
             self.enable_park_commands
             and self.enable_start_commands
             and self.full_mower_confirmation == FULL_MOWER_CONFIRMATION
+        )
+
+    @property
+    def full_failsafe_write_gate_enabled(self) -> bool:
+        return (
+            self.full_mower_write_gate_enabled
+            and self.enable_irrigation_commands
+            and self.full_failsafe_confirmation == FULL_FAILSAFE_CONFIRMATION
         )
 
 
@@ -141,13 +159,10 @@ class CycleResult:
 
 
 def ensure_heartbeat_only_mode(mode: ControlMode) -> None:
-    """Lässt höchstens PARK_ONLY zu; automatische Starts bleiben gesperrt."""
+    """Kompatibilitätsprüfung; Schreibrechte werden separat gegatet."""
 
-    if mode is ControlMode.FULL_FAILSAFE:
-        raise RuntimeError(
-            "Automatischer Start und Beregnungssteuerung sind noch gesperrt. "
-            f"CONTROL_MODE={mode.value} ist deshalb nicht zulässig."
-        )
+    if not isinstance(mode, ControlMode):
+        raise TypeError("mode muss ein ControlMode sein.")
 
 
 def build_heartbeat_result(

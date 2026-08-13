@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import tempfile
 import unittest
-from datetime import date, datetime, time, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -14,6 +14,7 @@ from mower.planner import (
     merge_blocks,
     read_match_blocks,
 )
+from mower.decision import parking_block_for
 
 
 TZ = ZoneInfo("Europe/Berlin")
@@ -35,6 +36,30 @@ class MowerPlannerTests(unittest.TestCase):
         self.assertEqual(merged[0].start, datetime(2026, 8, 25, 16, 30, tzinfo=TZ))
         self.assertEqual(merged[0].end, datetime(2026, 8, 25, 20, 30, tzinfo=TZ))
 
+    def test_training_park_command_is_forty_minutes_before_training(self) -> None:
+        blocks = build_training_blocks(
+            {
+                "before_minutes": 30,
+                "after_minutes": 30,
+                "weekly": [
+                    {"weekday": "Dienstag", "start": "17:00", "end": "18:30", "team": "E1"}
+                ],
+            },
+            date(2026, 8, 25),
+            1,
+            TZ,
+        )
+        now = datetime(2026, 8, 25, 16, 20, tzinfo=TZ)
+        self.assertIsNotNone(
+            parking_block_for(
+                active_block=None,
+                next_block=blocks[0],
+                now=now,
+                lookahead_minutes=10,
+            )
+        )
+        self.assertEqual(blocks[0].start, datetime(2026, 8, 25, 16, 30, tzinfo=TZ))
+
     def test_match_ics_is_used_without_additional_buffer(self) -> None:
         content = """BEGIN:VCALENDAR
 BEGIN:VEVENT
@@ -51,6 +76,24 @@ END:VCALENDAR
             blocks = read_match_blocks(path, TZ)
         self.assertEqual(blocks[0].start, datetime(2026, 8, 21, 18, 0, tzinfo=TZ))
         self.assertEqual(blocks[0].end, datetime(2026, 8, 21, 21, 30, tzinfo=TZ))
+
+    def test_match_park_command_is_seventy_minutes_before_kickoff(self) -> None:
+        kickoff = datetime(2026, 8, 21, 19, 0, tzinfo=TZ)
+        buffered = Block(
+            start=kickoff - timedelta(minutes=60),
+            end=kickoff + timedelta(minutes=150),
+            source="match",
+            title="Testspiel",
+        )
+        now = kickoff - timedelta(minutes=70)
+        self.assertIsNotNone(
+            parking_block_for(
+                active_block=None,
+                next_block=buffered,
+                now=now,
+                lookahead_minutes=10,
+            )
+        )
 
     def test_hydrawise_running_and_future_zone_are_blocked(self) -> None:
         status = {

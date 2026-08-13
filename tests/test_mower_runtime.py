@@ -75,8 +75,8 @@ class ControlCycleTests(unittest.TestCase):
                 past_due=False,
             )
 
-    def test_irrigation_control_remains_blocked(self) -> None:
-        with self.assertRaisesRegex(RuntimeError, "Beregnungssteuerung"):
+    def test_full_failsafe_requires_live_reads(self) -> None:
+        with self.assertRaisesRegex(RuntimeError, "ENABLE_LIVE_READS"):
             run_control_cycle(
                 now_utc=datetime(2026, 8, 2, 12, 0, tzinfo=timezone.utc),
                 environment={"CONTROL_MODE": "FULL_FAILSAFE"},

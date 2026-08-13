@@ -55,7 +55,7 @@ FORBIDDEN_CONTENT_MARKERS = (
     b'"type": "Start"',
     b"manualrun.php",
     b"stopzone.php",
-    b"suspend",
+    b"setzone.php",
     b"SSV53_AUTOMATION_TOKEN",
 )
 

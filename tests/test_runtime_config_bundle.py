@@ -126,7 +126,7 @@ class RuntimeConfigBundleTests(unittest.TestCase):
             self.assertEqual(summary["safety"]["training_before_minutes"], 30)
             self.assertEqual(summary["safety"]["training_after_minutes"], 30)
             self.assertEqual(summary["safety"]["hydrawise_before_minutes"], 30)
-            self.assertEqual(summary["safety"]["hydrawise_after_minutes"], 10)
+            self.assertEqual(summary["safety"]["hydrawise_after_minutes"], 0)
 
             ics = (
                 directory

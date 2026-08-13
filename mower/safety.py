@@ -109,11 +109,16 @@ def evaluate_command_gate(
                 "Die Befehlsabsicht ist abgelaufen.",
             )
 
-    if intent.normalized_action == "START" and not state.parked_by_automation:
+    if (
+        intent.normalized_action == "START"
+        and not state.parked_by_automation
+        and not state.continuous_mowing_owned
+    ):
         return CommandGateDecision(
             False,
             "START_NOT_OWNED",
-            "Automatischer Start ist nur nach eigener Parkierung erlaubt.",
+            "Automatischer Start ist nur nach eigener Parkierung oder einem "
+            "persistent übernommenen Mähauftrag erlaubt.",
         )
 
     if (

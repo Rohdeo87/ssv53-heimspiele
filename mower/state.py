@@ -53,6 +53,20 @@ class AutomationState:
     park_confirmed_utc: str | None = None
     automation_park_until_utc: str | None = None
     last_start_command_utc: str | None = None
+    continuous_mowing_owned: bool = False
+    continuous_mowing_work_area_id: int | None = None
+    continuous_mowing_window_end_utc: str | None = None
+    irrigation_phase: str | None = None
+    irrigation_plan_id: str | None = None
+    irrigation_plan_json: str | None = None
+    irrigation_suspended_relay_ids_json: str | None = None
+    irrigation_completed_relay_ids_json: str | None = None
+    irrigation_current_relay_id: int | None = None
+    irrigation_zone_start_reserved_utc: str | None = None
+    irrigation_zone_started_utc: str | None = None
+    irrigation_zone_clear_since_utc: str | None = None
+    irrigation_completed_utc: str | None = None
+    irrigation_failed_reason: str | None = None
     last_command_fingerprint: str | None = None
     last_command_utc: str | None = None
     maintenance_mode: bool = False
@@ -75,6 +89,11 @@ class AutomationState:
             "park_confirmed_utc",
             "automation_park_until_utc",
             "last_start_command_utc",
+            "continuous_mowing_window_end_utc",
+            "irrigation_zone_start_reserved_utc",
+            "irrigation_zone_started_utc",
+            "irrigation_zone_clear_since_utc",
+            "irrigation_completed_utc",
             "last_command_utc",
         ):
             _require_utc_iso(getattr(self, field_name), field_name)
@@ -156,6 +175,61 @@ class AutomationState:
             last_start_command_utc=_require_utc_iso(
                 _normalize_optional_text(values.get("last_start_command_utc")),
                 "last_start_command_utc",
+            ),
+            continuous_mowing_owned=bool(
+                values.get("continuous_mowing_owned", False)
+            ),
+            continuous_mowing_work_area_id=_normalize_optional_int(
+                values.get("continuous_mowing_work_area_id")
+            ),
+            continuous_mowing_window_end_utc=_require_utc_iso(
+                _normalize_optional_text(
+                    values.get("continuous_mowing_window_end_utc")
+                ),
+                "continuous_mowing_window_end_utc",
+            ),
+            irrigation_phase=_normalize_optional_text(
+                values.get("irrigation_phase")
+            ),
+            irrigation_plan_id=_normalize_optional_text(
+                values.get("irrigation_plan_id")
+            ),
+            irrigation_plan_json=_normalize_optional_text(
+                values.get("irrigation_plan_json")
+            ),
+            irrigation_suspended_relay_ids_json=_normalize_optional_text(
+                values.get("irrigation_suspended_relay_ids_json")
+            ),
+            irrigation_completed_relay_ids_json=_normalize_optional_text(
+                values.get("irrigation_completed_relay_ids_json")
+            ),
+            irrigation_current_relay_id=_normalize_optional_int(
+                values.get("irrigation_current_relay_id")
+            ),
+            irrigation_zone_start_reserved_utc=_require_utc_iso(
+                _normalize_optional_text(
+                    values.get("irrigation_zone_start_reserved_utc")
+                ),
+                "irrigation_zone_start_reserved_utc",
+            ),
+            irrigation_zone_started_utc=_require_utc_iso(
+                _normalize_optional_text(
+                    values.get("irrigation_zone_started_utc")
+                ),
+                "irrigation_zone_started_utc",
+            ),
+            irrigation_zone_clear_since_utc=_require_utc_iso(
+                _normalize_optional_text(
+                    values.get("irrigation_zone_clear_since_utc")
+                ),
+                "irrigation_zone_clear_since_utc",
+            ),
+            irrigation_completed_utc=_require_utc_iso(
+                _normalize_optional_text(values.get("irrigation_completed_utc")),
+                "irrigation_completed_utc",
+            ),
+            irrigation_failed_reason=_normalize_optional_text(
+                values.get("irrigation_failed_reason")
             ),
             last_command_fingerprint=_normalize_optional_text(
                 values.get("last_command_fingerprint")
@@ -284,6 +358,9 @@ class AutomationState:
         park_until_utc: datetime | None = None,
         park_source: str = "unknown",
         restart_allowed: bool = False,
+        work_area_id: int | None = None,
+        mowing_window_end_utc: datetime | None = None,
+        continuous_mowing: bool = False,
     ) -> "AutomationState":
         sent = _as_utc(sent_utc, "sent_utc")
         normalized_action = action.strip().upper()
@@ -312,8 +389,13 @@ class AutomationState:
                     if park_until_utc is not None
                     else None
                 ),
+                continuous_mowing_owned=False,
+                continuous_mowing_work_area_id=None,
+                continuous_mowing_window_end_utc=None,
             )
         else:
+            if continuous_mowing and (work_area_id is None or int(work_area_id) <= 0):
+                raise ValueError("work_area_id muss für kontinuierliches Mähen positiv sein.")
             changes.update(
                 parked_by_automation=False,
                 automation_park_source=None,
@@ -322,6 +404,18 @@ class AutomationState:
                 park_command_sent_utc=None,
                 park_confirmed_utc=None,
                 automation_park_until_utc=None,
+                continuous_mowing_owned=bool(continuous_mowing),
+                continuous_mowing_work_area_id=(
+                    int(work_area_id) if continuous_mowing else None
+                ),
+                continuous_mowing_window_end_utc=(
+                    _as_utc(
+                        mowing_window_end_utc,
+                        "mowing_window_end_utc",
+                    ).isoformat()
+                    if continuous_mowing and mowing_window_end_utc is not None
+                    else None
+                ),
             )
         return replace(self, **changes)
 

@@ -29,6 +29,7 @@ from mower.hydrawise import (
     evaluate_continuous_clear_confirmation,
     evaluate_safety_status,
     fetch_status,
+    selected_zone_schedule,
 )
 from mower.planner import create_plan, load_json, read_match_blocks
 from mower.runtime import ControlMode, CycleResult, RuntimeSettings
@@ -197,6 +198,10 @@ def run_read_only_cycle(
         max_age_seconds=int(
             environment.get("HYDRAWISE_STATUS_MAX_AGE_SECONDS", "180")
         ),
+    )
+    hydrawise_zones = selected_zone_schedule(
+        hydrawise_status,
+        hydrawise_config,
     )
 
     match_blocks = read_match_blocks(matches_path, tz)
@@ -385,6 +390,7 @@ def run_read_only_cycle(
                 "status": hydrawise_label,
                 "error": hydrawise_error,
                 "safety": hydrawise_safety.to_dict(),
+                "zones": hydrawise_zones,
                 "release_confirmation": (
                     release_confirmation.to_dict()
                     if release_confirmation is not None
