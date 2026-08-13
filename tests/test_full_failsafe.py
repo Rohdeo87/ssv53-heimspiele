@@ -215,6 +215,49 @@ class FullFailsafeTests(unittest.TestCase):
         self.assertEqual(output.decision_code, "IRRIGATION_UNEXPECTED_ACTIVE_ZONE")
         self.assertEqual(store.load().irrigation_phase, "FAILED")
 
+    def test_seventh_confirmed_zone_enters_complete_hold(self) -> None:
+        state = irrigation_state(phase="RUNNING", current=RELAYS[-1])
+        state = AutomationState.from_mapping(
+            {
+                **state.to_dict(),
+                "irrigation_completed_relay_ids_json": __import__("json").dumps(RELAYS[:-1]),
+                "irrigation_zone_started_utc": (NOW - timedelta(minutes=30)).isoformat(),
+                "irrigation_zone_clear_since_utc": (NOW - timedelta(minutes=3)).isoformat(),
+            }
+        )
+        output, store = self._run(state, result(block_source="irrigation"))
+        saved = store.load()
+        self.assertEqual(output.decision_code, "IRRIGATION_ALL_ZONES_CONFIRMED_COMPLETE")
+        self.assertEqual(saved.irrigation_phase, "COMPLETE_HOLD")
+        self.assertEqual(
+            set(__import__("json").loads(saved.irrigation_completed_relay_ids_json)),
+            set(RELAYS),
+        )
+        self.assertEqual(saved.hydrawise_clear_since_utc, NOW.isoformat())
+
+    def test_complete_hold_is_never_recaptured_during_original_schedule(self) -> None:
+        state = irrigation_state(phase="COMPLETE_HOLD")
+        state = AutomationState.from_mapping(
+            {
+                **state.to_dict(),
+                "irrigation_completed_relay_ids_json": __import__("json").dumps(RELAYS),
+                "irrigation_completed_utc": NOW.isoformat(),
+                "hydrawise_clear_since_utc": NOW.isoformat(),
+            }
+        )
+        calls = {"park": [], "start": [], "suspend": [], "zone": []}
+        output, store = self._run(
+            state,
+            result(block_source="irrigation"),
+            park=lambda *args: calls["park"].append(args) or {},
+            start=lambda *args: calls["start"].append(args) or {},
+            suspend=lambda *args: calls["suspend"].append(args) or {},
+            zone=lambda *args: calls["zone"].append(args) or {},
+        )
+        self.assertEqual(output.decision_code, "OCCUPANCY_OR_IRRIGATION_HOLD")
+        self.assertEqual(store.load().irrigation_phase, "COMPLETE_HOLD")
+        self.assertEqual(calls, {"park": [], "start": [], "suspend": [], "zone": []})
+
     def test_ninety_minute_hold_blocks_mower_start(self) -> None:
         state = irrigation_state(phase="COMPLETE_HOLD")
         state = AutomationState.from_mapping(

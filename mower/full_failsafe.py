@@ -413,18 +413,33 @@ def run_full_failsafe_cycle(
         maximum=24,
     )
 
-    if irrigation_due and state.irrigation_phase not in ACTIVE_IRRIGATION_PHASES:
-        if state.irrigation_phase == "FAILED":
-            return _persist_result(
-                store=store,
-                original=original,
-                state=state,
-                result=result,
-                details=details,
-                settings=settings,
-                decision_code="IRRIGATION_FAILED_HOLD",
-                message="Eine Beregnungsstörung ist gespeichert; der Mäher bleibt geparkt.",
-            )
+    if irrigation_due and state.irrigation_phase == "FAILED":
+        return _persist_result(
+            store=store,
+            original=original,
+            state=state,
+            result=result,
+            details=details,
+            settings=settings,
+            decision_code="IRRIGATION_FAILED_HOLD",
+            message="Eine Beregnungsstörung ist gespeichert; der Mäher bleibt geparkt.",
+        )
+    if (
+        irrigation_due
+        and state.irrigation_phase not in ACTIVE_IRRIGATION_PHASES
+        and state.irrigation_phase not in {None, "COMPLETE_HOLD"}
+    ):
+        return _persist_result(
+            store=store,
+            original=original,
+            state=state,
+            result=result,
+            details=details,
+            settings=settings,
+            decision_code="IRRIGATION_STATE_INVALID_HOLD",
+            message="Ein unbekannter Beregnungszustand sperrt jede automatische Fortsetzung.",
+        )
+    if irrigation_due and state.irrigation_phase is None:
         try:
             plan_id, zones = _validated_upcoming_plan(
                 details,
