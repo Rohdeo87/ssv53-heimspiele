@@ -39,14 +39,15 @@ ENV = {
     "HYDRAWISE_CLEAR_CONFIRMATION_MINUTES": "90",
     "MOWER_PARK_CONFIRMATION_MINUTES": "1",
     "MOWER_PARK_PROGRESS_GRACE_MINUTES": "3",
+    "IRRIGATION_FAILSAFE_DOCK_LEAD_MINUTES": "40",
     "MAX_AUTOMATIC_START_MINUTES": "720",
     "MOWER_CONTINUE_MIN_BATTERY_PERCENT": "60",
     "MOWER_RESTART_BATTERY_PERCENT": "90",
 }
 
 
-def zones() -> list[dict]:
-    start = NOW + timedelta(minutes=30)
+def zones(*, start_utc: datetime | None = None) -> list[dict]:
+    start = start_utc or NOW + timedelta(minutes=30)
     result = []
     for index, (relay_id, run_seconds) in enumerate(zip(RELAYS, RUN_SECONDS, strict=True), start=1):
         end = start + timedelta(seconds=run_seconds)
@@ -75,6 +76,8 @@ def result(
     clear: bool = True,
     override_action: str | None = None,
     external_reason_id: int | None = 253053,
+    window_end: datetime | None = None,
+    irrigation_start: datetime | None = None,
 ) -> CycleResult:
     block = None
     if block_source:
@@ -102,13 +105,15 @@ def result(
                 "next_block": block,
                 "mowing_window_now": {
                     "start": (NOW - timedelta(hours=1)).isoformat(),
-                    "end": (NOW + timedelta(hours=12)).isoformat(),
+                    "end": (window_end or NOW + timedelta(hours=12)).isoformat(),
                 },
             },
             "hydrawise": {
                 "status": "live (7 Zonen)",
                 "error": None,
-                "zones": zones(),
+                "zones": zones(
+                    start_utc=irrigation_start or NOW + timedelta(hours=13)
+                ),
                 "safety": {
                     "available": True,
                     "fresh": True,
@@ -420,7 +425,13 @@ class FullFailsafeTests(unittest.TestCase):
         zone_calls = []
         output, store = self._run(
             AutomationState(),
-            result(command="PARK", block_source="irrigation", activity="MOWING", clear=False),
+            result(
+                command="PARK",
+                block_source="irrigation",
+                activity="MOWING",
+                clear=False,
+                irrigation_start=NOW + timedelta(minutes=30),
+            ),
             park=lambda *args: park_calls.append(args) or {"accepted": True},
             zone=lambda *args: zone_calls.append(args) or {},
         )
@@ -442,6 +453,45 @@ class FullFailsafeTests(unittest.TestCase):
         self.assertEqual(output.decision_code, "IRRIGATION_ZONE_SUSPENDED")
         self.assertEqual(calls[-1][1], RELAYS[0])
         self.assertEqual(len(__import__("json").loads(store.load().irrigation_suspended_relay_ids_json)), 1)
+
+    def test_suspends_regular_schedule_while_mower_is_still_going_home(self) -> None:
+        calls = []
+        state = irrigation_state(phase="PLANNED")
+        state = AutomationState.from_mapping(
+            {
+                **state.to_dict(),
+                "park_confirmed_utc": None,
+                "irrigation_suspended_relay_ids_json": "[]",
+            }
+        )
+        output, store = self._run(
+            state,
+            result(block_source="irrigation", activity="GOING_HOME"),
+            suspend=lambda *args: calls.append(args) or {"message_type": "info"},
+        )
+        self.assertEqual(output.decision_code, "IRRIGATION_ZONE_SUSPENDED")
+        self.assertEqual(len(calls), 1)
+        self.assertIsNone(store.load().park_confirmed_utc)
+
+    def test_irrigation_start_waits_for_training_or_match_to_clear(self) -> None:
+        for source in ("irrigation+training", "irrigation+match"):
+            with self.subTest(source=source):
+                zone_calls = []
+                state = irrigation_state(phase="READY")
+                state = AutomationState.from_mapping(
+                    {**state.to_dict(), "automation_park_source": source}
+                )
+                output, store = self._run(
+                    state,
+                    result(block_source=source, activity="PARKED_IN_CS"),
+                    zone=lambda *args: zone_calls.append(args) or {"message_type": "info"},
+                )
+                self.assertEqual(
+                    output.decision_code,
+                    "IRRIGATION_WAIT_FOR_OCCUPANCY_CLEAR",
+                )
+                self.assertEqual(zone_calls, [])
+                self.assertEqual(store.load().irrigation_phase, "READY")
 
     def test_starts_first_zone_only_after_all_schedule_starts_are_suspended(self) -> None:
         calls = []
@@ -543,6 +593,165 @@ class FullFailsafeTests(unittest.TestCase):
         self.assertEqual(output.decision_code, "CONTINUOUS_MOWING_START_SENT")
         self.assertEqual(len(calls), 1)
         self.assertTrue(store.load().continuous_mowing_owned)
+
+    def test_start_command_expires_at_the_park_command_deadline(self) -> None:
+        state = AutomationState(
+            parked_by_automation=True,
+            automation_park_source="continuous",
+            automation_restart_allowed=True,
+            park_command_sent_utc=(NOW - timedelta(hours=1)).isoformat(),
+            park_confirmed_utc=(NOW - timedelta(minutes=2)).isoformat(),
+            hydrawise_clear_since_utc=(NOW - timedelta(minutes=120)).isoformat(),
+            last_hydrawise_success_utc=(NOW - timedelta(minutes=1)).isoformat(),
+        )
+        calls = []
+        output, store = self._run(
+            state,
+            result(
+                activity="PARKED_IN_CS",
+                battery=100,
+                window_end=NOW + timedelta(minutes=60),
+                irrigation_start=NOW + timedelta(hours=4),
+            ),
+            start=lambda *args: calls.append(args) or {"accepted": True},
+        )
+        self.assertEqual(output.decision_code, "CONTINUOUS_MOWING_START_SENT")
+        self.assertEqual(calls[0][-1], 50)
+        self.assertEqual(
+            store.load().continuous_mowing_window_end_utc,
+            (NOW + timedelta(minutes=50)).isoformat(),
+        )
+
+    def test_regular_irrigation_start_imposes_a_hard_forty_minute_deadline(self) -> None:
+        irrigation_start = NOW + timedelta(minutes=120)
+        state = AutomationState(
+            parked_by_automation=True,
+            automation_park_source="continuous",
+            automation_restart_allowed=True,
+            park_command_sent_utc=(NOW - timedelta(hours=1)).isoformat(),
+            park_confirmed_utc=(NOW - timedelta(minutes=2)).isoformat(),
+            hydrawise_clear_since_utc=(NOW - timedelta(minutes=120)).isoformat(),
+            last_hydrawise_success_utc=(NOW - timedelta(minutes=1)).isoformat(),
+        )
+        calls = []
+        output, store = self._run(
+            state,
+            result(
+                activity="PARKED_IN_CS",
+                battery=100,
+                window_end=NOW + timedelta(minutes=180),
+                irrigation_start=irrigation_start,
+            ),
+            start=lambda *args: calls.append(args) or {"accepted": True},
+        )
+        expected_deadline = irrigation_start - timedelta(minutes=40)
+        self.assertEqual(output.decision_code, "CONTINUOUS_MOWING_START_SENT")
+        self.assertEqual(calls[0][-1], 80)
+        self.assertEqual(
+            store.load().continuous_mowing_window_end_utc,
+            expected_deadline.isoformat(),
+        )
+        self.assertEqual(
+            output.details["mower_outage_guard"]["command_deadline_utc"],
+            expected_deadline.isoformat(),
+        )
+
+    def test_running_mower_gets_a_shorter_device_command_if_deadline_changed(self) -> None:
+        irrigation_start = NOW + timedelta(minutes=120)
+        calls = []
+        state = AutomationState(
+            continuous_mowing_owned=True,
+            continuous_mowing_work_area_id=849199,
+            continuous_mowing_window_end_utc=(NOW + timedelta(minutes=180)).isoformat(),
+            last_mower_activity="MOWING",
+            hydrawise_clear_since_utc=(NOW - timedelta(minutes=120)).isoformat(),
+            last_hydrawise_success_utc=(NOW - timedelta(minutes=1)).isoformat(),
+        )
+        output, store = self._run(
+            state,
+            result(
+                activity="MOWING",
+                window_end=NOW + timedelta(minutes=180),
+                irrigation_start=irrigation_start,
+            ),
+            start=lambda *args: calls.append(args) or {"accepted": True},
+        )
+        expected_deadline = irrigation_start - timedelta(minutes=40)
+        self.assertEqual(
+            output.decision_code,
+            "CONTINUOUS_MOWING_FAILSAFE_REFRESHED",
+        )
+        self.assertEqual(calls[0][-1], 80)
+        self.assertTrue(output.details["start_action"]["failsafe_refresh"])
+        self.assertEqual(
+            store.load().continuous_mowing_window_end_utc,
+            expected_deadline.isoformat(),
+        )
+
+    def test_already_bounded_running_mower_is_not_recommanded(self) -> None:
+        calls = []
+        state = AutomationState(
+            continuous_mowing_owned=True,
+            continuous_mowing_work_area_id=849199,
+            continuous_mowing_window_end_utc=(NOW + timedelta(minutes=60)).isoformat(),
+            last_mower_activity="MOWING",
+            hydrawise_clear_since_utc=(NOW - timedelta(minutes=120)).isoformat(),
+            last_hydrawise_success_utc=(NOW - timedelta(minutes=1)).isoformat(),
+        )
+        output, _store = self._run(
+            state,
+            result(
+                activity="MOWING",
+                window_end=NOW + timedelta(minutes=180),
+                irrigation_start=NOW + timedelta(minutes=120),
+            ),
+            start=lambda *args: calls.append(args) or {"accepted": True},
+        )
+        self.assertEqual(output.decision_code, "CONTINUOUS_MOWING_ACTIVE")
+        self.assertEqual(calls, [])
+
+    def test_irrigation_deadline_forces_park_even_if_planner_block_is_missing(self) -> None:
+        park_calls = []
+        start_calls = []
+        output, store = self._run(
+            AutomationState(
+                continuous_mowing_owned=True,
+                continuous_mowing_work_area_id=849199,
+                continuous_mowing_window_end_utc=(NOW + timedelta(hours=12)).isoformat(),
+            ),
+            result(
+                activity="MOWING",
+                window_end=NOW + timedelta(hours=12),
+                irrigation_start=NOW + timedelta(minutes=40),
+            ),
+            park=lambda *args: park_calls.append(args) or {"accepted": True},
+            start=lambda *args: start_calls.append(args) or {"accepted": True},
+        )
+        self.assertEqual(output.decision_code, "PARK_COMMAND_SENT")
+        self.assertEqual(len(park_calls), 1)
+        self.assertEqual(start_calls, [])
+        self.assertEqual(store.load().automation_park_source, "irrigation")
+
+    def test_irrigation_deadline_holds_a_charging_mower_in_the_dock(self) -> None:
+        park_calls = []
+        output, store = self._run(
+            AutomationState(
+                continuous_mowing_owned=True,
+                continuous_mowing_work_area_id=849199,
+                continuous_mowing_window_end_utc=(NOW + timedelta(hours=12)).isoformat(),
+            ),
+            result(
+                activity="CHARGING",
+                override_action="FORCE_MOW",
+                window_end=NOW + timedelta(hours=12),
+                irrigation_start=NOW + timedelta(minutes=40),
+            ),
+            park=lambda *args: park_calls.append(args) or {"accepted": True},
+        )
+        self.assertEqual(output.decision_code, "PARK_COMMAND_SENT")
+        self.assertEqual(len(park_calls), 1)
+        self.assertEqual(store.load().automation_park_source, "irrigation")
+        self.assertTrue(store.load().parked_by_automation)
 
     def test_owned_mower_turns_around_before_dock_when_battery_is_sufficient(self) -> None:
         window_end = NOW + timedelta(hours=12)

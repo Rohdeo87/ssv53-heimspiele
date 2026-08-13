@@ -206,6 +206,27 @@ def _active_relay_ids(details: dict[str, Any]) -> set[int]:
     return {int(value) for value in values}
 
 
+def _next_scheduled_irrigation_start(
+    details: dict[str, Any],
+    *,
+    now_utc: datetime,
+) -> datetime | None:
+    raw_zones = _as_dict(details.get("hydrawise")).get("zones")
+    if not isinstance(raw_zones, list):
+        return None
+    starts = [
+        start
+        for raw_zone in raw_zones
+        if (
+            start := _parse_time(
+                _as_dict(raw_zone).get("scheduled_start_utc")
+            )
+        ) is not None
+        and start > now_utc
+    ]
+    return min(starts, default=None)
+
+
 def _cycle_state(
     state: AutomationState,
     result: CycleResult,
@@ -429,6 +450,36 @@ def run_full_failsafe_cycle(
         minimum=1,
         maximum=24,
     )
+    irrigation_failsafe_lead_minutes = _env_int(
+        environment,
+        "IRRIGATION_FAILSAFE_DOCK_LEAD_MINUTES",
+        40,
+        minimum=30,
+        maximum=120,
+    )
+    next_irrigation_start = _next_scheduled_irrigation_start(
+        details,
+        now_utc=now,
+    )
+    irrigation_failsafe_deadline = (
+        next_irrigation_start
+        - timedelta(minutes=irrigation_failsafe_lead_minutes)
+        if next_irrigation_start is not None
+        else None
+    )
+    details["irrigation_outage_guard"] = {
+        "next_scheduled_start_utc": (
+            next_irrigation_start.isoformat()
+            if next_irrigation_start is not None
+            else None
+        ),
+        "mower_return_deadline_utc": (
+            irrigation_failsafe_deadline.isoformat()
+            if irrigation_failsafe_deadline is not None
+            else None
+        ),
+        "required_lead_minutes": irrigation_failsafe_lead_minutes,
+    }
 
     if (
         irrigation_due
@@ -541,6 +592,19 @@ def run_full_failsafe_cycle(
         wants_park = True
     if result.decision_code.startswith("HYDRAWISE_") and activity in PARKABLE_ACTIVITIES:
         wants_park = True
+    irrigation_park_already_safe = (
+        state.parked_by_automation
+        and "irrigation" in _source_parts(state.automation_park_source)
+        and activity in PARKED_ACTIVITIES
+    )
+    irrigation_outage_park_due = (
+        irrigation_failsafe_deadline is not None
+        and now >= irrigation_failsafe_deadline
+        and activity in PARK_COMMAND_ACTIVITIES
+        and not irrigation_park_already_safe
+    )
+    if irrigation_outage_park_due:
+        wants_park = True
 
     park_guard_required = (
         bool(_source_parts(block_source) & PARK_GUARD_BLOCK_SOURCES)
@@ -590,6 +654,7 @@ def run_full_failsafe_cycle(
     if wants_park:
         park_source = (
             block_source
+            or ("irrigation" if irrigation_outage_park_due else "")
             or (str(state.automation_park_source or "").strip().lower() if park_reassert_due else "")
             or "hydrawise_unconfirmed"
         )
@@ -717,14 +782,7 @@ def run_full_failsafe_cycle(
             minimum=1,
             maximum=15,
         )
-        if (
-            not state.parked_by_automation
-            or park_confirmed is None
-            or now - park_confirmed < timedelta(minutes=confirmation_minutes)
-            or activity not in PARKED_ACTIVITIES
-            or error_code != 0
-            or mower_state in ERROR_STATES
-        ):
+        if not state.parked_by_automation:
             return _persist_result(
                 store=store,
                 original=original,
@@ -733,7 +791,7 @@ def run_full_failsafe_cycle(
                 details=details,
                 settings=settings,
                 decision_code="IRRIGATION_WAIT_FOR_CONFIRMED_PARK",
-                message="Beregnung wartet auf die fortlaufend bestätigte Parkposition.",
+                message="Beregnung wartet zunächst auf den eigenen sicheren Parkbefehl.",
             )
         if not settings.full_failsafe_write_gate_enabled:
             return _persist_result(
@@ -841,6 +899,47 @@ def run_full_failsafe_cycle(
                 decision_code="IRRIGATION_ZONE_SUSPENDED",
                 message=f"Planstart für Zone {pending['zone']} wurde sicher suspendiert.",
                 command_sent=True,
+            )
+
+        if (
+            park_confirmed is None
+            or now - park_confirmed < timedelta(minutes=confirmation_minutes)
+            or activity not in PARKED_ACTIVITIES
+            or error_code != 0
+            or mower_state in ERROR_STATES
+        ):
+            return _persist_result(
+                store=store,
+                original=original,
+                state=state,
+                result=result,
+                details=details,
+                settings=settings,
+                decision_code="IRRIGATION_WAIT_FOR_CONFIRMED_PARK",
+                message="Der Wasserstart wartet auf die fortlaufend bestätigte Parkposition.",
+            )
+
+        occupancy_conflict_sources = (
+            _source_parts(blocked_now.get("source"))
+            | _source_parts(parking_block.get("source"))
+        ) & frozenset({"training", "match"})
+        if occupancy_conflict_sources:
+            details["irrigation_occupancy_guard"] = {
+                "active": True,
+                "sources": sorted(occupancy_conflict_sources),
+            }
+            return _persist_result(
+                store=store,
+                original=original,
+                state=state,
+                result=result,
+                details=details,
+                settings=settings,
+                decision_code="IRRIGATION_WAIT_FOR_OCCUPANCY_CLEAR",
+                message=(
+                    "Die regulären Planstarts sind suspendiert; der vorgezogene "
+                    "Wasserstart wartet auf das Ende von Training oder Spiel."
+                ),
             )
 
         current_id = state.irrigation_current_relay_id
@@ -1214,17 +1313,7 @@ def run_full_failsafe_cycle(
             message="Ein externer Parkbefehl beendet den automatischen Mähauftrag.",
         )
 
-    if activity in MOWING_ACTIVITIES:
-        return _persist_result(
-            store=store,
-            original=original,
-            state=state,
-            result=result,
-            details=details,
-            settings=settings,
-            decision_code="CONTINUOUS_MOWING_ACTIVE",
-            message="Der Mäher arbeitet bereits und mäht bis zur nächsten sicheren Sperre weiter.",
-        )
+    mowing_now = activity in MOWING_ACTIVITIES
     continue_threshold = _env_int(
         environment,
         "MOWER_CONTINUE_MIN_BATTERY_PERCENT",
@@ -1256,7 +1345,11 @@ def run_full_failsafe_cycle(
             decision_code="WAIT_FOR_MOWER_AT_STATION",
             message="Die Rückfahrt wird nicht unterbrochen; danach entscheidet der Akkustand.",
         )
-    if activity not in PARKED_ACTIVITIES and not turnaround_before_dock:
+    if (
+        activity not in PARKED_ACTIVITIES
+        and not turnaround_before_dock
+        and not mowing_now
+    ):
         return _persist_result(
             store=store,
             original=original,
@@ -1269,7 +1362,7 @@ def run_full_failsafe_cycle(
         )
 
     required_battery = continue_threshold if continuing_owned_job else restart_threshold
-    if battery < required_battery:
+    if battery < required_battery and not mowing_now:
         return _persist_result(
             store=store,
             original=original,
@@ -1309,7 +1402,18 @@ def run_full_failsafe_cycle(
         minimum=15,
         maximum=180,
     )
-    remaining = int((window_end - now).total_seconds() // 60)
+    planner_return_deadline = window_end - timedelta(
+        minutes=settings.park_lookahead_minutes
+    )
+    safe_command_deadline = min(
+        deadline
+        for deadline in (
+            planner_return_deadline,
+            irrigation_failsafe_deadline,
+        )
+        if deadline is not None
+    )
+    remaining = int((safe_command_deadline - now).total_seconds() // 60)
     duration = min(
         _env_int(
             environment,
@@ -1318,9 +1422,51 @@ def run_full_failsafe_cycle(
             minimum=30,
             maximum=1440,
         ),
-        max(0, remaining - 5),
+        max(0, remaining),
     )
-    if remaining < minimum_window or duration < minimum_window:
+    existing_command_end = _parse_time(state.continuous_mowing_window_end_utc)
+    failsafe_refresh = (
+        mowing_now
+        and state.continuous_mowing_owned
+        and (
+            existing_command_end is None
+            or existing_command_end > safe_command_deadline
+        )
+    )
+    details["mower_outage_guard"] = {
+        "planner_window_end_utc": window_end.isoformat(),
+        "planner_return_deadline_utc": planner_return_deadline.isoformat(),
+        "irrigation_return_deadline_utc": (
+            irrigation_failsafe_deadline.isoformat()
+            if irrigation_failsafe_deadline is not None
+            else None
+        ),
+        "command_deadline_utc": safe_command_deadline.isoformat(),
+        "existing_command_end_utc": (
+            existing_command_end.isoformat()
+            if existing_command_end is not None
+            else None
+        ),
+        "failsafe_refresh_required": failsafe_refresh,
+    }
+    if mowing_now and not failsafe_refresh:
+        return _persist_result(
+            store=store,
+            original=original,
+            state=state,
+            result=result,
+            details=details,
+            settings=settings,
+            decision_code="CONTINUOUS_MOWING_ACTIVE",
+            message=(
+                "Der Mäher arbeitet mit einem ausfallsicher begrenzten Auftrag "
+                "bis zur nächsten sicheren Rückkehrfrist weiter."
+            ),
+        )
+    if (
+        (not failsafe_refresh and (remaining < minimum_window or duration < minimum_window))
+        or (failsafe_refresh and duration < 1)
+    ):
         return _persist_result(
             store=store,
             original=original,
@@ -1329,7 +1475,7 @@ def run_full_failsafe_cycle(
             details=details,
             settings=settings,
             decision_code="MOWING_WINDOW_TOO_SHORT",
-            message="Das verbleibende freie Mähfenster ist zu kurz.",
+            message="Das verbleibende ausfallsichere Mähfenster ist zu kurz.",
         )
     work_area_id = int(target_area.get("id") or 0)
     if work_area_id <= 0 or target_area.get("enabled") is False:
@@ -1360,7 +1506,7 @@ def run_full_failsafe_cycle(
             action="PARK",
             target=mower_id,
             reason="continuous|bootstrap-owned-park",
-            valid_until_utc=window_end,
+            valid_until_utc=safe_command_deadline,
         )
         gate = evaluate_command_gate(state=original, intent=intent, now_utc=now)
         if not gate.allowed:
@@ -1381,7 +1527,7 @@ def run_full_failsafe_cycle(
             fingerprint=intent.fingerprint,
             sent_utc=now,
             action="PARK",
-            park_until_utc=window_end,
+            park_until_utc=safe_command_deadline,
             park_source="continuous",
             restart_allowed=True,
         )
@@ -1402,12 +1548,16 @@ def run_full_failsafe_cycle(
         action="START",
         target=mower_id,
         reason=(
-            "continuous-turnaround"
-            if turnaround_before_dock
-            else "continuous"
+            "continuous-failsafe-refresh"
+            if failsafe_refresh
+            else (
+                "continuous-turnaround"
+                if turnaround_before_dock
+                else "continuous"
+            )
         )
-        + f"|{window_end.isoformat()}|hydrawise-clear:{state.hydrawise_clear_since_utc}",
-        valid_until_utc=window_end,
+        + f"|{safe_command_deadline.isoformat()}|hydrawise-clear:{state.hydrawise_clear_since_utc}",
+        valid_until_utc=safe_command_deadline,
     )
     gate = evaluate_command_gate(state=state, intent=intent, now_utc=now)
     details["start_gate"] = {
@@ -1416,6 +1566,8 @@ def run_full_failsafe_cycle(
         "reason": gate.reason,
         "duration_minutes": duration,
         "work_area_id": work_area_id,
+        "command_deadline_utc": safe_command_deadline.isoformat(),
+        "failsafe_refresh": failsafe_refresh,
         "fingerprint": intent.fingerprint,
     }
     if not gate.allowed:
@@ -1429,12 +1581,16 @@ def run_full_failsafe_cycle(
             decision_code=gate.code,
             message=gate.reason,
         )
+    command_end = min(
+        safe_command_deadline,
+        now + timedelta(minutes=duration),
+    )
     command_state = state.record_command(
         fingerprint=intent.fingerprint,
         sent_utc=now,
         action="START",
         work_area_id=work_area_id,
-        mowing_window_end_utc=window_end,
+        mowing_window_end_utc=command_end,
         continuous_mowing=True,
     )
     if state.irrigation_phase == "COMPLETE_HOLD":
@@ -1471,20 +1627,30 @@ def run_full_failsafe_cycle(
         "duration_minutes": duration,
         "work_area_id": work_area_id,
         "continuous_mowing": True,
+        "command_end_utc": command_end.isoformat(),
+        "failsafe_refresh": failsafe_refresh,
         "turnaround_before_dock": turnaround_before_dock,
         "hydrawise_release_minutes": release_minutes,
     }
     return replace(
         result,
         decision_code=(
-            "CONTINUOUS_MOWING_TURNAROUND_SENT"
-            if turnaround_before_dock
-            else "CONTINUOUS_MOWING_START_SENT"
+            "CONTINUOUS_MOWING_FAILSAFE_REFRESHED"
+            if failsafe_refresh
+            else (
+                "CONTINUOUS_MOWING_TURNAROUND_SENT"
+                if turnaround_before_dock
+                else "CONTINUOUS_MOWING_START_SENT"
+            )
         ),
         message=(
-            "Der ausreichend geladene Mäher wurde vor der Station sicher erneut in die Rasenfläche geschickt."
-            if turnaround_before_dock
-            else "Der Mäher wurde im sicheren freien Fenster zum kontinuierlichen Mähen gestartet."
+            "Der laufende Mähauftrag wurde im Mäher selbst bis zur sicheren Rückkehrfrist begrenzt."
+            if failsafe_refresh
+            else (
+                "Der ausreichend geladene Mäher wurde vor der Station sicher erneut in die Rasenfläche geschickt."
+                if turnaround_before_dock
+                else "Der Mäher wurde im sicheren freien Fenster zum kontinuierlichen Mähen gestartet."
+            )
         ),
         command_sent=True,
         details=_decorate(
