@@ -47,6 +47,7 @@ SAFE_PARK_SOURCES = frozenset(
 ACTIVE_IRRIGATION_PHASES = frozenset(
     {"PLANNED", "SUSPENDING", "READY", "START_RESERVED", "RUNNING"}
 )
+PARK_GUARD_BLOCK_SOURCES = frozenset({"training", "match", "irrigation"})
 
 
 def _as_dict(value: Any) -> dict[str, Any]:
@@ -91,6 +92,22 @@ def _source_parts(source: Any) -> frozenset[str]:
 def _restart_allowed(source: str) -> bool:
     parts = _source_parts(source)
     return bool(parts) and parts.issubset(SAFE_PARK_SOURCES)
+
+
+def _park_valid_until(
+    *,
+    now_utc: datetime,
+    state: AutomationState,
+    parking_block: Mapping[str, Any],
+) -> datetime:
+    block_end = _parse_time(parking_block.get("end"))
+    if block_end is not None and block_end > now_utc:
+        return block_end
+    owned_end = _parse_time(state.automation_park_until_utc)
+    if owned_end is not None and owned_end > now_utc:
+        return owned_end
+    # A stable fallback keeps the command fingerprint constant within a UTC day.
+    return now_utc.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=2)
 
 
 def _json_ints(value: str | None) -> list[int]:
@@ -413,21 +430,10 @@ def run_full_failsafe_cycle(
         maximum=24,
     )
 
-    if irrigation_due and state.irrigation_phase == "FAILED":
-        return _persist_result(
-            store=store,
-            original=original,
-            state=state,
-            result=result,
-            details=details,
-            settings=settings,
-            decision_code="IRRIGATION_FAILED_HOLD",
-            message="Eine Beregnungsstörung ist gespeichert; der Mäher bleibt geparkt.",
-        )
     if (
         irrigation_due
         and state.irrigation_phase not in ACTIVE_IRRIGATION_PHASES
-        and state.irrigation_phase not in {None, "COMPLETE_HOLD"}
+        and state.irrigation_phase not in {None, "COMPLETE_HOLD", "FAILED"}
     ):
         return _persist_result(
             store=store,
@@ -489,9 +495,62 @@ def run_full_failsafe_cycle(
     if result.decision_code.startswith("HYDRAWISE_") and activity in PARKABLE_ACTIVITIES:
         wants_park = True
 
+    park_guard_required = (
+        bool(_source_parts(block_source) & PARK_GUARD_BLOCK_SOURCES)
+        or state.irrigation_phase in ACTIVE_IRRIGATION_PHASES
+        or state.irrigation_phase == "FAILED"
+    )
+    automation_park_lost = (
+        state.parked_by_automation
+        and park_guard_required
+        and activity in PARKABLE_ACTIVITIES
+    )
+    park_reassert_grace_minutes = _env_int(
+        environment,
+        "MOWER_PARK_PROGRESS_GRACE_MINUTES",
+        3,
+        minimum=1,
+        maximum=10,
+    )
+    park_sent = _parse_time(state.park_command_sent_utc)
+    park_confirmed = _parse_time(state.park_confirmed_utc)
+    park_reassert_due = automation_park_lost and (
+        park_confirmed is not None
+        or park_sent is None
+        or now - park_sent >= timedelta(minutes=park_reassert_grace_minutes)
+    )
+    if park_reassert_due:
+        wants_park = True
+    elif automation_park_lost:
+        details["park_guard"] = {
+            "active": True,
+            "reassert_due": False,
+            "grace_minutes": park_reassert_grace_minutes,
+            "park_command_sent_utc": state.park_command_sent_utc,
+            "activity": activity,
+        }
+        return _persist_result(
+            store=store,
+            original=original,
+            state=state,
+            result=result,
+            details=details,
+            settings=settings,
+            decision_code="PARK_REASSERT_GRACE",
+            message="Der frische Parkbefehl erhält kurz Zeit für die Statusübernahme; der Platz bleibt gesperrt.",
+        )
+
     if wants_park:
-        park_source = block_source or "hydrawise_unconfirmed"
-        block_end = _parse_time(parking_block.get("end")) or now + timedelta(days=1)
+        park_source = (
+            block_source
+            or (str(state.automation_park_source or "").strip().lower() if park_reassert_due else "")
+            or "hydrawise_unconfirmed"
+        )
+        block_end = _park_valid_until(
+            now_utc=now,
+            state=state,
+            parking_block=parking_block,
+        )
         if not settings.enable_park_commands:
             return _persist_result(
                 store=store,
@@ -522,16 +581,29 @@ def run_full_failsafe_cycle(
         intent = CommandIntent(
             action="PARK",
             target=mower_id,
-            reason=f"{park_source}|{parking_block.get('start', '')}|{parking_block.get('end', '')}",
+            reason=(
+                f"reassert|{park_source}|{parking_block.get('start', '')}|"
+                f"{parking_block.get('end', '')}|{state.irrigation_phase or ''}"
+                if park_reassert_due
+                else f"{park_source}|{parking_block.get('start', '')}|{parking_block.get('end', '')}"
+            ),
             valid_until_utc=block_end,
         )
-        gate = evaluate_command_gate(state=original, intent=intent, now_utc=now)
+        gate = evaluate_command_gate(
+            state=original,
+            intent=intent,
+            now_utc=now,
+            dedupe_minutes=(
+                park_reassert_grace_minutes if park_reassert_due else 10
+            ),
+        )
         details["park_gate"] = {
             "allowed": gate.allowed,
             "code": gate.code,
             "reason": gate.reason,
             "source": park_source,
             "fingerprint": intent.fingerprint,
+            "reasserted": park_reassert_due,
         }
         if not gate.allowed:
             return _persist_result(
@@ -559,6 +631,7 @@ def run_full_failsafe_cycle(
             "type": "ParkUntilFurtherNotice",
             "response": response,
             "source": park_source,
+            "reasserted": park_reassert_due,
         }
         return _persist_result(
             store=store,
@@ -567,8 +640,12 @@ def run_full_failsafe_cycle(
             result=result,
             details=details,
             settings=settings,
-            decision_code="PARK_COMMAND_SENT",
-            message="ParkUntilFurtherNotice wurde sicher gesendet.",
+            decision_code=("PARK_COMMAND_REASSERTED" if park_reassert_due else "PARK_COMMAND_SENT"),
+            message=(
+                "Der automatische Parkbefehl wurde wegen erneuter Platzfahrt sicher wiederholt."
+                if park_reassert_due
+                else "ParkUntilFurtherNotice wurde sicher gesendet."
+            ),
             command_sent=True,
         )
 

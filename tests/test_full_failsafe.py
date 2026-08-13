@@ -38,6 +38,7 @@ ENV = {
     "HYDRAWISE_EXPECTED_ZONE_COUNT": "7",
     "HYDRAWISE_CLEAR_CONFIRMATION_MINUTES": "90",
     "MOWER_PARK_CONFIRMATION_MINUTES": "1",
+    "MOWER_PARK_PROGRESS_GRACE_MINUTES": "3",
     "MAX_AUTOMATIC_START_MINUTES": "720",
     "MOWER_CONTINUE_MIN_BATTERY_PERCENT": "60",
     "MOWER_RESTART_BATTERY_PERCENT": "90",
@@ -151,10 +152,10 @@ def irrigation_state(*, phase: str, current: int | None = None) -> AutomationSta
 
 
 class FullFailsafeTests(unittest.TestCase):
-    def _run(self, state: AutomationState, cycle: CycleResult, **senders):
+    def _run(self, state: AutomationState, cycle: CycleResult, *, now: datetime = NOW, **senders):
         store = InMemoryStateStore(state)
         output = run_full_failsafe_cycle(
-            now_utc=NOW,
+            now_utc=now,
             settings=settings(),
             environment=ENV,
             past_due=False,
@@ -167,6 +168,127 @@ class FullFailsafeTests(unittest.TestCase):
             start_zone_sender=senders.get("zone", lambda *_: {"message_type": "info"}),
         )
         return output, store
+
+    def test_reasserts_owned_park_if_mower_reenters_training_or_match(self) -> None:
+        for source in ("training", "match"):
+            with self.subTest(source=source):
+                calls = []
+                state = AutomationState(
+                    parked_by_automation=True,
+                    automation_park_source=source,
+                    automation_restart_allowed=True,
+                    automation_park_until_utc=(NOW + timedelta(hours=4)).isoformat(),
+                    park_command_sent_utc=(NOW - timedelta(minutes=20)).isoformat(),
+                    park_confirmed_utc=(NOW - timedelta(minutes=15)).isoformat(),
+                )
+                output, saved = self._run(
+                    state,
+                    result(block_source=source, activity="MOWING"),
+                    park=lambda *args: calls.append(args) or {"accepted": True},
+                )
+                self.assertEqual(output.decision_code, "PARK_COMMAND_REASSERTED")
+                self.assertEqual(len(calls), 1)
+                self.assertTrue(output.details["park_action"]["reasserted"])
+                self.assertIsNone(saved.load().park_confirmed_utc)
+
+    def test_reasserts_owned_park_during_active_irrigation(self) -> None:
+        calls = []
+        output, _store = self._run(
+            irrigation_state(phase="RUNNING", current=RELAYS[0]),
+            result(activity="LEAVING", active_ids=[RELAYS[0]], clear=False),
+            park=lambda *args: calls.append(args) or {"accepted": True},
+        )
+        self.assertEqual(output.decision_code, "PARK_COMMAND_REASSERTED")
+        self.assertEqual(len(calls), 1)
+
+    def test_reasserts_owned_park_while_irrigation_is_failed(self) -> None:
+        calls = []
+        state = irrigation_state(phase="FAILED")
+        state = AutomationState.from_mapping(
+            {**state.to_dict(), "irrigation_failed_reason": "Testfehler"}
+        )
+        output, _store = self._run(
+            state,
+            result(block_source="irrigation", activity="MOWING"),
+            park=lambda *args: calls.append(args) or {"accepted": True},
+        )
+        self.assertEqual(output.decision_code, "PARK_COMMAND_REASSERTED")
+        self.assertEqual(len(calls), 1)
+
+    def test_fresh_unconfirmed_park_gets_status_grace_without_command_spam(self) -> None:
+        calls = []
+        state = AutomationState(
+            parked_by_automation=True,
+            automation_park_source="training",
+            automation_restart_allowed=True,
+            automation_park_until_utc=(NOW + timedelta(hours=4)).isoformat(),
+            park_command_sent_utc=(NOW - timedelta(minutes=2)).isoformat(),
+        )
+        output, _store = self._run(
+            state,
+            result(block_source="training", activity="MOWING"),
+            park=lambda *args: calls.append(args) or {"accepted": True},
+        )
+        self.assertEqual(output.decision_code, "PARK_REASSERT_GRACE")
+        self.assertEqual(calls, [])
+
+    def test_reasserted_park_is_not_sent_again_during_grace(self) -> None:
+        calls = []
+        state = AutomationState(
+            parked_by_automation=True,
+            automation_park_source="training",
+            automation_restart_allowed=True,
+            automation_park_until_utc=(NOW + timedelta(hours=4)).isoformat(),
+            park_command_sent_utc=(NOW - timedelta(minutes=20)).isoformat(),
+            park_confirmed_utc=(NOW - timedelta(minutes=15)).isoformat(),
+        )
+        _first, store = self._run(
+            state,
+            result(block_source="training", activity="MOWING"),
+            park=lambda *args: calls.append(args) or {"accepted": True},
+        )
+        second = run_full_failsafe_cycle(
+            now_utc=NOW + timedelta(minutes=1),
+            settings=settings(),
+            environment=ENV,
+            past_due=False,
+            source="test",
+            read_only_runner=lambda **_: result(block_source="training", activity="MOWING"),
+            state_store_factory=lambda _env: store,
+            park_sender=lambda *args: calls.append(args) or {"accepted": True},
+        )
+        self.assertEqual(second.decision_code, "PARK_REASSERT_GRACE")
+        self.assertEqual(len(calls), 1)
+        third = run_full_failsafe_cycle(
+            now_utc=NOW + timedelta(minutes=3),
+            settings=settings(),
+            environment=ENV,
+            past_due=False,
+            source="test",
+            read_only_runner=lambda **_: result(block_source="training", activity="MOWING"),
+            state_store_factory=lambda _env: store,
+            park_sender=lambda *args: calls.append(args) or {"accepted": True},
+        )
+        self.assertEqual(third.decision_code, "PARK_COMMAND_REASSERTED")
+        self.assertEqual(len(calls), 2)
+
+    def test_manual_stop_is_never_overridden_by_park_guard(self) -> None:
+        calls = []
+        state = AutomationState(
+            parked_by_automation=True,
+            automation_park_source="training",
+            automation_restart_allowed=True,
+            automation_park_until_utc=(NOW + timedelta(hours=4)).isoformat(),
+            park_command_sent_utc=(NOW - timedelta(minutes=20)).isoformat(),
+            park_confirmed_utc=(NOW - timedelta(minutes=15)).isoformat(),
+        )
+        output, _store = self._run(
+            state,
+            result(block_source="training", activity="STOPPED_IN_GARDEN"),
+            park=lambda *args: calls.append(args) or {"accepted": True},
+        )
+        self.assertEqual(output.decision_code, "OCCUPANCY_OR_IRRIGATION_HOLD")
+        self.assertEqual(calls, [])
 
     def test_irrigation_plan_parks_before_any_zone_command(self) -> None:
         park_calls = []
