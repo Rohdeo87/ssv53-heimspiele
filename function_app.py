@@ -13,7 +13,8 @@ from mower.irrigation_recovery import (
     IrrigationRecoveryError,
     reset_failed_irrigation,
 )
-from occupancy.service import build_occupancy_payload
+from occupancy.service import build_occupancy_payload, build_training_occurrences
+from training_cancellations import AzureTableCancellationStore
 
 
 app = func.FunctionApp()
@@ -78,7 +79,8 @@ def _occupancy_matches_path() -> tuple[str, str]:
 def _occupancy_headers(*, cache: bool) -> dict[str, str]:
     return {
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, OPTIONS",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
         "Cache-Control": "public, max-age=60" if cache else "no-store",
         "X-Content-Type-Options": "nosniff",
     }
@@ -196,17 +198,43 @@ def ssv53_occupancy(req: func.HttpRequest) -> func.HttpResponse:
 
     try:
         matches_path, match_source = _occupancy_matches_path()
+        config_path = os.environ.get(
+            "OCCUPANCY_CONFIG_PATH",
+            "occupancy/config.json",
+        )
         payload = build_occupancy_payload(
-            config_path=os.environ.get(
-                "OCCUPANCY_CONFIG_PATH",
-                "occupancy/config.json",
-            ),
+            config_path=config_path,
             matches_path=matches_path,
             start=start,
             end=end,
             season=season,
             generated_at=now_utc,
         )
+        cancellation_error = None
+        try:
+            range_start = datetime.fromisoformat(payload["range"]["start"])
+            range_end = datetime.fromisoformat(payload["range"]["end"])
+            store = AzureTableCancellationStore.from_environment(os.environ)
+            cancellations = store.list_active(range_start.date(), range_end.date())
+            cancelled = {item.occurrence_key for item in cancellations}
+            if cancelled:
+                payload = build_occupancy_payload(
+                    config_path=config_path,
+                    matches_path=matches_path,
+                    start=start,
+                    end=end,
+                    season=season,
+                    generated_at=now_utc,
+                    cancelled_occurrences=cancelled,
+                )
+        except Exception as exc:
+            # Fail closed: Ein Speicherfehler darf niemals Trainingszeit freigeben.
+            cancellation_error = f"{type(exc).__name__}: {exc}"
+            LOGGER.exception("SSV53_TRAINING_CANCELLATION_READ_ERROR")
+        payload["training_cancellations"] = {
+            "available": cancellation_error is None,
+            "fail_closed": cancellation_error is not None,
+        }
         payload["data_source"] = "azure"
         payload["match_source"] = match_source
         return func.HttpResponse(
@@ -242,5 +270,174 @@ def ssv53_occupancy(req: func.HttpRequest) -> func.HttpResponse:
             mimetype="application/json",
             charset="utf-8",
             headers=_occupancy_headers(cache=False),
+        )
+
+
+def _training_cancellation_response(
+    payload: dict,
+    status_code: int = 200,
+) -> func.HttpResponse:
+    return func.HttpResponse(
+        json.dumps(payload, ensure_ascii=False, sort_keys=True),
+        status_code=status_code,
+        mimetype="application/json",
+        charset="utf-8",
+        headers=_occupancy_headers(cache=False),
+    )
+
+
+@app.route(
+    route="training-cancellations",
+    methods=["GET", "POST", "OPTIONS"],
+    auth_level=func.AuthLevel.ANONYMOUS,
+)
+def ssv53_training_cancellations(req: func.HttpRequest) -> func.HttpResponse:
+    """Trainingsabsagen für die in Appack auf die Rolle TR begrenzte Seite."""
+    if req.method.upper() == "OPTIONS":
+        return func.HttpResponse(
+            status_code=204,
+            headers=_occupancy_headers(cache=False),
+        )
+
+    now_utc = datetime.now(timezone.utc)
+    tz = ZoneInfo("Europe/Berlin")
+    today = now_utc.astimezone(tz).date()
+    start_day = today
+    end_day = today + timedelta(days=28)
+    season = req.params.get("season") or "Sommer"
+    config_path = os.environ.get(
+        "OCCUPANCY_CONFIG_PATH",
+        "occupancy/config.json",
+    )
+
+    try:
+        if req.method.upper() == "GET":
+            if req.params.get("start"):
+                start_day = datetime.fromisoformat(req.params["start"]).date()
+            if req.params.get("end"):
+                end_day = datetime.fromisoformat(req.params["end"]).date()
+            if (
+                start_day < today
+                or end_day < start_day
+                or end_day > today + timedelta(days=63)
+            ):
+                raise ValueError(
+                    "Erlaubt sind heutige und zukünftige Termine innerhalb von 63 Tagen."
+                )
+
+        occurrences = build_training_occurrences(
+            config_path=config_path,
+            start=start_day.isoformat(),
+            end=(end_day + timedelta(days=1)).isoformat(),
+            season=season,
+        )
+        now_local = now_utc.astimezone(tz)
+        occurrences = [
+            item
+            for item in occurrences
+            if datetime.fromisoformat(item["end"]) > now_local
+        ]
+        by_id = {item["id"]: item for item in occurrences}
+        store = AzureTableCancellationStore.from_environment(os.environ)
+
+        if req.method.upper() == "GET":
+            active = {
+                item.event_id: item
+                for item in store.list_active(start_day, end_day)
+            }
+            items = []
+            for occurrence in occurrences:
+                cancellation = active.get(occurrence["id"])
+                items.append(
+                    {
+                        **occurrence,
+                        "cancelled": cancellation is not None,
+                        "cancelledAtUtc": (
+                            cancellation.cancelled_at_utc.isoformat()
+                            if cancellation
+                            else None
+                        ),
+                        "mowerReleaseNotBeforeUtc": (
+                            cancellation.release_not_before_utc.isoformat()
+                            if cancellation
+                            else None
+                        ),
+                    }
+                )
+            return _training_cancellation_response(
+                {"items": items, "season": season}
+            )
+
+        try:
+            body = req.get_json()
+        except ValueError as exc:
+            raise ValueError("Der Request muss gültiges JSON enthalten.") from exc
+        if not isinstance(body, dict):
+            raise ValueError("Der Request muss ein JSON-Objekt enthalten.")
+        event_id = str(body.get("eventId") or "")
+        action = str(body.get("action") or "")
+        occurrence = by_id.get(event_id)
+        if occurrence is None:
+            raise ValueError(
+                "Der Trainingstermin ist nicht vorhanden oder nicht mehr änderbar."
+            )
+
+        if (
+            action == "cancel"
+            and body.get("confirmation") == "TRAINING_FAELLT_AUS"
+        ):
+            delay = int(
+                os.environ.get(
+                    "TRAINING_CANCELLATION_RELEASE_DELAY_MINUTES",
+                    "30",
+                )
+            )
+            cancellation = store.cancel(
+                occurrence,
+                now_utc=now_utc,
+                release_delay_minutes=delay,
+            )
+            LOGGER.warning("SSV53_TRAINING_CANCELLED event_id=%s", event_id)
+            return _training_cancellation_response(
+                {
+                    "ok": True,
+                    "eventId": event_id,
+                    "cancelled": True,
+                    "mowerReleaseNotBeforeUtc": (
+                        cancellation.release_not_before_utc.isoformat()
+                    ),
+                }
+            )
+        if (
+            action == "restore"
+            and body.get("confirmation") == "TRAINING_WIEDER_AKTIV"
+        ):
+            restored = store.restore(event_id, now_utc=now_utc)
+            LOGGER.warning(
+                "SSV53_TRAINING_RESTORED event_id=%s restored=%s",
+                event_id,
+                restored,
+            )
+            return _training_cancellation_response(
+                {
+                    "ok": True,
+                    "eventId": event_id,
+                    "cancelled": False,
+                    "restored": restored,
+                }
+            )
+        raise ValueError("Aktion oder Bestätigung ist ungültig.")
+    except ValueError as exc:
+        return _training_cancellation_response({"error": str(exc)}, 400)
+    except Exception:
+        LOGGER.exception("SSV53_TRAINING_CANCELLATION_ERROR")
+        return _training_cancellation_response(
+            {
+                "error": (
+                    "Trainingsänderung ist derzeit nicht möglich; "
+                    "die Platzsperre bleibt bestehen."
+                )
+            },
+            503,
         )
 

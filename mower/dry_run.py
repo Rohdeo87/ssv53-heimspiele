@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import asdict, replace
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Mapping
 from zoneinfo import ZoneInfo
@@ -36,6 +36,7 @@ from mower.hydrawise import (
 from mower.planner import create_plan, load_json, read_match_blocks
 from mower.runtime import ControlMode, CycleResult, RuntimeSettings
 from mower.state_store import AzureTableStateStore, StateStore
+from training_cancellations import AzureTableCancellationStore
 
 
 StateStoreFactory = Callable[[Mapping[str, str]], StateStore]
@@ -140,6 +141,7 @@ def run_read_only_cycle(
     past_due: bool,
     source: str,
     state_store_factory: StateStoreFactory = AzureTableStateStore.from_environment,
+    cancellation_store_factory=AzureTableCancellationStore.from_environment,
 ) -> CycleResult:
     """Führt die komplette Live-Abfrage aus, sendet aber keinerlei Befehle."""
 
@@ -225,6 +227,23 @@ def run_read_only_cycle(
         hydrawise_config,
     )
 
+    cancellation_error: str | None = None
+    effective_cancellations: set[tuple[str, str]] = set()
+    try:
+        cancellation_store = cancellation_store_factory(environment)
+        cancellations = cancellation_store.list_active(
+            now_local.date(),
+            now_local.date() + timedelta(days=2),
+        )
+        effective_cancellations = {
+            item.occurrence_key
+            for item in cancellations
+            if item.is_effective(now_utc)
+        }
+    except Exception as exc:
+        # Fail closed: Ohne verlässliche Absagen bleiben alle Trainings gesperrt.
+        cancellation_error = f"{type(exc).__name__}: {exc}"
+
     match_blocks = read_match_blocks(matches_path, tz)
     plans, _merged = create_plan(
         config,
@@ -232,6 +251,7 @@ def run_read_only_cycle(
         hydrawise_status,
         now_local.date(),
         2,
+        effective_cancellations,
     )
     active_block, active_window = current_context(plans, now_local)
     next_block = next_block_after(plans, now_local)
@@ -420,6 +440,12 @@ def run_read_only_cycle(
                 ),
             },
             "automation_state": automation_state_details,
+            "training_cancellations": {
+                "available": cancellation_error is None,
+                "effective_count": len(effective_cancellations),
+                "error": cancellation_error,
+                "fail_closed": cancellation_error is not None,
+            },
             "mower": mower_details,
             "input_files": {
                 "config": str(Path(config_path)),

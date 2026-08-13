@@ -106,6 +106,7 @@ def _training_events(
     range_start: datetime,
     range_end: datetime,
     tz: ZoneInfo,
+    cancelled_occurrences: set[tuple[str, str]] | None = None,
 ) -> list[dict[str, Any]]:
     effective_from = _config_date(config, "effective_from")
     effective_to = _config_date(config, "effective_to")
@@ -114,6 +115,7 @@ def _training_events(
         for item in config.get("cancelled_occurrences", [])
         if isinstance(item, dict)
     }
+    cancelled.update(cancelled_occurrences or set())
     weekly = list(config.get("seasons", {}).get(season, {}).get("weekly", []))
     first_day = range_start.date() - timedelta(days=1)
     last_day = range_end.date() + timedelta(days=1)
@@ -145,6 +147,7 @@ def _training_events(
                 "resourceId": str(session["resource_id"]),
                 "source": "training",
                 "season": season,
+                "scheduleId": schedule_id,
                 "team": str(session.get("team", "Training")),
                 "area": str(session.get("area", "")),
                 "description": str(session.get("description", "")),
@@ -419,6 +422,7 @@ def build_occupancy_payload(
     end: str,
     season: str | None = None,
     generated_at: datetime | None = None,
+    cancelled_occurrences: set[tuple[str, str]] | None = None,
 ) -> dict[str, Any]:
     config = load_config(config_path)
     tz = ZoneInfo(str(config.get("timezone", "Europe/Berlin")))
@@ -432,6 +436,7 @@ def build_occupancy_payload(
             range_start=range_start,
             range_end=range_end,
             tz=tz,
+            cancelled_occurrences=cancelled_occurrences,
         ),
         *_match_events(
             config,
@@ -460,3 +465,26 @@ def build_occupancy_payload(
         "resources": list(config.get("resources", [])),
         "events": events,
     }
+
+
+def build_training_occurrences(
+    *,
+    config_path: str | Path,
+    start: str,
+    end: str,
+    season: str | None = None,
+) -> list[dict[str, Any]]:
+    """Erzeugt gültige Trainingsvorkommen ohne dynamischen Absagefilter."""
+    config = load_config(config_path)
+    tz = ZoneInfo(str(config.get("timezone", "Europe/Berlin")))
+    range_start, range_end = parse_range(start, end, tz)
+    selected_season = resolve_season(config, season)
+    events = _training_events(
+        config,
+        season=selected_season,
+        range_start=range_start,
+        range_end=range_end,
+        tz=tz,
+    )
+    events.sort(key=lambda item: (item["start"], item["resourceId"], item["title"]))
+    return events

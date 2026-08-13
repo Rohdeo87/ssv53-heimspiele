@@ -1,0 +1,82 @@
+<!-- SSV53 Training absagen – für eine in Appack auf Rolle TR begrenzte Seite -->
+<div id="ssv53-training-cancellations" class="tc-shell">
+  <style>
+    .tc-shell{font-family:Arial,sans-serif;color:#183126;max-width:720px;margin:0 auto;padding:14px}
+    .tc-head{background:#176b42;color:#fff;border-radius:14px;padding:18px;margin-bottom:14px}
+    .tc-head h2{font-size:22px;margin:0 0 7px}.tc-head p{margin:0;line-height:1.4}
+    .tc-info,.tc-error{border-radius:10px;padding:12px;margin:12px 0;line-height:1.4}
+    .tc-info{background:#eef7f2}.tc-error{background:#fff0f0;color:#8b1d1d;border:1px solid #e9b6b6}
+    .tc-list{display:grid;gap:10px}.tc-card{background:#fff;border:1px solid #d8e2dc;border-radius:12px;padding:14px;box-shadow:0 2px 8px rgba(0,0,0,.05)}
+    .tc-card.cancelled{background:#f4f4f4;border-color:#bbb}.tc-date{font-weight:700;font-size:17px}.tc-meta{color:#52645b;margin:6px 0 12px;line-height:1.45}
+    .tc-status{display:inline-block;border-radius:999px;padding:4px 9px;font-size:13px;background:#e5f4eb;color:#176b42;margin-left:6px}
+    .cancelled .tc-status{background:#e7e7e7;color:#555}
+    .tc-button{border:0;border-radius:9px;padding:10px 13px;font-weight:700;cursor:pointer;background:#176b42;color:#fff}
+    .tc-button.restore{background:#54645b}.tc-button:disabled{opacity:.55;cursor:wait}
+    .tc-loading{text-align:center;padding:28px;color:#52645b}.tc-empty{text-align:center;padding:24px;background:#f5f7f5;border-radius:10px}
+  </style>
+  <div class="tc-head">
+    <h2>Training absagen</h2>
+    <p>Hier kann ein einzelner Trainingstermin aus dem Belegungsplan genommen werden. Spiele und andere Sperren können nicht geändert werden.</p>
+  </div>
+  <div class="tc-info">Bitte nur absagen, wenn das Training sicher nicht stattfindet. Die Freigabe für den Mäher erfolgt aus Sicherheitsgründen frühestens 30 Minuten nach der Absage.</div>
+  <div id="tc-message" aria-live="polite"></div>
+  <div id="tc-content" class="tc-loading">Daten werden geladen</div>
+</div>
+<script>
+(function(){
+  "use strict";
+  const API="https://func-ssv53platzpflege-prod-q7kbw54s.azurewebsites.net/api/training-cancellations";
+  const root=document.getElementById("ssv53-training-cancellations");
+  if(!root)return;
+  const content=root.querySelector("#tc-content");
+  const message=root.querySelector("#tc-message");
+  const dateFmt=new Intl.DateTimeFormat("de-DE",{weekday:"long",day:"2-digit",month:"2-digit",year:"numeric"});
+  const timeFmt=new Intl.DateTimeFormat("de-DE",{hour:"2-digit",minute:"2-digit"});
+
+  function showMessage(text,error){
+    message.textContent=text||"";
+    message.className=text?(error?"tc-error":"tc-info"):"";
+  }
+  function setBusy(button,busy){button.disabled=busy;button.textContent=busy?"Bitte warten …":button.dataset.label;}
+  async function change(item,action,button){
+    const cancel=action==="cancel";
+    const question=cancel
+      ? `Soll das Training ${item.team} am ${dateFmt.format(new Date(item.start))} wirklich ausfallen?`
+      : `Soll das Training ${item.team} wieder als belegt eingetragen werden?`;
+    if(!window.confirm(question))return;
+    setBusy(button,true);showMessage("",false);
+    try{
+      const response=await fetch(API,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
+        action:action,eventId:item.id,confirmation:cancel?"TRAINING_FAELLT_AUS":"TRAINING_WIEDER_AKTIV"
+      })});
+      const data=await response.json().catch(()=>({}));
+      if(!response.ok)throw new Error(data.error||"Die Änderung konnte nicht gespeichert werden.");
+      showMessage(cancel?"Das Training wurde abgesagt.":"Das Training wurde wiederhergestellt.",false);
+      await load();
+    }catch(error){showMessage(error.message||"Die Änderung ist fehlgeschlagen. Die Platzsperre bleibt bestehen.",true);setBusy(button,false);}
+  }
+  function card(item){
+    const el=document.createElement("article");el.className="tc-card"+(item.cancelled?" cancelled":"");
+    const title=document.createElement("div");title.className="tc-date";title.textContent=dateFmt.format(new Date(item.start))+" – "+item.team;
+    const badge=document.createElement("span");badge.className="tc-status";badge.textContent=item.cancelled?"abgesagt":"findet statt";title.appendChild(badge);
+    const meta=document.createElement("div");meta.className="tc-meta";
+    meta.textContent=`${timeFmt.format(new Date(item.start))}–${timeFmt.format(new Date(item.end))} Uhr · ${item.resourceId==="rasen"?"Rasen":"Kunstrasen"}${item.area?" · "+item.area:""}`;
+    const button=document.createElement("button");button.type="button";button.className="tc-button"+(item.cancelled?" restore":"");
+    button.dataset.label=item.cancelled?"Absage zurücknehmen":"Training absagen";button.textContent=button.dataset.label;
+    button.addEventListener("click",()=>change(item,item.cancelled?"restore":"cancel",button));
+    el.append(title,meta,button);return el;
+  }
+  async function load(){
+    content.className="tc-loading";content.textContent="Daten werden geladen";
+    try{
+      const response=await fetch(API,{cache:"no-store"});
+      const data=await response.json().catch(()=>({}));
+      if(!response.ok||!Array.isArray(data.items))throw new Error(data.error||"Die Trainingsdaten konnten nicht geladen werden.");
+      content.textContent="";content.className="tc-list";
+      if(!data.items.length){const empty=document.createElement("div");empty.className="tc-empty";empty.textContent="Keine änderbaren Trainingstermine in den nächsten 28 Tagen.";content.appendChild(empty);return;}
+      data.items.forEach(item=>content.appendChild(card(item)));
+    }catch(error){content.textContent="";content.className="";showMessage(error.message||"Die Daten konnten nicht geladen werden.",true);}
+  }
+  load();
+})();
+</script>

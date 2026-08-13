@@ -16,6 +16,7 @@ REQUIRED_FILES = (
     "occupancy/match_model.py",
     "occupancy/service.py",
     "requirements.txt",
+    "training_cancellations.py",
     "mower/__init__.py",
     "mower/config.json",
     "mower/config_source.py",
@@ -103,6 +104,9 @@ def build_package(repository_root: Path, output_path: Path) -> dict[str, object]
         "manual_failed_irrigation_reset_implemented": True,
         "manual_reset_requires_function_auth": True,
         "manual_reset_sends_device_commands": False,
+        "training_cancellations_implemented": True,
+        "training_cancellations_fail_closed": True,
+        "training_cancellation_release_delay_minutes": 30,
         "expected_hydrawise_zone_count": 7,
         "expected_hydrawise_relay_ids": [
             9104894,

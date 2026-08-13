@@ -178,6 +178,7 @@ def build_training_blocks(
     start_day: date,
     days: int,
     tz: ZoneInfo,
+    cancelled_occurrences: set[tuple[str, str]] | None = None,
 ) -> list[Block]:
     before = timedelta(minutes=int(training_config.get("before_minutes", 30)))
     after = timedelta(minutes=int(training_config.get("after_minutes", 30)))
@@ -192,6 +193,15 @@ def build_training_blocks(
         for session in weekly:
             if _weekday_number(session["weekday"]) != day.weekday():
                 continue
+            schedule_id = str(session.get("id", "")).strip() or (
+                "legacy:"
+                + ":".join(
+                    str(session.get(key, "")).strip().casefold()
+                    for key in ("weekday", "start", "end", "team")
+                )
+            )
+            if (schedule_id, day.isoformat()) in (cancelled_occurrences or set()):
+                continue
             start = datetime.combine(day, parse_clock(session["start"]), tzinfo=tz) - before
             end = datetime.combine(day, parse_clock(session["end"]), tzinfo=tz) + after
             team = str(session.get("team", "Training"))
@@ -201,7 +211,7 @@ def build_training_blocks(
                     end=end,
                     source="training",
                     title=f"Training {team}",
-                    details={"team": team},
+                    details={"team": team, "schedule_id": schedule_id},
                 )
             )
     return blocks
@@ -346,6 +356,7 @@ def create_plan(
     hydrawise_status: dict[str, Any] | None,
     start_day: date,
     days: int,
+    cancelled_occurrences: set[tuple[str, str]] | None = None,
 ) -> tuple[list[DayPlan], list[Block]]:
     tz = ZoneInfo(config.get("timezone", "Europe/Berlin"))
     planning = config.get("planning", {})
@@ -355,7 +366,13 @@ def create_plan(
 
     horizon_start = datetime.combine(start_day, time.min, tzinfo=tz)
     horizon_end = horizon_start + timedelta(days=days)
-    training_blocks = build_training_blocks(config.get("training", {}), start_day, days, tz)
+    training_blocks = build_training_blocks(
+        config.get("training", {}),
+        start_day,
+        days,
+        tz,
+        cancelled_occurrences,
+    )
     relevant_matches = [block for block in match_blocks if block.end > horizon_start and block.start < horizon_end]
     irrigation_blocks = build_hydrawise_blocks(
         hydrawise_status,

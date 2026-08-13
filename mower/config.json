@@ -17,42 +17,49 @@
     ],
     "weekly": [
       {
+        "id": "som-ras-e1-di",
         "weekday": "Dienstag",
         "start": "17:00",
         "end": "18:30",
         "team": "E1"
       },
       {
+        "id": "som-ras-a-di",
         "weekday": "Dienstag",
         "start": "18:30",
         "end": "20:00",
         "team": "A"
       },
       {
+        "id": "som-ras-c-mi",
         "weekday": "Mittwoch",
         "start": "17:30",
         "end": "19:00",
         "team": "C"
       },
       {
+        "id": "som-ras-e1-do",
         "weekday": "Donnerstag",
         "start": "17:00",
         "end": "18:30",
         "team": "E1"
       },
       {
+        "id": "som-ras-a-do",
         "weekday": "Donnerstag",
         "start": "18:30",
         "end": "20:00",
         "team": "A"
       },
       {
+        "id": "som-ras-herren-do",
         "weekday": "Donnerstag",
         "start": "20:00",
         "end": "21:30",
         "team": "Herren"
       },
       {
+        "id": "som-ras-c-fr",
         "weekday": "Freitag",
         "start": "17:00",
         "end": "18:30",
