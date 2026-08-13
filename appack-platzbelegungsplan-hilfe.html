@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<!-- SSV53 Hilfe zum Platzbelegungsplan – Appack v1 -->
+<html lang="de">
+<head>
+  <title>${userTitle}</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta name="language" content="de" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=yes" />
+
+  <link href="https://cdn.appack.de/modules/fonts/roboto.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.appack.de/modules/common/fontawesome-pro-6.5.1/css/fontawesome.min.css" />
+  <link rel="stylesheet" href="https://cdn.appack.de/modules/common/fontawesome-pro-6.5.1/css/all.min.css" />
+  <link rel="stylesheet" href="https://cdn.appack.de/${appId}/workspace/styles.css" type="text/css" />
+  <link rel="stylesheet" href="https://cdn.appack.de/${appId}/workspace/app-color.css" type="text/css" />
+
+  <style type="text/css">
+    :root {
+      --ssv-blau: #285ea7;
+      --ssv-gold: #e0aa3f;
+      --ssv-gruen: #18864b;
+      --ssv-rot: #c6281e;
+      --bg: #f2f4f6;
+      --card-bg: #ffffff;
+      --soft-blue: #f5f7fb;
+      --line: #e0e4f0;
+      --text: #28313d;
+      --muted: #606b79;
+      --shadow: 0 4px 14px rgba(24, 46, 78, 0.11);
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      min-height: 100%;
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 16px;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+      padding-bottom: env(safe-area-inset-bottom, 0);
+    }
+
+    button {
+      font: inherit;
+    }
+
+    button:focus-visible {
+      outline: 3px solid rgba(40, 94, 167, 0.3);
+      outline-offset: 2px;
+    }
+
+    main {
+      width: 100%;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: max(10px, env(safe-area-inset-top, 0px))
+        max(10px, env(safe-area-inset-right, 0px))
+        14px
+        max(10px, env(safe-area-inset-left, 0px));
+    }
+
+    @keyframes card-in {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .page-card {
+      padding: 18px 18px 22px;
+      border-radius: 14px;
+      background: var(--card-bg);
+      box-shadow: var(--shadow);
+      animation: card-in 0.4s ease-out both;
+    }
+
+    .page-header {
+      position: relative;
+      margin-bottom: 15px;
+      padding-bottom: 8px;
+      text-align: center;
+    }
+
+    .page-header::after {
+      content: "";
+      display: block;
+      width: 75%;
+      max-width: 460px;
+      height: 2px;
+      margin: 11px auto 0;
+      border-radius: 2px;
+      background: var(--ssv-gold);
+    }
+
+    .page-icon {
+      width: 64px;
+      height: 64px;
+      margin: -2px 0 4px;
+      object-fit: contain;
+    }
+
+    .page-title {
+      margin: 0 0 3px;
+      color: #111111;
+      font-size: 1.9rem;
+      font-weight: 800;
+      letter-spacing: 0.015em;
+    }
+
+    .page-subtitle {
+      max-width: 660px;
+      margin: 0 auto;
+      color: #555f6d;
+      font-size: 1rem;
+      line-height: 1.45;
+    }
+
+    .page-meta {
+      margin-top: 6px;
+      color: #78818d;
+      font-size: 0.84rem;
+    }
+
+    .intro-block {
+      margin: 10px 0 12px;
+    }
+
+    .intro-block h2 {
+      margin: 0 0 6px;
+      color: var(--ssv-blau);
+      font-size: 1.05rem;
+    }
+
+    .intro-block p {
+      margin: 0 0 8px;
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+
+    .quick-facts {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin: 12px 0 14px;
+    }
+
+    .quick-fact {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 10px;
+      border: 1px solid #dbe5f4;
+      border-radius: 10px;
+      background: #f5f9ff;
+      color: #33465f;
+      font-size: 0.84rem;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+
+    .quick-fact i {
+      flex: 0 0 auto;
+      color: var(--ssv-blau);
+      font-size: 1.05rem;
+    }
+
+    .accordion-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .accordion-item {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--soft-blue);
+    }
+
+    .accordion-item > h2 {
+      margin: 0;
+      font: inherit;
+    }
+
+    .accordion-toggle {
+      width: 100%;
+      min-height: 53px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 12px;
+      border: 0;
+      background: transparent;
+      color: inherit;
+      cursor: pointer;
+      text-align: left;
+    }
+
+    .accordion-title-wrap {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .accordion-icon {
+      width: 31px;
+      height: 31px;
+      flex: 0 0 31px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      background: rgba(40, 94, 167, 0.1);
+      color: var(--ssv-blau);
+      transition: color 0.2s ease, background-color 0.2s ease;
+    }
+
+    .accordion-title {
+      color: #222b36;
+      font-size: 0.98rem;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+
+    .accordion-chevron {
+      flex: 0 0 auto;
+      color: #687281;
+      font-size: 1rem;
+      transition: transform 0.25s ease;
+    }
+
+    .accordion-item.open .accordion-chevron {
+      transform: rotate(180deg);
+    }
+
+    .accordion-item.open .accordion-icon {
+      background: rgba(40, 94, 167, 0.16);
+    }
+
+    .accordion-item.action.open .accordion-icon {
+      background: rgba(24, 134, 75, 0.13);
+      color: var(--ssv-gruen);
+    }
+
+    .accordion-item.warning.open .accordion-icon {
+      background: rgba(198, 40, 30, 0.12);
+      color: var(--ssv-rot);
+    }
+
+    .accordion-panel {
+      max-height: 0;
+      overflow: hidden;
+      padding: 0 12px;
+      border-top: 1px solid transparent;
+      background: #ffffff;
+      transition: max-height 0.32s ease, padding 0.32s ease, border-color 0.32s ease;
+    }
+
+    .accordion-item.open .accordion-panel {
+      padding: 8px 12px 10px;
+      border-top-color: var(--line);
+    }
+
+    .accordion-panel-inner {
+      padding: 2px 0;
+    }
+
+    .accordion-panel p,
+    .accordion-panel li {
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    .accordion-panel p {
+      margin: 0 0 8px;
+    }
+
+    .accordion-panel ul,
+    .accordion-panel ol {
+      margin: 0 0 9px 19px;
+      padding: 0;
+    }
+
+    .accordion-panel li {
+      margin-bottom: 5px;
+      padding-left: 1px;
+    }
+
+    .accordion-panel h3 {
+      margin: 10px 0 6px;
+      color: var(--ssv-blau);
+      font-size: 0.96rem;
+    }
+
+    .accordion-panel strong {
+      font-weight: 700;
+    }
+
+    .time-table {
+      width: 100%;
+      margin: 4px 0 10px;
+      border-spacing: 0;
+      overflow: hidden;
+      border: 1px solid #dfe5ec;
+      border-radius: 8px;
+      font-size: 0.86rem;
+    }
+
+    .time-table th,
+    .time-table td {
+      padding: 8px 9px;
+      border-bottom: 1px solid #e6ebf0;
+      text-align: left;
+      vertical-align: top;
+      line-height: 1.4;
+    }
+
+    .time-table tr:last-child th,
+    .time-table tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .time-table th {
+      width: 31%;
+      background: #f6f8fb;
+      color: #354052;
+      font-weight: 700;
+    }
+
+    .status-example {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin: 1px 3px 1px 0;
+      padding: 4px 8px;
+      border-radius: 7px;
+      background: #e4e7e6;
+      color: #4e5552;
+      font-size: 0.82rem;
+      font-weight: 750;
+    }
+
+    .notice-box {
+      margin: 9px 0;
+      padding: 9px 10px;
+      border: 1px solid #c7ddff;
+      border-radius: 9px;
+      background: #eaf4ff;
+      color: #30435b;
+      font-size: 0.88rem;
+      line-height: 1.45;
+    }
+
+    .notice-box.warning {
+      border-color: #efc5c1;
+      background: #fff2f1;
+      color: #71302b;
+    }
+
+    .tipp-box {
+      margin-top: 14px;
+      padding: 11px 12px;
+      border: 1px solid #c7ddff;
+      border-radius: 10px;
+      background: #e9f3ff;
+      font-size: 0.9rem;
+      line-height: 1.45;
+    }
+
+    .tipp-box strong {
+      display: block;
+      margin-bottom: 5px;
+      color: #233e62;
+    }
+
+    .tipp-box ul {
+      margin: 4px 0 0 18px;
+      padding: 0;
+    }
+
+    .tipp-box li {
+      margin-bottom: 4px;
+    }
+
+    @media (max-width: 650px) {
+      .quick-facts {
+        grid-template-columns: 1fr;
+      }
+
+      .quick-fact {
+        min-height: 42px;
+      }
+    }
+
+    @media (max-width: 420px) {
+      main {
+        padding-top: max(7px, env(safe-area-inset-top, 0px));
+        padding-right: max(7px, env(safe-area-inset-right, 0px));
+        padding-left: max(7px, env(safe-area-inset-left, 0px));
+      }
+
+      .page-card {
+        padding: 14px 12px 17px;
+      }
+
+      .page-title {
+        font-size: 1.65rem;
+      }
+
+      .page-subtitle {
+        font-size: 0.94rem;
+      }
+
+      .accordion-toggle {
+        padding-inline: 10px;
+      }
+
+      .accordion-panel {
+        padding-inline: 10px;
+      }
+
+      .accordion-item.open .accordion-panel {
+        padding-inline: 10px;
+      }
+
+      .time-table th,
+      .time-table td {
+        display: block;
+        width: 100%;
+      }
+
+      .time-table th {
+        padding-bottom: 3px;
+        border-bottom: 0;
+      }
+
+      .time-table td {
+        padding-top: 3px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main>
+    <div class="page-card">
+      <header class="page-header">
+        <img
+          src="https://cdn.appack.de/ssv53/images/Icon_Verein.png"
+          alt="SSV53"
+          class="page-icon" />
+        <h1 class="page-title">Hilfe zum Belegungsplan</h1>
+        <p class="page-subtitle">
+          So liest und bedienst du den Platzbelegungsplan und hilfst dabei,
+          freie Zeiten bestmöglich für die Platzpflege zu nutzen.
+        </p>
+        <div class="page-meta">Stand: 13.08.2026</div>
+      </header>
+
+      <section class="intro-block" aria-labelledby="intro-title">
+        <h2 id="intro-title">Das Wichtigste auf einen Blick</h2>
+        <p>
+          Der Belegungsplan bündelt die regelmäßigen Trainingszeiten und die
+          automatisch übernommenen Heimspiele. Tippe einen Termin an, um alle
+          Details einschließlich Zeiten, Platz und Ansprechpartnern zu sehen.
+        </p>
+      </section>
+
+      <div class="quick-facts" aria-label="Kurzübersicht">
+        <div class="quick-fact">
+          <i class="fa-solid fa-futbol" aria-hidden="true"></i>
+          <span>Heimspiele automatisch aus den DFB-Daten</span>
+        </div>
+        <div class="quick-fact">
+          <i class="fa-solid fa-clock" aria-hidden="true"></i>
+          <span>Spielzeit und Platzsperre klar getrennt</span>
+        </div>
+        <div class="quick-fact">
+          <i class="fa-solid fa-robot" aria-hidden="true"></i>
+          <span>Belegungen steuern die sicheren Mähzeiten</span>
+        </div>
+      </div>
+
+      <div class="accordion-list">
+        <section class="accordion-item open">
+          <h2>
+            <button
+              class="accordion-toggle"
+              type="button"
+              id="help-toggle-navigation"
+              aria-expanded="true"
+              aria-controls="help-panel-navigation">
+              <span class="accordion-title-wrap">
+                <span class="accordion-icon"><i class="fa-solid fa-calendar-days" aria-hidden="true"></i></span>
+                <span class="accordion-title">Belegungsplan bedienen</span>
+              </span>
+              <i class="accordion-chevron fa-solid fa-chevron-down" aria-hidden="true"></i>
+            </button>
+          </h2>
+          <div
+            class="accordion-panel"
+            id="help-panel-navigation"
+            role="region"
+            aria-labelledby="help-toggle-navigation"
+            aria-hidden="false">
+            <div class="accordion-panel-inner">
+              <ul>
+                <li><strong>Sommer/Winter:</strong> Wähle den aktuell benötigten Trainingsplan.</li>
+                <li><strong>Tag/Woche:</strong> Wechsle zwischen einer einzelnen Tagesansicht und der kompletten Woche.</li>
+                <li><strong>Platzfilter:</strong> Zeige alle Plätze oder nur Rasen beziehungsweise Kunstrasen an.</li>
+                <li><strong>Navigation:</strong> Nutze die Pfeile oder wische seitlich, um den Zeitraum zu wechseln.</li>
+                <li><strong>Details:</strong> Tippe ein Training oder Spiel an, um das vollständige Terminfenster und die Ansprechpartner zu öffnen.</li>
+              </ul>
+              <p>
+                Der zuletzt gewählte Zeitraum, die Ansicht und der Platzfilter
+                werden auf dem Gerät gespeichert und beim nächsten Öffnen wiederverwendet.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section class="accordion-item">
+          <h2>
+            <button
+              class="accordion-toggle"
+              type="button"
+              id="help-toggle-times"
+              aria-expanded="false"
+              aria-controls="help-panel-times">
+              <span class="accordion-title-wrap">
+                <span class="accordion-icon"><i class="fa-solid fa-stopwatch" aria-hidden="true"></i></span>
+                <span class="accordion-title">Welche Zeiten werden angezeigt?</span>
+              </span>
+              <i class="accordion-chevron fa-solid fa-chevron-down" aria-hidden="true"></i>
+            </button>
+          </h2>
+          <div
+            class="accordion-panel"
+            id="help-panel-times"
+            role="region"
+            aria-labelledby="help-toggle-times"
+            aria-hidden="true">
+            <div class="accordion-panel-inner">
+              <table class="time-table">
+                <tbody>
+                  <tr>
+                    <th>Training</th>
+                    <td>Der Kalender zeigt die reguläre Trainingszeit von Beginn bis Ende.</td>
+                  </tr>
+                  <tr>
+                    <th>Anstoß</th>
+                    <td>Der im DFB-Spielplan gemeldete Beginn des Spiels.</td>
+                  </tr>
+                  <tr>
+                    <th>Spielzeit</th>
+                    <td>Die nominelle Spielzeit, passend zur erkannten Altersklasse und Spielform.</td>
+                  </tr>
+                  <tr>
+                    <th>Platz gesperrt</th>
+                    <td>Bei Spielen 60 Minuten vor dem Anstoß bis 60 Minuten nach dem berechneten Spielende.</td>
+                  </tr>
+                </tbody>
+              </table>
+              <div class="notice-box">
+                Bei einem Spiel zeigt der Terminblock die <strong>gesamte Platzsperre</strong>.
+                Im geöffneten Termin stehen Anstoß, nominelle Spielzeit und Sperrzeit noch einmal getrennt.
+              </div>
+              <p>
+                Nachspielzeit, Verzögerungen oder ein tatsächlich früheres Spielende können nicht automatisch
+                vorausgesehen werden. Für die Platzpflege bleibt deshalb das berechnete Sicherheitsfenster maßgeblich.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section class="accordion-item">
+          <h2>
+            <button
+              class="accordion-toggle"
+              type="button"
+              id="help-toggle-matches"
+              aria-expanded="false"
+              aria-controls="help-panel-matches">
+              <span class="accordion-title-wrap">
+                <span class="accordion-icon"><i class="fa-solid fa-futbol" aria-hidden="true"></i></span>
+                <span class="accordion-title">Woher kommen die Spiele?</span>
+              </span>
+              <i class="accordion-chevron fa-solid fa-chevron-down" aria-hidden="true"></i>
+            </button>
+          </h2>
+          <div
+            class="accordion-panel"
+            id="help-panel-matches"
+            role="region"
+            aria-labelledby="help-toggle-matches"
+            aria-hidden="true">
+            <div class="accordion-panel-inner">
+              <p>
+                Die Heimspiele werden automatisch aus den strukturierten DFB-Daten übernommen und regelmäßig aktualisiert.
+                Anstoß, Mannschaft, Wettbewerb und Altersklasse müssen deshalb nicht von Trainerinnen oder Trainern
+                zusätzlich in Appack gepflegt werden.
+              </p>
+              <ul>
+                <li>Jugend- und Seniorenspiele werden gemeinsam berücksichtigt.</li>
+                <li>Die nominelle Dauer wird aus Altersklasse und Spielform bestimmt.</li>
+                <li>Auswärts- oder gegnerische Mannschaftsangaben werden nicht für die SSV53-Kontaktzuordnung verwendet.</li>
+              </ul>
+              <p>
+                Sollte ein offizielles Heimspiel fehlen oder falsch angesetzt sein, melde bitte den konkreten Termin,
+                die Mannschaft und den Platz an die Verantwortlichen. Spiele können nicht über die Trainingsabsage geändert werden.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section class="accordion-item">
+          <h2>
+            <button
+              class="accordion-toggle"
+              type="button"
+              id="help-toggle-contacts"
+              aria-expanded="false"
+              aria-controls="help-panel-contacts">
+              <span class="accordion-title-wrap">
+                <span class="accordion-icon"><i class="fa-solid fa-address-book" aria-hidden="true"></i></span>
+                <span class="accordion-title">Ansprechpartner anzeigen</span>
+              </span>
+              <i class="accordion-chevron fa-solid fa-chevron-down" aria-hidden="true"></i>
+            </button>
+          </h2>
+          <div
+            class="accordion-panel"
+            id="help-panel-contacts"
+            role="region"
+            aria-labelledby="help-toggle-contacts"
+            aria-hidden="true">
+            <div class="accordion-panel-inner">
+              <p>
+                Nach dem Antippen eines Trainings oder Spiels werden die für die erkannte SSV53-Mannschaft
+                hinterlegten Ansprechpartner angezeigt. Bei Spielen wird ausschließlich die <strong>eigene Mannschaft</strong>
+                für die Zuordnung verwendet – niemals der Gegner.
+              </p>
+              <p>
+                Ist das Team eindeutig erkannt, aber noch kein Kontakt hinterlegt, erscheint der Hinweis
+                <strong>„Kein Ansprechpartner hinterlegt“</strong>. Die Belegung und die Sicherheitszeiten bleiben trotzdem gültig.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section class="accordion-item action">
+          <h2>
+            <button
+              class="accordion-toggle"
+              type="button"
+              id="help-toggle-cancellation"
+              aria-expanded="false"
+              aria-controls="help-panel-cancellation">
+              <span class="accordion-title-wrap">
+                <span class="accordion-icon"><i class="fa-solid fa-calendar-xmark" aria-hidden="true"></i></span>
+                <span class="accordion-title">Training absagen oder Absage widerrufen</span>
+              </span>
+              <i class="accordion-chevron fa-solid fa-chevron-down" aria-hidden="true"></i>
+            </button>
+          </h2>
+          <div
+            class="accordion-panel"
+            id="help-panel-cancellation"
+            role="region"
+            aria-labelledby="help-toggle-cancellation"
+            aria-hidden="true">
+            <div class="accordion-panel-inner">
+              <p>
+                Die Funktion ist nur für Nutzerinnen und Nutzer mit einer aktiven Appack-Rolle
+                <strong>Trainer*in / Mitarbeiter*in</strong> sichtbar.
+              </p>
+              <h3>Training absagen</h3>
+              <ol>
+                <li>Das betroffene Training im Belegungsplan öffnen.</li>
+                <li>Den roten Button <strong>„Training absagen“</strong> antippen.</li>
+                <li>Die Sicherheitsabfrage noch einmal bestätigen.</li>
+              </ol>
+              <p>
+                Das Training bleibt zur Nachvollziehbarkeit sichtbar, wird aber grau dargestellt und mit
+                <span class="status-example"><i class="fa-solid fa-ban" aria-hidden="true"></i> Abgesagt</span>
+                gekennzeichnet.
+              </p>
+              <div class="notice-box">
+                Die freigewordene Zeit wird aus Sicherheitsgründen für den Mäher
+                <strong>frühestens 30 Minuten nach der Absage</strong> wirksam.
+              </div>
+              <h3>Absage widerrufen</h3>
+              <p>
+                Das graue, abgesagte Training erneut öffnen, <strong>„Absage widerrufen“</strong> wählen und bestätigen.
+                Das Training wird sofort wieder als reguläre Platzbelegung berücksichtigt.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section class="accordion-item warning">
+          <h2>
+            <button
+              class="accordion-toggle"
+              type="button"
+              id="help-toggle-mower"
+              aria-expanded="false"
+              aria-controls="help-panel-mower">
+              <span class="accordion-title-wrap">
+                <span class="accordion-icon"><i class="fa-solid fa-robot" aria-hidden="true"></i></span>
+                <span class="accordion-title">Was bedeutet die Belegung für den Mäher?</span>
+              </span>
+              <i class="accordion-chevron fa-solid fa-chevron-down" aria-hidden="true"></i>
+            </button>
+          </h2>
+          <div
+            class="accordion-panel"
+            id="help-panel-mower"
+            role="region"
+            aria-labelledby="help-toggle-mower"
+            aria-hidden="true">
+            <div class="accordion-panel-inner">
+              <p>
+                Um trotz der häufigen Platzbelegung möglichst viel Mähzeit zu nutzen, richtet sich der automatische
+                Park- und Startvorgang nach den hinterlegten Trainings- und Spielzeiten.
+              </p>
+              <table class="time-table">
+                <tbody>
+                  <tr>
+                    <th>Vor Training</th>
+                    <td>Der Mäher soll spätestens 30 Minuten vor Trainingsbeginn vom Platz sein.</td>
+                  </tr>
+                  <tr>
+                    <th>Nach Training</th>
+                    <td>Frühester automatischer Neustart 30 Minuten nach Trainingsende.</td>
+                  </tr>
+                  <tr>
+                    <th>Vor Spiel</th>
+                    <td>Der Mäher soll spätestens 60 Minuten vor dem Anstoß vom Platz sein.</td>
+                  </tr>
+                  <tr>
+                    <th>Nach Spiel</th>
+                    <td>Frühester automatischer Neustart 60 Minuten nach dem berechneten Spielende.</td>
+                  </tr>
+                </tbody>
+              </table>
+              <div class="notice-box warning">
+                <strong>Bitte den Mäher möglichst nicht manuell stoppen oder parken.</strong>
+                Eine manuelle Übersteuerung wird aus Sicherheitsgründen nicht automatisch aufgehoben; der Mäher kann sonst
+                im Dock bleiben. Im Zweifel bitte Juliane, Gerd oder Thomas informieren, damit der Mäher kontrolliert über
+                die App zurückgerufen beziehungsweise wieder gestartet werden kann.
+              </div>
+              <p>
+                Beregnungszeiten werden unabhängig vom Belegungsplan überwacht und haben für die Sicherheit immer Vorrang.
+                Sie werden nicht über diese Seite geändert.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section class="accordion-item">
+          <h2>
+            <button
+              class="accordion-toggle"
+              type="button"
+              id="help-toggle-errors"
+              aria-expanded="false"
+              aria-controls="help-panel-errors">
+              <span class="accordion-title-wrap">
+                <span class="accordion-icon"><i class="fa-solid fa-circle-question" aria-hidden="true"></i></span>
+                <span class="accordion-title">Wenn etwas nicht stimmt</span>
+              </span>
+              <i class="accordion-chevron fa-solid fa-chevron-down" aria-hidden="true"></i>
+            </button>
+          </h2>
+          <div
+            class="accordion-panel"
+            id="help-panel-errors"
+            role="region"
+            aria-labelledby="help-toggle-errors"
+            aria-hidden="true">
+            <div class="accordion-panel-inner">
+              <ul>
+                <li>Bei <strong>„Daten werden geladen“</strong> bitte kurz warten.</li>
+                <li>Bei einem Ladefehler zunächst die Internetverbindung prüfen und <strong>„Erneut versuchen“</strong> wählen.</li>
+                <li>Ein leerer Zeitraum kann bedeuten, dass für Filter und Woche tatsächlich keine Belegung vorliegt.</li>
+                <li>Fehlt ein Kontakt, ein Training oder ein DFB-Heimspiel, bitte Mannschaft, Datum, Uhrzeit und Platz möglichst genau melden.</li>
+                <li>Kann eine Trainingsabsage nicht gespeichert werden, bleibt die Platzsperre aus Sicherheitsgründen bestehen.</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <aside class="tipp-box">
+        <strong>Gemeinsames Ziel: sichere Abläufe und möglichst viel Zeit für die Platzpflege</strong>
+        <ul>
+          <li>Bitte Trainingsabsagen eintragen, sobald sicher ist, dass ein Training nicht stattfindet.</li>
+          <li>Spiele und Sperrzeiten nicht zusätzlich als Training anlegen.</li>
+          <li>Bei Unsicherheiten lieber kurz nachfragen und den Mäher nicht manuell bedienen.</li>
+        </ul>
+      </aside>
+    </div>
+  </main>
+
+  <script>
+    (function () {
+      "use strict";
+
+      var items = Array.prototype.slice.call(
+        document.querySelectorAll(".accordion-item")
+      );
+
+      function setItemState(item, open) {
+        var button = item.querySelector(".accordion-toggle");
+        var panel = item.querySelector(".accordion-panel");
+        if (!button || !panel) return;
+
+        item.classList.toggle("open", open);
+        button.setAttribute("aria-expanded", open ? "true" : "false");
+        panel.setAttribute("aria-hidden", open ? "false" : "true");
+        panel.style.maxHeight = open ? panel.scrollHeight + "px" : null;
+      }
+
+      function closeOtherItems(activeItem) {
+        items.forEach(function (item) {
+          if (item !== activeItem) setItemState(item, false);
+        });
+      }
+
+      items.forEach(function (item) {
+        var button = item.querySelector(".accordion-toggle");
+        if (!button) return;
+
+        setItemState(item, item.classList.contains("open"));
+        button.addEventListener("click", function () {
+          var willOpen = !item.classList.contains("open");
+          closeOtherItems(item);
+          setItemState(item, willOpen);
+
+          if (willOpen) {
+            window.setTimeout(function () {
+              var top = item.getBoundingClientRect().top + window.pageYOffset - 10;
+              window.scrollTo({ top: top, behavior: "smooth" });
+            }, 80);
+          }
+        });
+      });
+
+      window.addEventListener("resize", function () {
+        items.forEach(function (item) {
+          if (item.classList.contains("open")) setItemState(item, true);
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
