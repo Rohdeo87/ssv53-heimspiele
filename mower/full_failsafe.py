@@ -1595,32 +1595,71 @@ def run_full_failsafe_cycle(
     )
     if state.irrigation_phase == "COMPLETE_HOLD":
         command_state = _clear_irrigation(command_state)
-    try:
-        store.save(command_state, expected_revision=original.revision)
-    except Exception as exc:
-        return replace(
-            result,
-            decision_code="MOWER_START_RESERVATION_FAILED",
-            message="Mäherstart wurde wegen fehlender persistenter Reservierung nicht gesendet.",
-            command_sent=False,
-            details=_decorate(
-                details,
-                state=state,
-                settings=settings,
-                persisted=False,
-                command_sent=False,
-                error=f"{type(exc).__name__}: {exc}",
-            ),
-        )
     client_id = str(environment.get("HUSQVARNA_CLIENT_ID", "")).strip()
     client_secret = str(environment.get("HUSQVARNA_CLIENT_SECRET", "")).strip()
-    response = start_sender(
-        client_id,
-        client_secret,
-        mower_id,
-        work_area_id,
-        duration,
-    )
+    if failsafe_refresh:
+        response = start_sender(
+            client_id,
+            client_secret,
+            mower_id,
+            work_area_id,
+            duration,
+        )
+        try:
+            store.save(command_state, expected_revision=original.revision)
+        except Exception as exc:
+            details["start_action"] = {
+                "type": "StartInWorkArea",
+                "response": response,
+                "duration_minutes": duration,
+                "work_area_id": work_area_id,
+                "continuous_mowing": True,
+                "command_end_utc": command_end.isoformat(),
+                "failsafe_refresh": True,
+                "state_confirmation_error": f"{type(exc).__name__}: {exc}",
+            }
+            return replace(
+                result,
+                decision_code="CONTINUOUS_MOWING_FAILSAFE_REFRESH_SENT_STATE_UNCONFIRMED",
+                message=(
+                    "Husqvarna hat die sichere kürzere Laufzeit angenommen; "
+                    "die Zustandsbestätigung wird im nächsten Zyklus wiederholt."
+                ),
+                command_sent=True,
+                details=_decorate(
+                    details,
+                    state=state,
+                    settings=settings,
+                    persisted=False,
+                    command_sent=True,
+                    error=f"{type(exc).__name__}: {exc}",
+                ),
+            )
+    else:
+        try:
+            store.save(command_state, expected_revision=original.revision)
+        except Exception as exc:
+            return replace(
+                result,
+                decision_code="MOWER_START_RESERVATION_FAILED",
+                message="Mäherstart wurde wegen fehlender persistenter Reservierung nicht gesendet.",
+                command_sent=False,
+                details=_decorate(
+                    details,
+                    state=state,
+                    settings=settings,
+                    persisted=False,
+                    command_sent=False,
+                    error=f"{type(exc).__name__}: {exc}",
+                ),
+            )
+        response = start_sender(
+            client_id,
+            client_secret,
+            mower_id,
+            work_area_id,
+            duration,
+        )
     details["start_action"] = {
         "type": "StartInWorkArea",
         "response": response,
