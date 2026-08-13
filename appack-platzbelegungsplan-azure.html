@@ -1263,15 +1263,43 @@
     }
 
     .dialog-button--training-action {
-      border-color: var(--dialog-accent);
-      background: var(--dialog-accent);
-      color: var(--dialog-accent-text);
+      gap: 7px;
+      border-color: #9f1c14;
+      background: #c6281e;
+      color: #ffffff;
+      box-shadow: 0 3px 9px rgba(159, 28, 20, 0.22);
     }
 
     .dialog-button--training-action[data-cancelled="true"] {
       border-color: #646967;
       background: #646967;
       color: #ffffff;
+      box-shadow: none;
+    }
+
+    .training-cancellation-action-icon {
+      width: 18px;
+      height: 18px;
+      flex: 0 0 18px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.9;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .training-cancellation-action-icon--restore {
+      display: none;
+    }
+
+    .dialog-button--training-action[data-cancelled="true"]
+      .training-cancellation-action-icon--cancel {
+      display: none;
+    }
+
+    .dialog-button--training-action[data-cancelled="true"]
+      .training-cancellation-action-icon--restore {
+      display: block;
     }
 
     .dialog-button:disabled {
@@ -5567,9 +5595,12 @@
         ) return;
 
         const cancelled = event.extendedProps.cancelled === true;
+        const actionLabel = action.querySelector(
+          ".training-cancellation-action-label"
+        );
         action.hidden = false;
         action.setAttribute("data-cancelled", cancelled ? "true" : "false");
-        action.textContent = cancelled ? "Absage widerrufen" : "Training absagen";
+        actionLabel.textContent = cancelled ? "Absage widerrufen" : "Training absagen";
         if (cancelled) {
           status.textContent = "Dieses Training ist abgesagt.";
           status.hidden = false;
@@ -5589,7 +5620,9 @@
         if (!window.confirm(question)) return;
 
         elements.trainingCancellationAction.disabled = true;
-        elements.trainingCancellationAction.textContent = "Bitte warten …";
+        elements.trainingCancellationAction.querySelector(
+          ".training-cancellation-action-label"
+        ).textContent = "Bitte warten …";
         try {
           const response = await fetch(TRAINING_CANCELLATION_API_URL, {
             method: "POST",
@@ -6109,7 +6142,22 @@
           type="button"
           class="dialog-button dialog-button--training-action"
           hidden>
-          Training absagen
+          <svg
+            class="training-cancellation-action-icon training-cancellation-action-icon--cancel"
+            viewBox="0 0 24 24"
+            aria-hidden="true">
+            <path d="M7 3v3M17 3v3M4 9h16" />
+            <path d="M6 5h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z" />
+            <path d="m9 12 6 6m0-6-6 6" />
+          </svg>
+          <svg
+            class="training-cancellation-action-icon training-cancellation-action-icon--restore"
+            viewBox="0 0 24 24"
+            aria-hidden="true">
+            <path d="M4 4v6h6" />
+            <path d="M5.2 15a8 8 0 1 0 1.7-8.8L4 10" />
+          </svg>
+          <span class="training-cancellation-action-label">Training absagen</span>
         </button>
         <a id="popup-link" class="dialog-button dialog-button--primary" href="" hidden>
           Weitere Informationen

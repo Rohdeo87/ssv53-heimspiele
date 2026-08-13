@@ -88,3 +88,26 @@ test("Trainingsabsage verwendet einen CORS-safelisted POST ohne Preflight", () =
     /"Content-Type": "application\/json"/
   );
 });
+
+test("Absageaktion ist rot und zeigt zustandsabhängige Symbole", () => {
+  assert.match(
+    html,
+    /\.dialog-button--training-action\s*\{[\s\S]*?background: #c6281e;/
+  );
+  assert.match(
+    html,
+    /training-cancellation-action-icon--cancel[\s\S]*?aria-hidden="true"/
+  );
+  assert.match(
+    html,
+    /training-cancellation-action-icon--restore[\s\S]*?aria-hidden="true"/
+  );
+  assert.match(
+    html,
+    /<span class="training-cancellation-action-label">Training absagen<\/span>/
+  );
+  assert.match(
+    extractFunction("renderTrainingCancellationAction"),
+    /actionLabel\.textContent = cancelled \? "Absage widerrufen" : "Training absagen"/
+  );
+});
