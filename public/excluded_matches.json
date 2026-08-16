@@ -654,7 +654,7 @@
     "team_name": "Schönwalder SV",
     "team_category": "A-Junioren | Landesklasse",
     "team_role": "away",
-    "kickoff": "2026-11-07T16:00+01:00",
+    "kickoff": "2026-11-07T13:00+01:00",
     "home_team": "FSV Schorfheide Joachimsthal",
     "away_team": "Schönwalder SV",
     "competition": "A-Junioren | Landesklasse",
@@ -666,9 +666,9 @@
     "decision": "exclude",
     "calendar": "",
     "venue_rule": "Auswärtige Spielstätte",
-    "event_start": "2026-11-07T15:00+01:00",
-    "event_end": "2026-11-07T18:30+01:00",
-    "checksum": "030b51cafb11bdcde7d4dd9f8c26c454c8b0055dc07a4ac2fe974c62d5923316",
+    "event_start": "2026-11-07T12:00+01:00",
+    "event_end": "2026-11-07T15:30+01:00",
+    "checksum": "2d9e4698b71ccfe18b16f4166997eeebbdb9ef760c470f4705ae9323bbdda11d",
     "warnings": []
   },
   {
