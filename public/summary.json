@@ -1,15 +1,15 @@
 {
-  "generated_at": "2026-08-17T05:59:03+00:00",
+  "generated_at": "2026-08-17T11:00:23+00:00",
   "selection_mode": "club-wide venue",
   "event_timing": {
     "before_minutes": 60,
     "after_minutes": 60,
     "default_match_duration_minutes": 90
   },
-  "total": 106,
+  "total": 107,
   "included": 42,
   "review": 0,
-  "excluded": 64,
+  "excluded": 65,
   "by_calendar": {
     "Rasen": 37,
     "Kunstrasen": 5
@@ -46,9 +46,9 @@
       "review": 0
     },
     "Spielgemeinschaft Schönwalde-Perwenitz-Paaren": {
-      "total": 34,
+      "total": 35,
       "included": 12,
-      "excluded": 22,
+      "excluded": 23,
       "review": 0
     }
   },
@@ -79,7 +79,7 @@
     {
       "date_from": "2026-07-01",
       "date_to": "2026-09-30",
-      "competition_rows": 34
+      "competition_rows": 35
     },
     {
       "date_from": "2026-10-01",
