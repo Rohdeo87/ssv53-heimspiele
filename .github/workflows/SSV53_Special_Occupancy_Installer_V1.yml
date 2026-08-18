@@ -41,8 +41,8 @@ jobs:
           SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
         run: |
           set -euo pipefail
-          [ "$GITHUB_REF_NAME" = "main" ] || {
-            echo "Installer darf nur vom main-Branch gestartet werden." >&2
+          [ "$GITHUB_REF_NAME" = "$MIGRATION_BRANCH" ] || {
+            echo "Installer darf nur vom Branch $MIGRATION_BRANCH gestartet werden." >&2
             exit 1
           }
           [ "$CONFIRMATION" = "SSV53-SPECIAL-OCCUPANCY-INSTALL" ] || {
