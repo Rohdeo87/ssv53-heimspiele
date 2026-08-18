@@ -1,0 +1,748 @@
+name: SSV53 Belegung vollautomatisch
+
+on:
+  issues:
+    types:
+      - opened
+
+  workflow_dispatch:
+    inputs:
+      request_issue:
+        description: "GitHub-Issue des Belegungsauftrags"
+        required: false
+        type: string
+        default: ""
+
+  push:
+    branches:
+      - feature/azure-mower-migration
+    paths:
+      - occupancy/config.json
+
+concurrency:
+  group: ssv53-occupancy-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  MIGRATION_BRANCH: feature/azure-mower-migration
+  RESOURCE_GROUP: rg-ssv53-platzpflege-prod
+  FUNCTION_APP: func-ssv53platzpflege-prod-q7kbw54s
+  THIS_WORKFLOW: SSV53_Occupancy_Automation.yml
+
+jobs:
+  process-request:
+    name: ChatGPT-Belegungsauftrag übernehmen
+    if: github.event_name == 'issues' && startsWith(github.event.issue.title, '[SSV53-OCCUPANCY]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    permissions:
+      contents: write
+      issues: write
+      actions: write
+
+    steps:
+      - name: Absender und Auftragsformat prüfen
+        shell: bash
+        env:
+          ASSOCIATION: ${{ github.event.issue.author_association }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          set -euo pipefail
+
+          case "$ASSOCIATION" in
+            OWNER|MEMBER|COLLABORATOR) ;;
+            *)
+              echo "Belegungsauftrag nur von OWNER/MEMBER/COLLABORATOR erlaubt." >&2
+              exit 1
+              ;;
+          esac
+
+          printf '%s' "$ISSUE_BODY" | grep -Fq '<!-- SSV53_OCCUPANCY_V1'
+          printf '%s' "$ISSUE_BODY" | grep -Fq 'SSV53_OCCUPANCY_V1 -->'
+
+      - name: Migrationsbranch laden
+        uses: actions/checkout@v7
+        with:
+          ref: feature/azure-mower-migration
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Auftrag auf occupancy/config.json anwenden
+        id: apply
+        shell: bash
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          set -euo pipefail
+
+          python - <<'PY'
+          import json
+          import os
+          import re
+          from datetime import date, datetime
+          from pathlib import Path
+
+          body = os.environ["ISSUE_BODY"]
+          match = re.search(
+              r"<!--\s*SSV53_OCCUPANCY_V1\s*(\{.*?\})\s*SSV53_OCCUPANCY_V1\s*-->",
+              body,
+              flags=re.DOTALL,
+          )
+          if not match:
+              raise SystemExit("Kein gültiger SSV53_OCCUPANCY_V1-Auftrag gefunden.")
+
+          request = json.loads(match.group(1))
+          operations = request.get("operations")
+          if not isinstance(operations, list) or not operations:
+              raise SystemExit("operations muss eine nichtleere Liste sein.")
+
+          path = Path("occupancy/config.json")
+          config = json.loads(path.read_text(encoding="utf-8"))
+
+          if config.get("schema_version") != 1:
+              raise SystemExit("Unbekannte occupancy/config.json-Version.")
+
+          resources = {
+              str(item["id"])
+              for item in config.get("resources", [])
+              if isinstance(item, dict) and item.get("id")
+          }
+          if not {"rasen", "kunstrasen"}.issubset(resources):
+              raise SystemExit("Erwartete Platzressourcen fehlen.")
+
+          events = [
+              dict(item)
+              for item in config.get("one_off_events", [])
+              if isinstance(item, dict)
+          ]
+          cancelled = [
+              dict(item)
+              for item in config.get("cancelled_occurrences", [])
+              if isinstance(item, dict)
+          ]
+
+          def parse_dt(value: str) -> datetime:
+              try:
+                  return datetime.fromisoformat(value)
+              except ValueError as exc:
+                  raise SystemExit(f"Ungültiger ISO-Zeitstempel: {value}") from exc
+
+          def parse_date(value: str) -> date:
+              try:
+                  return date.fromisoformat(value)
+              except ValueError as exc:
+                  raise SystemExit(f"Ungültiges ISO-Datum: {value}") from exc
+
+          def safe_id(value: str) -> str:
+              value = str(value).strip()
+              if not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9._-]{2,100}", value):
+                  raise SystemExit(f"Ungültige Event-ID: {value!r}")
+              return value
+
+          descriptions = []
+
+          for index, operation in enumerate(operations, start=1):
+              if not isinstance(operation, dict):
+                  raise SystemExit(f"Operation {index} ist kein Objekt.")
+
+              kind = str(operation.get("type", "")).strip()
+
+              if kind == "upsert_event":
+                  event_id = safe_id(operation.get("id", ""))
+                  title = str(operation.get("title", "")).strip()
+                  start = str(operation.get("start", "")).strip()
+                  end = str(operation.get("end", "")).strip()
+                  resource_id = str(operation.get("resource_id", "")).strip()
+
+                  if not title:
+                      raise SystemExit(f"{event_id}: title fehlt.")
+                  if resource_id not in resources:
+                      raise SystemExit(
+                          f"{event_id}: unbekannte resource_id {resource_id!r}."
+                      )
+                  if parse_dt(end) <= parse_dt(start):
+                      raise SystemExit(f"{event_id}: end muss nach start liegen.")
+
+                  new_event = {
+                      "id": event_id,
+                      "title": title,
+                      "start": start,
+                      "end": end,
+                      "resource_id": resource_id,
+                      "area": str(
+                          operation.get("area", "vorne & hinten")
+                      ).strip() or "vorne & hinten",
+                      "source": str(
+                          operation.get("source", "special")
+                      ).strip() or "special",
+                      "description": str(
+                          operation.get("description", "")
+                      ).strip(),
+                  }
+
+                  existing_index = next(
+                      (
+                          i
+                          for i, item in enumerate(events)
+                          if item.get("id") == event_id
+                      ),
+                      None,
+                  )
+
+                  if existing_index is None:
+                      events.append(new_event)
+                  else:
+                      events[existing_index] = new_event
+
+                  descriptions.append(f"Event {event_id} gesetzt")
+
+              elif kind == "remove_event":
+                  event_id = safe_id(operation.get("id", ""))
+                  old_len = len(events)
+                  events = [
+                      item for item in events
+                      if item.get("id") != event_id
+                  ]
+                  descriptions.append(
+                      f"Event {event_id} entfernt"
+                      if len(events) != old_len
+                      else f"Event {event_id} war bereits entfernt"
+                  )
+
+              elif kind == "cancel_occurrence":
+                  schedule_id = str(
+                      operation.get("schedule_id", "")
+                  ).strip()
+                  day = str(operation.get("date", "")).strip()
+
+                  if not schedule_id:
+                      raise SystemExit(
+                          "cancel_occurrence: schedule_id fehlt."
+                      )
+
+                  parse_date(day)
+                  key = (schedule_id, day)
+                  existing = {
+                      (
+                          str(item.get("schedule_id", "")),
+                          str(item.get("date", "")),
+                      )
+                      for item in cancelled
+                  }
+
+                  if key not in existing:
+                      cancelled.append(
+                          {
+                              "schedule_id": schedule_id,
+                              "date": day,
+                          }
+                      )
+
+                  descriptions.append(
+                      f"{schedule_id} am {day} abgesagt"
+                  )
+
+              elif kind == "restore_occurrence":
+                  schedule_id = str(
+                      operation.get("schedule_id", "")
+                  ).strip()
+                  day = str(operation.get("date", "")).strip()
+
+                  if not schedule_id:
+                      raise SystemExit(
+                          "restore_occurrence: schedule_id fehlt."
+                      )
+
+                  parse_date(day)
+
+                  cancelled = [
+                      item
+                      for item in cancelled
+                      if not (
+                          str(item.get("schedule_id", ""))
+                          == schedule_id
+                          and str(item.get("date", "")) == day
+                      )
+                  ]
+
+                  descriptions.append(
+                      f"{schedule_id} am {day} wieder freigegeben"
+                  )
+
+              else:
+                  raise SystemExit(
+                      f"Nicht unterstützte Operation {index}: {kind!r}"
+                  )
+
+          events.sort(
+              key=lambda item: (
+                  str(item.get("start", "")),
+                  str(item.get("id", "")),
+              )
+          )
+          cancelled.sort(
+              key=lambda item: (
+                  str(item.get("date", "")),
+                  str(item.get("schedule_id", "")),
+              )
+          )
+
+          config["one_off_events"] = events
+          config["cancelled_occurrences"] = cancelled
+
+          rendered = json.dumps(
+              config,
+              ensure_ascii=False,
+              indent=2,
+          ) + "\n"
+
+          previous = path.read_text(encoding="utf-8")
+          path.write_text(rendered, encoding="utf-8")
+
+          changed = previous != rendered
+
+          with open(
+              os.environ["GITHUB_OUTPUT"],
+              "a",
+              encoding="utf-8",
+          ) as output:
+              output.write(
+                  f"changed={'true' if changed else 'false'}\n"
+              )
+
+          print("Auftrag übernommen:")
+          for description in descriptions:
+              print(f"- {description}")
+          print(f"occupancy/config.json geändert: {changed}")
+          PY
+
+      - name: Änderung committen und pushen
+        if: steps.apply.outputs.changed == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email \
+            "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add occupancy/config.json
+          git commit \
+            -m "Belegung aus Auftrag #${{ github.event.issue.number }} aktualisieren"
+
+          git push origin HEAD:feature/azure-mower-migration
+
+      - name: Sicheren Azure-Deploy auf Migrationsbranch starten
+        uses: actions/github-script@v8
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: process.env.THIS_WORKFLOW,
+              ref: process.env.MIGRATION_BRANCH,
+              inputs: {
+                request_issue: String(context.issue.number)
+              }
+            });
+
+      - name: Auftrag als übernommen markieren
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const changed =
+              '${{ steps.apply.outputs.changed }}' === 'true';
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: changed
+                ? '✅ Belegungsänderung übernommen. Der sichere Azure-Deploy wurde automatisch gestartet.'
+                : '✅ Die gewünschte Belegung war bereits gespeichert. Der sichere Azure-Deploy wurde trotzdem gestartet.'
+            });
+
+  deploy:
+    name: Belegung sicher nach Azure veröffentlichen
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    permissions:
+      contents: read
+      id-token: write
+      issues: write
+
+    steps:
+      - name: Nur den Migrationsbranch zulassen
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          [ "$GITHUB_REF_NAME" = "$MIGRATION_BRANCH" ] || {
+            echo "Deployment nur von $MIGRATION_BRANCH erlaubt." >&2
+            exit 1
+          }
+
+      - name: Aktuellen Migrationsstand laden
+        uses: actions/checkout@v7
+        with:
+          ref: feature/azure-mower-migration
+          fetch-depth: 1
+
+      - name: Python 3.12 einrichten
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Abhängigkeiten installieren
+        run: |
+          python -m pip install \
+            --disable-pip-version-check \
+            -r requirements.txt
+
+      - name: Belegungskonfiguration formal prüfen
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python - <<'PY'
+          import json
+          from datetime import datetime
+          from pathlib import Path
+
+          config = json.loads(
+              Path("occupancy/config.json").read_text(
+                  encoding="utf-8"
+              )
+          )
+
+          assert config["schema_version"] == 1
+          assert config["timezone"] == "Europe/Berlin"
+
+          resources = {
+              item["id"]
+              for item in config.get("resources", [])
+              if isinstance(item, dict) and item.get("id")
+          }
+
+          assert {"rasen", "kunstrasen"}.issubset(resources)
+
+          ids = set()
+
+          for item in config.get("one_off_events", []):
+              assert isinstance(item, dict)
+
+              for key in (
+                  "id",
+                  "title",
+                  "start",
+                  "end",
+                  "resource_id",
+              ):
+                  assert item.get(key), (
+                      f"one_off_event ohne {key}"
+                  )
+
+              assert item["id"] not in ids, (
+                  f"Doppelte Event-ID: {item['id']}"
+              )
+              ids.add(item["id"])
+
+              assert item["resource_id"] in resources
+              assert (
+                  datetime.fromisoformat(item["end"])
+                  > datetime.fromisoformat(item["start"])
+              )
+
+          cancelled = set()
+
+          for item in config.get(
+              "cancelled_occurrences",
+              [],
+          ):
+              key = (
+                  item.get("schedule_id"),
+                  item.get("date"),
+              )
+
+              assert all(key), (
+                  "Ungültige cancelled_occurrence"
+              )
+
+              assert key not in cancelled, (
+                  f"Doppelte Trainingsabsage: {key}"
+              )
+              cancelled.add(key)
+
+          print("Belegungskonfiguration gültig.")
+          PY
+
+      - name: Vollständigen Testbestand ausführen
+        run: |
+          python -m unittest discover \
+            -s tests \
+            -p "test_*.py" \
+            -v
+
+      - name: Aktuelles FULL_FAILSAFE-Produktionspaket bauen
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          rm -rf dist
+          mkdir -p dist
+
+          python \
+            scripts/build_azure_full_failsafe_package.py \
+            --repository-root . \
+            --output \
+              dist/ssv53-platzpflege-full-failsafe-occupancy.zip \
+            > dist/occupancy-package.json
+
+      - name: Paket und Sicherheitsgates prüfen
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python - <<'PY'
+          import json
+          import zipfile
+
+          path = (
+              "dist/"
+              "ssv53-platzpflege-full-failsafe-occupancy.zip"
+          )
+
+          with zipfile.ZipFile(path) as archive:
+              names = set(archive.namelist())
+
+              required = {
+                  "function_app.py",
+                  "order_mail.py",
+                  "training_cancellations.py",
+                  "occupancy/config.json",
+                  "occupancy/service.py",
+                  "mower/full_failsafe.py",
+                  "mower/full_mower.py",
+                  "mower/husqvarna_actions.py",
+                  "mower/husqvarna_start_actions.py",
+                  "mower/hydrawise_actions.py",
+                  "package-manifest.json",
+              }
+
+              missing = required - names
+              assert not missing, (
+                  f"Paketdateien fehlen: {sorted(missing)}"
+              )
+
+              manifest = json.loads(
+                  archive.read(
+                      "package-manifest.json"
+                  ).decode("utf-8")
+              )
+
+              assert (
+                  manifest["safety_stage"]
+                  == "FULL_FAILSAFE_7_ZONES_90_MIN_CAPABLE_LOCKED"
+              )
+              assert (
+                  manifest["park_write_gate_required"]
+                  is True
+              )
+              assert (
+                  manifest["start_write_gate_required"]
+                  is True
+              )
+              assert (
+                  manifest["irrigation_write_gate_required"]
+                  is True
+              )
+
+          print(
+              "FULL_FAILSAFE-Produktionspaket geprüft."
+          )
+          PY
+
+      - name: Mit Azure verbinden
+        uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_BOOTSTRAP_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Azure-Appsettings vor Deployment sichern
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          az functionapp config appsettings list \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$FUNCTION_APP" \
+            --output json \
+            > /tmp/appsettings-before.json
+
+          test -s /tmp/appsettings-before.json
+
+      - name: Aktuellen Stand nach Azure deployen
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          az functionapp deployment source config-zip \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$FUNCTION_APP" \
+            --src \
+              dist/ssv53-platzpflege-full-failsafe-occupancy.zip \
+            --build-remote true \
+            --timeout 900 \
+            --output none
+
+      - name: Azure-Appsettings nach Deployment vergleichen
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          az functionapp config appsettings list \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$FUNCTION_APP" \
+            --output json \
+            > /tmp/appsettings-after.json
+
+          python - <<'PY'
+          import json
+
+          def values(path):
+              rows = json.load(
+                  open(path, encoding="utf-8")
+              )
+              return {
+                  str(row["name"]):
+                  str(row.get("value", ""))
+                  for row in rows
+              }
+
+          before = values(
+              "/tmp/appsettings-before.json"
+          )
+          after = values(
+              "/tmp/appsettings-after.json"
+          )
+
+          if before != after:
+              changed = sorted(
+                  key
+                  for key in set(before) | set(after)
+                  if before.get(key) != after.get(key)
+              )
+              raise SystemExit(
+                  "Azure-Appsettings unerwartet verändert: "
+                  + ", ".join(changed)
+              )
+
+          print(
+              "Alle Azure-Appsettings sind unverändert."
+          )
+          PY
+
+      - name: Öffentlichen Belegungs-Endpunkt live prüfen
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          HOST="$(
+            az functionapp show \
+              --resource-group "$RESOURCE_GROUP" \
+              --name "$FUNCTION_APP" \
+              --query defaultHostName \
+              --output tsv
+          )"
+
+          [ -n "$HOST" ]
+
+          TODAY="$(date -u +%F)"
+          TOMORROW="$(date -u -d '+1 day' +%F)"
+
+          success=false
+
+          for attempt in 1 2 3 4 5; do
+            if curl \
+              --fail \
+              --silent \
+              --show-error \
+              "https://${HOST}/api/occupancy?start=${TODAY}&end=${TOMORROW}&season=Sommer" \
+              > /tmp/occupancy-live.json
+            then
+              success=true
+              break
+            fi
+
+            sleep 5
+          done
+
+          [ "$success" = "true" ]
+
+          python - <<'PY'
+          import json
+
+          payload = json.load(
+              open(
+                  "/tmp/occupancy-live.json",
+                  encoding="utf-8",
+              )
+          )
+
+          assert payload.get("schema_version") == 1
+          assert payload.get("data_source") == "azure"
+          assert isinstance(
+              payload.get("events"),
+              list,
+          )
+
+          print(
+              "Belegungs-Endpunkt ist live erreichbar."
+          )
+          PY
+
+      - name: Auftrag bei Erfolg abschließen
+        if: success() && inputs.request_issue != ''
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const issueNumber =
+              Number('${{ inputs.request_issue }}');
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: '✅ Azure-Deployment und Live-Prüfung erfolgreich. Der Belegungsauftrag ist vollständig abgeschlossen.'
+            });
+
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              state: 'closed'
+            });
+
+      - name: Auftrag bei Fehler markieren
+        if: failure() && inputs.request_issue != ''
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const issueNumber =
+              Number('${{ inputs.request_issue }}');
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: '❌ Der automatische Azure-Deploy ist fehlgeschlagen. Der Auftrag bleibt offen und muss geprüft werden.'
+            });
+
+      - name: Azure-Sitzung beenden
+        if: always()
+        run: az logout || true
