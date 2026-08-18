@@ -1,0 +1,135 @@
+name: SSV53 Bestell-Mail Go-Live V1
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Exakt SSV53-ORDER-MAIL-GO-LIVE eingeben"
+        required: true
+        type: string
+      appack_page_installed:
+        description: "Exakt APPACK-SEITE-INSTALLIERT eingeben"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  enable:
+    name: Produktiven Abhol-Mailversand freigeben
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    env:
+      MIGRATION_BRANCH: feature/azure-mower-migration
+      RESOURCE_GROUP: rg-ssv53-platzpflege-prod
+      FUNCTION_APP: func-ssv53platzpflege-prod-q7kbw54s
+
+    steps:
+      - name: Doppelte Freigabe prüfen
+        shell: bash
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+          APPACK_CONFIRMATION: ${{ inputs.appack_page_installed }}
+        run: |
+          set -euo pipefail
+          [ "$GITHUB_REF_NAME" = "$MIGRATION_BRANCH" ] || {
+            echo "Workflow muss vom Azure-Migrationsbranch gestartet werden." >&2
+            exit 1
+          }
+          [ "$CONFIRMATION" = "SSV53-ORDER-MAIL-GO-LIVE" ] || {
+            echo "Go-Live-Bestätigung fehlt." >&2
+            exit 1
+          }
+          [ "$APPACK_CONFIRMATION" = "APPACK-SEITE-INSTALLIERT" ] || {
+            echo "Bestätigung der installierten Appack-Seite fehlt." >&2
+            exit 1
+          }
+
+      - name: Mit Azure per OIDC anmelden
+        uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_BOOTSTRAP_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: SMTP vor Go-Live erneut prüfen
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          FUNCTION_KEY="$(az functionapp function keys list \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$FUNCTION_APP" \
+            --function-name ssv53_order_mail \
+            --query '"appack-order-admin"' \
+            --output tsv)"
+
+          [ -n "$FUNCTION_KEY" ] || {
+            echo "Funktionsschlüssel fehlt." >&2
+            exit 1
+          }
+
+          echo "::add-mask::$FUNCTION_KEY"
+          export FUNCTION_KEY
+
+          python - <<'PY'
+          import json, os, urllib.parse, urllib.request
+          url = (
+              f"https://{os.environ['FUNCTION_APP']}.azurewebsites.net/api/order-mail?"
+              + urllib.parse.urlencode({"code": os.environ["FUNCTION_KEY"]})
+          )
+          request = urllib.request.Request(
+              url,
+              data=json.dumps({"action": "check"}).encode("utf-8"),
+              headers={"Content-Type": "application/json"},
+              method="POST",
+          )
+          with urllib.request.urlopen(request, timeout=30) as response:
+              payload = json.loads(response.read().decode("utf-8"))
+          if payload.get("ok") is not True or payload.get("smtpAuthenticated") is not True:
+              raise SystemExit(f"SMTP-Prüfung fehlgeschlagen: {payload}")
+          print("SMTP ist vor Go-Live erfolgreich authentifiziert.")
+          PY
+
+      - name: Produktiven Abhol-Mailversand aktivieren
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          az functionapp config appsettings set \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$FUNCTION_APP" \
+            --settings SSV53_ORDER_MAIL_ENABLED=true \
+            --output none
+
+          echo "SSV53_ORDER_MAIL_ENABLED wurde auf true gesetzt."
+
+      - name: Aktivierung verifizieren
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          for i in $(seq 1 12); do
+            ENABLED="$(az functionapp config appsettings list \
+              --resource-group "$RESOURCE_GROUP" \
+              --name "$FUNCTION_APP" \
+              --query "[?name=='SSV53_ORDER_MAIL_ENABLED'].value | [0]" \
+              --output tsv 2>/dev/null || true)"
+
+            if [ "$ENABLED" = "true" ]; then
+              echo "Verifiziert: Produktiver Bestell-Mailversand ist aktiviert."
+              exit 0
+            fi
+            sleep 5
+          done
+
+          echo "Aktivierung konnte nicht verifiziert werden." >&2
+          exit 1
+
+      - name: Azure-Sitzung beenden
+        if: always()
+        shell: bash
+        run: az logout || true
