@@ -15,6 +15,7 @@ from mower.irrigation_recovery import (
 )
 from occupancy.service import build_occupancy_payload, build_training_occurrences
 from training_cancellations import AzureTableCancellationStore
+from order_mail import OrderMailError, check_smtp_connection, send_order_ready_mail
 
 
 app = func.FunctionApp()
@@ -439,5 +440,107 @@ def ssv53_training_cancellations(req: func.HttpRequest) -> func.HttpResponse:
                 )
             },
             503,
+        )
+
+
+def _order_mail_response(
+    payload: dict,
+    *,
+    status_code: int = 200,
+) -> func.HttpResponse:
+    return func.HttpResponse(
+        json.dumps(payload, ensure_ascii=False, sort_keys=True),
+        status_code=status_code,
+        mimetype="application/json",
+        charset="utf-8",
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type",
+            "Cache-Control": "no-store",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
+@app.route(
+    route="order-mail",
+    methods=["POST", "OPTIONS"],
+    auth_level=func.AuthLevel.FUNCTION,
+)
+def ssv53_order_mail(req: func.HttpRequest) -> func.HttpResponse:
+    """Sicherer SMTP-Maildienst für T-Shirt-Bestellungen."""
+
+    if req.method.upper() == "OPTIONS":
+        return _order_mail_response({}, status_code=204)
+
+    try:
+        body = req.get_json()
+    except ValueError:
+        return _order_mail_response(
+            {
+                "ok": False,
+                "code": "REQUEST_INVALID",
+                "error": "Der Request muss gültiges JSON enthalten.",
+            },
+            status_code=400,
+        )
+    if not isinstance(body, dict):
+        return _order_mail_response(
+            {
+                "ok": False,
+                "code": "REQUEST_INVALID",
+                "error": "Der Request muss ein JSON-Objekt enthalten.",
+            },
+            status_code=400,
+        )
+
+    action = str(body.get("action") or "").strip().lower()
+    try:
+        if action == "check":
+            result = check_smtp_connection(os.environ)
+            LOGGER.info("SSV53_ORDER_MAIL_SMTP_CHECK_OK")
+            return _order_mail_response(result)
+
+        if action == "send-ready":
+            result = send_order_ready_mail(body, os.environ)
+            LOGGER.info(
+                "SSV53_ORDER_MAIL_REQUEST_OK order_id=%s sent=%s duplicate=%s",
+                result.get("orderId"),
+                result.get("sent"),
+                result.get("alreadySent"),
+            )
+            return _order_mail_response(result)
+
+        return _order_mail_response(
+            {
+                "ok": False,
+                "code": "ACTION_INVALID",
+                "error": "Unbekannte Mail-Aktion.",
+            },
+            status_code=400,
+        )
+    except OrderMailError as exc:
+        LOGGER.warning(
+            "SSV53_ORDER_MAIL_REJECTED code=%s",
+            exc.code,
+        )
+        return _order_mail_response(
+            {
+                "ok": False,
+                "code": exc.code,
+                "error": str(exc),
+            },
+            status_code=exc.status_code,
+        )
+    except Exception:
+        LOGGER.exception("SSV53_ORDER_MAIL_ERROR")
+        return _order_mail_response(
+            {
+                "ok": False,
+                "code": "ORDER_MAIL_INTERNAL_ERROR",
+                "error": "Der Bestell-Maildienst ist unerwartet fehlgeschlagen.",
+            },
+            status_code=500,
         )
 
