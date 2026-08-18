@@ -111,3 +111,25 @@ test("Absageaktion ist rot und zeigt zustandsabhängige Symbole", () => {
     /actionLabel\.textContent = cancelled \? "Absage widerrufen" : "Training absagen"/
   );
 });
+
+test("nur Trainer können eine Appack-Belegung anlegen", () => {
+  assert.match(html, /canCreateTrainerOccupancies: hasActiveTrainerRole\(profileJSON\)/);
+  assert.match(html, /id="trainer-add-occupancy" type="button" hidden/);
+  const opener = extractFunction("openTrainerOccupancyDialog");
+  const saver = extractFunction("saveTrainerOccupancy");
+  assert.match(opener, /!state\.canCreateTrainerOccupancies/);
+  assert.match(saver, /!state\.canCreateTrainerOccupancies/);
+  assert.match(saver, /fetch\(TRAINER_OCCUPANCY_API_URL/);
+  assert.match(saver, /"Content-Type": "text\/plain;charset=UTF-8"/);
+  assert.match(saver, /confirmation: "TRAINER_BELEGUNG_SPEICHERN"/);
+});
+
+test("Trainerbelegung schreibt nur validierte strukturierte Felder", () => {
+  const saver = extractFunction("saveTrainerOccupancy");
+  assert.match(saver, /end <= start \|\| end - start > maximumDuration/);
+  assert.match(saver, /start: start\.toISOString\(\)/);
+  assert.match(saver, /end: end\.toISOString\(\)/);
+  assert.match(saver, /resourceId: resourceId/);
+  assert.match(saver, /resourceId === "rasen"/);
+  assert.match(html, /Kunstrasen-Einträge erscheinen in Sommer und Winter/);
+});

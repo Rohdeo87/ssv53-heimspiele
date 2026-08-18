@@ -38,9 +38,9 @@ def decision(
 class MatchTimingRulesTest(unittest.TestCase):
     def test_senior_league_durations(self) -> None:
         cases = (
-            ("Herren | Kreisliga", "Spielgemeinschaft Schönwalde", 90, "HERREN"),
-            ("Herren Ü40 | Kreisliga", "Schönwalder SV (Ü40)", 90, "UE40"),
-            ("Herren Ü50 | Kreisliga", "SpG Perwenitz/Schönwalde Ü50", 90, "UE50"),
+            ("Herren | Kreisliga", "Spielgemeinschaft Schönwalde", 105, "HERREN"),
+            ("Herren Ü40 | Kreisliga", "Schönwalder SV (Ü40)", 105, "UE40"),
+            ("Herren Ü50 | Kreisliga", "SpG Perwenitz/Schönwalde Ü50", 105, "UE50"),
         )
         for category, team, minutes, age_class in cases:
             with self.subTest(category=category):
@@ -55,12 +55,12 @@ class MatchTimingRulesTest(unittest.TestCase):
             competition="Herren Ü40 | Kreispokal",
             match_type="PO",
         )
-        self.assertEqual(90, result.minutes)
+        self.assertEqual(105, result.minutes)
         self.assertEqual("cup", result.competition_format)
         self.assertNotIn("cup-max", result.duration_rule)
 
     def test_all_regular_youth_age_classes(self) -> None:
-        expected = {"A": 90, "B": 80, "C": 70, "D": 60, "E": 50, "F": 40, "G": 40}
+        expected = {"A": 105, "B": 95, "C": 85, "D": 75, "E": 65, "F": 55, "G": 55}
         for age_class, minutes in expected.items():
             with self.subTest(age_class=age_class):
                 result = decision(f"{age_class}-Junioren | Kreisliga")
@@ -69,7 +69,7 @@ class MatchTimingRulesTest(unittest.TestCase):
                 self.assertEqual("league", result.competition_format)
 
     def test_youth_cup_includes_age_specific_maximum_extension(self) -> None:
-        expected = {"A": 120, "B": 100, "C": 80, "D": 70, "E": 60, "F": 50, "G": 50}
+        expected = {"A": 135, "B": 115, "C": 95, "D": 85, "E": 75, "F": 65, "G": 65}
         for age_class, minutes in expected.items():
             with self.subTest(age_class=age_class):
                 result = decision(
@@ -125,10 +125,10 @@ class MatchTimingRulesTest(unittest.TestCase):
         )
         recalculate_event_times(match, {"event_timing": timing_config()})
         self.assertEqual("2026-09-12T10:00+02:00", match.kickoff)
-        self.assertEqual("2026-09-12T11:00+02:00", match.match_end)
+        self.assertEqual("2026-09-12T11:15+02:00", match.match_end)
         self.assertEqual("2026-09-12T09:00+02:00", match.event_start)
-        self.assertEqual("2026-09-12T12:00+02:00", match.event_end)
-        self.assertEqual(60, match.match_duration_minutes)
+        self.assertEqual("2026-09-12T12:15+02:00", match.event_end)
+        self.assertEqual(75, match.match_duration_minutes)
 
 
 if __name__ == "__main__":

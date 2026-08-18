@@ -386,6 +386,127 @@ def ssv53_occupancy_admin(req: func.HttpRequest) -> func.HttpResponse:
         )
 
 
+def _trainer_occupancy_response(
+    payload: dict,
+    status_code: int = 200,
+) -> func.HttpResponse:
+    return func.HttpResponse(
+        json.dumps(payload, ensure_ascii=False, sort_keys=True),
+        status_code=status_code,
+        mimetype="application/json",
+        charset="utf-8",
+        headers=_occupancy_headers(cache=False),
+    )
+
+
+@app.route(
+    route="trainer-occupancies",
+    methods=["POST", "OPTIONS"],
+    auth_level=func.AuthLevel.ANONYMOUS,
+)
+def ssv53_trainer_occupancies(req: func.HttpRequest) -> func.HttpResponse:
+    """Einzelbelegung für die in Appack auf die Rolle TR begrenzte Seite."""
+    if req.method.upper() == "OPTIONS":
+        return func.HttpResponse(
+            status_code=204,
+            headers=_occupancy_headers(cache=False),
+        )
+
+    try:
+        if not special_occupancy_enabled(os.environ):
+            raise SpecialOccupancyError(
+                "SPECIAL_OCCUPANCY_DISABLED",
+                "Manuelle Belegungen sind derzeit nicht aktiviert.",
+                status_code=503,
+            )
+        try:
+            body = req.get_json()
+        except ValueError as exc:
+            raise SpecialOccupancyError(
+                "REQUEST_INVALID",
+                "Der Request muss gültiges JSON enthalten.",
+            ) from exc
+        if not isinstance(body, dict):
+            raise SpecialOccupancyError(
+                "REQUEST_INVALID",
+                "Der Request muss ein JSON-Objekt enthalten.",
+            )
+        if body.get("confirmation") != "TRAINER_BELEGUNG_SPEICHERN":
+            raise SpecialOccupancyError(
+                "CONFIRMATION_INVALID",
+                "Die Sicherheitsbestätigung fehlt oder ist ungültig.",
+            )
+
+        now_utc = datetime.now(timezone.utc)
+        now_local = now_utc.astimezone(ZoneInfo("Europe/Berlin"))
+        try:
+            start = datetime.fromisoformat(
+                str(body.get("start") or "").replace("Z", "+00:00")
+            )
+        except (TypeError, ValueError) as exc:
+            raise SpecialOccupancyError(
+                "DATETIME_INVALID",
+                "Der Beginn ist ungültig.",
+            ) from exc
+        if start.tzinfo is None or start.utcoffset() is None:
+            raise SpecialOccupancyError(
+                "DATETIME_TIMEZONE_REQUIRED",
+                "Der Beginn muss eine Zeitzone enthalten.",
+            )
+        start = start.astimezone(ZoneInfo("Europe/Berlin"))
+        if start < now_local - timedelta(minutes=5):
+            raise SpecialOccupancyError(
+                "START_IN_PAST",
+                "Eine neue Belegung darf nicht in der Vergangenheit beginnen.",
+            )
+        if start > now_local + timedelta(days=63):
+            raise SpecialOccupancyError(
+                "START_TOO_FAR_AHEAD",
+                "Eine neue Belegung darf höchstens 63 Tage im Voraus liegen.",
+            )
+
+        command = {
+            "commandId": str(body.get("commandId") or ""),
+            "action": "upsert",
+            "event": {
+                "id": str(body.get("eventId") or ""),
+                "title": body.get("title"),
+                "start": body.get("start"),
+                "end": body.get("end"),
+                "resourceId": body.get("resourceId"),
+                "area": body.get("area") or "vorne & hinten",
+                "description": body.get("description") or "",
+                "suppressTraining": False,
+                "mowerBufferBeforeMinutes": 30,
+                "mowerBufferAfterMinutes": 30,
+            },
+        }
+        store = AzureTableSpecialOccupancyStore.from_environment(os.environ)
+        result = store.apply(command, now_utc=now_utc)
+        LOGGER.warning(
+            "SSV53_TRAINER_OCCUPANCY_CREATED event_id=%s resource=%s",
+            command["event"]["id"],
+            command["event"]["resourceId"],
+        )
+        return _trainer_occupancy_response(result, status_code=200)
+    except SpecialOccupancyError as exc:
+        LOGGER.warning("SSV53_TRAINER_OCCUPANCY_REJECTED code=%s", exc.code)
+        return _trainer_occupancy_response(
+            {"ok": False, "code": exc.code, "error": str(exc)},
+            exc.status_code,
+        )
+    except Exception:
+        LOGGER.exception("SSV53_TRAINER_OCCUPANCY_ERROR")
+        return _trainer_occupancy_response(
+            {
+                "ok": False,
+                "code": "TRAINER_OCCUPANCY_INTERNAL_ERROR",
+                "error": "Die Belegung konnte nicht sicher gespeichert werden.",
+            },
+            503,
+        )
+
+
 def _training_cancellation_response(
     payload: dict,
     status_code: int = 200,

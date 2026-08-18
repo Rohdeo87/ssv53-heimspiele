@@ -138,11 +138,11 @@ class RuntimeConfigBundleTests(unittest.TestCase):
             ).read_text(encoding="utf-8")
             self.assertEqual(ics.count("BEGIN:VEVENT"), 3)
             self.assertIn("DTSTART;TZID=Europe/Berlin:20260819T170000", ics)
-            self.assertIn("DTEND;TZID=Europe/Berlin:20260819T201000", ics)
+            self.assertIn("DTEND;TZID=Europe/Berlin:20260819T202500", ics)
             self.assertIn("DTSTART;TZID=Europe/Berlin:20260820T180000", ics)
-            self.assertIn("DTEND;TZID=Europe/Berlin:20260820T210000", ics)
+            self.assertIn("DTEND;TZID=Europe/Berlin:20260820T211500", ics)
             self.assertIn("DTSTART;TZID=Europe/Berlin:20260821T190000", ics)
-            self.assertIn("DTEND;TZID=Europe/Berlin:20260821T223000", ics)
+            self.assertIn("DTEND;TZID=Europe/Berlin:20260821T224500", ics)
             self.assertNotIn("match-e-kr", ics)
 
     def test_uses_active_range_for_publication_day_without_fixed_date(self) -> None:

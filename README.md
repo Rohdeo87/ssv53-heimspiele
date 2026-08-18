@@ -123,6 +123,24 @@ anschließend kontrolliert übernommen.
 - Die Azure-Migration bleibt bis zur ausdrücklichen Aktivierung im
   separaten Branch `feature/azure-mower-migration`.
 
+## Manuelle Trainer-Belegungen
+
+Der Appack-Belegungsplan zeigt die Aktion `Belegung hinzufügen` ausschließlich
+bei einer aktiven Trainerrolle. Die Erkennung verwendet dieselbe
+`profile_json`-Prüfung wie die bestehende Trainingsabsage. Einträge werden ohne
+zusätzliches Appack-Workbook direkt über `/api/trainer-occupancies` im
+vorhandenen Azure-Table-Store für Sonderbelegungen gespeichert.
+
+- Der Browser kann weder Mäherpuffer noch `suppressTraining` beeinflussen;
+  Azure erzwingt 30 Minuten Vorlauf, 30 Minuten Nachlauf und erhält bestehende
+  Trainingsbelegungen.
+- Kunstrasen wird saisonunabhängig in Sommer und Winter angezeigt und erzeugt
+  keinen Mäherblock.
+- Rasen wird über die bestehende Quelle `special` in die fail-closed
+  Mäherplanung übernommen.
+- Azure akzeptiert nur gültige Zeiträume bis 14 Tage Dauer, höchstens 63 Tage
+  im Voraus, bekannte Plätze und die explizite Sicherheitsbestätigung.
+
 ## Kontrolle nach dem ersten Lauf
 
 In `public/summary.json` sollten insbesondere stehen:

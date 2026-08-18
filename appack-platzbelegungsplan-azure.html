@@ -1292,6 +1292,64 @@
       display: none;
     }
 
+    #trainer-add-occupancy {
+      position: fixed;
+      right: max(12px, env(safe-area-inset-right, 0px));
+      bottom: calc(52px + env(safe-area-inset-bottom, 0px));
+      z-index: 8;
+      min-height: 46px;
+      padding: 0 16px;
+      border: 0;
+      border-radius: 23px;
+      background: var(--brand);
+      color: #fff;
+      box-shadow: 0 6px 20px rgba(31, 77, 140, 0.3);
+      font-weight: 750;
+      cursor: pointer;
+    }
+
+    .trainer-occupancy-form {
+      display: grid;
+      gap: 12px;
+    }
+
+    .trainer-occupancy-form label {
+      display: grid;
+      gap: 5px;
+      color: var(--text);
+      font-weight: 680;
+    }
+
+    .trainer-occupancy-form input,
+    .trainer-occupancy-form select,
+    .trainer-occupancy-form textarea {
+      width: 100%;
+      min-height: 42px;
+      padding: 9px 10px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: #fff;
+      color: var(--text);
+      font: inherit;
+    }
+
+    .trainer-occupancy-form textarea {
+      min-height: 72px;
+      resize: vertical;
+    }
+
+    .trainer-occupancy-hint,
+    .trainer-occupancy-status {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.35;
+    }
+
+    .trainer-occupancy-status[data-error="true"] {
+      color: var(--danger);
+    }
+
     .dialog-button--training-action[data-cancelled="true"]
       .training-cancellation-action-icon--cancel {
       display: none;
@@ -1523,6 +1581,8 @@
         "https://func-ssv53platzpflege-prod-q7kbw54s.azurewebsites.net/api/occupancy";
       const TRAINING_CANCELLATION_API_URL =
         "https://func-ssv53platzpflege-prod-q7kbw54s.azurewebsites.net/api/training-cancellations";
+      const TRAINER_OCCUPANCY_API_URL =
+        "https://func-ssv53platzpflege-prod-q7kbw54s.azurewebsites.net/api/trainer-occupancies";
       const OCCUPANCY_FETCH_TIMEOUT = 15000;
       const OCCUPANCY_FETCH_RETRIES = 2;
       const OCCUPANCY_RETRY_DELAY = 500;
@@ -1619,7 +1679,8 @@
         currentDateInfo: null,
         currentDialogEvent: null,
         currentDialogEventKey: "",
-        canManageTrainingCancellations: hasActiveTrainerRole(profileJSON)
+        canManageTrainingCancellations: hasActiveTrainerRole(profileJSON),
+        canCreateTrainerOccupancies: hasActiveTrainerRole(profileJSON)
       };
 
       const elements = {
@@ -1654,7 +1715,15 @@
         trainerContactRetry: document.getElementById("trainer-contact-retry"),
         popupLink: document.getElementById("popup-link"),
         trainingCancellationAction: document.getElementById("training-cancellation-action"),
-        trainingCancellationStatus: document.getElementById("training-cancellation-status")
+        trainingCancellationStatus: document.getElementById("training-cancellation-status"),
+        trainerAddOccupancy: document.getElementById("trainer-add-occupancy"),
+        trainerOccupancyDialogLayer: document.getElementById("trainer-occupancy-dialog-layer"),
+        trainerOccupancyDialog: document.getElementById("trainer-occupancy-dialog"),
+        trainerOccupancyForm: document.getElementById("trainer-occupancy-form"),
+        trainerOccupancyClose: document.getElementById("trainer-occupancy-close"),
+        trainerOccupancyCancel: document.getElementById("trainer-occupancy-cancel"),
+        trainerOccupancySubmit: document.getElementById("trainer-occupancy-submit"),
+        trainerOccupancyStatus: document.getElementById("trainer-occupancy-status")
       };
 
       function syncCalendarViewport() {
@@ -5729,6 +5798,123 @@
         });
       }
 
+      function updateTrainerOccupancyAvailability() {
+        elements.trainerAddOccupancy.hidden = !state.canCreateTrainerOccupancies;
+      }
+
+      function localDateTimeValue(date) {
+        const pad = function (value) { return String(value).padStart(2, "0"); };
+        return [
+          date.getFullYear(), "-", pad(date.getMonth() + 1), "-", pad(date.getDate()),
+          "T", pad(date.getHours()), ":", pad(date.getMinutes())
+        ].join("");
+      }
+
+      function openTrainerOccupancyDialog() {
+        if (
+          !state.canCreateTrainerOccupancies
+        ) return;
+        const form = elements.trainerOccupancyForm;
+        form.reset();
+        const start = new Date();
+        start.setMinutes(Math.ceil(start.getMinutes() / 30) * 30, 0, 0);
+        const end = new Date(start.getTime() + 90 * 60 * 1000);
+        form.elements.belegungStart.value = localDateTimeValue(start);
+        form.elements.belegungEnde.value = localDateTimeValue(end);
+        elements.trainerOccupancyStatus.hidden = true;
+        elements.trainerOccupancyStatus.removeAttribute("data-error");
+        elements.trainerOccupancyDialogLayer.hidden = false;
+        document.body.classList.add("dialog-open");
+        window.requestAnimationFrame(function () {
+          form.elements.belegungTitel.focus();
+        });
+      }
+
+      function closeTrainerOccupancyDialog() {
+        if (elements.trainerOccupancyDialogLayer.hidden) return;
+        elements.trainerOccupancyDialogLayer.hidden = true;
+        document.body.classList.remove("dialog-open");
+        elements.trainerOccupancySubmit.disabled = false;
+        elements.trainerAddOccupancy.focus();
+      }
+
+      async function saveTrainerOccupancy(event) {
+        event.preventDefault();
+        if (
+          !state.canCreateTrainerOccupancies
+        ) return;
+        const form = elements.trainerOccupancyForm;
+        const title = String(form.elements.belegungTitel.value || "").trim();
+        const start = new Date(form.elements.belegungStart.value);
+        const end = new Date(form.elements.belegungEnde.value);
+        const resourceId = String(form.elements.belegungPlatz.value || "").trim();
+        const maximumDuration = 14 * 24 * 60 * 60 * 1000;
+        if (!title || title.length > 120) {
+          elements.trainerOccupancyStatus.textContent =
+            "Bitte einen Titel mit höchstens 120 Zeichen eingeben.";
+          elements.trainerOccupancyStatus.dataset.error = "true";
+          elements.trainerOccupancyStatus.hidden = false;
+          return;
+        }
+        if (
+          Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) ||
+          end <= start || end - start > maximumDuration
+        ) {
+          elements.trainerOccupancyStatus.textContent =
+            "Bitte einen gültigen Zeitraum von höchstens 14 Tagen wählen.";
+          elements.trainerOccupancyStatus.dataset.error = "true";
+          elements.trainerOccupancyStatus.hidden = false;
+          return;
+        }
+        if (resourceId === "rasen" && !window.confirm(
+          "Diese Belegung sperrt den Rasen für den Mäher zusätzlich 30 Minuten vor und 30 Minuten nach dem Termin. Speichern?"
+        )) return;
+
+        elements.trainerOccupancySubmit.disabled = true;
+        elements.trainerOccupancyStatus.textContent = "Belegung wird gespeichert …";
+        elements.trainerOccupancyStatus.removeAttribute("data-error");
+        elements.trainerOccupancyStatus.hidden = false;
+        try {
+          const randomPart = window.crypto && typeof window.crypto.randomUUID === "function"
+            ? window.crypto.randomUUID()
+            : [Date.now().toString(36), Math.random().toString(36).slice(2)].join("-");
+          const response = await fetch(TRAINER_OCCUPANCY_API_URL, {
+            method: "POST",
+            mode: "cors",
+            cache: "no-store",
+            credentials: "omit",
+            headers: {
+              "Accept": "application/json",
+              "Content-Type": "text/plain;charset=UTF-8"
+            },
+            body: JSON.stringify({
+              commandId: "trainer-create:" + randomPart,
+              eventId: "trainer-" + randomPart.toLowerCase(),
+              title: title,
+              start: start.toISOString(),
+              end: end.toISOString(),
+              resourceId: resourceId,
+              area: String(form.elements.belegungBereich.value || "vorne & hinten"),
+              description: String(form.elements.belegungBeschreibung.value || "").trim().slice(0, 500),
+              confirmation: "TRAINER_BELEGUNG_SPEICHERN"
+            })
+          });
+          const payload = await response.json().catch(function () { return {}; });
+          if (!response.ok || !payload.ok) {
+            throw new Error(payload.error || "Azure hat die Belegung nicht gespeichert.");
+          }
+          closeTrainerOccupancyDialog();
+          window.setTimeout(function () { loadCurrentRange(true); }, 600);
+        } catch (error) {
+          elements.trainerOccupancySubmit.disabled = false;
+          elements.trainerOccupancyStatus.textContent = error && error.message
+            ? error.message
+            : "Die Belegung konnte nicht sicher gespeichert werden.";
+          elements.trainerOccupancyStatus.dataset.error = "true";
+          elements.trainerOccupancyStatus.hidden = false;
+        }
+      }
+
       async function loadInitialData() {
         let settingsRows = [];
         try {
@@ -5741,6 +5927,7 @@
           ? Object.assign({}, DEFAULT_SETTINGS, settingsRows[0])
           : DEFAULT_SETTINGS;
         state.module = state.settings.module || DEFAULT_SETTINGS.module;
+        updateTrainerOccupancyAvailability();
 
         const storedSlotRowHeight = Number.parseFloat(
           storageGet(storageKey("slot-row-height"))
@@ -5772,6 +5959,30 @@
       }
 
       function bindInterface() {
+        elements.trainerAddOccupancy.addEventListener(
+          "click",
+          openTrainerOccupancyDialog
+        );
+        elements.trainerOccupancyClose.addEventListener(
+          "click",
+          closeTrainerOccupancyDialog
+        );
+        elements.trainerOccupancyCancel.addEventListener(
+          "click",
+          closeTrainerOccupancyDialog
+        );
+        elements.trainerOccupancyDialogLayer.addEventListener("click", function (event) {
+          if (event.target.hasAttribute("data-trainer-dialog-close")) {
+            closeTrainerOccupancyDialog();
+          }
+        });
+        elements.trainerOccupancyForm.addEventListener("submit", saveTrainerOccupancy);
+        document.addEventListener("keydown", function (event) {
+          if (event.key === "Escape" && !elements.trainerOccupancyDialogLayer.hidden) {
+            event.preventDefault();
+            closeTrainerOccupancyDialog();
+          }
+        });
         elements.seasonButtons.forEach(function (button) {
           button.addEventListener("click", function () {
             setSeason(button.getAttribute("data-season"));
@@ -6052,6 +6263,90 @@
     </nav>
     <span id="calendar-swipe-status" role="status" aria-live="polite"></span>
   </main>
+
+  <button id="trainer-add-occupancy" type="button" hidden>
+    <i class="fa-solid fa-plus" aria-hidden="true"></i>
+    Belegung hinzufügen
+  </button>
+
+  <div id="trainer-occupancy-dialog-layer" class="dialog-layer" hidden>
+    <div class="dialog-backdrop" data-trainer-dialog-close aria-hidden="true"></div>
+    <section
+      id="trainer-occupancy-dialog"
+      class="event-dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="trainer-occupancy-title"
+      tabindex="-1">
+      <header class="dialog-header">
+        <div class="dialog-heading">
+          <div>Nur für Trainer*innen</div>
+          <h2 id="trainer-occupancy-title">Belegung hinzufügen</h2>
+        </div>
+        <button
+          id="trainer-occupancy-close"
+          type="button"
+          class="icon-button"
+          aria-label="Dialog schließen">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          </svg>
+        </button>
+      </header>
+      <form id="trainer-occupancy-form" class="dialog-body trainer-occupancy-form">
+        <label>
+          Bezeichnung
+          <input name="belegungTitel" type="text" maxlength="120" required autocomplete="off" />
+        </label>
+        <label>
+          Platz
+          <select name="belegungPlatz" required>
+            <option value="rasen">Rasenplatz</option>
+            <option value="kunstrasen">Kunstrasenplatz</option>
+          </select>
+        </label>
+        <label>
+          Beginn
+          <input name="belegungStart" type="datetime-local" required />
+        </label>
+        <label>
+          Ende
+          <input name="belegungEnde" type="datetime-local" required />
+        </label>
+        <label>
+          Bereich
+          <select name="belegungBereich">
+            <option value="vorne &amp; hinten">Gesamter Platz</option>
+            <option value="vorne">Vorne</option>
+            <option value="hinten">Hinten</option>
+          </select>
+        </label>
+        <label>
+          Hinweis (optional)
+          <textarea name="belegungBeschreibung" maxlength="500"></textarea>
+        </label>
+        <p class="trainer-occupancy-hint">
+          Kunstrasen-Einträge erscheinen in Sommer und Winter. Auf dem Rasen
+          wird der Mäher 30 Minuten vorher geparkt und frühestens 30 Minuten
+          nach Ende wieder freigegeben.
+        </p>
+        <p
+          id="trainer-occupancy-status"
+          class="trainer-occupancy-status"
+          role="status"
+          aria-live="polite"
+          hidden></p>
+        <footer class="dialog-footer">
+          <button id="trainer-occupancy-cancel" type="button" class="dialog-button">
+            Abbrechen
+          </button>
+          <button id="trainer-occupancy-submit" type="submit" class="dialog-button dialog-button--primary">
+            Sicher speichern
+          </button>
+        </footer>
+      </form>
+    </section>
+  </div>
 
   <div id="event-dialog-layer" class="dialog-layer" hidden>
     <div class="dialog-backdrop" data-dialog-close aria-hidden="true"></div>

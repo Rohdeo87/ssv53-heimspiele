@@ -116,10 +116,14 @@ def resolve_match_timing(
     age_rules = timing_config.get("age_class_rules", {}) or {}
     rule = age_rules.get(age_class) if age_class else None
     if isinstance(rule, dict):
-        minutes = int(rule.get("minutes", 0))
+        playing_minutes = int(rule.get("minutes", 0))
+        halftime_minutes = int(rule.get("halftime_minutes", 0))
         rule_id = str(rule.get("id") or "").strip()
-        if minutes <= 0 or not rule_id:
+        if playing_minutes <= 0 or halftime_minutes < 0 or not rule_id:
             raise MatchTimingError(f"Unvollständige Zeitregel für Altersklasse {age_class}.")
+        minutes = playing_minutes + halftime_minutes
+        if halftime_minutes:
+            rule_id = f"{rule_id}+halftime-{halftime_minutes}"
         if detected_format == "cup":
             extension = int(rule.get("cup_extension_minutes", 0))
             if extension > 0:

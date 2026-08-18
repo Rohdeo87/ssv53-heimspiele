@@ -107,9 +107,9 @@ class ClubParserTest(unittest.TestCase):
         matches = parse_club_matchplan(self.fixture(), "fixture://club", config())
         item = next(m for m in matches if m.match_number == "610000001")
         self.assertEqual("2026-08-22T09:00+02:00", item.event_start)
-        self.assertEqual("2026-08-22T10:50+02:00", item.match_end)
-        self.assertEqual("2026-08-22T11:50+02:00", item.event_end)
-        self.assertEqual(50, item.match_duration_minutes)
+        self.assertEqual("2026-08-22T11:05+02:00", item.match_end)
+        self.assertEqual("2026-08-22T12:05+02:00", item.event_end)
+        self.assertEqual(65, item.match_duration_minutes)
 
     def test_identical_duplicate_detail_id_is_collapsed_safely(self):
         fixture = self.fixture()
@@ -187,7 +187,7 @@ class ClubParserTest(unittest.TestCase):
         )
         self.assertEqual("2026-08-21T19:00+02:00", item.kickoff)
         self.assertEqual("2026-08-21T18:00+02:00", item.event_start)
-        self.assertEqual("2026-08-21T21:30+02:00", item.event_end)
+        self.assertEqual("2026-08-21T21:45+02:00", item.event_end)
         self.assertEqual([], audit["duplicate_detail_ids"])
         self.assertEqual(1, len(audit["duplicate_resolutions"]))
         self.assertTrue(audit["duplicate_resolutions"][0]["resolution_attempt"]["resolved"])
