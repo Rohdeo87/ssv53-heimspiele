@@ -18,6 +18,7 @@ REQUIRED_FILES = (
     "occupancy/service.py",
     "requirements.txt",
     "training_cancellations.py",
+    "special_occupancy.py",
     "mower/__init__.py",
     "mower/config.json",
     "mower/config_source.py",
@@ -108,6 +109,8 @@ def build_package(repository_root: Path, output_path: Path) -> dict[str, object]
         "training_cancellations_implemented": True,
         "training_cancellations_fail_closed": True,
         "training_cancellation_release_delay_minutes": 30,
+        "dynamic_special_occupancy_implemented": True,
+        "dynamic_special_occupancy_fail_closed": True,
         "expected_hydrawise_zone_count": 7,
         "expected_hydrawise_relay_ids": [
             9104894,

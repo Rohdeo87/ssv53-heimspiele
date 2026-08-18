@@ -45,12 +45,12 @@ ERROR_STATES = frozenset(
     {"ERROR", "FATAL_ERROR", "ERROR_AT_POWER_UP", "WAIT_UPDATING", "WAIT_POWER_UP"}
 )
 SAFE_PARK_SOURCES = frozenset(
-    {"training", "match", "irrigation", "hydrawise_unconfirmed", "continuous"}
+    {"training", "match", "special", "irrigation", "hydrawise_unconfirmed", "continuous"}
 )
 ACTIVE_IRRIGATION_PHASES = frozenset(
     {"PLANNED", "SUSPENDING", "READY", "START_RESERVED", "RUNNING"}
 )
-PARK_GUARD_BLOCK_SOURCES = frozenset({"training", "match", "irrigation"})
+PARK_GUARD_BLOCK_SOURCES = frozenset({"training", "match", "special", "irrigation"})
 
 
 def _as_dict(value: Any) -> dict[str, Any]:
@@ -929,7 +929,7 @@ def run_full_failsafe_cycle(
         except Exception as exc:
             state = _failed_irrigation(state, f"{type(exc).__name__}: {exc}")
 
-    occupancy_sources = _source_parts(block_source) & frozenset({"training", "match"})
+    occupancy_sources = _source_parts(block_source) & frozenset({"training", "match", "special"})
     external_park_evidence = (
         override_action in PARK_OVERRIDE_ACTIONS
         or (

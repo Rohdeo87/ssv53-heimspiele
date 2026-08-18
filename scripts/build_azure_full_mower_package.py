@@ -17,6 +17,8 @@ REQUIRED_FILES = (
     "occupancy/match_model.py",
     "occupancy/service.py",
     "requirements.txt",
+    "training_cancellations.py",
+    "special_occupancy.py",
     "mower/__init__.py",
     "mower/config.json",
     "mower/config_source.py",

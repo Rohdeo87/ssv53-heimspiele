@@ -27,7 +27,7 @@ StateStoreFactory = Callable[[Mapping[str, str]], StateStore]
 ParkSender = Callable[[str, str, str], dict[str, Any]]
 StartSender = Callable[[str, str, str, int, int], dict[str, Any]]
 
-SAFE_AUTOSTART_PARK_SOURCES = frozenset({"training", "match"})
+SAFE_AUTOSTART_PARK_SOURCES = frozenset({"training", "match", "special"})
 PARKED_ACTIVITIES = frozenset({"PARKED_IN_CS", "CHARGING"})
 PARKABLE_ACTIVITIES = frozenset({"MOWING", "LEAVING"})
 MOWER_ERROR_STATES = frozenset(

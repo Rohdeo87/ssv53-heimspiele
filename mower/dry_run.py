@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import asdict, replace
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, time, timedelta, timezone
 from pathlib import Path
 from typing import Any, Mapping
 from zoneinfo import ZoneInfo
@@ -38,10 +38,16 @@ from mower.planner import (
     load_json,
     read_match_blocks,
     resolve_training_cancellation_keys,
+    Block,
 )
 from mower.runtime import ControlMode, CycleResult, RuntimeSettings
 from mower.state_store import AzureTableStateStore, StateStore
 from training_cancellations import AzureTableCancellationStore
+from special_occupancy import (
+    AzureTableSpecialOccupancyStore,
+    enabled as special_occupancy_enabled,
+    event_to_mower_block,
+)
 
 
 StateStoreFactory = Callable[[Mapping[str, str]], StateStore]
@@ -147,6 +153,7 @@ def run_read_only_cycle(
     source: str,
     state_store_factory: StateStoreFactory = AzureTableStateStore.from_environment,
     cancellation_store_factory=AzureTableCancellationStore.from_environment,
+    special_store_factory=AzureTableSpecialOccupancyStore.from_environment,
 ) -> CycleResult:
     """Führt die komplette Live-Abfrage aus, sendet aber keinerlei Befehle."""
 
@@ -252,7 +259,44 @@ def run_read_only_cycle(
         # Fail closed: Ohne verlässliche Absagen bleiben alle Trainings gesperrt.
         cancellation_error = f"{type(exc).__name__}: {exc}"
 
+    special_enabled = special_occupancy_enabled(environment)
+    special_error: str | None = None
+    special_events = []
+    special_blocks = []
+    special_horizon_start = datetime.combine(
+        now_local.date(),
+        time.min,
+        tzinfo=tz,
+    )
+    special_horizon_end = special_horizon_start + timedelta(days=2)
+    if special_enabled:
+        try:
+            special_store = special_store_factory(environment)
+            special_events = special_store.list_active(
+                special_horizon_start,
+                special_horizon_end,
+            )
+            special_blocks = [
+                block
+                for event in special_events
+                if (block := event_to_mower_block(event, Block)) is not None
+            ]
+        except Exception as exc:
+            # Fail closed: Sind Sonderbelegungen nicht lesbar, bleibt der
+            # Rasen für den gesamten Planungshorizont gesperrt.
+            special_error = f"{type(exc).__name__}: {exc}"
+            special_blocks = [
+                Block(
+                    start=special_horizon_start,
+                    end=special_horizon_end,
+                    source="special",
+                    title="Sonderbelegungsstatus unklar",
+                    details={"fail_closed": True},
+                )
+            ]
+
     match_blocks = read_match_blocks(matches_path, tz)
+    match_blocks.extend(special_blocks)
     plans, _merged = create_plan(
         config,
         match_blocks,
@@ -454,6 +498,14 @@ def run_read_only_cycle(
                 "unresolved_event_ids": unresolved_cancellations,
                 "error": cancellation_error,
                 "fail_closed": cancellation_error is not None,
+            },
+            "special_occupancy": {
+                "enabled": special_enabled,
+                "available": (not special_enabled) or special_error is None,
+                "event_count": len(special_events),
+                "rasen_block_count": len(special_blocks),
+                "error": special_error,
+                "fail_closed": special_enabled and special_error is not None,
             },
             "mower": mower_details,
             "input_files": {

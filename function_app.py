@@ -15,6 +15,14 @@ from mower.irrigation_recovery import (
 )
 from occupancy.service import build_occupancy_payload, build_training_occurrences
 from training_cancellations import AzureTableCancellationStore
+from special_occupancy import (
+    AzureTableSpecialOccupancyStore,
+    SpecialOccupancyError,
+    enabled as special_occupancy_enabled,
+    fail_closed_public_events,
+    merge_public_special_events,
+    parse_admin_request,
+)
 from order_mail import OrderMailError, check_smtp_connection, send_order_ready_mail
 
 
@@ -236,6 +244,36 @@ def ssv53_occupancy(req: func.HttpRequest) -> func.HttpResponse:
             "available": cancellation_error is None,
             "fail_closed": cancellation_error is not None,
         }
+        special_enabled = special_occupancy_enabled(os.environ)
+        special_error = None
+        special_count = 0
+        if special_enabled:
+            special_start = datetime.fromisoformat(payload["range"]["start"])
+            special_end = datetime.fromisoformat(payload["range"]["end"])
+            try:
+                special_store = AzureTableSpecialOccupancyStore.from_environment(
+                    os.environ
+                )
+                special_events = special_store.list_active(
+                    special_start,
+                    special_end,
+                )
+                special_count = len(special_events)
+                payload = merge_public_special_events(payload, special_events)
+            except Exception as exc:
+                special_error = f"{type(exc).__name__}: {exc}"
+                LOGGER.exception("SSV53_SPECIAL_OCCUPANCY_READ_ERROR")
+                payload = merge_public_special_events(
+                    payload,
+                    fail_closed_public_events(special_start, special_end),
+                )
+        payload["special_occupancy"] = {
+            "enabled": special_enabled,
+            "available": (not special_enabled) or special_error is None,
+            "fail_closed": special_enabled and special_error is not None,
+            "count": special_count,
+            "error": special_error,
+        }
         payload["data_source"] = "azure"
         payload["match_source"] = match_source
         return func.HttpResponse(
@@ -271,6 +309,80 @@ def ssv53_occupancy(req: func.HttpRequest) -> func.HttpResponse:
             mimetype="application/json",
             charset="utf-8",
             headers=_occupancy_headers(cache=False),
+        )
+
+
+@app.route(
+    route="occupancy-admin",
+    methods=["POST"],
+    auth_level=func.AuthLevel.FUNCTION,
+)
+def ssv53_occupancy_admin(req: func.HttpRequest) -> func.HttpResponse:
+    """Geschützte Schreibschnittstelle für dynamische Sonderbelegungen."""
+
+    try:
+        body = req.get_json()
+    except ValueError:
+        return _json_response(
+            {
+                "ok": False,
+                "code": "REQUEST_INVALID",
+                "error": "Der Request muss gültiges JSON enthalten.",
+            },
+            status_code=400,
+        )
+    if not isinstance(body, dict):
+        return _json_response(
+            {
+                "ok": False,
+                "code": "REQUEST_INVALID",
+                "error": "Der Request muss ein JSON-Objekt enthalten.",
+            },
+            status_code=400,
+        )
+
+    try:
+        command = parse_admin_request(
+            body,
+            allowed_sender=os.environ.get(
+                "SSV53_OCCUPANCY_COMMAND_ALLOWED_SENDER",
+                "",
+            ),
+        )
+        store = AzureTableSpecialOccupancyStore.from_environment(os.environ)
+        result = store.apply(
+            command,
+            now_utc=datetime.now(timezone.utc),
+        )
+        LOGGER.warning(
+            "SSV53_SPECIAL_OCCUPANCY_COMMAND command_id=%s action=%s duplicate=%s",
+            result.get("commandId"),
+            result.get("action"),
+            result.get("duplicate"),
+        )
+        return _json_response(result, status_code=200)
+    except SpecialOccupancyError as exc:
+        LOGGER.warning(
+            "SSV53_SPECIAL_OCCUPANCY_REJECTED code=%s",
+            exc.code,
+        )
+        return _json_response(
+            {
+                "ok": False,
+                "code": exc.code,
+                "error": str(exc),
+            },
+            status_code=exc.status_code,
+        )
+    except Exception:
+        LOGGER.exception("SSV53_SPECIAL_OCCUPANCY_ADMIN_ERROR")
+        return _json_response(
+            {
+                "ok": False,
+                "code": "SPECIAL_OCCUPANCY_INTERNAL_ERROR",
+                "error": "Die Sonderbelegung konnte nicht gespeichert werden.",
+            },
+            status_code=503,
         )
 
 
