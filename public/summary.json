@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-11T06:16:40+00:00",
+  "generated_at": "2026-08-18T20:07:58+00:00",
   "selection_mode": "club-wide venue",
   "event_timing": {
     "before_minutes": 60,
@@ -20,12 +20,12 @@
       "dfb-kinderfussball-g-festival-max-7x7"
     ]
   },
-  "total": 105,
-  "included": 41,
+  "total": 107,
+  "included": 42,
   "review": 0,
-  "excluded": 64,
+  "excluded": 65,
   "by_calendar": {
-    "Rasen": 36,
+    "Rasen": 37,
     "Kunstrasen": 5
   },
   "by_team": {
@@ -47,6 +47,12 @@
       "excluded": 8,
       "review": 0
     },
+    "Schönwalder SV 53": {
+      "total": 1,
+      "included": 1,
+      "excluded": 0,
+      "review": 0
+    },
     "SpG Perwenitz/​Schönwalde Ü50": {
       "total": 14,
       "included": 3,
@@ -54,9 +60,9 @@
       "review": 0
     },
     "Spielgemeinschaft Schönwalde-Perwenitz-Paaren": {
-      "total": 34,
+      "total": 35,
       "included": 12,
-      "excluded": 22,
+      "excluded": 23,
       "review": 0
     }
   },
@@ -64,6 +70,7 @@
     "Schönwalder SV",
     "Schönwalder SV (9er)",
     "Schönwalder SV (Ü40)",
+    "Schönwalder SV 53",
     "SpG Perwenitz/​Schönwalde Ü50",
     "Spielgemeinschaft Schönwalde-Perwenitz-Paaren"
   ],
@@ -87,7 +94,7 @@
     {
       "date_from": "2026-07-01",
       "date_to": "2026-09-30",
-      "competition_rows": 33
+      "competition_rows": 35
     },
     {
       "date_from": "2026-10-01",

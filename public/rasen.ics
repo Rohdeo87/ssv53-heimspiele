@@ -7,324 +7,333 @@ X-WR-CALNAME:SSV53 Rasen – Spiele
 X-WR-TIMEZONE:Europe/Berlin
 BEGIN:VEVENT
 UID:dfb-031NC93R54000000VS5489BUVT2M8LCU@ssv53.de
-DTSTAMP:20260811T061640Z
+DTSTAMP:20260818T200758Z
 DTSTART;TZID=Europe/Berlin:20260819T180000
-DTEND;TZID=Europe/Berlin:20260819T213000
+DTEND;TZID=Europe/Berlin:20260819T214500
 SUMMARY:Schönwalder SV: Schönwalder SV – SG Grün-Weiß Golm
 LOCATION:Rasenplatz\, Sportplatz Schönwalde Strandbad\, Platz 1\, Kurmärkische Str. 2\, 14621 Schönwalde-Glien
 DESCRIPTION:Mi\, | A-Junioren | Landesfreundschaftsspiele | https://www.fussball.de/spiel/schoenwalder-sv-sg-gruen-weiss-golm/-/spiel/031NC93R54000000VS5489BUVT2M8LCU
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031C84AB5K000000VS5489BUVUR5FS5A@ssv53.de
-DTSTAMP:20260811T061640Z
+DTSTAMP:20260818T200758Z
 DTSTART;TZID=Europe/Berlin:20260821T180000
-DTEND;TZID=Europe/Berlin:20260821T213000
+DTEND;TZID=Europe/Berlin:20260821T214500
 SUMMARY:Schönwalder SV (Ü40): Schönwalder SV (Ü40) – SG Bornim Ü40
 LOCATION:Rasenplatz\, Sportplatz Schönwalde Strandbad\, Platz 1\, Kurmärkische Str. 2\, 14621 Schönwalde-Glien
 DESCRIPTION:Fr\, | Herren Ü40 | Kreispokal | https://www.fussball.de/spiel/schoenwalder-sv-ue40-sg-bornim-ue40/-/spiel/031C84AB5K000000VS5489BUVUR5FS5A
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031HB5BAAS000000VS5489BTVVG7L386@ssv53.de
-DTSTAMP:20260811T061640Z
+DTSTAMP:20260818T200758Z
 DTSTART;TZID=Europe/Berlin:20260829T100000
-DTEND;TZID=Europe/Berlin:20260829T133000
+DTEND;TZID=Europe/Berlin:20260829T134500
 SUMMARY:Schönwalder SV: Schönwalder SV – FC Schwedt 02 A-Junioren
 LOCATION:Rasenplatz\, Sportplatz Schönwalde Strandbad\, Platz 1\, Kurmärkische Str. 2\, 14621 Schönwalde-Glien
 DESCRIPTION:Sa\, | A-Junioren | Landesklasse | https://www.fussball.de/spiel/schoenwalder-sv-fc-schwedt-02-a-junioren/-/spiel/031HB5BAAS000000VS5489BTVVG7L386
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031DP96C58000000VS5489BUVUR5FS5A@ssv53.de
-DTSTAMP:20260811T061640Z
+DTSTAMP:20260818T200758Z
 DTSTART;TZID=Europe/Berlin:20260904T190000
-DTEND;TZID=Europe/Berlin:20260904T223000
+DTEND;TZID=Europe/Berlin:20260904T224500
 SUMMARY:Spielgemeinschaft Schönwalde-Perwenitz-Paaren: Spielgemeinschaft Schönwalde-Perwenitz-Paaren – VfL Nauen II
 LOCATION:Rasenplatz\, Sportplatz Schönwalde Strandbad\, Platz 1\, Kurmärkische Str. 2\, 14621 Schönwalde-Glien
 DESCRIPTION:Herren | Kreisliga | https://www.fussball.de/spiel/spielgemeinschaft-schoenwalde-perwenitz-paaren-vfl-nauen-ii/-/spiel/031DP96C58000000VS5489BUVUR5FS5A
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031MFGE2K8000000VS5489BUVVKNMR0J@ssv53.de
-DTSTAMP:20260811T061640Z
+DTSTAMP:20260818T200758Z
 DTSTART;TZID=Europe/Berlin:20260905T090000
-DTEND;TZID=Europe/Berlin:20260905T121000
+DTEND;TZID=Europe/Berlin:20260905T122500
 SUMMARY:Schönwalder SV (9er): Schönwalder SV (9er) – Potsdamer Kickers 94 (9er) II
 LOCATION:Rasenplatz\, Sportplatz Schönwalde Strandbad\, Platz 1\, Kurmärkische Str. 2\, 14621 Schönwalde-Glien
 DESCRIPTION:C-Junioren | 2.Kreisklasse | https://www.fussball.de/spiel/schoenwalder-sv-9er-potsdamer-kickers-94-9er-ii/-/spiel/031MFGE2K8000000VS5489BUVVKNMR0J
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031HB5B9Q0000000VS5489BTVVG7L386@ssv53.de
-DTSTAMP:20260811T061640Z
+DTSTAMP:20260818T200758Z
 DTSTART;TZID=Europe/Berlin:20260912T100000
-DTEND;TZID=Europe/Berlin:20260912T133000
+DTEND;TZID=Europe/Berlin:20260912T134500
 SUMMARY:Schönwalder SV: Schönwalder SV – Oranienburger FC Eintracht U19
 LOCATION:Rasenplatz\, Sportplatz Schönwalde Strandbad\, Platz 1\, Kurmärkische Str. 2\, 14621 Schönwalde-Glien
 DESCRIPTION:A-Junioren | Landesklasse | https://www.fussball.de/spiel/schoenwalder-sv-oranienburger-fc-eintracht-u19/-/spiel/031HB5B9Q0000000VS5489BTVVG7L386
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031MFGE2RO000000VS5489BUVVKNMR0J@ssv53.de
-DTSTAMP:20260811T061640Z
+DTSTAMP:20260818T200758Z
 DTSTART;TZID=Europe/Berlin:20260919T090000
-DTEND;TZID=Europe/Berlin:20260919T121000
+DTEND;TZID=Europe/Berlin:20260919T122500
 SUMMARY:Schönwalder SV (9er): Schönwalder SV (9er) – TSV Perwenitz (9er)
 LOCATION:Rasenplatz\, Sportplatz Schönwalde Strandbad\, Platz 1\, Kurmärkische Str. 2\, 14621 Schönwalde-Glien
 DESCRIPTION:Sa\, | C-Junioren | 2.Kreisklasse | https://www.fussball.de/spiel/schoenwalder-sv-9er-tsv-perwenitz-9er/-/spiel/031MFGE2RO000000VS5489BUVVKNMR0J
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031MFGE2VC000000VS5489BUVVKNMR0J@ssv53.de
-DTSTAMP:20260811T061640Z
+DTSTAMP:20260818T200758Z
 DTSTART;TZID=Europe/Berlin:20260926T090000
-DTEND;TZID=Europe/Berlin:20260926T121000
+DTEND;TZID=Europe/Berlin:20260926T122500
 SUMMARY:Schönwalder SV (9er): Schönwalder SV (9er) – Eintracht Falkensee II (9er)
 LOCATION:Rasenplatz\, Sportplatz Schönwalde Strandbad\, Platz 1\, Kurmärkische Str. 2\, 14621 Schönwalde-Glien
 DESCRIPTION:Sa\, | C-Junioren | 2.Kreisklasse | https://www.fussball.de/spiel/schoenwalder-sv-9er-eintracht-falkensee-ii-9er/-/spiel/031MFGE2VC000000VS5489BUVVKNMR0J
 END:VEVENT
 BEGIN:VEVENT
+UID:dfb-031O4JQIM4000000VS5489BUVT2M8LCU@ssv53.de
+DTSTAMP:20260818T200758Z
+DTSTART;TZID=Europe/Berlin:20260927T093000
+DTEND;TZID=Europe/Berlin:20260927T134500
+SUMMARY:Schönwalder SV 53: Schönwalder SV 53 – SV Concordia Nowawes 06
+LOCATION:Rasenplatz\, Sportplatz Schönwalde Strandbad\, Platz 1\, Kurmärkische Str. 2\, 14621 Schönwalde-Glien
+DESCRIPTION:A-Junioren | Brandenburg-Pokal | https://www.fussball.de/spiel/schoenwalder-sv-sv-concordia-nowawes-06/-/spiel/031O4JQIM4000000VS5489BUVT2M8LCU
+END:VEVENT
+BEGIN:VEVENT
 UID:dfb-031DB86VDS000000VS5489BUVUR5FS5A@ssv53.de
-DTSTAMP:20260811T061640Z
+DTSTAMP:20260818T200758Z
 DTSTART;TZID=Europe/Berlin:20261002T180000
-DTEND;TZID=Europe/Berlin:20261002T213000
+DTEND;TZID=Europe/Berlin:20261002T214500
 SUMMARY:Schönwalder SV (Ü40): Schönwalder SV (Ü40) – SV Dallgow 47
 LOCATION:Rasenplatz\, Sportplatz Schönwalde Strandbad\, Platz 1\, Kurmärkische Str. 2\, 14621 Schönwalde-Glien
 DESCRIPTION:Fr\, | Herren Ü40 | Kreisliga | https://www.fussball.de/spiel/schoenwalder-sv-ue40-sv-dallgow-47/-/spiel/031DB86VDS000000VS5489BUVUR5FS5A
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031DP96F8G000000VS5489BUVUR5FS5A@ssv53.de
-DTSTAMP:20260811T061640Z
+DTSTAMP:20260818T200758Z
 DTSTART;TZID=Europe/Berlin:20261004T130000
-DTEND;TZID=Europe/Berlin:20261004T163000
+DTEND;TZID=Europe/Berlin:20261004T164500
 SUMMARY:Spielgemeinschaft Schönwalde-Perwenitz-Paaren: Spielgemeinschaft Schönwalde-Perwenitz-Paaren – SV Hohennauen
 LOCATION:Rasenplatz\, Sportplatz Schönwalde Strandbad\, Platz 1\, Kurmärkische Str. 2\, 14621 Schönwalde-Glien
 DESCRIPTION:Herren | Kreisliga | https://www.fussball.de/spiel/spielgemeinschaft-schoenwalde-perwenitz-paaren-sv-hohennauen/-/spiel/031DP96F8G000000VS5489BUVUR5FS5A
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031HB5B99O000000VS5489BTVVG7L386@ssv53.de
-DTSTAMP:20260811T061640Z
+DTSTAMP:20260818T200758Z
 DTSTART;TZID=Europe/Berlin:20261010T100000
-DTEND;TZID=Europe/Berlin:20261010T133000
+DTEND;TZID=Europe/Berlin:20261010T134500
 SUMMARY:Schönwalder SV: Schönwalder SV – SG Grün-Weiß Rehfelde
 LOCATION:Rasenplatz\, Sportplatz Schönwalde Strandbad\, Platz 1\, Kurmärkische Str. 2\, 14621 Schönwalde-Glien
 DESCRIPTION:Sa\, | A-Junioren | Landesklasse | https://www.fussball.de/spiel/schoenwalder-sv-sg-gruen-weiss-rehfelde/-/spiel/031HB5B99O000000VS5489BTVVG7L386
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031DP96EHK000000VS5489BUVUR5FS5A@ssv53.de
-DTSTAMP:20260811T061640Z
+DTSTAMP:20260818T200758Z
 DTSTART;TZID=Europe/Berlin:20261018T130000
-DTEND;TZID=Europe/Berlin:20261018T163000
+DTEND;TZID=Europe/Berlin:20261018T164500
 SUMMARY:Spielgemeinschaft Schönwalde-Perwenitz-Paaren: Spielgemeinschaft Schönwalde-Perwenitz-Paaren – FC Rot-Weiß Nennhausen
 LOCATION:Rasenplatz\, Sportplatz Schönwalde Strandbad\, Platz 1\, Kurmärkische Str. 2\, 14621 Schönwalde-Glien
 DESCRIPTION:So\, | Herren | Kreisliga | https://www.fussball.de/spiel/spielgemeinschaft-schoenwalde-perwenitz-paaren-fc-rot-weiss-nennhausen/-/spiel/031DP96EHK000000VS5489BUVUR5FS5A
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031DP96DRK000000VS5489BUVUR5FS5A@ssv53.de
-DTSTAMP:20260811T061640Z
+DTSTAMP:20260818T200758Z
 DTSTART;TZID=Europe/Berlin:20261101T130000
-DTEND;TZID=Europe/Berlin:20261101T163000
+DTEND;TZID=Europe/Berlin:20261101T164500
 SUMMARY:Spielgemeinschaft Schönwalde-Perwenitz-Paaren: Spielgemeinschaft Schönwalde-Perwenitz-Paaren – SV Blau-Weiß Damsdorf
 LOCATION:Rasenplatz\, Sportplatz Schönwalde Strandbad\, Platz 1\, Kurmärkische Str. 2\, 14621 Schönwalde-Glien
 DESCRIPTION:So\, | Herren | Kreisliga | https://www.fussball.de/spiel/spielgemeinschaft-schoenwalde-perwenitz-paaren-sv-blau-weiss-damsdorf/-/spiel/031DP96DRK000000VS5489BUVUR5FS5A
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031DB86V6S000000VS5489BUVUR5FS5A@ssv53.de
-DTSTAMP:20260811T061640Z
+DTSTAMP:20260818T200758Z
 DTSTART;TZID=Europe/Berlin:20261106T180000
-DTEND;TZID=Europe/Berlin:20261106T213000
+DTEND;TZID=Europe/Berlin:20261106T214500
 SUMMARY:Schönwalder SV (Ü40): Schönwalder SV (Ü40) – SV Falkensee-Finkenkrug
 LOCATION:Rasenplatz\, Sportplatz Schönwalde Strandbad\, Platz 1\, Kurmärkische Str. 2\, 14621 Schönwalde-Glien
 DESCRIPTION:Fr\, | Herren Ü40 | Kreisliga | https://www.fussball.de/spiel/schoenwalder-sv-ue40-sv-falkensee-finkenkrug/-/spiel/031DB86V6S000000VS5489BUVUR5FS5A
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031HB5B8QK000000VS5489BTVVG7L386@ssv53.de
-DTSTAMP:20260811T061640Z
+DTSTAMP:20260818T200758Z
 DTSTART;TZID=Europe/Berlin:20261114T100000
-DTEND;TZID=Europe/Berlin:20261114T133000
+DTEND;TZID=Europe/Berlin:20261114T134500
 SUMMARY:Schönwalder SV: Schönwalder SV – FV Erkner 1920
 LOCATION:Rasenplatz\, Sportplatz Schönwalde Strandbad\, Platz 1\, Kurmärkische Str. 2\, 14621 Schönwalde-Glien
 DESCRIPTION:Sa\, | A-Junioren | Landesklasse | https://www.fussball.de/spiel/schoenwalder-sv-fv-erkner-1920/-/spiel/031HB5B8QK000000VS5489BTVVG7L386
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031DP96D60000000VS5489BUVUR5FS5A@ssv53.de
-DTSTAMP:20260811T061640Z
+DTSTAMP:20260818T200758Z
 DTSTART;TZID=Europe/Berlin:20261115T130000
-DTEND;TZID=Europe/Berlin:20261115T163000
+DTEND;TZID=Europe/Berlin:20261115T164500
 SUMMARY:Spielgemeinschaft Schönwalde-Perwenitz-Paaren: Spielgemeinschaft Schönwalde-Perwenitz-Paaren – FC Borussia Brandenburg II
 LOCATION:Rasenplatz\, Sportplatz Schönwalde Strandbad\, Platz 1\, Kurmärkische Str. 2\, 14621 Schönwalde-Glien
 DESCRIPTION:So\, | Herren | Kreisliga | https://www.fussball.de/spiel/spielgemeinschaft-schoenwalde-perwenitz-paaren-fc-borussia-brandenburg-ii/-/spiel/031DP96D60000000VS5489BUVUR5FS5A
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031HB5BAJS000000VS5489BTVVG7L386@ssv53.de
-DTSTAMP:20260811T061640Z
+DTSTAMP:20260818T200758Z
 DTSTART;TZID=Europe/Berlin:20261128T100000
-DTEND;TZID=Europe/Berlin:20261128T133000
+DTEND;TZID=Europe/Berlin:20261128T134500
 SUMMARY:Schönwalder SV: Schönwalder SV – MSV 1919 Neuruppin U19
 LOCATION:Rasenplatz\, Sportplatz Schönwalde Strandbad\, Platz 1\, Kurmärkische Str. 2\, 14621 Schönwalde-Glien
 DESCRIPTION:A-Junioren | Landesklasse | https://www.fussball.de/spiel/schoenwalder-sv-msv-1919-neuruppin-u19/-/spiel/031HB5BAJS000000VS5489BTVVG7L386
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031HB5B8DG000000VS5489BTVVG7L386@ssv53.de
-DTSTAMP:20260811T061640Z
+DTSTAMP:20260818T200758Z
 DTSTART;TZID=Europe/Berlin:20261205T100000
-DTEND;TZID=Europe/Berlin:20261205T133000
+DTEND;TZID=Europe/Berlin:20261205T134500
 SUMMARY:Schönwalder SV: Schönwalder SV – VfL Nauen/​SV Grün-Weiss Brieselang
 LOCATION:Rasenplatz\, Sportplatz Schönwalde Strandbad\, Platz 1\, Kurmärkische Str. 2\, 14621 Schönwalde-Glien
 DESCRIPTION:Sa\, | A-Junioren | Landesklasse | https://www.fussball.de/spiel/schoenwalder-sv-vfl-nauen-sv-gruen-weiss-brieselang/-/spiel/031HB5B8DG000000VS5489BTVVG7L386
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031HB5BEJS000000VS5489BTVVG7L386@ssv53.de
-DTSTAMP:20260811T061640Z
+DTSTAMP:20260818T200758Z
 DTSTART;TZID=Europe/Berlin:20270227T100000
-DTEND;TZID=Europe/Berlin:20270227T133000
+DTEND;TZID=Europe/Berlin:20270227T134500
 SUMMARY:Schönwalder SV: Schönwalder SV – SC Victoria 1914 Templin
 LOCATION:Rasenplatz\, Sportplatz Schönwalde Strandbad\, Platz 1\, Kurmärkische Str. 2\, 14621 Schönwalde-Glien
 DESCRIPTION:Sa\, | A-Junioren | Landesklasse | https://www.fussball.de/spiel/schoenwalder-sv-sc-victoria-1914-templin/-/spiel/031HB5BEJS000000VS5489BTVVG7L386
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031DP96PJK000000VS5489BUVUR5FS5A@ssv53.de
-DTSTAMP:20260811T061640Z
+DTSTAMP:20260818T200758Z
 DTSTART;TZID=Europe/Berlin:20270228T130000
-DTEND;TZID=Europe/Berlin:20270228T163000
+DTEND;TZID=Europe/Berlin:20270228T164500
 SUMMARY:Spielgemeinschaft Schönwalde-Perwenitz-Paaren: Spielgemeinschaft Schönwalde-Perwenitz-Paaren – FC Deetz
 LOCATION:Rasenplatz\, Sportplatz Schönwalde Strandbad\, Platz 1\, Kurmärkische Str. 2\, 14621 Schönwalde-Glien
 DESCRIPTION:So\, | Herren | Kreisliga | https://www.fussball.de/spiel/spielgemeinschaft-schoenwalde-perwenitz-paaren-fc-deetz-i/-/spiel/031DP96PJK000000VS5489BUVUR5FS5A
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031DP96ORC000000VS5489BUVUR5FS5A@ssv53.de
-DTSTAMP:20260811T061640Z
+DTSTAMP:20260818T200758Z
 DTSTART;TZID=Europe/Berlin:20270307T140000
-DTEND;TZID=Europe/Berlin:20270307T173000
+DTEND;TZID=Europe/Berlin:20270307T174500
 SUMMARY:Spielgemeinschaft Schönwalde-Perwenitz-Paaren: Spielgemeinschaft Schönwalde-Perwenitz-Paaren – FSV 1950 Wachow/​Tremmen
 LOCATION:Rasenplatz\, Sportplatz Schönwalde Strandbad\, Platz 1\, Kurmärkische Str. 2\, 14621 Schönwalde-Glien
 DESCRIPTION:Herren | Kreisliga | https://www.fussball.de/spiel/spielgemeinschaft-schoenwalde-perwenitz-paaren-fsv-1950-wachow-tremmen/-/spiel/031DP96ORC000000VS5489BUVUR5FS5A
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031HB5BDEG000000VS5489BTVVG7L386@ssv53.de
-DTSTAMP:20260811T061640Z
+DTSTAMP:20260818T200758Z
 DTSTART;TZID=Europe/Berlin:20270313T100000
-DTEND;TZID=Europe/Berlin:20270313T133000
+DTEND;TZID=Europe/Berlin:20270313T134500
 SUMMARY:Schönwalder SV: Schönwalder SV – FC Strausberg
 LOCATION:Rasenplatz\, Sportplatz Schönwalde Strandbad\, Platz 1\, Kurmärkische Str. 2\, 14621 Schönwalde-Glien
 DESCRIPTION:Sa\, | A-Junioren | Landesklasse | https://www.fussball.de/spiel/schoenwalder-sv-fc-strausberg/-/spiel/031HB5BDEG000000VS5489BTVVG7L386
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031DB870D4000000VS5489BUVUR5FS5A@ssv53.de
-DTSTAMP:20260811T061640Z
+DTSTAMP:20260818T200758Z
 DTSTART;TZID=Europe/Berlin:20270409T180000
-DTEND;TZID=Europe/Berlin:20270409T213000
+DTEND;TZID=Europe/Berlin:20270409T214500
 SUMMARY:Schönwalder SV (Ü40): Schönwalder SV (Ü40) – Eintracht Falkensee Ü40
 LOCATION:Rasenplatz\, Sportplatz Schönwalde Strandbad\, Platz 1\, Kurmärkische Str. 2\, 14621 Schönwalde-Glien
 DESCRIPTION:Fr\, | Herren Ü40 | Kreisliga | https://www.fussball.de/spiel/schoenwalder-sv-ue40-eintracht-falkensee-ue40/-/spiel/031DB870D4000000VS5489BUVUR5FS5A
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031DB8NT0S000000VS5489BUVUR5FS5A@ssv53.de
-DTSTAMP:20260811T061640Z
+DTSTAMP:20260818T200758Z
 DTSTART;TZID=Europe/Berlin:20270409T190000
-DTEND;TZID=Europe/Berlin:20270409T223000
+DTEND;TZID=Europe/Berlin:20270409T224500
 SUMMARY:SpG Perwenitz/​Schönwalde Ü50: SpG Perwenitz/​Schönwalde Ü50 – SV Falkensee-Finkenkrug
 LOCATION:Rasenplatz\, Sportplatz Schönwalde Strandbad\, Platz 1\, Kurmärkische Str. 2\, 14621 Schönwalde-Glien
 DESCRIPTION:Herren Ü50 | Kreisliga | https://www.fussball.de/spiel/spg-perwenitz-schoenwalde-ue50-sv-falkensee-finkenkrug/-/spiel/031DB8NT0S000000VS5489BUVUR5FS5A
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031HB5BCK8000000VS5489BTVVG7L386@ssv53.de
-DTSTAMP:20260811T061640Z
+DTSTAMP:20260818T200758Z
 DTSTART;TZID=Europe/Berlin:20270410T100000
-DTEND;TZID=Europe/Berlin:20270410T133000
+DTEND;TZID=Europe/Berlin:20270410T134500
 SUMMARY:Schönwalder SV: Schönwalder SV – SpG Klosterfelde/​Wandlitz/​Basdorf
 LOCATION:Rasenplatz\, Sportplatz Schönwalde Strandbad\, Platz 1\, Kurmärkische Str. 2\, 14621 Schönwalde-Glien
 DESCRIPTION:Sa\, | A-Junioren | Landesklasse | https://www.fussball.de/spiel/schoenwalder-sv-spg-klosterfelde-wandlitz-basdorf/-/spiel/031HB5BCK8000000VS5489BTVVG7L386
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031DP96M1K000000VS5489BUVUR5FS5A@ssv53.de
-DTSTAMP:20260811T061640Z
+DTSTAMP:20260818T200758Z
 DTSTART;TZID=Europe/Berlin:20270411T130000
-DTEND;TZID=Europe/Berlin:20270411T163000
+DTEND;TZID=Europe/Berlin:20270411T164500
 SUMMARY:Spielgemeinschaft Schönwalde-Perwenitz-Paaren: Spielgemeinschaft Schönwalde-Perwenitz-Paaren – SV Roskow
 LOCATION:Rasenplatz\, Sportplatz Schönwalde Strandbad\, Platz 1\, Kurmärkische Str. 2\, 14621 Schönwalde-Glien
 DESCRIPTION:So\, | Herren | Kreisliga | https://www.fussball.de/spiel/spielgemeinschaft-schoenwalde-perwenitz-paaren-sv-roskow/-/spiel/031DP96M1K000000VS5489BUVUR5FS5A
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031DP96KK4000000VS5489BUVUR5FS5A@ssv53.de
-DTSTAMP:20260811T061640Z
+DTSTAMP:20260818T200758Z
 DTSTART;TZID=Europe/Berlin:20270425T130000
-DTEND;TZID=Europe/Berlin:20270425T163000
+DTEND;TZID=Europe/Berlin:20270425T164500
 SUMMARY:Spielgemeinschaft Schönwalde-Perwenitz-Paaren: Spielgemeinschaft Schönwalde-Perwenitz-Paaren – SV Grün-Weiss Brieselang II
 LOCATION:Rasenplatz\, Sportplatz Schönwalde Strandbad\, Platz 1\, Kurmärkische Str. 2\, 14621 Schönwalde-Glien
 DESCRIPTION:So\, | Herren | Kreisliga | https://www.fussball.de/spiel/spielgemeinschaft-schoenwalde-perwenitz-paaren-sv-gruen-weiss-brieselang-ii/-/spiel/031DP96KK4000000VS5489BUVUR5FS5A
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031DB87058000000VS5489BUVUR5FS5A@ssv53.de
-DTSTAMP:20260811T061640Z
+DTSTAMP:20260818T200758Z
 DTSTART;TZID=Europe/Berlin:20270507T180000
-DTEND;TZID=Europe/Berlin:20270507T213000
+DTEND;TZID=Europe/Berlin:20270507T214500
 SUMMARY:Schönwalder SV (Ü40): Schönwalder SV (Ü40) – SG Eintracht Friesack Ü40
 LOCATION:Rasenplatz\, Sportplatz Schönwalde Strandbad\, Platz 1\, Kurmärkische Str. 2\, 14621 Schönwalde-Glien
 DESCRIPTION:Fr\, | Herren Ü40 | Kreisliga | https://www.fussball.de/spiel/schoenwalder-sv-ue40-sg-eintracht-friesack-ue40/-/spiel/031DB87058000000VS5489BUVUR5FS5A
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031DB8NSPC000000VS5489BUVUR5FS5A@ssv53.de
-DTSTAMP:20260811T061640Z
+DTSTAMP:20260818T200758Z
 DTSTART;TZID=Europe/Berlin:20270507T190000
-DTEND;TZID=Europe/Berlin:20270507T223000
+DTEND;TZID=Europe/Berlin:20270507T224500
 SUMMARY:SpG Perwenitz/​Schönwalde Ü50: SpG Perwenitz/​Schönwalde Ü50 – SpG Empor Schenkenberg/​Eintracht Glindow
 LOCATION:Rasenplatz\, Sportplatz Schönwalde Strandbad\, Platz 1\, Kurmärkische Str. 2\, 14621 Schönwalde-Glien
 DESCRIPTION:Herren Ü50 | Kreisliga | https://www.fussball.de/spiel/spg-perwenitz-schoenwalde-ue50-spg-empor-schenkenberg-eintracht-glindow/-/spiel/031DB8NSPC000000VS5489BUVUR5FS5A
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031DP96JUG000000VS5489BUVUR5FS5A@ssv53.de
-DTSTAMP:20260811T061640Z
+DTSTAMP:20260818T200758Z
 DTSTART;TZID=Europe/Berlin:20270509T130000
-DTEND;TZID=Europe/Berlin:20270509T163000
+DTEND;TZID=Europe/Berlin:20270509T164500
 SUMMARY:Spielgemeinschaft Schönwalde-Perwenitz-Paaren: Spielgemeinschaft Schönwalde-Perwenitz-Paaren – Mögeliner SC 1913
 LOCATION:Rasenplatz\, Sportplatz Schönwalde Strandbad\, Platz 1\, Kurmärkische Str. 2\, 14621 Schönwalde-Glien
 DESCRIPTION:Herren | Kreisliga | https://www.fussball.de/spiel/spielgemeinschaft-schoenwalde-perwenitz-paaren-moegeliner-sc-1913/-/spiel/031DP96JUG000000VS5489BUVUR5FS5A
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031HB5BC5G000000VS5489BTVVG7L386@ssv53.de
-DTSTAMP:20260811T061640Z
+DTSTAMP:20260818T200758Z
 DTSTART;TZID=Europe/Berlin:20270522T100000
-DTEND;TZID=Europe/Berlin:20270522T133000
+DTEND;TZID=Europe/Berlin:20270522T134500
 SUMMARY:Schönwalder SV: Schönwalder SV – FSV Schorfheide Joachimsthal
 LOCATION:Rasenplatz\, Sportplatz Schönwalde Strandbad\, Platz 1\, Kurmärkische Str. 2\, 14621 Schönwalde-Glien
 DESCRIPTION:Sa\, | A-Junioren | Landesklasse | https://www.fussball.de/spiel/schoenwalder-sv-fsv-schorfheide-joachimsthal/-/spiel/031HB5BC5G000000VS5489BTVVG7L386
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031DP96IO0000000VS5489BUVUR5FS5A@ssv53.de
-DTSTAMP:20260811T061640Z
+DTSTAMP:20260818T200758Z
 DTSTART;TZID=Europe/Berlin:20270523T130000
-DTEND;TZID=Europe/Berlin:20270523T163000
+DTEND;TZID=Europe/Berlin:20270523T164500
 SUMMARY:Spielgemeinschaft Schönwalde-Perwenitz-Paaren: Spielgemeinschaft Schönwalde-Perwenitz-Paaren – BSC Rathenow
 LOCATION:Rasenplatz\, Sportplatz Schönwalde Strandbad\, Platz 1\, Kurmärkische Str. 2\, 14621 Schönwalde-Glien
 DESCRIPTION:So\, | Herren | Kreisliga | https://www.fussball.de/spiel/spielgemeinschaft-schoenwalde-perwenitz-paaren-bsc-rathenow/-/spiel/031DP96IO0000000VS5489BUVUR5FS5A
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031DB86VQ4000000VS5489BUVUR5FS5A@ssv53.de
-DTSTAMP:20260811T061640Z
+DTSTAMP:20260818T200758Z
 DTSTART;TZID=Europe/Berlin:20270528T180000
-DTEND;TZID=Europe/Berlin:20270528T213000
+DTEND;TZID=Europe/Berlin:20270528T214500
 SUMMARY:Schönwalder SV (Ü40): Schönwalder SV (Ü40) – FSV 95 Ketzin/​Falkenrehde Ü40
 LOCATION:Rasenplatz\, Sportplatz Schönwalde Strandbad\, Platz 1\, Kurmärkische Str. 2\, 14621 Schönwalde-Glien
 DESCRIPTION:Fr\, | Herren Ü40 | Kreisliga | https://www.fussball.de/spiel/schoenwalder-sv-ue40-fsv-95-ketzin-falkenrehde-ue40/-/spiel/031DB86VQ4000000VS5489BUVUR5FS5A
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031DB8NSH4000000VS5489BUVUR5FS5A@ssv53.de
-DTSTAMP:20260811T061640Z
+DTSTAMP:20260818T200758Z
 DTSTART;TZID=Europe/Berlin:20270528T190000
-DTEND;TZID=Europe/Berlin:20270528T223000
+DTEND;TZID=Europe/Berlin:20270528T224500
 SUMMARY:SpG Perwenitz/​Schönwalde Ü50: SpG Perwenitz/​Schönwalde Ü50 – SV Blau-Gelb Falkensee
 LOCATION:Rasenplatz\, Sportplatz Schönwalde Strandbad\, Platz 1\, Kurmärkische Str. 2\, 14621 Schönwalde-Glien
 DESCRIPTION:Herren Ü50 | Kreisliga | https://www.fussball.de/spiel/spg-perwenitz-schoenwalde-ue50-sv-blau-gelb-falkensee/-/spiel/031DB8NSH4000000VS5489BUVUR5FS5A
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031HB5BBC0000000VS5489BTVVG7L386@ssv53.de
-DTSTAMP:20260811T061640Z
+DTSTAMP:20260818T200758Z
 DTSTART;TZID=Europe/Berlin:20270605T100000
-DTEND;TZID=Europe/Berlin:20270605T133000
+DTEND;TZID=Europe/Berlin:20270605T134500
 SUMMARY:Schönwalder SV: Schönwalder SV – FV Preussen Eberswalde
 LOCATION:Rasenplatz\, Sportplatz Schönwalde Strandbad\, Platz 1\, Kurmärkische Str. 2\, 14621 Schönwalde-Glien
 DESCRIPTION:Sa\, | A-Junioren | Landesklasse | https://www.fussball.de/spiel/schoenwalder-sv-fv-preussen-eberswalde/-/spiel/031HB5BBC0000000VS5489BTVVG7L386
 END:VEVENT
 BEGIN:VEVENT
 UID:dfb-031DP96HKG000000VS5489BUVUR5FS5A@ssv53.de
-DTSTAMP:20260811T061640Z
+DTSTAMP:20260818T200758Z
 DTSTART;TZID=Europe/Berlin:20270606T130000
-DTEND;TZID=Europe/Berlin:20270606T163000
+DTEND;TZID=Europe/Berlin:20270606T164500
 SUMMARY:Spielgemeinschaft Schönwalde-Perwenitz-Paaren: Spielgemeinschaft Schönwalde-Perwenitz-Paaren – SV Kloster Lehnin
 LOCATION:Rasenplatz\, Sportplatz Schönwalde Strandbad\, Platz 1\, Kurmärkische Str. 2\, 14621 Schönwalde-Glien
 DESCRIPTION:So\, | Herren | Kreisliga | https://www.fussball.de/spiel/spielgemeinschaft-schoenwalde-perwenitz-paaren-sv-kloster-lehnin/-/spiel/031DP96HKG000000VS5489BUVUR5FS5A
