@@ -425,7 +425,17 @@ def _trainer_occupancy_conflicts(
             event_start = datetime.fromisoformat(str(item.get("occupancyStart") or item["start"]))
             event_end = datetime.fromisoformat(str(item.get("occupancyEnd") or item["end"]))
             if event_end > start and event_start < end:
-                key = str(item.get("id") or f"{event_start}:{item.get('title')}")
+                # Derselbe physische Termin kann in beiden Saisonansichten
+                # vorkommen. Für die Warnung zählt er trotzdem nur einmal.
+                key = "|".join(
+                    (
+                        resource_id,
+                        event_start.isoformat(),
+                        event_end.isoformat(),
+                        str(item.get("title") or "").strip().casefold(),
+                        str(item.get("source") or "").strip().casefold(),
+                    )
+                )
                 candidates[key] = dict(item, start=event_start.isoformat(), end=event_end.isoformat())
     for event in store.list_active(start, end):
         if event.resource_id == resource_id and event.end > start and event.start < end:

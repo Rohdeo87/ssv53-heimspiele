@@ -33,7 +33,7 @@ test("Hilfeseite dokumentiert Kontakte und Trainingsabsage vollständig", () => 
   assert.match(html, /ausschließlich die <strong>eigene Mannschaft<\/strong>/);
   assert.match(html, /Kein Ansprechpartner hinterlegt/);
   assert.match(html, /Trainer\*in \/ Mitarbeiter\*in/);
-  assert.match(html, /roten Button <strong>„Training absagen“<\/strong>/);
+  assert.match(html, /roten Button <strong>„Termin absagen“<\/strong>/);
   assert.match(html, /Absage widerrufen/);
   assert.match(html, /frühestens 30 Minuten nach der Absage/);
   assert.match(html, /Abgesagt/);

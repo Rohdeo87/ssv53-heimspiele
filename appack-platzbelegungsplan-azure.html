@@ -1323,6 +1323,23 @@
       font-weight: 680;
     }
 
+    .trainer-occupancy-datetime-group {
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr);
+      gap: 8px;
+      min-width: 0;
+      margin: 0;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+    }
+
+    .trainer-occupancy-datetime-group legend {
+      padding: 0 5px;
+      color: var(--text);
+      font-weight: 750;
+    }
+
     .trainer-occupancy-form input,
     .trainer-occupancy-form select,
     .trainer-occupancy-form textarea {
@@ -2968,9 +2985,14 @@
       function getAppackProfileValue(profile, keys, depth) {
         if (!profile || typeof profile !== "object") return "";
         const remainingDepth = depth == null ? 3 : depth;
-        for (const key of keys) {
-          if (profile[key] != null && typeof profile[key] !== "object") {
-            const value = String(profile[key]).trim();
+        const normalizedKeys = keys.map(function (key) {
+          return String(key).replace(/[^a-z0-9]/gi, "").toLowerCase();
+        });
+        for (const actualKey of Object.keys(profile)) {
+          const normalizedActual = actualKey.replace(/[^a-z0-9]/gi, "").toLowerCase();
+          if (normalizedKeys.includes(normalizedActual) &&
+              profile[actualKey] != null && typeof profile[actualKey] !== "object") {
+            const value = String(profile[actualKey]).trim();
             if (value) return value;
           }
         }
@@ -2985,8 +3007,8 @@
       }
 
       function getCurrentAppackCreator(profile) {
-        const firstName = getAppackProfileValue(profile, ["firstName", "firstname", "vorname"]);
-        const lastName = getAppackProfileValue(profile, ["lastName", "lastname", "nachname"]);
+        const firstName = getAppackProfileValue(profile, ["firstName", "first_name", "givenName", "vorname"]);
+        const lastName = getAppackProfileValue(profile, ["lastName", "last_name", "surname", "familyName", "nachname"]);
         return {
           id: getAppackProfileValue(profile, ["id", "userId", "userID", "profileId", "memberId", "uuid"]),
           name: getAppackProfileValue(profile, ["displayName", "fullName", "name", "username"]) || [firstName, lastName].filter(Boolean).join(" "),
@@ -2996,6 +3018,45 @@
           chatId: getAppackProfileValue(profile, ["chatId", "chatID", "directChatId"]),
           image: getAppackProfileValue(profile, ["image", "imageUrl", "avatar", "avatarUrl", "profileImage"])
         };
+      }
+
+      function mergeCreatorContact(profileCreator, workbookContact) {
+        const profile = profileCreator || {};
+        const workbook = workbookContact || {};
+        return {
+          id: profile.id || "",
+          name: workbook.name || profile.name || "",
+          phone: workbook.phone || profile.phone || "",
+          mobile: workbook.mobile || profile.mobile || "",
+          email: workbook.email || profile.email || "",
+          chatId: workbook.chatId || profile.chatId || "",
+          image: workbook.image || profile.image || "",
+          instagram: workbook.instagram || "",
+          website: workbook.website || "",
+          facebook: workbook.facebook || "",
+          role: workbook.role || "",
+          infoHtml: workbook.infoHtml || ""
+        };
+      }
+
+      function findCurrentCreatorWorkbookContact() {
+        const profile = state.currentCreator || {};
+        const profileName = normalizeMatchText(profile.name);
+        const profileEmail = String(profile.email || "").trim().toLowerCase();
+        const profileChat = String(profile.chatId || "").trim().toLowerCase();
+        const profileId = String(profile.id || "").trim().toLowerCase();
+        const exact = state.trainerContacts.find(function (contact) {
+          return (profileEmail && String(contact.email || "").trim().toLowerCase() === profileEmail) ||
+            (profileChat && String(contact.chatId || "").trim().toLowerCase() === profileChat) ||
+            (profileId && String(contact.chatId || "").trim().toLowerCase() === profileId) ||
+            (profileName && normalizeMatchText(contact.name) === profileName);
+        });
+        if (exact) return exact;
+        if (!profileName) return null;
+        const nameMatches = state.trainerContacts.filter(function (contact) {
+          return normalizeMatchText(contact.name).split(/\s+/).includes(profileName);
+        });
+        return nameMatches.length === 1 ? nameMatches[0] : null;
       }
 
       function extractContactCategoryTeamKeys(value) {
@@ -5737,7 +5798,7 @@
         );
         action.hidden = false;
         action.setAttribute("data-cancelled", cancelled ? "true" : "false");
-        actionLabel.textContent = cancelled ? "Absage widerrufen" : "Training absagen";
+        actionLabel.textContent = cancelled ? "Absage widerrufen" : "Termin absagen";
         if (cancelled) {
           status.textContent = "Dieses Training ist abgesagt.";
           status.hidden = false;
@@ -5931,6 +5992,25 @@
         ].join("");
       }
 
+      function setTrainerOccupancyDateTime(form, prefix, date) {
+        const value = localDateTimeValue(date).split("T");
+        form.elements[prefix + "Datum"].value = value[0];
+        form.elements[prefix + "Zeit"].value = value[1];
+      }
+
+      function readTrainerOccupancyDateTime(form, prefix) {
+        const date = String(form.elements[prefix + "Datum"].value || "");
+        const time = String(form.elements[prefix + "Zeit"].value || "");
+        return new Date(date + "T" + time);
+      }
+
+      function suggestTrainerOccupancyEnd() {
+        const form = elements.trainerOccupancyForm;
+        const start = readTrainerOccupancyDateTime(form, "belegungStart");
+        if (Number.isNaN(start.getTime())) return;
+        setTrainerOccupancyDateTime(form, "belegungEnde", new Date(start.getTime() + 60 * 60 * 1000));
+      }
+
       function openTrainerOccupancyDialog() {
         if (
           !state.canCreateTrainerOccupancies
@@ -5939,9 +6019,9 @@
         form.reset();
         const start = new Date();
         start.setMinutes(Math.ceil(start.getMinutes() / 30) * 30, 0, 0);
-        const end = new Date(start.getTime() + 90 * 60 * 1000);
-        form.elements.belegungStart.value = localDateTimeValue(start);
-        form.elements.belegungEnde.value = localDateTimeValue(end);
+        const end = new Date(start.getTime() + 60 * 60 * 1000);
+        setTrainerOccupancyDateTime(form, "belegungStart", start);
+        setTrainerOccupancyDateTime(form, "belegungEnde", end);
         elements.trainerOccupancyStatus.hidden = true;
         elements.trainerOccupancyStatus.removeAttribute("data-error");
         elements.trainerOccupancyDialogLayer.hidden = false;
@@ -5966,8 +6046,8 @@
         ) return;
         const form = elements.trainerOccupancyForm;
         const title = String(form.elements.belegungTitel.value || "").trim();
-        const start = new Date(form.elements.belegungStart.value);
-        const end = new Date(form.elements.belegungEnde.value);
+        const start = readTrainerOccupancyDateTime(form, "belegungStart");
+        const end = readTrainerOccupancyDateTime(form, "belegungEnde");
         const resourceId = String(form.elements.belegungPlatz.value || "").trim();
         const maximumDuration = 14 * 24 * 60 * 60 * 1000;
         if (!title || title.length > 120) {
@@ -5999,6 +6079,13 @@
           const randomPart = window.crypto && typeof window.crypto.randomUUID === "function"
             ? window.crypto.randomUUID()
             : [Date.now().toString(36), Math.random().toString(36).slice(2)].join("-");
+          await loadTrainerContacts(false).catch(function () {
+            /* Profilfelder bleiben der definierte Fallback. */
+          });
+          const creator = mergeCreatorContact(
+            state.currentCreator,
+            findCurrentCreatorWorkbookContact()
+          );
           const requestBody = {
             action: "create",
             commandId: "trainer-create:" + randomPart,
@@ -6009,7 +6096,7 @@
             resourceId: resourceId,
             area: String(form.elements.belegungBereich.value || "vorne & hinten"),
             description: String(form.elements.belegungBeschreibung.value || "").trim().slice(0, 500),
-            creator: state.currentCreator,
+            creator: creator,
             confirmation: "TRAINER_BELEGUNG_SPEICHERN"
           };
           const sendRequest = function () { return fetch(TRAINER_OCCUPANCY_API_URL, {
@@ -6124,6 +6211,11 @@
           }
         });
         elements.trainerOccupancyForm.addEventListener("submit", saveTrainerOccupancy);
+        ["belegungStartDatum", "belegungStartZeit"].forEach(function (name) {
+          elements.trainerOccupancyForm.elements[name].addEventListener(
+            "change", suggestTrainerOccupancyEnd
+          );
+        });
         elements.trainerOccupancyDelete.addEventListener("click", deleteTrainerOccupancy);
         document.addEventListener("keydown", function (event) {
           if (event.key === "Escape" && !elements.trainerOccupancyDialogLayer.hidden) {
@@ -6452,14 +6544,16 @@
             <option value="kunstrasen">Kunstrasenplatz</option>
           </select>
         </label>
-        <label>
-          Beginn
-          <input name="belegungStart" type="datetime-local" required />
-        </label>
-        <label>
-          Ende
-          <input name="belegungEnde" type="datetime-local" required />
-        </label>
+        <fieldset class="trainer-occupancy-datetime-group">
+          <legend>Beginn</legend>
+          <label>Tag <input name="belegungStartDatum" type="date" required /></label>
+          <label>Uhrzeit <input name="belegungStartZeit" type="time" step="300" required /></label>
+        </fieldset>
+        <fieldset class="trainer-occupancy-datetime-group">
+          <legend>Ende</legend>
+          <label>Tag <input name="belegungEndeDatum" type="date" required /></label>
+          <label>Uhrzeit <input name="belegungEndeZeit" type="time" step="300" required /></label>
+        </fieldset>
         <label>
           Bereich
           <select name="belegungBereich">
@@ -6488,7 +6582,7 @@
             Abbrechen
           </button>
           <button id="trainer-occupancy-submit" type="submit" class="dialog-button dialog-button--primary">
-            Sicher speichern
+            Termin anlegen
           </button>
         </footer>
       </form>
@@ -6603,7 +6697,7 @@
             <path d="M4 4v6h6" />
             <path d="M5.2 15a8 8 0 1 0 1.7-8.8L4 10" />
           </svg>
-          <span class="training-cancellation-action-label">Training absagen</span>
+          <span class="training-cancellation-action-label">Termin absagen</span>
         </button>
         <a id="popup-link" class="dialog-button dialog-button--primary" href="" hidden>
           Weitere Informationen

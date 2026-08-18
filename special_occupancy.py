@@ -130,6 +130,11 @@ class SpecialOccupancyEvent:
     creator_email: str
     creator_chat_id: str
     creator_image: str
+    creator_instagram: str
+    creator_website: str
+    creator_facebook: str
+    creator_role: str
+    creator_info_html: str
     suppress_training: bool
     mower_buffer_before_minutes: int
     mower_buffer_after_minutes: int
@@ -203,6 +208,11 @@ class SpecialOccupancyEvent:
             creator_email=_bounded_text(creator.get("email"), field="creator.email", maximum=180),
             creator_chat_id=_bounded_text(creator.get("chatId"), field="creator.chatId", maximum=180),
             creator_image=_bounded_text(creator.get("image"), field="creator.image", maximum=500),
+            creator_instagram=_bounded_text(creator.get("instagram"), field="creator.instagram", maximum=500),
+            creator_website=_bounded_text(creator.get("website"), field="creator.website", maximum=500),
+            creator_facebook=_bounded_text(creator.get("facebook"), field="creator.facebook", maximum=500),
+            creator_role=_bounded_text(creator.get("role"), field="creator.role", maximum=180),
+            creator_info_html=_bounded_text(creator.get("infoHtml"), field="creator.infoHtml", maximum=1000),
             suppress_training=suppress_training,
             mower_buffer_before_minutes=_buffer(
                 raw.get("mowerBufferBeforeMinutes"),
@@ -233,6 +243,11 @@ class SpecialOccupancyEvent:
             creator_email=str(entity.get("CreatorEmail", "")),
             creator_chat_id=str(entity.get("CreatorChatId", "")),
             creator_image=str(entity.get("CreatorImage", "")),
+            creator_instagram=str(entity.get("CreatorInstagram", "")),
+            creator_website=str(entity.get("CreatorWebsite", "")),
+            creator_facebook=str(entity.get("CreatorFacebook", "")),
+            creator_role=str(entity.get("CreatorRole", "")),
+            creator_info_html=str(entity.get("CreatorInfoHtml", "")),
             suppress_training=bool(entity.get("SuppressTraining", True)),
             mower_buffer_before_minutes=int(entity.get("MowerBufferBeforeMinutes", 30)),
             mower_buffer_after_minutes=int(entity.get("MowerBufferAfterMinutes", 30)),
@@ -263,6 +278,11 @@ class SpecialOccupancyEvent:
             "CreatorEmail": self.creator_email,
             "CreatorChatId": self.creator_chat_id,
             "CreatorImage": self.creator_image,
+            "CreatorInstagram": self.creator_instagram,
+            "CreatorWebsite": self.creator_website,
+            "CreatorFacebook": self.creator_facebook,
+            "CreatorRole": self.creator_role,
+            "CreatorInfoHtml": self.creator_info_html,
             "SuppressTraining": self.suppress_training,
             "MowerBufferBeforeMinutes": self.mower_buffer_before_minutes,
             "MowerBufferAfterMinutes": self.mower_buffer_after_minutes,
@@ -291,6 +311,11 @@ class SpecialOccupancyEvent:
                 "email": self.creator_email,
                 "chatId": self.creator_chat_id,
                 "image": self.creator_image,
+                "instagram": self.creator_instagram,
+                "website": self.creator_website,
+                "facebook": self.creator_facebook,
+                "role": self.creator_role,
+                "infoHtml": self.creator_info_html,
             },
         }
 

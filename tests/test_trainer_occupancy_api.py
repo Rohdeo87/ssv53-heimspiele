@@ -116,6 +116,11 @@ class TrainerOccupancyApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 409)
         self.assertEqual(body["code"], "OCCUPANCY_CONFLICT")
         self.assertTrue(body["conflicts"])
+        signatures = {
+            (item["title"], item["start"], item["end"], item["source"])
+            for item in body["conflicts"]
+        }
+        self.assertEqual(len(signatures), len(body["conflicts"]))
         self.assertEqual(self.store.events, {})
 
         payload["overlapConfirmation"] = "UEBERSCHNEIDUNG_TROTZDEM_SPEICHERN"

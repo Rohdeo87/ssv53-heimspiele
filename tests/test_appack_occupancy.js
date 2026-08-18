@@ -179,7 +179,7 @@ test("abgesagtes Training bleibt grau mit Status und stabiler Termin-ID sichtbar
   assert.deepEqual(mapped.classNames, ["ssv-training-cancelled"]);
   assert.equal(mapped.color, "#8a8f8c");
   assert.match(html, /cancelledBadge\.textContent = "Abgesagt"/);
-  assert.match(html, /"Absage widerrufen" : "Training absagen"/);
+  assert.match(html, /"Absage widerrufen" : "Termin absagen"/);
   assert.match(html, /window\.confirm\(question\)/);
 });
 

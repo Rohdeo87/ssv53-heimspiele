@@ -121,11 +121,11 @@ test("Absageaktion ist rot und zeigt zustandsabhängige Symbole", () => {
   );
   assert.match(
     html,
-    /<span class="training-cancellation-action-label">Training absagen<\/span>/
+    /<span class="training-cancellation-action-label">Termin absagen<\/span>/
   );
   assert.match(
     extractFunction("renderTrainingCancellationAction"),
-    /actionLabel\.textContent = cancelled \? "Absage widerrufen" : "Training absagen"/
+    /actionLabel\.textContent = cancelled \? "Absage widerrufen" : "Termin absagen"/
   );
 });
 
@@ -151,4 +151,10 @@ test("Trainerbelegung schreibt nur validierte strukturierte Felder", () => {
   assert.match(saver, /resourceId: resourceId/);
   assert.match(saver, /resourceId === "rasen"/);
   assert.match(html, /Kunstrasen-Einträge erscheinen in Sommer und Winter/);
+  assert.match(html, /type="date" required/);
+  assert.match(html, /type="time" step="300" required/);
+  assert.match(html, /new Date\(start\.getTime\(\) \+ 60 \* 60 \* 1000\)/);
+  assert.match(saver, /mergeCreatorContact/);
+  assert.match(saver, /findCurrentCreatorWorkbookContact/);
+  assert.match(html, />\s*Termin anlegen\s*<\/button>/);
 });
