@@ -1,0 +1,326 @@
+name: SSV53 Bestell-Mail Key Vault Fix V5
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Exakt SSV53-ORDER-MAIL-KV-FIX eingeben"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: ssv53-order-mail-keyvault-fix
+  cancel-in-progress: false
+
+jobs:
+  fix:
+    name: Key-Vault-Referenz reparieren und SMTP prüfen
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      MIGRATION_BRANCH: feature/azure-mower-migration
+      RESOURCE_GROUP: rg-ssv53-platzpflege-prod
+      FUNCTION_APP: func-ssv53platzpflege-prod-q7kbw54s
+      APP_SETTING: SSV53_ORDER_MAIL_SMTP_PASSWORD
+      SECRET_NAME: ssv53-smtp-password
+
+    steps:
+      - name: Harte Freigabe prüfen
+        shell: bash
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+          CLIENT_ID: ${{ vars.AZURE_BOOTSTRAP_CLIENT_ID }}
+          TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          set -euo pipefail
+
+          [ "$GITHUB_REF_NAME" = "$MIGRATION_BRANCH" ] || {
+            echo "Dieser Workflow darf nur vom Azure-Migrationsbranch laufen." >&2
+            exit 1
+          }
+
+          [ "$CONFIRMATION" = "SSV53-ORDER-MAIL-KV-FIX" ] || {
+            echo "Explizite Bestätigung fehlt." >&2
+            exit 1
+          }
+
+          for variable in CLIENT_ID TENANT_ID SUBSCRIPTION_ID; do
+            [ -n "${!variable:-}" ] || {
+              echo "Erforderliche GitHub-Variable $variable fehlt." >&2
+              exit 1
+            }
+          done
+
+      - name: Mit Azure per OIDC anmelden
+        uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_BOOTSTRAP_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Function App, Managed Identity und Key Vault eindeutig bestimmen
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          APP_ID="$(az webapp show \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$FUNCTION_APP" \
+            --query id \
+            --output tsv)"
+
+          [ -n "$APP_ID" ] || {
+            echo "Function-App-Ressourcen-ID fehlt." >&2
+            exit 1
+          }
+
+          az webapp identity show \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$FUNCTION_APP" \
+            --output json > /tmp/function-identity.json
+
+          az keyvault list \
+            --resource-group "$RESOURCE_GROUP" \
+            --output json > /tmp/keyvaults.json
+
+          python - <<'PY'
+          import json
+          import os
+
+          identity = json.load(open("/tmp/function-identity.json", encoding="utf-8"))
+          user_ids = list((identity.get("userAssignedIdentities") or {}).keys())
+          if len(user_ids) != 1:
+              raise SystemExit(
+                  f"Erwartet genau eine User-Assigned Identity, gefunden: {len(user_ids)}"
+              )
+
+          vaults = json.load(open("/tmp/keyvaults.json", encoding="utf-8"))
+          candidates = [
+              item for item in vaults
+              if str(item.get("name") or "").startswith("kv-ssv53platzpflege")
+          ]
+          if len(candidates) != 1:
+              raise SystemExit(
+                  f"Erwartet genau einen SSV53-Key-Vault, gefunden: {len(candidates)}"
+              )
+
+          vault = candidates[0]
+          vault_uri = str((vault.get("properties") or {}).get("vaultUri") or "").strip()
+          if not vault_uri.startswith("https://") or not vault_uri.endswith("/"):
+              raise SystemExit("Key-Vault-URI ist ungültig.")
+
+          open("/tmp/uami-id.txt", "w", encoding="utf-8").write(user_ids[0])
+          open("/tmp/vault-uri.txt", "w", encoding="utf-8").write(vault_uri)
+          open("/tmp/vault-name.txt", "w", encoding="utf-8").write(vault["name"])
+
+          print("Function App: gefunden")
+          print("User-Assigned Identity: eindeutig gefunden")
+          print("SSV53 Key Vault:", vault["name"])
+          PY
+
+          printf '%s' "$APP_ID" > /tmp/app-id.txt
+
+      - name: Key-Vault-Identity der Function App prüfen und bei Bedarf reparieren
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          APP_ID="$(cat /tmp/app-id.txt)"
+          UAMI_ID="$(cat /tmp/uami-id.txt)"
+
+          CURRENT="$(az resource show \
+            --ids "$APP_ID" \
+            --api-version 2024-04-01 \
+            --query properties.keyVaultReferenceIdentity \
+            --output tsv 2>/dev/null || true)"
+
+          if [ "$CURRENT" = "$UAMI_ID" ]; then
+            echo "keyVaultReferenceIdentity ist bereits korrekt."
+          else
+            echo "keyVaultReferenceIdentity wird auf die zugewiesene Managed Identity gesetzt."
+            az functionapp update \
+              --resource-group "$RESOURCE_GROUP" \
+              --name "$FUNCTION_APP" \
+              --set keyVaultReferenceIdentity="$UAMI_ID" \
+              --output none
+          fi
+
+      - name: SMTP-Secret-Referenz auf bewährtes SecretUri-Format setzen
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          VAULT_URI="$(cat /tmp/vault-uri.txt)"
+          REFERENCE="@Microsoft.KeyVault(SecretUri=${VAULT_URI}secrets/${SECRET_NAME})"
+
+          az functionapp config appsettings set \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$FUNCTION_APP" \
+            --settings \
+              SSV53_ORDER_MAIL_ENABLED=false \
+              "${APP_SETTING}=${REFERENCE}" \
+            --output none
+
+          echo "SMTP-Key-Vault-Referenz wurde auf das gleiche SecretUri-Format wie die bestehenden Secrets gesetzt."
+          echo "Produktiver Mailversand bleibt deaktiviert."
+
+      - name: Key-Vault-Referenzen sofort neu auflösen
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          APP_ID="$(cat /tmp/app-id.txt)"
+
+          az rest \
+            --method post \
+            --url "https://management.azure.com${APP_ID}/config/configreferences/appsettings/refresh?api-version=2022-03-01" \
+            --output none
+
+          echo "Key-Vault-Referenzen wurden aktiv neu geladen."
+
+      - name: Auf aufgelöste SMTP-Referenz warten
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          APP_ID="$(cat /tmp/app-id.txt)"
+          STATUS=""
+          DETAILS=""
+
+          for i in $(seq 1 12); do
+            az rest \
+              --method get \
+              --url "https://management.azure.com${APP_ID}/config/configreferences/appsettings/${APP_SETTING}?api-version=2025-03-01" \
+              --output json > /tmp/kv-status.json
+
+            STATUS="$(python - <<'PY'
+          import json
+          data = json.load(open("/tmp/kv-status.json", encoding="utf-8"))
+          print((data.get("properties") or {}).get("status") or "")
+          PY
+          )"
+
+            DETAILS="$(python - <<'PY'
+          import json
+          data = json.load(open("/tmp/kv-status.json", encoding="utf-8"))
+          details = str((data.get("properties") or {}).get("details") or "")
+          print(details.replace("\n", " ")[:500])
+          PY
+          )"
+
+            echo "Key-Vault-Status: ${STATUS:-<leer>}"
+
+            if [ "$STATUS" = "Resolved" ]; then
+              echo "SMTP-Secret wurde erfolgreich aus Key Vault aufgelöst."
+              break
+            fi
+
+            sleep 10
+          done
+
+          if [ "$STATUS" != "Resolved" ]; then
+            echo "Key-Vault-Referenz konnte nicht aufgelöst werden." >&2
+            echo "Status: ${STATUS:-<leer>}" >&2
+            echo "Details: ${DETAILS:-<keine>}" >&2
+            exit 1
+          fi
+
+      - name: OVH SMTP-Anmeldung testen – weiterhin keine Mail senden
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          FUNCTION_KEY="$(az functionapp function keys list \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$FUNCTION_APP" \
+            --function-name ssv53_order_mail \
+            --query '"appack-order-admin"' \
+            --output tsv)"
+
+          [ -n "$FUNCTION_KEY" ] || {
+            echo "Funktionsspezifischer Schlüssel fehlt." >&2
+            exit 1
+          }
+
+          export FUNCTION_KEY
+
+          python - <<'PY'
+          import json
+          import os
+          import urllib.error
+          import urllib.parse
+          import urllib.request
+
+          app = os.environ["FUNCTION_APP"]
+          key = os.environ["FUNCTION_KEY"]
+
+          url = (
+              f"https://{app}.azurewebsites.net/api/order-mail?"
+              + urllib.parse.urlencode({"code": key})
+          )
+
+          request = urllib.request.Request(
+              url,
+              data=json.dumps({"action": "check"}).encode("utf-8"),
+              headers={"Content-Type": "application/json"},
+              method="POST",
+          )
+
+          try:
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  payload = json.loads(response.read().decode("utf-8"))
+          except urllib.error.HTTPError as exc:
+              body = exc.read().decode("utf-8", errors="replace")
+              try:
+                  payload = json.loads(body)
+              except json.JSONDecodeError:
+                  raise SystemExit(
+                      f"SMTP-Test: HTTP {exc.code}, Antwort war kein JSON."
+                  )
+
+              print("SMTP-Test HTTP:", exc.code)
+              print("Sicherer Fehlercode:", payload.get("code", "<fehlt>"))
+              print("Fehlermeldung:", payload.get("error", "<fehlt>"))
+              raise SystemExit(
+                  f"SMTP-Test fehlgeschlagen: {payload.get('code', 'UNKNOWN')}"
+              )
+
+          if not payload.get("ok") or not payload.get("smtpAuthenticated"):
+              raise SystemExit(f"SMTP-Prüfung fehlgeschlagen: {payload}")
+
+          if payload.get("mailEnabled") is not False:
+              raise SystemExit(
+                  "Sicherheitsfehler: produktiver Mailversand ist aktiviert."
+              )
+
+          print("OVH SMTP erfolgreich authentifiziert.")
+          print("Es wurde ausdrücklich keine E-Mail gesendet.")
+          PY
+
+          unset FUNCTION_KEY
+
+      - name: Azure-Sitzung beenden
+        if: always()
+        shell: bash
+        run: az logout || true
+
+      - name: Ergebnis zusammenfassen
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "# SSV53 Bestell-Mail – Key Vault Fix V5"
+            echo
+            echo "- Produktiver Mailversand: **deaktiviert**"
+            echo "- SMTP-Key-Vault-Referenz: **SecretUri-Format**"
+            echo "- Key-Vault-Identity: **geprüft**"
+            echo "- E-Mail durch diesen Workflow versendet: **nein**"
+            echo
+            echo "Bei grünem Lauf ist der nächste Schritt eine gezielte Testmail."
+          } >> "$GITHUB_STEP_SUMMARY"
