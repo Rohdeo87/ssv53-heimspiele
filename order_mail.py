@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import html
 import logging
-import os
 import re
 import smtplib
 import ssl
@@ -23,6 +22,29 @@ LOGGER = logging.getLogger("ssv53.azure.order_mail")
 ORDER_ID_PATTERN = re.compile(r"^SSV53-\d{6}-\d{6}-[A-Z0-9]{4}$")
 EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 PARTITION_KEY = "ssv53-order-ready-mail-v1"
+MAX_ORDER_ITEMS = 20
+MAX_ITEM_QTY = 50
+MAX_UNIT_PRICE_CENTS = 100_000
+MAX_ORDER_TOTAL_CENTS = 2_000_000
+
+APP_BLUE = "#285EA7"
+APP_DARK_BLUE = "#173B6D"
+APP_GOLD = "#E0AA3F"
+APP_BG = "#F2F4F6"
+APP_MUTED = "#718096"
+APP_BORDER = "#E3E8ED"
+APP_LOGO_URL = "https://cdn.appack.de/ssv53/images/Icon_Verein.png"
+
+PRODUCT_IMAGES = {
+    ("damen", "blau"): "https://cdn.appack.de/ssv53/images/Damen_blau.jpeg",
+    ("damen", "weiss"): "https://cdn.appack.de/ssv53/images/Damen_wei%C3%9F.jpeg",
+    ("herren", "blau"): "https://cdn.appack.de/ssv53/images/Herren_blau.jpeg",
+    ("herren", "weiss"): "https://cdn.appack.de/ssv53/images/Herren_wei%C3%9F.jpeg",
+    ("kids", "blau"): "https://cdn.appack.de/ssv53/images/Kids_blau.jpeg",
+    ("kids", "weiss"): "https://cdn.appack.de/ssv53/images/Kids_wei%C3%9F.jpeg",
+}
+ALLOWED_GROUP_KEYS = {"damen", "herren", "kids"}
+ALLOWED_COLOR_KEYS = {"blau", "weiss"}
 
 
 class OrderMailError(RuntimeError):
@@ -144,9 +166,7 @@ class OrderMailStore:
                 "Der Azure-Statusspeicher für den Mailversand ist unvollständig konfiguriert.",
                 status_code=503,
             )
-        credential = credential_factory(
-            client_id=settings.managed_identity_client_id
-        )
+        credential = credential_factory(client_id=settings.managed_identity_client_id)
         client = table_client_factory(
             endpoint=settings.storage_account_url,
             table_name=settings.state_table_name,
@@ -218,14 +238,15 @@ class OrderMailStore:
         return "claimed"
 
     def mark_sent(self, *, order_id: str, recipient: str) -> None:
+        now = datetime.now(timezone.utc).isoformat()
         self._table_client.update_entity(
             entity={
                 "PartitionKey": PARTITION_KEY,
                 "RowKey": order_id,
                 "status": "sent",
                 "recipient": recipient.lower(),
-                "sentAtUtc": datetime.now(timezone.utc).isoformat(),
-                "updatedAtUtc": datetime.now(timezone.utc).isoformat(),
+                "sentAtUtc": now,
+                "updatedAtUtc": now,
             },
             mode=UpdateMode.MERGE,
         )
@@ -314,7 +335,199 @@ def check_smtp_connection(
     }
 
 
-def _validate_ready_request(payload: Mapping[str, Any]) -> tuple[str, str, str]:
+def _safe_short_text(value: Any, *, field: str, max_length: int) -> str:
+    text = re.sub(r"[\r\n\t]+", " ", str(value or "").strip())
+    text = re.sub(r"\s{2,}", " ", text)
+    if not text or len(text) > max_length:
+        raise OrderMailError(
+            "ORDER_DETAILS_INVALID",
+            f"Das Feld {field} der Bestellübersicht ist ungültig.",
+            status_code=400,
+        )
+    return text
+
+
+def _strict_int(value: Any, *, field: str, minimum: int, maximum: int) -> int:
+    if isinstance(value, bool):
+        raise OrderMailError(
+            "ORDER_DETAILS_INVALID",
+            f"Das Feld {field} der Bestellübersicht ist ungültig.",
+            status_code=400,
+        )
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError) as exc:
+        raise OrderMailError(
+            "ORDER_DETAILS_INVALID",
+            f"Das Feld {field} der Bestellübersicht ist ungültig.",
+            status_code=400,
+        ) from exc
+    if str(parsed) != str(value).strip() and not isinstance(value, int):
+        raise OrderMailError(
+            "ORDER_DETAILS_INVALID",
+            f"Das Feld {field} der Bestellübersicht ist ungültig.",
+            status_code=400,
+        )
+    if parsed < minimum or parsed > maximum:
+        raise OrderMailError(
+            "ORDER_DETAILS_INVALID",
+            f"Das Feld {field} der Bestellübersicht ist außerhalb des erlaubten Bereichs.",
+            status_code=400,
+        )
+    return parsed
+
+
+def _normalize_product_keys(
+    *,
+    group_key: Any,
+    color_key: Any,
+    variant: str,
+) -> tuple[str | None, str | None]:
+    group = str(group_key or "").strip().lower()
+    color = str(color_key or "").strip().lower().replace("ß", "ss")
+
+    normalized_variant = (
+        variant.lower()
+        .replace("ä", "ae")
+        .replace("ö", "oe")
+        .replace("ü", "ue")
+        .replace("ß", "ss")
+    )
+
+    if not group:
+        if "frau" in normalized_variant or "damen" in normalized_variant:
+            group = "damen"
+        elif "maenner" in normalized_variant or "herren" in normalized_variant:
+            group = "herren"
+        elif "kids" in normalized_variant or "kinder" in normalized_variant:
+            group = "kids"
+
+    if not color:
+        if "blau" in normalized_variant:
+            color = "blau"
+        elif "weiss" in normalized_variant:
+            color = "weiss"
+
+    if group and group not in ALLOWED_GROUP_KEYS:
+        raise OrderMailError(
+            "ORDER_DETAILS_INVALID",
+            "Die Produktgruppe der Bestellübersicht ist ungültig.",
+            status_code=400,
+        )
+    if color and color not in ALLOWED_COLOR_KEYS:
+        raise OrderMailError(
+            "ORDER_DETAILS_INVALID",
+            "Die Produktfarbe der Bestellübersicht ist ungültig.",
+            status_code=400,
+        )
+    return group or None, color or None
+
+
+def _validate_order_details(
+    payload: Mapping[str, Any],
+) -> tuple[list[dict[str, Any]], int | None]:
+    raw_items = payload.get("items")
+    raw_total = payload.get("totalCents")
+
+    if raw_items is None:
+        if raw_total is None:
+            return [], None
+        total = _strict_int(
+            raw_total,
+            field="totalCents",
+            minimum=0,
+            maximum=MAX_ORDER_TOTAL_CENTS,
+        )
+        return [], total
+
+    if not isinstance(raw_items, list) or not raw_items or len(raw_items) > MAX_ORDER_ITEMS:
+        raise OrderMailError(
+            "ORDER_DETAILS_INVALID",
+            "Die Bestellübersicht enthält eine ungültige Anzahl von Positionen.",
+            status_code=400,
+        )
+
+    items: list[dict[str, Any]] = []
+    calculated_total = 0
+    for index, raw_item in enumerate(raw_items, start=1):
+        if not isinstance(raw_item, Mapping):
+            raise OrderMailError(
+                "ORDER_DETAILS_INVALID",
+                "Eine Position der Bestellübersicht ist ungültig.",
+                status_code=400,
+            )
+
+        variant = _safe_short_text(
+            raw_item.get("variant"),
+            field=f"items[{index}].variant",
+            max_length=100,
+        )
+        size = _safe_short_text(
+            raw_item.get("size"),
+            field=f"items[{index}].size",
+            max_length=24,
+        )
+        qty = _strict_int(
+            raw_item.get("qty"),
+            field=f"items[{index}].qty",
+            minimum=1,
+            maximum=MAX_ITEM_QTY,
+        )
+        unit_price_cents = _strict_int(
+            raw_item.get("unitPriceCents"),
+            field=f"items[{index}].unitPriceCents",
+            minimum=0,
+            maximum=MAX_UNIT_PRICE_CENTS,
+        )
+        group, color = _normalize_product_keys(
+            group_key=raw_item.get("groupKey"),
+            color_key=raw_item.get("colorKey"),
+            variant=variant,
+        )
+        line_total = qty * unit_price_cents
+        calculated_total += line_total
+
+        if calculated_total > MAX_ORDER_TOTAL_CENTS:
+            raise OrderMailError(
+                "ORDER_DETAILS_INVALID",
+                "Die Gesamtsumme der Bestellübersicht überschreitet den erlaubten Bereich.",
+                status_code=400,
+            )
+
+        items.append(
+            {
+                "variant": variant,
+                "size": size,
+                "qty": qty,
+                "unitPriceCents": unit_price_cents,
+                "lineTotalCents": line_total,
+                "groupKey": group,
+                "colorKey": color,
+            }
+        )
+
+    if raw_total is None:
+        total = calculated_total
+    else:
+        total = _strict_int(
+            raw_total,
+            field="totalCents",
+            minimum=0,
+            maximum=MAX_ORDER_TOTAL_CENTS,
+        )
+        if total != calculated_total:
+            raise OrderMailError(
+                "ORDER_TOTAL_MISMATCH",
+                "Die übermittelte Gesamtsumme stimmt nicht mit den Bestellpositionen überein.",
+                status_code=400,
+            )
+
+    return items, total
+
+
+def _validate_ready_request(
+    payload: Mapping[str, Any],
+) -> tuple[str, str, str, list[dict[str, Any]], int | None]:
     order_id = str(payload.get("orderId") or "").strip().upper()
     recipient = str(payload.get("email") or "").strip().lower()
     name = re.sub(r"[\r\n]+", " ", str(payload.get("name") or "").strip())[:120]
@@ -334,7 +547,81 @@ def _validate_ready_request(payload: Mapping[str, Any]) -> tuple[str, str, str]:
     if not name:
         name = "SSV53-Mitglied"
 
-    return order_id, recipient, name
+    items, total_cents = _validate_order_details(payload)
+    return order_id, recipient, name, items, total_cents
+
+
+def _euro(cents: int) -> str:
+    return f"{cents / 100:.2f}".replace(".", ",") + " €"
+
+
+def _plain_order_details(items: list[dict[str, Any]], total_cents: int | None) -> str:
+    if not items:
+        return ""
+
+    lines = ["", "Deine Bestellung:"]
+    for item in items:
+        lines.append(
+            f"- {item['variant']} | Größe {item['size']} | "
+            f"{item['qty']} × {_euro(item['unitPriceCents'])} = "
+            f"{_euro(item['lineTotalCents'])}"
+        )
+    if total_cents is not None:
+        lines.extend(["", f"Gesamtsumme: {_euro(total_cents)}"])
+    return "\n".join(lines) + "\n"
+
+
+def _product_rows_html(items: list[dict[str, Any]]) -> str:
+    rows: list[str] = []
+    for item in items:
+        safe_variant = html.escape(item["variant"])
+        safe_size = html.escape(item["size"])
+        image_url = PRODUCT_IMAGES.get((item["groupKey"], item["colorKey"]))
+        image_html = ""
+        if image_url:
+            image_html = (
+                f'<img src="{html.escape(image_url, quote=True)}" '
+                f'alt="{safe_variant}" width="84" '
+                'style="display:block;width:84px;height:84px;object-fit:cover;'
+                'border-radius:12px;border:1px solid #E3E8ED;background:#FFFFFF;">'
+            )
+        else:
+            image_html = (
+                f'<div style="width:84px;height:84px;border-radius:12px;'
+                f'background:#F2F4F6;border:1px solid #E3E8ED;'
+                f'text-align:center;line-height:84px;color:#718096;font-size:12px;">SSV53</div>'
+            )
+
+        rows.append(
+            f"""
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
+                   style="border-collapse:separate;border-spacing:0;margin:0 0 10px 0;
+                          border:1px solid {APP_BORDER};border-radius:14px;background:#FFFFFF;">
+              <tr>
+                <td width="104" valign="top" style="padding:12px 8px 12px 12px;">
+                  {image_html}
+                </td>
+                <td valign="top" style="padding:14px 12px 12px 4px;">
+                  <div style="font-size:16px;line-height:1.3;font-weight:700;color:#111827;">
+                    {safe_variant}
+                  </div>
+                  <div style="margin-top:5px;font-size:13px;line-height:1.45;color:{APP_MUTED};">
+                    Größe {safe_size} &nbsp;·&nbsp; {item['qty']} Stück
+                  </div>
+                  <div style="margin-top:8px;font-size:13px;color:{APP_MUTED};">
+                    {item['qty']} × {_euro(item['unitPriceCents'])}
+                  </div>
+                </td>
+                <td width="96" valign="middle" align="right"
+                    style="padding:14px 14px 12px 6px;font-size:16px;
+                           font-weight:700;color:#111827;white-space:nowrap;">
+                  {_euro(item['lineTotalCents'])}
+                </td>
+              </tr>
+            </table>
+            """
+        )
+    return "".join(rows)
 
 
 def _build_ready_message(
@@ -343,42 +630,148 @@ def _build_ready_message(
     order_id: str,
     recipient: str,
     name: str,
+    items: list[dict[str, Any]],
+    total_cents: int | None,
 ) -> EmailMessage:
     subject = "Deine SSV53-Bestellung ist abholbereit"
+
+    details_plain = _plain_order_details(items, total_cents)
     plain = (
         f"Hallo {name},\n\n"
-        f"deine Bestellung {order_id} ist ab sofort abholbereit.\n\n"
+        f"deine Bestellung {order_id} ist ab sofort abholbereit.\n"
+        f"{details_plain}\n"
+        "Bezahlung: bei Abholung.\n\n"
         "Den aktuellen Status deiner Bestellung findest du in der SSV53-App "
         "unter „Sonstiges → Meine Bestellungen“.\n\n"
-        "Die Bezahlung erfolgt bei Abholung.\n\n"
         "Viele Grüße\n"
         "Schönwalder SV 1953 e.V.\n"
     )
+
     safe_name = html.escape(name)
     safe_order_id = html.escape(order_id)
+    product_rows = _product_rows_html(items)
+
+    details_section = ""
+    if items:
+        total_html = (
+            f"""
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
+                   style="margin-top:14px;border-collapse:separate;border-spacing:0;
+                          background:{APP_BLUE};border-radius:14px;">
+              <tr>
+                <td style="padding:15px 16px;color:#FFFFFF;font-size:14px;font-weight:700;">
+                  Gesamtsumme
+                </td>
+                <td align="right" style="padding:15px 16px;color:#FFFFFF;
+                                         font-size:20px;font-weight:800;white-space:nowrap;">
+                  {_euro(total_cents or 0)}
+                </td>
+              </tr>
+            </table>
+            """
+        )
+        details_section = f"""
+          <div style="margin-top:26px;font-size:17px;font-weight:800;color:{APP_DARK_BLUE};">
+            Deine Bestellung
+          </div>
+          <div style="height:2px;background:{APP_GOLD};width:86px;margin:8px 0 14px 0;"></div>
+          {product_rows}
+          {total_html}
+        """
+
     html_body = f"""\
 <!doctype html>
 <html lang="de">
-  <body style="font-family:Arial,sans-serif;color:#172033;line-height:1.55">
-    <div style="max-width:600px;margin:0 auto;padding:24px">
-      <div style="font-size:22px;font-weight:700;color:#285EA7;margin-bottom:18px">
-        Deine SSV53-Bestellung ist abholbereit
-      </div>
-      <p>Hallo {safe_name},</p>
-      <p>
-        deine Bestellung <strong>{safe_order_id}</strong> ist ab sofort
-        <strong>abholbereit</strong>.
-      </p>
-      <p>
-        Den aktuellen Status findest du jederzeit in der SSV53-App unter
-        <strong>Sonstiges → Meine Bestellungen</strong>.
-      </p>
-      <p>Die Bezahlung erfolgt bei Abholung.</p>
-      <p style="margin-top:28px">
-        Viele Grüße<br>
-        <strong>Schönwalder SV 1953 e.V.</strong>
-      </p>
-    </div>
+  <body style="margin:0;padding:0;background:{APP_BG};font-family:Arial,Helvetica,sans-serif;
+               color:#111827;-webkit-text-size-adjust:100%;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
+           style="width:100%;background:{APP_BG};border-collapse:collapse;">
+      <tr>
+        <td align="center" style="padding:24px 10px;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
+                 style="width:100%;max-width:620px;background:#FFFFFF;border-collapse:separate;
+                        border-spacing:0;border-radius:18px;">
+            <tr>
+              <td align="center" style="padding:26px 22px 8px 22px;">
+                <img src="{APP_LOGO_URL}" alt="Schönwalder SV 1953 e.V." width="72"
+                     style="display:block;width:72px;height:72px;object-fit:contain;border:0;">
+              </td>
+            </tr>
+            <tr>
+              <td align="center" style="padding:4px 24px 0 24px;">
+                <div style="font-size:25px;line-height:1.25;font-weight:800;color:#111111;">
+                  Deine Bestellung ist abholbereit
+                </div>
+                <div style="margin-top:8px;font-size:14px;line-height:1.5;color:#555555;">
+                  Schönwalder SV 1953 e.V.
+                </div>
+                <div style="height:2px;background:{APP_GOLD};width:70%;max-width:420px;
+                            margin:16px auto 0 auto;"></div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:22px 24px 28px 24px;">
+                <div style="font-size:16px;line-height:1.55;color:#111827;">
+                  Hallo <strong>{safe_name}</strong>,
+                </div>
+                <div style="margin-top:9px;font-size:15px;line-height:1.6;color:#374151;">
+                  deine Bestellung ist ab sofort zur Abholung bereit.
+                </div>
+
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
+                       style="margin-top:18px;border-collapse:separate;border-spacing:0;
+                              background:#EEF4FB;border-radius:14px;">
+                  <tr>
+                    <td style="padding:13px 15px;">
+                      <div style="font-size:12px;line-height:1.3;color:{APP_MUTED};">
+                        Bestellnummer
+                      </div>
+                      <div style="margin-top:3px;font-size:16px;line-height:1.3;
+                                  font-weight:800;color:{APP_DARK_BLUE};">
+                        {safe_order_id}
+                      </div>
+                    </td>
+                    <td align="right" valign="middle" style="padding:13px 15px;">
+                      <span style="display:inline-block;padding:7px 10px;border-radius:999px;
+                                   background:{APP_BLUE};color:#FFFFFF;font-size:12px;
+                                   font-weight:800;">ABHOLBEREIT</span>
+                    </td>
+                  </tr>
+                </table>
+
+                {details_section}
+
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
+                       style="margin-top:18px;border-collapse:separate;border-spacing:0;
+                              border:1px solid {APP_BORDER};border-radius:14px;background:#F8FAFC;">
+                  <tr>
+                    <td style="padding:14px 16px;font-size:14px;line-height:1.55;color:#374151;">
+                      <strong style="color:{APP_DARK_BLUE};">Bezahlung</strong><br>
+                      Bei Abholung
+                    </td>
+                  </tr>
+                </table>
+
+                <div style="margin-top:22px;font-size:14px;line-height:1.6;color:#555555;">
+                  Den aktuellen Status findest du jederzeit in der SSV53-App unter
+                  <strong>Sonstiges → Meine Bestellungen</strong>.
+                </div>
+
+                <div style="margin-top:28px;font-size:14px;line-height:1.6;color:#374151;">
+                  Viele Grüße<br>
+                  <strong style="color:{APP_DARK_BLUE};">Schönwalder SV 1953 e.V.</strong>
+                </div>
+              </td>
+            </tr>
+          </table>
+
+          <div style="max-width:620px;margin:13px auto 0 auto;padding:0 12px;
+                      text-align:center;font-size:11px;line-height:1.5;color:#8A94A3;">
+            Diese E-Mail wurde automatisch zu deiner SSV53-T-Shirt-Bestellung versendet.
+          </div>
+        </td>
+      </tr>
+    </table>
   </body>
 </html>
 """
@@ -416,7 +809,7 @@ def send_order_ready_mail(
             status_code=400,
         )
 
-    order_id, recipient, name = _validate_ready_request(payload)
+    order_id, recipient, name, items, total_cents = _validate_ready_request(payload)
     store = store or OrderMailStore.from_settings(settings)
 
     claim = store.claim(order_id=order_id, recipient=recipient)
@@ -439,6 +832,8 @@ def send_order_ready_mail(
         order_id=order_id,
         recipient=recipient,
         name=name,
+        items=items,
+        total_cents=total_cents,
     )
 
     try:
@@ -482,4 +877,6 @@ def send_order_ready_mail(
         "sent": True,
         "alreadySent": False,
         "orderId": order_id,
+        "itemCount": len(items),
+        "totalCents": total_cents,
     }
