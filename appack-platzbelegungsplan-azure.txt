@@ -1297,16 +1297,19 @@
       right: max(12px, env(safe-area-inset-right, 0px));
       bottom: calc(52px + env(safe-area-inset-bottom, 0px));
       z-index: 8;
-      min-height: 46px;
-      padding: 0 16px;
+      width: 42px;
+      height: 42px;
+      padding: 0;
       border: 0;
-      border-radius: 23px;
+      border-radius: 50%;
       background: var(--brand);
       color: #fff;
       box-shadow: 0 6px 20px rgba(31, 77, 140, 0.3);
       font-weight: 750;
       cursor: pointer;
     }
+
+    #trainer-add-occupancy i { font-size: 1rem; }
 
     .trainer-occupancy-form {
       display: grid;
@@ -1680,7 +1683,9 @@
         currentDialogEvent: null,
         currentDialogEventKey: "",
         canManageTrainingCancellations: hasActiveTrainerRole(profileJSON),
-        canCreateTrainerOccupancies: hasActiveTrainerRole(profileJSON)
+        canCreateTrainerOccupancies: hasActiveTrainerRole(profileJSON),
+        canAdministerTrainerOccupancies: hasActiveAppAdministratorRole(profileJSON),
+        currentCreator: getCurrentAppackCreator(profileJSON)
       };
 
       const elements = {
@@ -1713,6 +1718,7 @@
         trainerContactList: document.getElementById("trainer-contact-list"),
         trainerContactStatus: document.getElementById("trainer-contact-status"),
         trainerContactRetry: document.getElementById("trainer-contact-retry"),
+        trainerContactsHeading: document.getElementById("trainer-contacts-heading"),
         popupLink: document.getElementById("popup-link"),
         trainingCancellationAction: document.getElementById("training-cancellation-action"),
         trainingCancellationStatus: document.getElementById("training-cancellation-status"),
@@ -1723,7 +1729,8 @@
         trainerOccupancyClose: document.getElementById("trainer-occupancy-close"),
         trainerOccupancyCancel: document.getElementById("trainer-occupancy-cancel"),
         trainerOccupancySubmit: document.getElementById("trainer-occupancy-submit"),
-        trainerOccupancyStatus: document.getElementById("trainer-occupancy-status")
+        trainerOccupancyStatus: document.getElementById("trainer-occupancy-status"),
+        trainerOccupancyDelete: document.getElementById("trainer-occupancy-delete")
       };
 
       function syncCalendarViewport() {
@@ -2943,6 +2950,54 @@
         }
       }
 
+      function hasActiveAppAdministratorRole(profile) {
+        if (!profile || typeof profile !== "object") return false;
+        const values = [];
+        if (Array.isArray(profile.roleKeys)) values.push.apply(values, profile.roleKeys);
+        if (Array.isArray(profile.roles)) {
+          profile.roles.forEach(function (role) {
+            values.push(role && role.enumKey, role && role.value);
+          });
+        }
+        return values.some(function (value) {
+          const normalized = normalizeAppackRoleText(value).replace(/[\s_-]+/g, "");
+          return normalized === "appadministrator" || normalized === "appadmin";
+        });
+      }
+
+      function getAppackProfileValue(profile, keys, depth) {
+        if (!profile || typeof profile !== "object") return "";
+        const remainingDepth = depth == null ? 3 : depth;
+        for (const key of keys) {
+          if (profile[key] != null && typeof profile[key] !== "object") {
+            const value = String(profile[key]).trim();
+            if (value) return value;
+          }
+        }
+        if (remainingDepth <= 0) return "";
+        for (const value of Object.values(profile)) {
+          if (value && typeof value === "object" && !Array.isArray(value)) {
+            const nested = getAppackProfileValue(value, keys, remainingDepth - 1);
+            if (nested) return nested;
+          }
+        }
+        return "";
+      }
+
+      function getCurrentAppackCreator(profile) {
+        const firstName = getAppackProfileValue(profile, ["firstName", "firstname", "vorname"]);
+        const lastName = getAppackProfileValue(profile, ["lastName", "lastname", "nachname"]);
+        return {
+          id: getAppackProfileValue(profile, ["id", "userId", "userID", "profileId", "memberId", "uuid"]),
+          name: getAppackProfileValue(profile, ["displayName", "fullName", "name", "username"]) || [firstName, lastName].filter(Boolean).join(" "),
+          phone: getAppackProfileValue(profile, ["phone", "telephone", "telefon"]),
+          mobile: getAppackProfileValue(profile, ["mobile", "mobilePhone", "handy", "whatsapp"]),
+          email: getAppackProfileValue(profile, ["email", "mail"]),
+          chatId: getAppackProfileValue(profile, ["chatId", "chatID", "directChatId"]),
+          image: getAppackProfileValue(profile, ["image", "imageUrl", "avatar", "avatarUrl", "profileImage"])
+        };
+      }
+
       function extractContactCategoryTeamKeys(value) {
         const keys = new Set();
         splitContactValues(value).forEach(function (token) {
@@ -3730,6 +3785,9 @@
       function resetTrainerContactDisplay() {
         elements.trainerContacts.hidden = true;
         elements.trainerContactList.replaceChildren();
+        if (elements.trainerContactsHeading) {
+          elements.trainerContactsHeading.lastChild.textContent = " Verantwortliche Trainer*innen";
+        }
         setTrainerContactStatus("", false);
       }
 
@@ -3755,6 +3813,14 @@
       function renderTrainerContactsForEvent(event) {
         resetTrainerContactDisplay();
         if (!event) return;
+
+        const props = event.extendedProps || {};
+        if (props.eventKind === "special" && props.creator && props.creator.name) {
+          elements.trainerContactsHeading.lastChild.textContent = " Erstellt von";
+          elements.trainerContactList.appendChild(createTrainerContactCard(props.creator));
+          elements.trainerContacts.hidden = false;
+          return;
+        }
 
         const profile = getEventContactProfile(event);
         if (!profile.eligible) return;
@@ -4268,7 +4334,8 @@
           matchDurationMinutes: Number(item.matchDurationMinutes || 0),
           durationRule: String(item.durationRule || ""),
           competitionFormat: String(item.competitionFormat || ""),
-          matchType: String(item.matchType || "")
+          matchType: String(item.matchType || ""),
+          creator: item.creator && typeof item.creator === "object" ? item.creator : null
         };
 
         return {
@@ -5627,6 +5694,7 @@
         elements.popupTime.textContent = getPopupTimeText(event);
         elements.popupDescription.innerHTML = sanitizePopupDescription(props.description);
         renderTrainingCancellationAction(event);
+        renderTrainerOccupancyDeleteAction(event);
 
         const detailLink = String(props.detailLink || "").trim();
         if (isSafeLink(detailLink)) {
@@ -5673,6 +5741,59 @@
         if (cancelled) {
           status.textContent = "Dieses Training ist abgesagt.";
           status.hidden = false;
+        }
+      }
+
+      function isTrainerCreatedOccupancy(event) {
+        const props = event && event.extendedProps || {};
+        return props.eventKind === "special" &&
+          String(props.occurrenceId || "").startsWith("one-off:trainer-");
+      }
+
+      function renderTrainerOccupancyDeleteAction(event) {
+        const action = elements.trainerOccupancyDelete;
+        action.hidden = true;
+        action.disabled = false;
+        if (!isTrainerCreatedOccupancy(event)) return;
+        const creator = event.extendedProps.creator || {};
+        const ownEntry = Boolean(state.currentCreator.id) &&
+          state.currentCreator.id === String(creator.id || "");
+        action.hidden = !(ownEntry || state.canAdministerTrainerOccupancies);
+      }
+
+      async function deleteTrainerOccupancy() {
+        const event = state.currentDialogEvent;
+        if (!event || elements.trainerOccupancyDelete.hidden) return;
+        if (!window.confirm(
+          "Diese manuelle Belegung wirklich löschen? Die Änderung wirkt direkt auf die Platz- und Mäherplanung."
+        )) return;
+        elements.trainerOccupancyDelete.disabled = true;
+        try {
+          const randomPart = window.crypto && typeof window.crypto.randomUUID === "function"
+            ? window.crypto.randomUUID() : Date.now().toString(36);
+          const response = await fetch(TRAINER_OCCUPANCY_API_URL, {
+            method: "POST", mode: "cors", cache: "no-store", credentials: "omit",
+            headers: {"Accept": "application/json", "Content-Type": "text/plain;charset=UTF-8"},
+            body: JSON.stringify({
+              action: "delete",
+              commandId: "trainer-delete:" + randomPart,
+              eventId: event.extendedProps.occurrenceId,
+              requesterId: state.currentCreator.id,
+              isAppAdministrator: state.canAdministerTrainerOccupancies,
+              confirmation: "TRAINER_BELEGUNG_LOESCHEN"
+            })
+          });
+          const payload = await response.json().catch(function () { return {}; });
+          if (!response.ok || !payload.ok) {
+            throw new Error(payload.error || "Die Belegung konnte nicht gelöscht werden.");
+          }
+          closeEventDetails();
+          loadCurrentRange(true);
+        } catch (error) {
+          elements.trainerOccupancyDelete.disabled = false;
+          elements.trainingCancellationStatus.textContent = error && error.message
+            ? error.message : "Löschen fehlgeschlagen.";
+          elements.trainingCancellationStatus.hidden = false;
         }
       }
 
@@ -5878,7 +5999,20 @@
           const randomPart = window.crypto && typeof window.crypto.randomUUID === "function"
             ? window.crypto.randomUUID()
             : [Date.now().toString(36), Math.random().toString(36).slice(2)].join("-");
-          const response = await fetch(TRAINER_OCCUPANCY_API_URL, {
+          const requestBody = {
+            action: "create",
+            commandId: "trainer-create:" + randomPart,
+            eventId: "trainer-" + randomPart.toLowerCase(),
+            title: title,
+            start: start.toISOString(),
+            end: end.toISOString(),
+            resourceId: resourceId,
+            area: String(form.elements.belegungBereich.value || "vorne & hinten"),
+            description: String(form.elements.belegungBeschreibung.value || "").trim().slice(0, 500),
+            creator: state.currentCreator,
+            confirmation: "TRAINER_BELEGUNG_SPEICHERN"
+          };
+          const sendRequest = function () { return fetch(TRAINER_OCCUPANCY_API_URL, {
             method: "POST",
             mode: "cors",
             cache: "no-store",
@@ -5887,19 +6021,32 @@
               "Accept": "application/json",
               "Content-Type": "text/plain;charset=UTF-8"
             },
-            body: JSON.stringify({
-              commandId: "trainer-create:" + randomPart,
-              eventId: "trainer-" + randomPart.toLowerCase(),
-              title: title,
-              start: start.toISOString(),
-              end: end.toISOString(),
-              resourceId: resourceId,
-              area: String(form.elements.belegungBereich.value || "vorne & hinten"),
-              description: String(form.elements.belegungBeschreibung.value || "").trim().slice(0, 500),
-              confirmation: "TRAINER_BELEGUNG_SPEICHERN"
-            })
-          });
-          const payload = await response.json().catch(function () { return {}; });
+            body: JSON.stringify(requestBody)
+          }); };
+          let response = await sendRequest();
+          let payload = await response.json().catch(function () { return {}; });
+          if (response.status === 409 && payload.code === "OCCUPANCY_CONFLICT") {
+            const conflictText = (payload.conflicts || []).map(function (item) {
+              const conflictStart = new Date(item.start);
+              const conflictEnd = new Date(item.end);
+              return "• " + item.title + " (" +
+                conflictStart.toLocaleString("de-DE", {dateStyle: "short", timeStyle: "short"}) +
+                " – " + conflictEnd.toLocaleTimeString("de-DE", {hour: "2-digit", minute: "2-digit"}) + ")";
+            }).join("\n");
+            if (!window.confirm(
+              "Der Termin überschneidet sich mit:\n\n" + conflictText +
+              "\n\nTrotzdem speichern?"
+            )) {
+              elements.trainerOccupancySubmit.disabled = false;
+              elements.trainerOccupancyStatus.textContent =
+                "Die Belegung wurde wegen der Überschneidung nicht gespeichert.";
+              elements.trainerOccupancyStatus.dataset.error = "true";
+              return;
+            }
+            requestBody.overlapConfirmation = "UEBERSCHNEIDUNG_TROTZDEM_SPEICHERN";
+            response = await sendRequest();
+            payload = await response.json().catch(function () { return {}; });
+          }
           if (!response.ok || !payload.ok) {
             throw new Error(payload.error || "Azure hat die Belegung nicht gespeichert.");
           }
@@ -5977,6 +6124,7 @@
           }
         });
         elements.trainerOccupancyForm.addEventListener("submit", saveTrainerOccupancy);
+        elements.trainerOccupancyDelete.addEventListener("click", deleteTrainerOccupancy);
         document.addEventListener("keydown", function (event) {
           if (event.key === "Escape" && !elements.trainerOccupancyDialogLayer.hidden) {
             event.preventDefault();
@@ -6264,9 +6412,8 @@
     <span id="calendar-swipe-status" role="status" aria-live="polite"></span>
   </main>
 
-  <button id="trainer-add-occupancy" type="button" hidden>
+  <button id="trainer-add-occupancy" type="button" aria-label="Belegung hinzufügen" title="Belegung hinzufügen" hidden>
     <i class="fa-solid fa-plus" aria-hidden="true"></i>
-    Belegung hinzufügen
   </button>
 
   <div id="trainer-occupancy-dialog-layer" class="dialog-layer" hidden>
@@ -6431,6 +6578,10 @@
       <footer class="dialog-footer">
         <button id="close-dialog-bottom" type="button" class="dialog-button">
           Schließen
+        </button>
+        <button id="trainer-occupancy-delete" type="button" class="dialog-button dialog-button--training-action" hidden>
+          <i class="fa-solid fa-trash" aria-hidden="true"></i>
+          Belegung löschen
         </button>
         <button
           id="training-cancellation-action"

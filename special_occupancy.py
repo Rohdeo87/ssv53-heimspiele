@@ -123,6 +123,13 @@ class SpecialOccupancyEvent:
     resource_id: str
     area: str
     description: str
+    creator_id: str
+    creator_name: str
+    creator_phone: str
+    creator_mobile: str
+    creator_email: str
+    creator_chat_id: str
+    creator_image: str
     suppress_training: bool
     mower_buffer_before_minutes: int
     mower_buffer_after_minutes: int
@@ -178,6 +185,7 @@ class SpecialOccupancyEvent:
             field="description",
             maximum=500,
         )
+        creator = raw.get("creator") if isinstance(raw.get("creator"), Mapping) else {}
         suppress_training = bool(raw.get("suppressTraining", True))
         now = _utc(now_utc)
         return cls(
@@ -188,6 +196,13 @@ class SpecialOccupancyEvent:
             resource_id=resource_id,
             area=area,
             description=description,
+            creator_id=_bounded_text(creator.get("id"), field="creator.id", maximum=180),
+            creator_name=_bounded_text(creator.get("name"), field="creator.name", maximum=120),
+            creator_phone=_bounded_text(creator.get("phone"), field="creator.phone", maximum=80),
+            creator_mobile=_bounded_text(creator.get("mobile"), field="creator.mobile", maximum=80),
+            creator_email=_bounded_text(creator.get("email"), field="creator.email", maximum=180),
+            creator_chat_id=_bounded_text(creator.get("chatId"), field="creator.chatId", maximum=180),
+            creator_image=_bounded_text(creator.get("image"), field="creator.image", maximum=500),
             suppress_training=suppress_training,
             mower_buffer_before_minutes=_buffer(
                 raw.get("mowerBufferBeforeMinutes"),
@@ -211,6 +226,13 @@ class SpecialOccupancyEvent:
             resource_id=str(entity["ResourceId"]),
             area=str(entity.get("Area", "vorne & hinten")),
             description=str(entity.get("Description", "")),
+            creator_id=str(entity.get("CreatorId", "")),
+            creator_name=str(entity.get("CreatorName", "")),
+            creator_phone=str(entity.get("CreatorPhone", "")),
+            creator_mobile=str(entity.get("CreatorMobile", "")),
+            creator_email=str(entity.get("CreatorEmail", "")),
+            creator_chat_id=str(entity.get("CreatorChatId", "")),
+            creator_image=str(entity.get("CreatorImage", "")),
             suppress_training=bool(entity.get("SuppressTraining", True)),
             mower_buffer_before_minutes=int(entity.get("MowerBufferBeforeMinutes", 30)),
             mower_buffer_after_minutes=int(entity.get("MowerBufferAfterMinutes", 30)),
@@ -234,6 +256,13 @@ class SpecialOccupancyEvent:
             "ResourceId": self.resource_id,
             "Area": self.area,
             "Description": self.description,
+            "CreatorId": self.creator_id,
+            "CreatorName": self.creator_name,
+            "CreatorPhone": self.creator_phone,
+            "CreatorMobile": self.creator_mobile,
+            "CreatorEmail": self.creator_email,
+            "CreatorChatId": self.creator_chat_id,
+            "CreatorImage": self.creator_image,
             "SuppressTraining": self.suppress_training,
             "MowerBufferBeforeMinutes": self.mower_buffer_before_minutes,
             "MowerBufferAfterMinutes": self.mower_buffer_after_minutes,
@@ -254,10 +283,21 @@ class SpecialOccupancyEvent:
             "team": "",
             "area": self.area,
             "description": self.description,
+            "creator": {
+                "id": self.creator_id,
+                "name": self.creator_name,
+                "phone": self.creator_phone,
+                "mobile": self.creator_mobile,
+                "email": self.creator_email,
+                "chatId": self.creator_chat_id,
+                "image": self.creator_image,
+            },
         }
 
 
 class SpecialOccupancyStore(Protocol):
+    def get_active(self, event_id: str) -> SpecialOccupancyEvent | None: ...
+
     def list_active(
         self,
         range_start: datetime,
@@ -276,6 +316,9 @@ class InMemorySpecialOccupancyStore:
     def __init__(self) -> None:
         self.events: dict[str, SpecialOccupancyEvent] = {}
         self.commands: dict[str, str] = {}
+
+    def get_active(self, event_id: str) -> SpecialOccupancyEvent | None:
+        return self.events.get(str(event_id).strip().lower())
 
     def list_active(
         self,
@@ -376,6 +419,9 @@ class AzureTableSpecialOccupancyStore:
         if not bool(entity.get("Active")):
             return None
         return SpecialOccupancyEvent.from_entity(entity)
+
+    def get_active(self, event_id: str) -> SpecialOccupancyEvent | None:
+        return self._get(str(event_id).strip().lower())
 
     def list_active(
         self,

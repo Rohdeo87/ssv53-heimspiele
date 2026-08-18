@@ -40,7 +40,10 @@ const api = new Function(
   [
     extractFunction("normalizeAppackRoleText"),
     extractFunction("hasActiveTrainerRole"),
-    "return { hasActiveTrainerRole };"
+    extractFunction("hasActiveAppAdministratorRole"),
+    extractFunction("getAppackProfileValue"),
+    extractFunction("getCurrentAppackCreator"),
+    "return { hasActiveTrainerRole, hasActiveAppAdministratorRole, getCurrentAppackCreator };"
   ].join("\n\n")
 )({ console: { warn() {} } });
 
@@ -62,6 +65,20 @@ test("beantragte Rolle, Vorstand und fehlendes Profil bleiben verborgen", () => 
   assert.equal(api.hasActiveTrainerRole({ roleKeys: ["VS"] }), false);
   assert.equal(api.hasActiveTrainerRole({ roles: [{ enumKey: "VS", value: "Vorstand" }] }), false);
   assert.equal(api.hasActiveTrainerRole(null), false);
+});
+
+test("App-Administrator und Profildaten werden aus dem aktiven Appack-Profil gelesen", () => {
+  assert.equal(api.hasActiveAppAdministratorRole({roles: [{value: "App-Administrator"}]}), true);
+  const creator = api.getCurrentAppackCreator({
+    id: "user-42",
+    firstName: "Jule",
+    lastName: "Beispiel",
+    contact: {mobilePhone: "+49 170 123", email: "jule@example.de", chatId: "chat-42"}
+  });
+  assert.deepEqual(creator, {
+    id: "user-42", name: "Jule Beispiel", phone: "", mobile: "+49 170 123",
+    email: "jule@example.de", chatId: "chat-42", image: ""
+  });
 });
 
 test("Belegungsplan nutzt Appacks profile_json und prüft auch den Handler", () => {
@@ -114,7 +131,7 @@ test("Absageaktion ist rot und zeigt zustandsabhängige Symbole", () => {
 
 test("nur Trainer können eine Appack-Belegung anlegen", () => {
   assert.match(html, /canCreateTrainerOccupancies: hasActiveTrainerRole\(profileJSON\)/);
-  assert.match(html, /id="trainer-add-occupancy" type="button" hidden/);
+  assert.match(html, /id="trainer-add-occupancy"[^>]*aria-label="Belegung hinzufügen"[^>]*hidden/);
   const opener = extractFunction("openTrainerOccupancyDialog");
   const saver = extractFunction("saveTrainerOccupancy");
   assert.match(opener, /!state\.canCreateTrainerOccupancies/);
@@ -122,6 +139,8 @@ test("nur Trainer können eine Appack-Belegung anlegen", () => {
   assert.match(saver, /fetch\(TRAINER_OCCUPANCY_API_URL/);
   assert.match(saver, /"Content-Type": "text\/plain;charset=UTF-8"/);
   assert.match(saver, /confirmation: "TRAINER_BELEGUNG_SPEICHERN"/);
+  assert.match(saver, /overlapConfirmation = "UEBERSCHNEIDUNG_TROTZDEM_SPEICHERN"/);
+  assert.match(html, /id="trainer-occupancy-delete"[^>]*hidden/);
 });
 
 test("Trainerbelegung schreibt nur validierte strukturierte Felder", () => {

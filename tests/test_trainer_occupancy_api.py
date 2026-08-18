@@ -55,11 +55,12 @@ class TrainerOccupancyApiTests(unittest.TestCase):
             "commandId": "trainer-create:test-001",
             "eventId": "trainer-test-001",
             "title": "Zusatztraining C-Junioren",
-            "start": "2026-08-20T18:00:00+02:00",
-            "end": "2026-08-20T19:30:00+02:00",
+            "start": "2026-08-20T02:00:00+02:00",
+            "end": "2026-08-20T03:30:00+02:00",
             "resourceId": resource_id,
             "area": "vorne & hinten",
             "description": "Trainerbelegung",
+            "creator": {"id": "appack-42", "name": "Juliane Beispiel", "email": "juliane@example.de"},
             "confirmation": "TRAINER_BELEGUNG_SPEICHERN",
         }
 
@@ -71,9 +72,10 @@ class TrainerOccupancyApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         event = self.store.events["trainer-test-001"]
         block = event_to_mower_block(event, Block)
-        self.assertEqual(block.start.isoformat(), "2026-08-20T17:30:00+02:00")
-        self.assertEqual(block.end.isoformat(), "2026-08-20T20:00:00+02:00")
+        self.assertEqual(block.start.isoformat(), "2026-08-20T01:30:00+02:00")
+        self.assertEqual(block.end.isoformat(), "2026-08-20T04:00:00+02:00")
         self.assertFalse(event.suppress_training)
+        self.assertEqual(event.creator_name, "Juliane Beispiel")
 
     def test_kunstrasen_is_visible_in_both_seasons_without_mower_block(self) -> None:
         response = function_app.ssv53_trainer_occupancies(
@@ -104,6 +106,45 @@ class TrainerOccupancyApiTests(unittest.TestCase):
             400,
         )
         self.assertEqual(self.store.events, {})
+
+    def test_overlap_requires_explicit_second_confirmation(self) -> None:
+        payload = self.payload("rasen")
+        payload["start"] = "2026-08-20T17:30:00+02:00"
+        payload["end"] = "2026-08-20T18:30:00+02:00"
+        response = function_app.ssv53_trainer_occupancies(request(payload))
+        body = json.loads(response.get_body())
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(body["code"], "OCCUPANCY_CONFLICT")
+        self.assertTrue(body["conflicts"])
+        self.assertEqual(self.store.events, {})
+
+        payload["overlapConfirmation"] = "UEBERSCHNEIDUNG_TROTZDEM_SPEICHERN"
+        response = function_app.ssv53_trainer_occupancies(request(payload))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("trainer-test-001", self.store.events)
+
+    def test_creator_or_app_admin_can_delete_manual_entry(self) -> None:
+        self.assertEqual(
+            function_app.ssv53_trainer_occupancies(request(self.payload())).status_code,
+            200,
+        )
+        delete = {
+            "action": "delete",
+            "commandId": "trainer-delete:test-001",
+            "eventId": "one-off:trainer-test-001",
+            "requesterId": "wrong-user",
+            "confirmation": "TRAINER_BELEGUNG_LOESCHEN",
+        }
+        self.assertEqual(
+            function_app.ssv53_trainer_occupancies(request(delete)).status_code,
+            403,
+        )
+        delete["requesterId"] = "appack-42"
+        self.assertEqual(
+            function_app.ssv53_trainer_occupancies(request(delete)).status_code,
+            200,
+        )
+        self.assertNotIn("trainer-test-001", self.store.events)
 
 
 if __name__ == "__main__":

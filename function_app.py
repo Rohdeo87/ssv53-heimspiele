@@ -399,6 +399,50 @@ def _trainer_occupancy_response(
     )
 
 
+def _trainer_occupancy_conflicts(
+    *,
+    start: datetime,
+    end: datetime,
+    resource_id: str,
+    store,
+) -> list[dict]:
+    """Prüft denselben physischen Platz gegen Plan, Spiele und Sondertermine."""
+    config_path = os.environ.get("OCCUPANCY_CONFIG_PATH", "occupancy/config.json")
+    matches_path, _ = _occupancy_matches_path()
+    candidates: dict[str, dict] = {}
+    for season in ("Sommer", "Winter"):
+        payload = build_occupancy_payload(
+            config_path=config_path,
+            matches_path=matches_path,
+            start=start.date().isoformat(),
+            end=(end.date() + timedelta(days=1)).isoformat(),
+            season=season,
+            generated_at=datetime.now(timezone.utc),
+        )
+        for item in payload.get("events", []):
+            if str(item.get("resourceId") or "") != resource_id:
+                continue
+            event_start = datetime.fromisoformat(str(item.get("occupancyStart") or item["start"]))
+            event_end = datetime.fromisoformat(str(item.get("occupancyEnd") or item["end"]))
+            if event_end > start and event_start < end:
+                key = str(item.get("id") or f"{event_start}:{item.get('title')}")
+                candidates[key] = dict(item, start=event_start.isoformat(), end=event_end.isoformat())
+    for event in store.list_active(start, end):
+        if event.resource_id == resource_id and event.end > start and event.start < end:
+            item = event.to_public_event()
+            candidates[item["id"]] = item
+    return [
+        {
+            "id": item.get("id"),
+            "title": item.get("title") or "Belegung",
+            "start": item.get("start"),
+            "end": item.get("end"),
+            "source": item.get("source"),
+        }
+        for item in sorted(candidates.values(), key=lambda value: value["start"])
+    ]
+
+
 @app.route(
     route="trainer-occupancies",
     methods=["POST", "OPTIONS"],
@@ -431,13 +475,36 @@ def ssv53_trainer_occupancies(req: func.HttpRequest) -> func.HttpResponse:
                 "REQUEST_INVALID",
                 "Der Request muss ein JSON-Objekt enthalten.",
             )
-        if body.get("confirmation") != "TRAINER_BELEGUNG_SPEICHERN":
+        action = str(body.get("action") or "create").strip().lower()
+        expected_confirmation = (
+            "TRAINER_BELEGUNG_LOESCHEN" if action == "delete"
+            else "TRAINER_BELEGUNG_SPEICHERN"
+        )
+        if body.get("confirmation") != expected_confirmation:
             raise SpecialOccupancyError(
                 "CONFIRMATION_INVALID",
                 "Die Sicherheitsbestätigung fehlt oder ist ungültig.",
             )
 
         now_utc = datetime.now(timezone.utc)
+        store = AzureTableSpecialOccupancyStore.from_environment(os.environ)
+        if action == "delete":
+            event_id = str(body.get("eventId") or "").removeprefix("one-off:").strip().lower()
+            existing = store.get_active(event_id)
+            if existing is None:
+                raise SpecialOccupancyError("EVENT_NOT_FOUND", "Die Belegung wurde nicht gefunden.", status_code=404)
+            requester_id = str(body.get("requesterId") or "").strip()
+            is_admin = bool(body.get("isAppAdministrator"))
+            if not is_admin and (not requester_id or requester_id != existing.creator_id):
+                raise SpecialOccupancyError("DELETE_FORBIDDEN", "Diese Belegung darf nur vom Ersteller oder App-Administrator gelöscht werden.", status_code=403)
+            result = store.apply(
+                {"commandId": str(body.get("commandId") or ""), "action": "delete", "eventId": event_id},
+                now_utc=now_utc,
+            )
+            LOGGER.warning("SSV53_TRAINER_OCCUPANCY_DELETED event_id=%s", event_id)
+            return _trainer_occupancy_response(result, status_code=200)
+        if action != "create":
+            raise SpecialOccupancyError("ACTION_INVALID", "action muss create oder delete sein.")
         now_local = now_utc.astimezone(ZoneInfo("Europe/Berlin"))
         try:
             start = datetime.fromisoformat(
@@ -465,6 +532,23 @@ def ssv53_trainer_occupancies(req: func.HttpRequest) -> func.HttpResponse:
                 "Eine neue Belegung darf höchstens 63 Tage im Voraus liegen.",
             )
 
+        try:
+            end = datetime.fromisoformat(str(body.get("end") or "").replace("Z", "+00:00"))
+        except (TypeError, ValueError) as exc:
+            raise SpecialOccupancyError("DATETIME_INVALID", "Das Ende ist ungültig.") from exc
+        if end.tzinfo is None or end.utcoffset() is None:
+            raise SpecialOccupancyError("DATETIME_TIMEZONE_REQUIRED", "Das Ende muss eine Zeitzone enthalten.")
+        end = end.astimezone(ZoneInfo("Europe/Berlin"))
+        resource_id = str(body.get("resourceId") or "").strip().lower()
+        conflicts = _trainer_occupancy_conflicts(
+            start=start, end=end, resource_id=resource_id, store=store
+        )
+        if conflicts and body.get("overlapConfirmation") != "UEBERSCHNEIDUNG_TROTZDEM_SPEICHERN":
+            return _trainer_occupancy_response(
+                {"ok": False, "code": "OCCUPANCY_CONFLICT", "error": "Der Termin überschneidet sich mit einer vorhandenen Belegung.", "conflicts": conflicts},
+                status_code=409,
+            )
+
         command = {
             "commandId": str(body.get("commandId") or ""),
             "action": "upsert",
@@ -476,12 +560,12 @@ def ssv53_trainer_occupancies(req: func.HttpRequest) -> func.HttpResponse:
                 "resourceId": body.get("resourceId"),
                 "area": body.get("area") or "vorne & hinten",
                 "description": body.get("description") or "",
+                "creator": body.get("creator") if isinstance(body.get("creator"), dict) else {},
                 "suppressTraining": False,
                 "mowerBufferBeforeMinutes": 30,
                 "mowerBufferAfterMinutes": 30,
             },
         }
-        store = AzureTableSpecialOccupancyStore.from_environment(os.environ)
         result = store.apply(command, now_utc=now_utc)
         LOGGER.warning(
             "SSV53_TRAINER_OCCUPANCY_CREATED event_id=%s resource=%s",
