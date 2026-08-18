@@ -52,8 +52,42 @@
       ]
     }
   },
-  "one_off_events": [],
-  "cancelled_occurrences": [],
+"one_off_events": [
+  {
+    "id": "sperre-herbstkino-2026-10-03",
+    "title": "Herbstkino – Kunstrasen gesperrt",
+    "start": "2026-10-03T00:00:00",
+    "end": "2026-10-04T00:00:00",
+    "resource_id": "kunstrasen",
+    "area": "vorne & hinten",
+    "source": "special",
+    "description": "Kunstrasen ganztägig wegen Herbstkino gesperrt."
+  },
+  {
+    "id": "sperre-weihnachtssingen-2026-12-18",
+    "title": "Weihnachtssingen – Kunstrasen gesperrt",
+    "start": "2026-12-18T00:00:00",
+    "end": "2026-12-19T00:00:00",
+    "resource_id": "kunstrasen",
+    "area": "vorne & hinten",
+    "source": "special",
+    "description": "Kunstrasen ganztägig wegen Weihnachtssingen gesperrt."
+  }
+],
+"cancelled_occurrences": [
+  {
+    "schedule_id": "win-kr-e2-fr",
+    "date": "2026-12-18"
+  },
+  {
+    "schedule_id": "win-kr-c-fr",
+    "date": "2026-12-18"
+  },
+  {
+    "schedule_id": "win-kr-d-fr",
+    "date": "2026-12-18"
+  }
+],
   "matches": {
     "resource_id": "rasen",
     "buffer_before_minutes": 60,
