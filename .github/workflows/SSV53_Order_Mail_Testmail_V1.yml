@@ -1,0 +1,310 @@
+name: SSV53 Bestell-Mail Testmail V1
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Exakt SSV53-ORDER-MAIL-TEST eingeben"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: ssv53-order-mail-testmail
+  cancel-in-progress: false
+
+jobs:
+  testmail:
+    name: Einmalige Testmail sicher versenden
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      MIGRATION_BRANCH: feature/azure-mower-migration
+      RESOURCE_GROUP: rg-ssv53-platzpflege-prod
+      FUNCTION_APP: func-ssv53platzpflege-prod-q7kbw54s
+      TEST_RECIPIENT: thomas_rohde@outlook.de
+      TEST_NAME: Thomas
+
+    steps:
+      - name: Harte Freigabe prüfen
+        shell: bash
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+          CLIENT_ID: ${{ vars.AZURE_BOOTSTRAP_CLIENT_ID }}
+          TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          set -euo pipefail
+
+          [ "$GITHUB_REF_NAME" = "$MIGRATION_BRANCH" ] || {
+            echo "Dieser Workflow darf nur vom Azure-Migrationsbranch laufen." >&2
+            exit 1
+          }
+
+          [ "$CONFIRMATION" = "SSV53-ORDER-MAIL-TEST" ] || {
+            echo "Explizite Bestätigung fehlt." >&2
+            exit 1
+          }
+
+          for variable in CLIENT_ID TENANT_ID SUBSCRIPTION_ID; do
+            [ -n "${!variable:-}" ] || {
+              echo "Erforderliche GitHub-Variable $variable fehlt." >&2
+              exit 1
+            }
+          done
+
+      - name: Mit Azure per OIDC anmelden
+        uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_BOOTSTRAP_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Ausgangszustand prüfen
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          ENABLED="$(az functionapp config appsettings list \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$FUNCTION_APP" \
+            --query "[?name=='SSV53_ORDER_MAIL_ENABLED'].value | [0]" \
+            --output tsv)"
+
+          [ "$ENABLED" = "false" ] || {
+            echo "Sicherheitsabbruch: SSV53_ORDER_MAIL_ENABLED ist vor dem Test nicht false." >&2
+            exit 1
+          }
+
+          FUNCTION_KEY="$(az functionapp function keys list \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$FUNCTION_APP" \
+            --function-name ssv53_order_mail \
+            --query '"appack-order-admin"' \
+            --output tsv)"
+
+          [ -n "$FUNCTION_KEY" ] || {
+            echo "Funktionsspezifischer Schlüssel appack-order-admin fehlt." >&2
+            exit 1
+          }
+
+          echo "::add-mask::$FUNCTION_KEY"
+          echo "FUNCTION_KEY=$FUNCTION_KEY" >> "$GITHUB_ENV"
+          echo "Ausgangszustand sicher: produktiver Versand ist deaktiviert."
+
+      - name: Mailversand temporär aktivieren
+        id: enable_mail
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          az functionapp config appsettings set \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$FUNCTION_APP" \
+            --settings SSV53_ORDER_MAIL_ENABLED=true \
+            --output none
+
+          echo "Mailversand wurde nur für den kontrollierten Test aktiviert."
+
+      - name: Warten bis Function den Testmodus übernommen hat
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python - <<'PY'
+          import json
+          import os
+          import time
+          import urllib.error
+          import urllib.parse
+          import urllib.request
+
+          app = os.environ["FUNCTION_APP"]
+          key = os.environ["FUNCTION_KEY"]
+
+          url = (
+              f"https://{app}.azurewebsites.net/api/order-mail?"
+              + urllib.parse.urlencode({"code": key})
+          )
+
+          last = None
+          for attempt in range(1, 13):
+              request = urllib.request.Request(
+                  url,
+                  data=json.dumps({"action": "check"}).encode("utf-8"),
+                  headers={"Content-Type": "application/json"},
+                  method="POST",
+              )
+              try:
+                  with urllib.request.urlopen(request, timeout=30) as response:
+                      payload = json.loads(response.read().decode("utf-8"))
+                  last = payload
+                  if (
+                      payload.get("ok") is True
+                      and payload.get("smtpAuthenticated") is True
+                      and payload.get("mailEnabled") is True
+                  ):
+                      print("Function hat temporären Testmodus übernommen.")
+                      raise SystemExit(0)
+              except urllib.error.HTTPError as exc:
+                  body = exc.read().decode("utf-8", errors="replace")
+                  last = f"HTTP {exc.code}: {body[:500]}"
+              except Exception as exc:
+                  last = repr(exc)
+
+              print(f"Versuch {attempt}/12: noch nicht bereit.")
+              time.sleep(10)
+
+          raise SystemExit(f"Function wurde nicht testbereit. Letzter Zustand: {last}")
+          PY
+
+      - name: Eindeutige Test-Bestellnummer erzeugen
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          TEST_ORDER_ID="$(python - <<'PY'
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+          import secrets
+          import string
+
+          now = datetime.now(ZoneInfo("Europe/Berlin"))
+          alphabet = string.ascii_uppercase + string.digits
+          suffix = "".join(secrets.choice(alphabet) for _ in range(4))
+          print(f"SSV53-{now:%y%m%d}-{now:%H%M%S}-{suffix}")
+          PY
+          )"
+
+          echo "TEST_ORDER_ID=$TEST_ORDER_ID" >> "$GITHUB_ENV"
+          echo "Test-Bestellnummer: $TEST_ORDER_ID"
+
+      - name: Genau eine Testmail senden
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python - <<'PY'
+          import json
+          import os
+          import urllib.error
+          import urllib.parse
+          import urllib.request
+
+          app = os.environ["FUNCTION_APP"]
+          key = os.environ["FUNCTION_KEY"]
+
+          url = (
+              f"https://{app}.azurewebsites.net/api/order-mail?"
+              + urllib.parse.urlencode({"code": key})
+          )
+
+          payload = {
+              "action": "send-ready",
+              "confirmation": "SSV53-ORDER-ABHOLBEREIT",
+              "orderId": os.environ["TEST_ORDER_ID"],
+              "email": os.environ["TEST_RECIPIENT"],
+              "name": os.environ["TEST_NAME"],
+          }
+
+          request = urllib.request.Request(
+              url,
+              data=json.dumps(payload).encode("utf-8"),
+              headers={"Content-Type": "application/json"},
+              method="POST",
+          )
+
+          try:
+              with urllib.request.urlopen(request, timeout=45) as response:
+                  result = json.loads(response.read().decode("utf-8"))
+          except urllib.error.HTTPError as exc:
+              body = exc.read().decode("utf-8", errors="replace")
+              try:
+                  result = json.loads(body)
+              except json.JSONDecodeError:
+                  raise SystemExit(
+                      f"Testmail: HTTP {exc.code}, Antwort war kein JSON."
+                  )
+
+              print("Testmail HTTP:", exc.code)
+              print("Sicherer Fehlercode:", result.get("code", "<fehlt>"))
+              print("Fehlermeldung:", result.get("error", "<fehlt>"))
+              raise SystemExit(
+                  f"Testmail fehlgeschlagen: {result.get('code', 'UNKNOWN')}"
+              )
+
+          if result.get("ok") is not True:
+              raise SystemExit(f"Testmail meldet keinen Erfolg: {result}")
+
+          if result.get("alreadySent") is True:
+              raise SystemExit(
+                  "Sicherheitsabbruch: Test-Bestellnummer war bereits als versendet markiert."
+              )
+
+          print("Testmail wurde vom Azure-Maildienst erfolgreich versendet.")
+          print("Empfänger:", os.environ["TEST_RECIPIENT"])
+          print("Bestellnummer:", os.environ["TEST_ORDER_ID"])
+          PY
+
+      - name: Mailversand sofort wieder deaktivieren
+        if: always() && steps.enable_mail.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          az functionapp config appsettings set \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$FUNCTION_APP" \
+            --settings SSV53_ORDER_MAIL_ENABLED=false \
+            --output none
+
+          echo "Produktiver Mailversand wurde wieder deaktiviert."
+
+      - name: Deaktivierung verifizieren
+        if: always() && steps.enable_mail.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          for i in $(seq 1 12); do
+            ENABLED="$(az functionapp config appsettings list \
+              --resource-group "$RESOURCE_GROUP" \
+              --name "$FUNCTION_APP" \
+              --query "[?name=='SSV53_ORDER_MAIL_ENABLED'].value | [0]" \
+              --output tsv 2>/dev/null || true)"
+
+            if [ "$ENABLED" = "false" ]; then
+              echo "Verifiziert: SSV53_ORDER_MAIL_ENABLED=false"
+              exit 0
+            fi
+
+            sleep 5
+          done
+
+          echo "WARNUNG: Deaktivierung konnte nicht verifiziert werden." >&2
+          exit 1
+
+      - name: Azure-Sitzung beenden
+        if: always()
+        shell: bash
+        run: az logout || true
+
+      - name: Ergebnis zusammenfassen
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "# SSV53 Bestell-Mail – Testmail V1"
+            echo
+            echo "- Testempfänger: **${TEST_RECIPIENT}**"
+            echo "- Produktiver Versand nach dem Workflow: **deaktiviert**"
+            if [ -n "${TEST_ORDER_ID:-}" ]; then
+              echo "- Test-Bestellnummer: **${TEST_ORDER_ID}**"
+            fi
+            echo
+            echo "Nach erfolgreichem Versand bitte den Eingang der Testmail prüfen."
+          } >> "$GITHUB_STEP_SUMMARY"
