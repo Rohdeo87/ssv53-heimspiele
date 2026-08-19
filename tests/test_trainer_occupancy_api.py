@@ -170,6 +170,12 @@ class TrainerOccupancyApiTests(unittest.TestCase):
             "training:sommer:som-ras-a-do:2026-08-20",
         )
         self.assertTrue(event.suppress_training)
+        self.assertEqual(event.team, event.title)
+        self.assertEqual(event.creator_name, "")
+        self.assertEqual(event.moved_by_name, "Trainer Beispiel")
+        public_event = event.to_public_event()
+        self.assertEqual(public_event["team"], event.title)
+        self.assertEqual(public_event["movedBy"]["name"], "Trainer Beispiel")
         self.assertIsNone(event_to_mower_block(event, Block))
 
         # Ein anderer Trainer darf einen verlegten regulären Termin wieder
@@ -179,12 +185,46 @@ class TrainerOccupancyApiTests(unittest.TestCase):
             "eventId": "one-off:" + event.event_id,
             "targetResourceId": "rasen",
             "requesterId": "trainer-99",
+            "creator": {"id": "trainer-99", "name": "Andere Trainerin"},
         })
         response = function_app.ssv53_trainer_occupancies(request(payload))
         self.assertEqual(response.status_code, 200, response.get_body())
         moved_back = self.store.events[event.event_id]
         self.assertEqual(moved_back.resource_id, "rasen")
+        self.assertEqual(moved_back.team, event.team)
+        self.assertEqual(moved_back.creator_name, "")
+        self.assertEqual(moved_back.moved_by_name, "Andere Trainerin")
         self.assertIsNotNone(event_to_mower_block(moved_back, Block))
+
+    def test_manual_entry_keeps_creator_and_records_mover_separately(self) -> None:
+        self.assertEqual(
+            function_app.ssv53_trainer_occupancies(request(self.payload())).status_code,
+            200,
+        )
+        move = {
+            "action": "move",
+            "commandId": "trainer-move:manual-entry",
+            "eventId": "one-off:trainer-test-001",
+            "targetResourceId": "kunstrasen",
+            "requesterId": "admin-7",
+            "isAppAdministrator": True,
+            "creator": {
+                "id": "admin-7",
+                "name": "App Administrator",
+                "mobile": "+49 170 1234567",
+            },
+            "confirmation": "TRAINER_BELEGUNG_VERSCHIEBEN",
+        }
+        response = function_app.ssv53_trainer_occupancies(request(move))
+        self.assertEqual(response.status_code, 200, response.get_body())
+        moved = self.store.events["trainer-test-001"]
+        self.assertEqual(moved.creator_name, "Juliane Beispiel")
+        self.assertEqual(moved.creator_email, "juliane@example.de")
+        self.assertEqual(moved.moved_by_name, "App Administrator")
+        self.assertEqual(moved.moved_by_mobile, "+49 170 1234567")
+        public_event = moved.to_public_event()
+        self.assertEqual(public_event["creator"]["name"], "Juliane Beispiel")
+        self.assertEqual(public_event["movedBy"]["name"], "App Administrator")
 
     def test_move_to_occupied_pitch_requires_same_second_confirmation(self) -> None:
         payload = {

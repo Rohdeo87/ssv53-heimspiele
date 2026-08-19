@@ -131,6 +131,7 @@ class SpecialOccupancyEvent:
     resource_id: str
     area: str
     description: str
+    team: str
     creator_id: str
     creator_name: str
     creator_phone: str
@@ -143,6 +144,18 @@ class SpecialOccupancyEvent:
     creator_facebook: str
     creator_role: str
     creator_info_html: str
+    moved_by_id: str
+    moved_by_name: str
+    moved_by_phone: str
+    moved_by_mobile: str
+    moved_by_email: str
+    moved_by_chat_id: str
+    moved_by_image: str
+    moved_by_instagram: str
+    moved_by_website: str
+    moved_by_facebook: str
+    moved_by_role: str
+    moved_by_info_html: str
     replaced_training_event_id: str
     suppress_training: bool
     mower_buffer_before_minutes: int
@@ -200,6 +213,7 @@ class SpecialOccupancyEvent:
             maximum=500,
         )
         creator = raw.get("creator") if isinstance(raw.get("creator"), Mapping) else {}
+        moved_by = raw.get("movedBy") if isinstance(raw.get("movedBy"), Mapping) else {}
         replaced_training_event_id = _bounded_text(
             raw.get("replacesTrainingEventId"),
             field="replacesTrainingEventId",
@@ -220,6 +234,7 @@ class SpecialOccupancyEvent:
             resource_id=resource_id,
             area=area,
             description=description,
+            team=_bounded_text(raw.get("team"), field="team", maximum=120),
             creator_id=_bounded_text(creator.get("id"), field="creator.id", maximum=180),
             creator_name=_bounded_text(creator.get("name"), field="creator.name", maximum=120),
             creator_phone=_bounded_text(creator.get("phone"), field="creator.phone", maximum=80),
@@ -232,6 +247,18 @@ class SpecialOccupancyEvent:
             creator_facebook=_bounded_text(creator.get("facebook"), field="creator.facebook", maximum=500),
             creator_role=_bounded_text(creator.get("role"), field="creator.role", maximum=180),
             creator_info_html=_bounded_text(creator.get("infoHtml"), field="creator.infoHtml", maximum=1000),
+            moved_by_id=_bounded_text(moved_by.get("id"), field="movedBy.id", maximum=180),
+            moved_by_name=_bounded_text(moved_by.get("name"), field="movedBy.name", maximum=120),
+            moved_by_phone=_bounded_text(moved_by.get("phone"), field="movedBy.phone", maximum=80),
+            moved_by_mobile=_bounded_text(moved_by.get("mobile"), field="movedBy.mobile", maximum=80),
+            moved_by_email=_bounded_text(moved_by.get("email"), field="movedBy.email", maximum=180),
+            moved_by_chat_id=_bounded_text(moved_by.get("chatId"), field="movedBy.chatId", maximum=180),
+            moved_by_image=_optional_image(moved_by.get("image")),
+            moved_by_instagram=_bounded_text(moved_by.get("instagram"), field="movedBy.instagram", maximum=500),
+            moved_by_website=_bounded_text(moved_by.get("website"), field="movedBy.website", maximum=500),
+            moved_by_facebook=_bounded_text(moved_by.get("facebook"), field="movedBy.facebook", maximum=500),
+            moved_by_role=_bounded_text(moved_by.get("role"), field="movedBy.role", maximum=180),
+            moved_by_info_html=_bounded_text(moved_by.get("infoHtml"), field="movedBy.infoHtml", maximum=1000),
             replaced_training_event_id=replaced_training_event_id,
             suppress_training=suppress_training,
             mower_buffer_before_minutes=_buffer(
@@ -256,6 +283,7 @@ class SpecialOccupancyEvent:
             resource_id=str(entity["ResourceId"]),
             area=str(entity.get("Area", "vorne & hinten")),
             description=str(entity.get("Description", "")),
+            team=str(entity.get("Team", "")),
             creator_id=str(entity.get("CreatorId", "")),
             creator_name=str(entity.get("CreatorName", "")),
             creator_phone=str(entity.get("CreatorPhone", "")),
@@ -268,6 +296,18 @@ class SpecialOccupancyEvent:
             creator_facebook=str(entity.get("CreatorFacebook", "")),
             creator_role=str(entity.get("CreatorRole", "")),
             creator_info_html=str(entity.get("CreatorInfoHtml", "")),
+            moved_by_id=str(entity.get("MovedById", "")),
+            moved_by_name=str(entity.get("MovedByName", "")),
+            moved_by_phone=str(entity.get("MovedByPhone", "")),
+            moved_by_mobile=str(entity.get("MovedByMobile", "")),
+            moved_by_email=str(entity.get("MovedByEmail", "")),
+            moved_by_chat_id=str(entity.get("MovedByChatId", "")),
+            moved_by_image=str(entity.get("MovedByImage", "")),
+            moved_by_instagram=str(entity.get("MovedByInstagram", "")),
+            moved_by_website=str(entity.get("MovedByWebsite", "")),
+            moved_by_facebook=str(entity.get("MovedByFacebook", "")),
+            moved_by_role=str(entity.get("MovedByRole", "")),
+            moved_by_info_html=str(entity.get("MovedByInfoHtml", "")),
             replaced_training_event_id=str(entity.get("ReplacedTrainingEventId", "")),
             suppress_training=bool(entity.get("SuppressTraining", True)),
             mower_buffer_before_minutes=int(entity.get("MowerBufferBeforeMinutes", 30)),
@@ -292,6 +332,7 @@ class SpecialOccupancyEvent:
             "ResourceId": self.resource_id,
             "Area": self.area,
             "Description": self.description,
+            "Team": self.team,
             "CreatorId": self.creator_id,
             "CreatorName": self.creator_name,
             "CreatorPhone": self.creator_phone,
@@ -304,6 +345,18 @@ class SpecialOccupancyEvent:
             "CreatorFacebook": self.creator_facebook,
             "CreatorRole": self.creator_role,
             "CreatorInfoHtml": self.creator_info_html,
+            "MovedById": self.moved_by_id,
+            "MovedByName": self.moved_by_name,
+            "MovedByPhone": self.moved_by_phone,
+            "MovedByMobile": self.moved_by_mobile,
+            "MovedByEmail": self.moved_by_email,
+            "MovedByChatId": self.moved_by_chat_id,
+            "MovedByImage": self.moved_by_image,
+            "MovedByInstagram": self.moved_by_instagram,
+            "MovedByWebsite": self.moved_by_website,
+            "MovedByFacebook": self.moved_by_facebook,
+            "MovedByRole": self.moved_by_role,
+            "MovedByInfoHtml": self.moved_by_info_html,
             "ReplacedTrainingEventId": self.replaced_training_event_id,
             "SuppressTraining": self.suppress_training,
             "MowerBufferBeforeMinutes": self.mower_buffer_before_minutes,
@@ -322,7 +375,7 @@ class SpecialOccupancyEvent:
             "resourceId": self.resource_id,
             "source": "special",
             "season": None,
-            "team": "",
+            "team": self.team or (self.title if self.replaced_training_event_id else ""),
             "replacesTrainingEventId": self.replaced_training_event_id,
             "area": self.area,
             "description": self.description,
@@ -339,6 +392,21 @@ class SpecialOccupancyEvent:
                 "facebook": self.creator_facebook,
                 "role": self.creator_role,
                 "infoHtml": self.creator_info_html,
+            },
+            "movedBy": {
+                # Alte Verlegungen speicherten die ausführende Person als Creator.
+                "id": self.moved_by_id or (self.creator_id if self.replaced_training_event_id else ""),
+                "name": self.moved_by_name or (self.creator_name if self.replaced_training_event_id else ""),
+                "phone": self.moved_by_phone or (self.creator_phone if self.replaced_training_event_id else ""),
+                "mobile": self.moved_by_mobile or (self.creator_mobile if self.replaced_training_event_id else ""),
+                "email": self.moved_by_email or (self.creator_email if self.replaced_training_event_id else ""),
+                "chatId": self.moved_by_chat_id or (self.creator_chat_id if self.replaced_training_event_id else ""),
+                "image": self.moved_by_image or (self.creator_image if self.replaced_training_event_id else ""),
+                "instagram": self.moved_by_instagram or (self.creator_instagram if self.replaced_training_event_id else ""),
+                "website": self.moved_by_website or (self.creator_website if self.replaced_training_event_id else ""),
+                "facebook": self.moved_by_facebook or (self.creator_facebook if self.replaced_training_event_id else ""),
+                "role": self.moved_by_role or (self.creator_role if self.replaced_training_event_id else ""),
+                "infoHtml": self.moved_by_info_html or (self.creator_info_html if self.replaced_training_event_id else ""),
             },
         }
 
@@ -880,6 +948,7 @@ def fail_closed_public_events(
             description=(
                 "Sonderbelegungen konnten vorübergehend nicht aus Azure geladen werden."
             ),
+            team="",
             creator_id="",
             creator_name="",
             creator_phone="",
@@ -892,6 +961,18 @@ def fail_closed_public_events(
             creator_facebook="",
             creator_role="",
             creator_info_html="",
+            moved_by_id="",
+            moved_by_name="",
+            moved_by_phone="",
+            moved_by_mobile="",
+            moved_by_email="",
+            moved_by_chat_id="",
+            moved_by_image="",
+            moved_by_instagram="",
+            moved_by_website="",
+            moved_by_facebook="",
+            moved_by_role="",
+            moved_by_info_html="",
             replaced_training_event_id="",
             suppress_training=True,
             mower_buffer_before_minutes=0,

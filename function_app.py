@@ -530,7 +530,7 @@ def _trainer_move_source(
         if occurrence is None:
             raise SpecialOccupancyError("EVENT_NOT_FOUND", "Der Trainingstermin wurde nicht gefunden.", status_code=404)
         event_id = "trainer-move-" + hashlib.sha256(source_id.encode("utf-8")).hexdigest()[:32]
-        creator = body.get("creator") if isinstance(body.get("creator"), dict) else {}
+        moved_by = body.get("creator") if isinstance(body.get("creator"), dict) else {}
         event = {
             "id": event_id,
             "title": occurrence.get("title") or "Training",
@@ -539,7 +539,9 @@ def _trainer_move_source(
             "resourceId": occurrence.get("resourceId"),
             "area": occurrence.get("area") or "vorne & hinten",
             "description": occurrence.get("description") or "",
-            "creator": creator,
+            "team": occurrence.get("team") or occurrence.get("title") or "",
+            "creator": {},
+            "movedBy": moved_by,
             "replacesTrainingEventId": source_id,
         }
         return event, source_id, str(occurrence.get("resourceId") or "").lower()
@@ -566,6 +568,7 @@ def _trainer_move_source(
         "resourceId": existing.resource_id,
         "area": existing.area,
         "description": existing.description,
+        "team": existing.team,
         "creator": {
             "id": existing.creator_id,
             "name": existing.creator_name,
@@ -580,6 +583,24 @@ def _trainer_move_source(
             "role": existing.creator_role,
             "infoHtml": existing.creator_info_html,
         },
+        "movedBy": (
+            body.get("creator")
+            if isinstance(body.get("creator"), dict) and body.get("creator")
+            else {
+                "id": existing.moved_by_id,
+                "name": existing.moved_by_name,
+                "phone": existing.moved_by_phone,
+                "mobile": existing.moved_by_mobile,
+                "email": existing.moved_by_email,
+                "chatId": existing.moved_by_chat_id,
+                "image": existing.moved_by_image,
+                "instagram": existing.moved_by_instagram,
+                "website": existing.moved_by_website,
+                "facebook": existing.moved_by_facebook,
+                "role": existing.moved_by_role,
+                "infoHtml": existing.moved_by_info_html,
+            }
+        ),
         "replacesTrainingEventId": existing.replaced_training_event_id,
     }
     return event, source_id, existing.resource_id

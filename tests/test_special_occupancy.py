@@ -152,6 +152,12 @@ class SpecialOccupancyTests(unittest.TestCase):
         command["event"]["replacesTrainingEventId"] = (
             "training:sommer:som-ras-c-mi:2026-08-19"
         )
+        command["event"]["team"] = "C-Junioren"
+        command["event"]["movedBy"] = {
+            "id": "trainer-17",
+            "name": "Trainer Beispiel",
+            "email": "trainer@example.de",
+        }
         self.store.apply(command, now_utc=self.now)
         special = self.store.events["trainer-move-c"]
         payload = {"events": [
@@ -175,6 +181,12 @@ class SpecialOccupancyTests(unittest.TestCase):
         self.assertNotIn("training:sommer:som-ras-c-mi:2026-08-19", ids)
         self.assertIn("training:sommer:som-ras-c-fr:2026-08-21", ids)
         self.assertIn("one-off:trainer-move-c", ids)
+        public_event = special.to_public_event()
+        self.assertEqual(public_event["team"], "C-Junioren")
+        self.assertEqual(public_event["movedBy"]["name"], "Trainer Beispiel")
+        restored = type(special).from_entity(special.to_entity())
+        self.assertEqual(restored.team, "C-Junioren")
+        self.assertEqual(restored.moved_by_email, "trainer@example.de")
         self.assertEqual(
             relocated_training_occurrence_keys([special]),
             {("som-ras-c-mi", "2026-08-19")},

@@ -1103,6 +1103,23 @@
       gap: 8px;
     }
 
+    .trainer-contact-section-label {
+      margin: 6px 2px 0;
+      color: #285ea7;
+      font-size: 0.76rem;
+      font-weight: 850;
+      letter-spacing: 0.045em;
+      text-transform: uppercase;
+    }
+
+    .trainer-contact-section-note {
+      padding: 9px 10px;
+      border-radius: 9px;
+      background: #f4f6f9;
+      color: #626b76;
+      font-size: 0.86rem;
+    }
+
     .trainer-contact-card {
       padding: 9px 10px;
       border: 1px solid rgba(40, 94, 167, 0.15);
@@ -1289,6 +1306,21 @@
       background: #c6281e;
       color: #ffffff;
       box-shadow: 0 3px 9px rgba(159, 28, 20, 0.22);
+    }
+
+    .dialog-button--move-action {
+      gap: 7px;
+      border-color: #285ea7;
+      background: linear-gradient(135deg, #285ea7 0%, #3b7cc2 100%);
+      color: #ffffff;
+      box-shadow: 0 3px 10px rgba(40, 94, 167, 0.24);
+    }
+
+    .dialog-button--move-action:hover,
+    .dialog-button--move-action:focus-visible {
+      border-color: #1f4f91;
+      background: linear-gradient(135deg, #1f4f91 0%, #326fad 100%);
+      box-shadow: 0 4px 13px rgba(40, 94, 167, 0.3);
     }
 
     .dialog-button--training-action[data-cancelled="true"] {
@@ -3677,7 +3709,8 @@
           : [];
         const title = String(event.title || "");
         const description = plainTextFromHtml(props.description || "");
-        const primaryValues = [title].concat(categoryTitles);
+        const structuredTeam = String(props.team || "").trim();
+        const primaryValues = [structuredTeam, title].concat(categoryTitles).filter(Boolean);
         const primaryRawText = primaryValues.join(" ");
         const primaryText = normalizeMatchText(primaryRawText);
         const fullText = normalizeMatchText(primaryRawText + " " + description);
@@ -3935,6 +3968,30 @@
         return card;
       }
 
+      function appendTrainerContactSectionLabel(label) {
+        const element = document.createElement("div");
+        element.className = "trainer-contact-section-label";
+        element.textContent = label;
+        elements.trainerContactList.appendChild(element);
+      }
+
+      function appendTrainerContactSectionNote(message) {
+        const element = document.createElement("div");
+        element.className = "trainer-contact-section-note";
+        element.textContent = message;
+        elements.trainerContactList.appendChild(element);
+      }
+
+      function resolveProfileContact(profile) {
+        const fallback = Object.assign({}, profile || {});
+        if (isSameCreator(fallback, state.currentCreator)) {
+          Object.keys(state.currentCreator).forEach(function (key) {
+            if (state.currentCreator[key]) fallback[key] = state.currentCreator[key];
+          });
+        }
+        return mergeCreatorContact(fallback, findCreatorWorkbookContact(fallback));
+      }
+
       function setTrainerContactStatus(message, canRetry) {
         elements.trainerContactStatus.textContent = message;
         elements.trainerContactStatus.hidden = !message;
@@ -3974,6 +4031,65 @@
         if (!event) return;
 
         const props = event.extendedProps || {};
+        const isRelocatedTraining =
+          props.eventKind === "special" && Boolean(props.replacesTrainingEventId);
+        const movedBy = props.movedBy && props.movedBy.name
+          ? props.movedBy
+          : (isRelocatedTraining ? props.creator : null);
+        const isMovedSpecial =
+          props.eventKind === "special" && Boolean(movedBy && movedBy.name);
+
+        if (isMovedSpecial) {
+          if (!isRelocatedTraining) {
+            elements.trainerContactsHeading.lastChild.textContent = " Beteiligte Personen";
+          }
+          elements.trainerContacts.hidden = false;
+          const eventKey = getDialogEventKey(event);
+          if (!state.trainerContactsReady && !state.trainerContactsError) {
+            setTrainerContactStatus("Kontaktdaten werden geladen …", false);
+            loadTrainerContacts(false).then(function () {
+              if (state.currentDialogEventKey === eventKey && !elements.dialogLayer.hidden) {
+                renderTrainerContactsForEvent(event);
+              }
+            }).catch(function () {
+              if (state.currentDialogEventKey === eventKey && !elements.dialogLayer.hidden) {
+                renderTrainerContactsForEvent(event);
+              }
+            });
+            return;
+          }
+
+          if (isRelocatedTraining) {
+            appendTrainerContactSectionLabel("Ursprüngliche Ansprechpartner*innen");
+            const originalContacts = state.trainerContactsReady
+              ? findTrainerContacts(event)
+              : [];
+            if (originalContacts.length) {
+              originalContacts.forEach(function (contact) {
+                elements.trainerContactList.appendChild(createTrainerContactCard(contact));
+              });
+            } else {
+              appendTrainerContactSectionNote("Kein Ansprechpartner hinterlegt");
+            }
+          } else {
+            appendTrainerContactSectionLabel("Erstellt von");
+            if (props.creator && props.creator.name) {
+              elements.trainerContactList.appendChild(
+                createTrainerContactCard(resolveProfileContact(props.creator))
+              );
+            } else {
+              appendTrainerContactSectionNote("Keine Person hinterlegt");
+            }
+          }
+
+          appendTrainerContactSectionLabel("Verlegt von");
+          elements.trainerContactList.appendChild(
+            createTrainerContactCard(resolveProfileContact(movedBy))
+          );
+          setTrainerContactStatus("", false);
+          return;
+        }
+
         if (props.eventKind === "special" && props.creator && props.creator.name) {
           elements.trainerContactsHeading.lastChild.textContent = " Erstellt von";
           elements.trainerContacts.hidden = false;
@@ -3992,15 +4108,7 @@
             return;
           }
 
-          const fallback = Object.assign({}, props.creator);
-          const isOwnEntry = isSameCreator(fallback, state.currentCreator);
-          if (isOwnEntry) {
-            Object.keys(state.currentCreator).forEach(function (key) {
-              if (state.currentCreator[key]) fallback[key] = state.currentCreator[key];
-            });
-          }
-          const workbookContact = findCreatorWorkbookContact(fallback);
-          const creatorContact = mergeCreatorContact(fallback, workbookContact);
+          const creatorContact = resolveProfileContact(props.creator);
           elements.trainerContactList.appendChild(createTrainerContactCard(creatorContact));
           setTrainerContactStatus("", false);
           return;
@@ -4422,7 +4530,7 @@
             "<p>" + escapeHtml(description).replace(/\r?\n/g, "<br>") + "</p>"
           );
         }
-        if (item && item.source === "training" && area) {
+        if (item && (item.source === "training" || item.replacesTrainingEventId) && area) {
           rows.push(
             "<p><strong>Bereich:</strong> " + escapeHtml(area) + "</p>"
           );
@@ -4520,7 +4628,8 @@
           competitionFormat: String(item.competitionFormat || ""),
           matchType: String(item.matchType || ""),
           replacesTrainingEventId: String(item.replacesTrainingEventId || ""),
-          creator: item.creator && typeof item.creator === "object" ? item.creator : null
+          creator: item.creator && typeof item.creator === "object" ? item.creator : null,
+          movedBy: item.movedBy && typeof item.movedBy === "object" ? item.movedBy : null
         };
 
         return {
@@ -6947,7 +7056,7 @@
           <i class="fa-solid fa-trash" aria-hidden="true"></i>
           Belegung löschen
         </button>
-        <button id="trainer-occupancy-move" type="button" class="dialog-button dialog-button--training-action" hidden>
+        <button id="trainer-occupancy-move" type="button" class="dialog-button dialog-button--move-action" hidden>
           <i class="fa-solid fa-right-left" aria-hidden="true"></i>
           <span>Auf anderen Platz verlegen</span>
         </button>

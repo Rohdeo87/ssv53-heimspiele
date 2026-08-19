@@ -132,6 +132,21 @@ test("Absageaktion ist rot und zeigt zustandsabhängige Symbole", () => {
   );
 });
 
+test("Verlegen ist eine eigenständige blaue Aktion und nicht rot", () => {
+  assert.match(
+    html,
+    /\.dialog-button--move-action\s*\{[\s\S]*?linear-gradient\([\s\S]*?#285ea7/
+  );
+  assert.match(
+    html,
+    /id="trainer-occupancy-move"[^>]*class="dialog-button dialog-button--move-action"/
+  );
+  assert.doesNotMatch(
+    html,
+    /id="trainer-occupancy-move"[^>]*dialog-button--training-action/
+  );
+});
+
 test("nur Trainer können eine Appack-Belegung anlegen", () => {
   assert.match(html, /canCreateTrainerOccupancies: hasActiveTrainerRole\(profileJSON\)/);
   assert.match(html, /id="trainer-add-occupancy"[^>]*aria-label="Belegung hinzufügen"[^>]*hidden/);
@@ -167,6 +182,23 @@ test("Trainerbelegung schreibt nur validierte strukturierte Felder", () => {
   assert.match(html, />\s*Termin anlegen\s*<\/button>/);
   assert.match(html, /id="calendar-today-button"[^>]*>Heute<\/button>/);
   assert.match(html, /elements\.todayButton\.addEventListener\("click"/);
+});
+
+test("verlegte Trainings behalten Teamkontakte und zeigen die verschiebende Person separat", () => {
+  const mapper = extractFunction("mapAzureOccupancyEvent");
+  const profile = extractFunction("getEventContactProfile");
+  const renderer = extractFunction("renderTrainerContactsForEvent");
+  assert.match(mapper, /team: String\(item\.team \|\| ""\)/);
+  assert.match(mapper, /movedBy: item\.movedBy/);
+  assert.match(profile, /const structuredTeam = String\(props\.team \|\| ""\)\.trim\(\)/);
+  assert.match(renderer, /Boolean\(props\.replacesTrainingEventId\)/);
+  assert.match(renderer, /const isMovedSpecial/);
+  assert.match(renderer, /Ursprüngliche Ansprechpartner\*innen/);
+  assert.match(renderer, /Erstellt von/);
+  assert.match(renderer, /Verlegt von/);
+  assert.match(renderer, /findTrainerContacts\(event\)/);
+  assert.match(renderer, /resolveProfileContact\(movedBy\)/);
+  assert.match(extractFunction("buildAzureEventDescription"), /item\.replacesTrainingEventId/);
 });
 
 test("Kalender öffnet die heutige Woche und Heute behält die gewählte Ansicht", () => {
