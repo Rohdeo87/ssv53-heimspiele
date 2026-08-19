@@ -173,13 +173,27 @@ def _branded_message(
     detail_rows = "".join(
         f"""
         <tr>
-          <td style="padding:11px 14px;border-bottom:1px solid {APP_BORDER};
-                     font-size:12px;line-height:1.4;color:{APP_MUTED};width:34%;">
-            {html.escape(label)}
-          </td>
-          <td style="padding:11px 14px;border-bottom:1px solid {APP_BORDER};
-                     font-size:14px;line-height:1.45;color:#1F2937;font-weight:700;">
-            {html.escape(value)}
+          <td style="padding:0 0 10px 0;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
+                   style="width:100%;border-collapse:separate;border-spacing:0;
+                          background:#F4F6FA;border:1px solid {APP_BORDER};border-radius:12px;">
+              <tr>
+                <td style="width:38px;padding:12px 0 12px 13px;vertical-align:middle;">
+                  <span style="display:inline-block;width:28px;height:28px;border-radius:50%;
+                               background:#E8EFF8;color:{APP_BLUE};text-align:center;
+                               font-size:16px;line-height:28px;font-weight:800;">&#8226;</span>
+                </td>
+                <td style="padding:11px 13px 11px 10px;vertical-align:middle;">
+                  <div style="font-size:12px;line-height:1.35;color:{APP_MUTED};">
+                    {html.escape(label)}
+                  </div>
+                  <div style="margin-top:2px;font-size:15px;line-height:1.4;
+                              color:#1F2937;font-weight:700;">
+                    {html.escape(value)}
+                  </div>
+                </td>
+              </tr>
+            </table>
           </td>
         </tr>"""
         for label, value in details
@@ -192,56 +206,56 @@ def _branded_message(
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
            style="width:100%;background:{APP_BG};border-collapse:collapse;">
       <tr>
-        <td align="center" style="padding:24px 10px;">
+        <td align="center" style="padding:0 0 28px 0;">
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
-                 style="width:100%;max-width:620px;background:#FFFFFF;border-collapse:separate;
-                        border-spacing:0;border-radius:18px;overflow:hidden;">
+                 style="width:100%;max-width:620px;background:{APP_BLUE};border-collapse:collapse;">
             <tr>
-              <td style="height:7px;background:{APP_BLUE};font-size:0;line-height:0;">&nbsp;</td>
+              <td style="padding:18px 22px;color:#FFFFFF;font-size:22px;line-height:1.25;
+                         font-weight:700;">SSV53&nbsp;&nbsp; Belegungsplan</td>
             </tr>
+          </table>
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
+                 style="width:calc(100% - 20px);max-width:600px;margin-top:14px;background:#FFFFFF;
+                        border-collapse:separate;border-spacing:0;border-radius:20px;overflow:hidden;
+                        box-shadow:0 5px 16px rgba(17,24,39,.10);">
             <tr>
-              <td align="center" style="padding:25px 22px 8px 22px;">
+              <td align="center" style="padding:22px 22px 8px 22px;">
                 <img src="{APP_LOGO_URL}" alt="Schönwalder SV 1953 e.V." width="72"
                      style="display:block;width:72px;height:72px;object-fit:contain;border:0;">
               </td>
             </tr>
             <tr>
               <td align="center" style="padding:4px 24px 0 24px;">
-                <span style="display:inline-block;padding:7px 11px;border-radius:999px;
-                             background:#FFF4D6;color:{APP_DARK_BLUE};font-size:11px;
-                             letter-spacing:.4px;font-weight:800;">
-                  {html.escape(badge)}
-                </span>
-                <div style="margin-top:13px;font-size:25px;line-height:1.25;
-                            font-weight:800;color:#111111;">
+                <div style="margin-top:7px;font-size:27px;line-height:1.25;
+                            font-weight:800;color:#080808;">
                   {html.escape(headline)}
                 </div>
-                <div style="margin-top:8px;font-size:14px;line-height:1.5;color:#555555;">
-                  Schönwalder SV 1953 e.V.
-                </div>
-                <div style="height:2px;background:{APP_GOLD};width:70%;max-width:420px;
-                            margin:16px auto 0 auto;"></div>
+                <div style="height:2px;background:{APP_GOLD};width:72%;max-width:390px;
+                            margin:14px auto 0 auto;"></div>
               </td>
             </tr>
             <tr>
               <td style="padding:22px 24px 29px 24px;">
-                <div style="font-size:15px;line-height:1.6;color:#374151;">
+                <div style="font-size:16px;line-height:1.65;color:#202020;">
                   {html.escape(intro)}
                 </div>
+                <div style="margin-top:22px;font-size:16px;line-height:1.4;
+                            font-weight:800;color:{APP_BLUE};">
+                  {html.escape(badge)}
+                </div>
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
-                       style="margin-top:19px;border-collapse:separate;border-spacing:0;
-                              border:1px solid {APP_BORDER};border-radius:14px;
-                              background:#F8FAFC;overflow:hidden;">
+                       style="margin-top:10px;border-collapse:collapse;">
                   {detail_rows}
                 </table>
-                <div style="margin-top:21px;padding:15px 16px;border-radius:14px;
-                            background:#EEF4FB;font-size:14px;line-height:1.6;color:#374151;">
-                  <strong style="color:{APP_DARK_BLUE};">Nächster Schritt</strong><br>
+                <div style="margin-top:13px;padding:15px 16px;border-radius:12px;
+                            background:#F4F6FA;border:1px solid {APP_BORDER};
+                            font-size:14px;line-height:1.6;color:#374151;">
+                  <strong style="color:{APP_BLUE};">Nächster Schritt</strong><br>
                   {html.escape(closing)}
                 </div>
-                <div style="margin-top:27px;font-size:14px;line-height:1.6;color:#374151;">
+                <div style="margin-top:25px;font-size:14px;line-height:1.6;color:#555555;">
                   Viele Grüße<br>
-                  <strong style="color:{APP_DARK_BLUE};">Schönwalder SV 1953 e.V.</strong>
+                  <strong style="color:#202020;">Schönwalder SV 1953 e.V.</strong>
                 </div>
               </td>
             </tr>
