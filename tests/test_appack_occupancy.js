@@ -183,11 +183,16 @@ test("abgesagtes Training bleibt grau mit Status und stabiler Termin-ID sichtbar
   assert.match(html, /window\.confirm\(question\)/);
 });
 
-test("Absageaktionen sind ausschließlich an Trainingsereignisse gebunden", () => {
+test("Absageaktionen gelten für reguläre und verlegte Trainings", () => {
   assert.match(
     html,
-    /props\.eventKind === "training" && Boolean\(props\.occurrenceId\)/
+    /const regularTraining = props\.eventKind === "training"/
   );
+  assert.match(
+    html,
+    /const relocatedTraining = props\.eventKind === "special"/
+  );
+  assert.match(html, /Boolean\(props\.replacesTrainingEventId\)/);
   assert.match(html, /TRAINING_FAELLT_AUS/);
   assert.match(html, /TRAINING_WIEDER_AKTIV/);
 });

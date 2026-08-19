@@ -6058,7 +6058,11 @@
 
       function isTrainingCancellationEvent(event) {
         const props = event && event.extendedProps || {};
-        return props.eventKind === "training" && Boolean(props.occurrenceId);
+        const regularTraining = props.eventKind === "training" &&
+          Boolean(props.occurrenceId);
+        const relocatedTraining = props.eventKind === "special" &&
+          Boolean(props.replacesTrainingEventId) && Boolean(props.occurrenceId);
+        return regularTraining || relocatedTraining;
       }
 
       function renderTrainingCancellationAction(event) {
@@ -6074,7 +6078,8 @@
           !isTrainingCancellationEvent(event)
         ) return;
 
-        const cancelled = event.extendedProps.cancelled === true;
+        const cancelled = event.extendedProps.eventKind === "training" &&
+          event.extendedProps.cancelled === true;
         const actionLabel = action.querySelector(
           ".training-cancellation-action-label"
         );
@@ -6100,13 +6105,7 @@
         action.disabled = false;
         const label = action.querySelector("span");
         const props = event && event.extendedProps || {};
-        const relocatedTraining = props.eventKind === "special" &&
-          Boolean(props.replacesTrainingEventId);
-        label.textContent = relocatedTraining ? "Termin absagen" : "Belegung löschen";
-        if (relocatedTraining) {
-          action.hidden = !state.canManageTrainingCancellations;
-          return;
-        }
+        label.textContent = "Belegung löschen";
         if (!isTrainerCreatedOccupancy(event)) return;
         const creator = props.creator || {};
         const ownEntry = Boolean(state.currentCreator.id) &&
@@ -6256,7 +6255,10 @@
           !state.canManageTrainingCancellations ||
           !isTrainingCancellationEvent(event)
         ) return;
-        const cancelled = event.extendedProps.cancelled === true;
+        const props = event.extendedProps || {};
+        const relocatedTraining = props.eventKind === "special" &&
+          Boolean(props.replacesTrainingEventId);
+        const cancelled = !relocatedTraining && props.cancelled === true;
         const question = cancelled
           ? "Soll die Absage wirklich widerrufen werden? Das Training wird wieder als Platzbelegung berücksichtigt."
           : "Soll dieses Training wirklich abgesagt werden?";
@@ -6267,6 +6269,39 @@
           ".training-cancellation-action-label"
         ).textContent = "Bitte warten …";
         try {
+          if (relocatedTraining) {
+            const randomPart = window.crypto && typeof window.crypto.randomUUID === "function"
+              ? window.crypto.randomUUID() : Date.now().toString(36);
+            const relocatedResponse = await fetch(TRAINER_OCCUPANCY_API_URL, {
+              method: "POST",
+              mode: "cors",
+              cache: "no-store",
+              credentials: "omit",
+              headers: {
+                "Accept": "application/json",
+                "Content-Type": "text/plain;charset=UTF-8"
+              },
+              body: JSON.stringify({
+                action: "delete",
+                commandId: "trainer-delete:" + randomPart,
+                eventId: props.occurrenceId,
+                requesterId: state.currentCreator.id,
+                isAppAdministrator: state.canAdministerTrainerOccupancies,
+                confirmation: "TRAINER_BELEGUNG_LOESCHEN"
+              })
+            });
+            const relocatedPayload = await relocatedResponse.json().catch(function () {
+              return {};
+            });
+            if (!relocatedResponse.ok || !relocatedPayload.ok) {
+              throw new Error(
+                relocatedPayload.error || "Das verlegte Training konnte nicht abgesagt werden."
+              );
+            }
+            closeEventDetails();
+            loadCurrentRange(true);
+            return;
+          }
           const response = await fetch(TRAINING_CANCELLATION_API_URL, {
             method: "POST",
             mode: "cors",

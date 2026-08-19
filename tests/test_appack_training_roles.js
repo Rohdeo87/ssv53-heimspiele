@@ -166,10 +166,72 @@ test("nur Trainer können eine Appack-Belegung anlegen", () => {
   assert.match(mover, /targetResource === "rasen"/);
   const deleteRenderer = extractFunction("renderTrainerOccupancyDeleteAction");
   const deleter = extractFunction("deleteTrainerOccupancy");
-  assert.match(deleteRenderer, /Boolean\(props\.replacesTrainingEventId\)/);
-  assert.match(deleteRenderer, /"Termin absagen"/);
-  assert.match(deleteRenderer, /state\.canManageTrainingCancellations/);
-  assert.match(deleter, /Dieses verlegte Training wirklich absagen/);
+  const cancellationDetector = extractFunction("isTrainingCancellationEvent");
+  const cancellationHandler = extractFunction("changeTrainingCancellation");
+  assert.match(cancellationDetector, /props\.eventKind === "special"/);
+  assert.match(cancellationDetector, /Boolean\(props\.replacesTrainingEventId\)/);
+  assert.doesNotMatch(deleteRenderer, /replacesTrainingEventId/);
+  assert.match(cancellationHandler, /if \(relocatedTraining\)/);
+  assert.match(cancellationHandler, /fetch\(TRAINER_OCCUPANCY_API_URL/);
+  assert.match(cancellationHandler, /confirmation: "TRAINER_BELEGUNG_LOESCHEN"/);
+  assert.match(deleter, /Diese manuelle Belegung wirklich löschen/);
+});
+
+test("realer mehrfach verlegter F-Termin behält den normalen Absagebutton", () => {
+  const cancellationAction = {
+    hidden: true,
+    disabled: false,
+    attributes: {},
+    label: {textContent: ""},
+    removeAttribute(name) { delete this.attributes[name]; },
+    setAttribute(name, value) { this.attributes[name] = value; },
+    querySelector(selector) {
+      assert.equal(selector, ".training-cancellation-action-label");
+      return this.label;
+    }
+  };
+  const deleteAction = {
+    hidden: false,
+    disabled: false,
+    label: {textContent: ""},
+    querySelector(selector) {
+      assert.equal(selector, "span");
+      return this.label;
+    }
+  };
+  const runtime = new Function(
+    "state",
+    "elements",
+    [
+      extractFunction("isTrainingCancellationEvent"),
+      extractFunction("renderTrainingCancellationAction"),
+      extractFunction("isTrainerCreatedOccupancy"),
+      extractFunction("renderTrainerOccupancyDeleteAction"),
+      "return {renderTrainingCancellationAction, renderTrainerOccupancyDeleteAction};"
+    ].join("\n\n")
+  )(
+    {
+      canManageTrainingCancellations: true,
+      canAdministerTrainerOccupancies: false,
+      currentCreator: {id: "trainer-17"}
+    },
+    {
+      trainingCancellationAction: cancellationAction,
+      trainingCancellationStatus: {hidden: true, textContent: ""},
+      trainerOccupancyDelete: deleteAction
+    }
+  );
+  const event = {extendedProps: {
+    eventKind: "special",
+    occurrenceId: "one-off:trainer-move-246bcdd383ae60f0e1af26e0e699be52",
+    replacesTrainingEventId: "training:sommer:som-kr-f-do:2026-08-20",
+    creator: {}
+  }};
+  runtime.renderTrainingCancellationAction(event);
+  runtime.renderTrainerOccupancyDeleteAction(event);
+  assert.equal(cancellationAction.hidden, false);
+  assert.equal(cancellationAction.label.textContent, "Termin absagen");
+  assert.equal(deleteAction.hidden, true);
 });
 
 test("Trainerbelegung schreibt nur validierte strukturierte Felder", () => {
