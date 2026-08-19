@@ -78,6 +78,13 @@ def _bounded_text(value: Any, *, field: str, maximum: int, required: bool = Fals
     return text
 
 
+def _optional_image(value: Any) -> str:
+    """Profilbilder sind Komfortdaten und dürfen eine Belegung nie blockieren."""
+    text = str(value or "").strip()
+    # Kurze URLs bleiben erhalten; übergroße Base64-/Blob-Werte werden verworfen.
+    return text if len(text) <= 2048 else ""
+
+
 def _event_row_key(event_id: str) -> str:
     return "event-" + hashlib.sha256(event_id.encode("utf-8")).hexdigest()
 
@@ -207,7 +214,7 @@ class SpecialOccupancyEvent:
             creator_mobile=_bounded_text(creator.get("mobile"), field="creator.mobile", maximum=80),
             creator_email=_bounded_text(creator.get("email"), field="creator.email", maximum=180),
             creator_chat_id=_bounded_text(creator.get("chatId"), field="creator.chatId", maximum=180),
-            creator_image=_bounded_text(creator.get("image"), field="creator.image", maximum=500),
+            creator_image=_optional_image(creator.get("image")),
             creator_instagram=_bounded_text(creator.get("instagram"), field="creator.instagram", maximum=500),
             creator_website=_bounded_text(creator.get("website"), field="creator.website", maximum=500),
             creator_facebook=_bounded_text(creator.get("facebook"), field="creator.facebook", maximum=500),

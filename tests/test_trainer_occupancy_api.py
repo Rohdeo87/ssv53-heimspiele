@@ -152,5 +152,15 @@ class TrainerOccupancyApiTests(unittest.TestCase):
         self.assertNotIn("trainer-test-001", self.store.events)
 
 
+    def test_oversized_optional_profile_image_never_blocks_creation(self) -> None:
+        payload = self.payload()
+        payload["creator"]["image"] = "data:image/jpeg;base64," + ("A" * 12000)
+        response = function_app.ssv53_trainer_occupancies(request(payload))
+        self.assertEqual(response.status_code, 200)
+        event = self.store.events["trainer-test-001"]
+        self.assertEqual(event.creator_image, "")
+        self.assertEqual(event.creator_name, "Juliane Beispiel")
+        self.assertEqual(event.creator_email, "juliane@example.de")
+
 if __name__ == "__main__":
     unittest.main()
