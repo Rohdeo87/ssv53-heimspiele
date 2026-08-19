@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import json
 import tempfile
 import unittest
@@ -20,7 +21,12 @@ class FullFailsafePackageTests(unittest.TestCase):
             with zipfile.ZipFile(output) as archive:
                 names = set(archive.namelist())
                 manifest = json.loads(archive.read("package-manifest.json"))
-                joined = b"\n".join(archive.read(name) for name in names if name.endswith(".py"))
+                sources = {
+                    name: archive.read(name)
+                    for name in names
+                    if name.endswith(".py")
+                }
+                joined = b"\n".join(sources.values())
             self.assertEqual(
                 manifest["safety_stage"],
                 "FULL_FAILSAFE_7_ZONES_120_MIN_CAPABLE_LOCKED",
@@ -61,6 +67,32 @@ class FullFailsafePackageTests(unittest.TestCase):
             self.assertIn("mower/full_failsafe.py", names)
             self.assertIn("mower/irrigation_recovery.py", names)
             self.assertIn("mower/hydrawise_actions.py", names)
+            local_modules = {
+                name[:-3].replace("/", ".")
+                for name in names
+                if name.endswith(".py")
+            }
+            missing_local_imports: list[tuple[str, str]] = []
+            for name in names:
+                if not name.endswith(".py"):
+                    continue
+                tree = ast.parse(sources[name], filename=name)
+                for node in ast.walk(tree):
+                    if not isinstance(node, ast.ImportFrom) or not node.module:
+                        continue
+                    is_local = node.module.startswith(("mower", "occupancy")) or node.module in {
+                        "order_mail",
+                        "occupancy_notifications",
+                        "training_cancellations",
+                        "special_occupancy",
+                    }
+                    if (
+                        is_local
+                        and node.module not in local_modules
+                        and node.module + ".__init__" not in local_modules
+                    ):
+                        missing_local_imports.append((name, node.module))
+            self.assertEqual(missing_local_imports, [])
             self.assertIn(b"setzone.php", joined)
             self.assertNotIn(b"ResumeSchedule", joined)
             self.assertTrue(result["sha256"])
