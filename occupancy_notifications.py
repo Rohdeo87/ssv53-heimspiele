@@ -317,6 +317,54 @@ def _current_payload(now_utc: datetime, values: Mapping[str, str]) -> dict[str, 
     return merge_public_special_events(payload, specials)
 
 
+def _collision_message(
+    settings: OrderMailSettings,
+    recipient: str,
+    match: Mapping[str, Any],
+    booking: Mapping[str, Any],
+    *,
+    test: bool = False,
+) -> EmailMessage:
+    kickoff = _event_dt(match, "kickoff", "start")
+    booking_start = _event_dt(booking, "start")
+    booking_end = _event_dt(booking, "end")
+    resource = str(match.get("resourceId") or "")
+    place = {"rasen": "Rasenplatz", "kunstrasen": "Kunstrasenplatz"}.get(
+        resource.lower(), resource or "Nicht angegeben"
+    )
+    return _branded_message(
+        settings,
+        recipient,
+        subject=("[TEST] " if test else "") + "SSV53: Überschneidung im Belegungsplan",
+        headline="Buchungskollision",
+        intro=(
+            "Ein neu angesetztes Verbandsspiel überschneidet sich mit einer "
+            "bestehenden Platzbelegung."
+        ),
+        detail_groups=[
+            ("NEUES VERBANDSSPIEL", [
+                ("Spiel", str(match.get("title") or "Heimspiel")),
+                ("Anstoß", kickoff.strftime("%d.%m.%Y um %H:%M Uhr")),
+                ("Platz", place),
+            ]),
+            ("BESTEHENDE BUCHUNG", [
+                ("Belegung", str(booking.get("title") or "Belegung")),
+                (
+                    "Zeitraum",
+                    f"{booking_start.strftime('%d.%m.%Y, %H:%M')} bis "
+                    f"{booking_end.strftime('%H:%M')} Uhr",
+                ),
+            ]),
+        ],
+        closing="Bitte prüft und koordiniert die Platznutzung.",
+        automatic_note=(
+            "Angeforderte Testmail mit aktuellen Daten aus dem SSV53-Belegungsplan"
+            if test
+            else "Automatische Benachrichtigung aus dem SSV53-Belegungsplan"
+        ),
+    )
+
+
 def process_collision_notifications(
     now_utc: datetime,
     values: Mapping[str, str],
@@ -349,40 +397,7 @@ def process_collision_notifications(
             )
             if not directory.claim_delivery(fingerprint, now_utc):
                 continue
-            kickoff = _event_dt(match, "kickoff", "start")
-            booking_start = _event_dt(booking, "start")
-            booking_end = _event_dt(booking, "end")
-            resource = str(match.get("resourceId") or "")
-            place = {"rasen": "Rasenplatz", "kunstrasen": "Kunstrasenplatz"}.get(
-                resource.lower(), resource or "Nicht angegeben"
-            )
-            message = _branded_message(
-                settings,
-                recipient,
-                subject="SSV53: Überschneidung im Belegungsplan",
-                headline="Buchungskollision",
-                intro=(
-                    "Ein neu angesetztes Verbandsspiel überschneidet sich mit einer "
-                    "bestehenden Platzbelegung."
-                ),
-                detail_groups=[
-                    ("NEUES VERBANDSSPIEL", [
-                        ("Spiel", str(match.get("title") or "Heimspiel")),
-                        ("Anstoß", kickoff.strftime("%d.%m.%Y um %H:%M Uhr")),
-                        ("Platz", place),
-                    ]),
-                    ("BESTEHENDE BUCHUNG", [
-                        ("Belegung", str(booking.get("title") or "Belegung")),
-                        (
-                            "Zeitraum",
-                            f"{booking_start.strftime('%d.%m.%Y, %H:%M')} bis "
-                            f"{booking_end.strftime('%H:%M')} Uhr",
-                        ),
-                    ]),
-                ],
-                closing="Bitte prüft und koordiniert die Platznutzung.",
-                automatic_note="Automatische Benachrichtigung aus dem SSV53-Belegungsplan",
-            )
+            message = _collision_message(settings, recipient, match, booking)
             try:
                 mail_sender(settings, message)
                 directory.mark_delivery(fingerprint, "sent", now_utc)
@@ -424,3 +439,44 @@ def send_collision_test_mail(
         mail_sender(settings, message)
         sent += 1
     return {"ok": True, "sent": sent}
+
+
+def send_real_collision_test_mail(
+    now_utc: datetime,
+    values: Mapping[str, str],
+    *,
+    payload: Mapping[str, Any] | None = None,
+    mail_sender: MailSender = _send_message,
+) -> dict[str, Any]:
+    """Sendet die nächste reale Kollision als Test, ohne den Zustellstatus zu verändern."""
+    if not enabled(values):
+        raise RuntimeError("Kollisionsbenachrichtigungen sind nicht aktiviert.")
+    recipients = collision_recipients(values)
+    settings = OrderMailSettings.from_mapping(values)
+    occupancy = dict(payload) if payload is not None else _current_payload(now_utc, values)
+    collisions = find_collisions(list(occupancy.get("events", [])))
+    relevant = [
+        collision for collision in collisions
+        if _event_dt(collision[0], "occupancyEnd", "end") >= now_utc
+    ]
+    if not relevant:
+        raise RuntimeError("Aktuell besteht keine kommende Buchungskollision für eine Testmail.")
+    match, booking = min(
+        relevant,
+        key=lambda collision: _event_dt(collision[0], "occupancyStart", "start"),
+    )
+    for recipient in recipients:
+        mail_sender(
+            settings,
+            _collision_message(settings, recipient, match, booking, test=True),
+        )
+    return {
+        "ok": True,
+        "sent": len(recipients),
+        "matchId": str(match.get("id") or ""),
+        "matchTitle": str(match.get("title") or "Heimspiel"),
+        "bookingId": str(booking.get("id") or ""),
+        "bookingTitle": str(booking.get("title") or "Belegung"),
+        "kickoff": _event_dt(match, "kickoff", "start").isoformat(),
+        "resourceId": str(match.get("resourceId") or ""),
+    }

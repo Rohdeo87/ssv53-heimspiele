@@ -15,7 +15,11 @@ from mower.irrigation_recovery import (
     reset_failed_irrigation,
 )
 from occupancy.service import build_occupancy_payload, build_training_occurrences
-from occupancy_notifications import process_collision_notifications, send_collision_test_mail
+from occupancy_notifications import (
+    process_collision_notifications,
+    send_collision_test_mail,
+    send_real_collision_test_mail,
+)
 from training_cancellations import AzureTableCancellationStore
 from special_occupancy import (
     AzureTableSpecialOccupancyStore,
@@ -1033,6 +1037,25 @@ def ssv53_order_mail(req: func.HttpRequest) -> func.HttpResponse:
                 )
             result = send_collision_test_mail(os.environ)
             LOGGER.info("SSV53_OCCUPANCY_COLLISION_TEST_MAIL_OK sent=%s", result["sent"])
+            return _order_mail_response(result)
+
+        if action == "send-real-collision-test":
+            if body.get("confirmation") != "SSV53-REAL-COLLISION-TEST":
+                return _order_mail_response(
+                    {
+                        "ok": False,
+                        "code": "CONFIRMATION_INVALID",
+                        "error": "Die Echtkollisions-Testbestätigung ist ungültig.",
+                    },
+                    status_code=400,
+                )
+            result = send_real_collision_test_mail(datetime.now(timezone.utc), os.environ)
+            LOGGER.info(
+                "SSV53_OCCUPANCY_REAL_COLLISION_TEST_MAIL_OK sent=%s match_id=%s booking_id=%s",
+                result["sent"],
+                result["matchId"],
+                result["bookingId"],
+            )
             return _order_mail_response(result)
 
         if action == "check":

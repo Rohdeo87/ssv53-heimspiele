@@ -11,6 +11,7 @@ from occupancy_notifications import (
     find_collisions,
     process_collision_notifications,
     send_collision_test_mail,
+    send_real_collision_test_mail,
 )
 
 
@@ -192,6 +193,35 @@ class OccupancyNotificationTests(unittest.TestCase):
         self.assertTrue(all(message.is_multipart() for message in sent))
         self.assertTrue(all("Buchungskollision" in message_part(message, "text/html") for message in sent))
         self.assertTrue(all("keine weitere Aktion" in message_part(message, "text/plain") for message in sent))
+
+    def test_real_collision_test_uses_real_payload_without_delivery_claim(self) -> None:
+        sent = []
+        payload = collision_payload()
+        result = send_real_collision_test_mail(
+            NOW,
+            environment(),
+            payload=payload,
+            mail_sender=lambda settings, message: sent.append(message),
+        )
+        self.assertEqual(result["sent"], 2)
+        self.assertEqual(result["matchId"], "match:c")
+        self.assertEqual(result["bookingId"], "one-off:trainer")
+        self.assertEqual(result["resourceId"], "rasen")
+        self.assertTrue(all(message["Subject"].startswith("[TEST]") for message in sent))
+        for message in sent:
+            plain = message_part(message, "text/plain")
+            self.assertIn("SSV C - Gast C", plain)
+            self.assertIn("Zusatztraining", plain)
+            self.assertIn("20.08.2026 um 18:30 Uhr", plain)
+
+    def test_real_collision_test_rejects_missing_collision(self) -> None:
+        with self.assertRaisesRegex(RuntimeError, "keine kommende"):
+            send_real_collision_test_mail(
+                NOW,
+                environment(),
+                payload={"events": []},
+                mail_sender=lambda settings, message: self.fail("mail sent"),
+            )
 
 
 if __name__ == "__main__":
