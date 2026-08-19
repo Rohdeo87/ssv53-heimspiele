@@ -734,7 +734,7 @@
       min-width: 0;
       min-height: var(--calendar-navigation-height);
       display: grid;
-      grid-template-columns: 42px minmax(0, 1fr) 42px;
+      grid-template-columns: 42px minmax(0, 1fr) 42px 62px;
       align-items: center;
       gap: 5px;
       padding:
@@ -803,6 +803,27 @@
       -webkit-appearance: none;
     }
 
+    #calendar-today-button {
+      min-width: 0;
+      min-height: 34px;
+      padding: 5px 9px;
+      border: 1px solid rgba(40, 94, 167, 0.18);
+      border-radius: 17px;
+      background: var(--brand);
+      color: #fff;
+      font-size: 0.76rem;
+      font-weight: 760;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    #calendar-today-button:disabled {
+      border-color: var(--line);
+      background: var(--surface-soft);
+      color: var(--muted);
+      cursor: default;
+      opacity: 0.72;
+    }
     #calendar-date-button:active {
       background: var(--brand-soft);
     }
@@ -1468,7 +1489,7 @@
       }
 
       #calendar-navigation {
-        grid-template-columns: 46px minmax(0, 1fr) 46px;
+        grid-template-columns: 46px minmax(0, 1fr) 46px 66px;
       }
 
       #calendar-date-primary {
@@ -1509,7 +1530,7 @@
       }
 
       #calendar-navigation {
-        grid-template-columns: 39px minmax(0, 1fr) 39px;
+        grid-template-columns: 39px minmax(0, 1fr) 39px 54px;
         gap: 3px;
         padding-inline: 4px;
       }
@@ -1716,6 +1737,7 @@
         previousDateButton: document.getElementById("calendar-date-previous"),
         nextDateButton: document.getElementById("calendar-date-next"),
         currentDateButton: document.getElementById("calendar-date-button"),
+        todayButton: document.getElementById("calendar-today-button"),
         currentDatePrimary: document.getElementById("calendar-date-primary"),
         currentDateSecondary: document.getElementById("calendar-date-secondary"),
         swipeStatus: document.getElementById("calendar-swipe-status"),
@@ -3006,6 +3028,57 @@
         return "";
       }
 
+      function unwrapAppackImageValue(value, depth) {
+        const remaining = depth == null ? 5 : depth;
+        if (value == null || remaining < 0) return "";
+        if (typeof value === "string") return value.trim();
+        if (Array.isArray(value)) {
+          for (const entry of value) {
+            const candidate = unwrapAppackImageValue(entry, remaining - 1);
+            if (candidate) return candidate;
+          }
+          return "";
+        }
+        if (typeof value !== "object") return "";
+        const preferred = ["url", "src", "href", "downloadUrl", "thumbnailUrl", "value", "path"];
+        for (const key of preferred) {
+          if (value[key] != null) {
+            const candidate = unwrapAppackImageValue(value[key], remaining - 1);
+            if (candidate) return candidate;
+          }
+        }
+        for (const child of Object.values(value)) {
+          const candidate = unwrapAppackImageValue(child, remaining - 1);
+          if (candidate && /^(?:https?:|data:image\/|blob:|\/)/i.test(candidate)) return candidate;
+        }
+        return "";
+      }
+
+      function getAppackProfileImage(profile) {
+        if (!profile || typeof profile !== "object") return "";
+        const imageKeys = new Set([
+          "image", "imageurl", "profileimage", "profileimageurl", "avatar",
+          "avatarurl", "picture", "pictureurl", "photo", "photourl", "userimage"
+        ]);
+        const search = function (value, depth) {
+          if (!value || typeof value !== "object" || depth < 0) return "";
+          for (const key of Object.keys(value)) {
+            const normalized = key.replace(/[^a-z0-9]/gi, "").toLowerCase();
+            if (imageKeys.has(normalized)) {
+              const candidate = unwrapAppackImageValue(value[key], 5);
+              if (candidate) return candidate;
+            }
+          }
+          for (const child of Object.values(value)) {
+            if (child && typeof child === "object") {
+              const candidate = search(child, depth - 1);
+              if (candidate) return candidate;
+            }
+          }
+          return "";
+        };
+        return search(profile, 4);
+      }
       function getCurrentAppackCreator(profile) {
         const firstName = getAppackProfileValue(profile, ["firstName", "first_name", "givenName", "vorname"]);
         const lastName = getAppackProfileValue(profile, ["lastName", "last_name", "surname", "familyName", "nachname"]);
@@ -3016,7 +3089,7 @@
           mobile: getAppackProfileValue(profile, ["mobile", "mobilePhone", "handy", "whatsapp"]),
           email: getAppackProfileValue(profile, ["email", "mail"]),
           chatId: getAppackProfileValue(profile, ["chatId", "chatID", "directChatId"]),
-          image: getAppackProfileValue(profile, ["image", "imageUrl", "avatar", "avatarUrl", "profileImage"])
+          image: getAppackProfileImage(profile)
         };
       }
 
@@ -3039,6 +3112,24 @@
         };
       }
 
+      function isSameCreator(leftValue, rightValue) {
+        const left = leftValue || {};
+        const right = rightValue || {};
+        const equal = function (first, second) {
+          return Boolean(first && second) &&
+            String(first).trim().toLowerCase() === String(second).trim().toLowerCase();
+        };
+        if (equal(left.id, right.id) || equal(left.email, right.email) ||
+            equal(left.chatId, right.chatId)) return true;
+        const leftName = normalizeMatchText(left.name);
+        const rightName = normalizeMatchText(right.name);
+        if (!leftName || !rightName) return false;
+        if (leftName === rightName) return true;
+        const leftParts = leftName.split(/\s+/);
+        const rightParts = rightName.split(/\s+/);
+        return (leftParts.length === 1 && rightParts[rightParts.length - 1] === leftName) ||
+          (rightParts.length === 1 && leftParts[leftParts.length - 1] === rightName);
+      }
       function findCreatorWorkbookContact(creator) {
         const profile = creator || {};
         const profileName = normalizeMatchText(profile.name);
@@ -3899,8 +3990,7 @@
           }
 
           const fallback = Object.assign({}, props.creator);
-          const isOwnEntry = Boolean(fallback.id) &&
-            fallback.id === String(state.currentCreator.id || "");
+          const isOwnEntry = isSameCreator(fallback, state.currentCreator);
           if (isOwnEntry) {
             Object.keys(state.currentCreator).forEach(function (key) {
               if (state.currentCreator[key]) fallback[key] = state.currentCreator[key];
@@ -4900,6 +4990,10 @@
           "aria-label",
           isDayView ? "Vorheriger Tag" : "Vorherige Woche"
         );
+        const today = new Date();
+        const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        elements.todayButton.disabled = todayStart >= start && todayStart <= end;
+
         elements.nextDateButton.setAttribute(
           "aria-label",
           isDayView ? "Nächster Tag" : "Nächste Woche"
@@ -6277,6 +6371,10 @@
           navigateCalendar(1, "button");
         });
 
+        elements.todayButton.addEventListener("click", function () {
+          if (state.calendar) state.calendar.today();
+        });
+
         elements.currentDateButton.addEventListener("click", function () {
           if (state.calendar) state.calendar.today();
         });
@@ -6530,6 +6628,7 @@
             stroke-linejoin="round" />
         </svg>
       </button>
+      <button id="calendar-today-button" type="button" aria-label="Zurück zu heute">Heute</button>
     </nav>
     <span id="calendar-swipe-status" role="status" aria-live="polite"></span>
   </main>

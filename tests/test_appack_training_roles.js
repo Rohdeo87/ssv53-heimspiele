@@ -42,6 +42,8 @@ const api = new Function(
     extractFunction("hasActiveTrainerRole"),
     extractFunction("hasActiveAppAdministratorRole"),
     extractFunction("getAppackProfileValue"),
+    extractFunction("unwrapAppackImageValue"),
+    extractFunction("getAppackProfileImage"),
     extractFunction("getCurrentAppackCreator"),
     "return { hasActiveTrainerRole, hasActiveAppAdministratorRole, getCurrentAppackCreator };"
   ].join("\n\n")
@@ -73,11 +75,12 @@ test("App-Administrator und Profildaten werden aus dem aktiven Appack-Profil gel
     id: "user-42",
     firstName: "Jule",
     lastName: "Beispiel",
-    contact: {mobilePhone: "+49 170 123", email: "jule@example.de", chatId: "chat-42"}
+    contact: {mobilePhone: "+49 170 123", email: "jule@example.de", chatId: "chat-42"},
+    media: {profileImage: {downloadUrl: "https://cdn.appack.de/profile/user-42.jpg"}}
   });
   assert.deepEqual(creator, {
     id: "user-42", name: "Jule Beispiel", phone: "", mobile: "+49 170 123",
-    email: "jule@example.de", chatId: "chat-42", image: ""
+    email: "jule@example.de", chatId: "chat-42", image: "https://cdn.appack.de/profile/user-42.jpg"
   });
 });
 
@@ -157,4 +160,6 @@ test("Trainerbelegung schreibt nur validierte strukturierte Felder", () => {
   assert.match(saver, /mergeCreatorContact/);
   assert.match(saver, /findCurrentCreatorWorkbookContact/);
   assert.match(html, />\s*Termin anlegen\s*<\/button>/);
+  assert.match(html, /id="calendar-today-button"[^>]*>Heute<\/button>/);
+  assert.match(html, /elements\.todayButton\.addEventListener\("click"/);
 });
