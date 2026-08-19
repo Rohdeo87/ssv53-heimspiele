@@ -1,14 +1,22 @@
 {
   "blocked_until": "",
   "last_run_at": "2026-08-19T10:53:41.453885+00:00",
-  "last_status": "security_locked",
+  "last_status": "manually_unlocked",
   "last_request_count": 0,
   "last_http_status": 200,
   "last_retry_after_seconds": null,
-  "security_lock": true,
-  "security_lock_reason": "Challenge-Marker erkannt: captcha",
-  "security_lock_at": "2026-08-19T05:54:30.606735+00:00",
-  "security_lock_url": "https://www.fussball.de/spiel/spielgemeinschaft-schoenwalde-perwenitz-paaren-vfl-nauen-ii/-/spiel/031DP96C58000000VS5489BUVUR5FS5A",
-  "security_lock_http_status": 200,
-  "manual_unlock_required": true
+  "security_lock": false,
+  "security_lock_reason": "",
+  "security_lock_at": "",
+  "security_lock_url": "",
+  "security_lock_http_status": null,
+  "manual_unlock_required": false,
+  "last_manual_unlock_at": "2026-08-19T12:34:16+00:00",
+  "last_manual_unlock_reason": "Bestaetigter Fehlalarm: regulaere Spielseite mit CAPTCHA-Kontaktformular; vollstaendiger Testabruf und Aenderungsgate erfolgreich",
+  "last_cleared_security_lock": {
+    "reason": "Challenge-Marker erkannt: captcha",
+    "locked_at": "2026-08-19T05:54:30.606735+00:00",
+    "url": "https://www.fussball.de/spiel/spielgemeinschaft-schoenwalde-perwenitz-paaren-vfl-nauen-ii/-/spiel/031DP96C58000000VS5489BUVUR5FS5A",
+    "http_status": 200
+  }
 }
