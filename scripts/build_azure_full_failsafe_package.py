@@ -98,7 +98,7 @@ def build_package(repository_root: Path, output_path: Path) -> dict[str, object]
     manifest = {
         "schema_version": 1,
         "package_type": "azure-functions-python-source",
-        "safety_stage": "FULL_FAILSAFE_7_ZONES_90_MIN_CAPABLE_LOCKED",
+        "safety_stage": "FULL_FAILSAFE_7_ZONES_120_MIN_CAPABLE_LOCKED",
         "remote_build_required": True,
         "automatic_park_implemented": True,
         "automatic_continuous_mowing_implemented": True,
@@ -124,7 +124,7 @@ def build_package(repository_root: Path, output_path: Path) -> dict[str, object]
         "hydrawise_schedule_suspension_required": True,
         "hydrawise_zone_start_confirmation_required": True,
         "hydrawise_zone_end_confirmation_required": True,
-        "hydrawise_continuous_clear_minutes": 90,
+        "hydrawise_continuous_clear_minutes": 120,
         "irrigation_plan_lease_minutes": 3,
         "irrigation_plan_change_confirmation_minutes": 2,
         "hydrawise_app_suspension_releases_unused_window": True,

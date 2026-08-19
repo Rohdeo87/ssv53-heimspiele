@@ -112,7 +112,7 @@ def reset_failed_irrigation(
     """Setzt ausschließlich einen sicher geprüften FAILED-Zustand zurück.
 
     Diese Funktion sendet weder Husqvarna- noch Hydrawise-Befehle. Der Reset
-    startet die 90-Minuten-Freigabekette neu und lässt den Mäher geparkt.
+    startet die konfigurierte Freigabekette neu und lässt den Mäher geparkt.
     """
 
     if now_utc.tzinfo is None or now_utc.utcoffset() is None:
@@ -203,7 +203,7 @@ def reset_failed_irrigation(
     status = hydrawise_fetcher(api_key, controller_id)
     reset_horizon_minutes = max(
         90,
-        int(environment.get("HYDRAWISE_CLEAR_CONFIRMATION_MINUTES", "90")),
+        int(environment.get("HYDRAWISE_CLEAR_CONFIRMATION_MINUTES", "120")),
     )
     safety: HydrawiseSafetySnapshot = evaluate_safety_status(
         status,
@@ -249,7 +249,7 @@ def reset_failed_irrigation(
         code="IRRIGATION_FAILED_RESET",
         message=(
             "Beregnungsfehler kontrolliert zurückgesetzt; der Mäher bleibt geparkt "
-            "und die 90-Minuten-Freigabekette beginnt neu."
+            "und die konfigurierte Freigabekette beginnt neu."
         ),
         previous_revision=state.revision,
         revision=reset.revision,

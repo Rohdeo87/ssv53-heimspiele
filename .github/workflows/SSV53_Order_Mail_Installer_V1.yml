@@ -102,7 +102,7 @@ jobs:
               )
               assert (
                   manifest["safety_stage"]
-                  == "FULL_FAILSAFE_7_ZONES_90_MIN_CAPABLE_LOCKED"
+                  == "FULL_FAILSAFE_7_ZONES_120_MIN_CAPABLE_LOCKED"
               )
               joined = b"\n".join(
                   archive.read(name)

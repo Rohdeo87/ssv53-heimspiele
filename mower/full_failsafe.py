@@ -851,6 +851,20 @@ def run_full_failsafe_cycle(
         details,
         now_utc=now,
     )
+    irrigation_capture_max_lead_minutes = _env_int(
+        environment,
+        "IRRIGATION_CAPTURE_MAX_LEAD_MINUTES",
+        45,
+        minimum=30,
+        maximum=120,
+    )
+    irrigation_capture_due = (
+        next_irrigation_start is not None
+        and timedelta(0)
+        <= next_irrigation_start - now
+        <= timedelta(minutes=irrigation_capture_max_lead_minutes)
+    )
+    irrigation_due = irrigation_due or irrigation_capture_due
     irrigation_failsafe_deadline = (
         next_irrigation_start
         - timedelta(minutes=irrigation_failsafe_lead_minutes)
@@ -869,7 +883,46 @@ def run_full_failsafe_cycle(
             else None
         ),
         "required_lead_minutes": irrigation_failsafe_lead_minutes,
+        "capture_due": irrigation_capture_due,
+        "capture_max_lead_minutes": irrigation_capture_max_lead_minutes,
     }
+
+    # Ein abgeschlossener alter Lauf darf die Vorbereitung des naechsten
+    # Hydrawise-Plans nicht blockieren. Der vorherige Nachlauf wird dadurch
+    # nicht aufgehoben: Der Maeher bleibt geparkt und der neue Lauf beginnt
+    # erst nach allen unveraenderten Sicherheitsnachweisen.
+    if state.irrigation_phase == "COMPLETE_HOLD" and irrigation_capture_due:
+        try:
+            upcoming_plan_id, _upcoming_zones = _validated_upcoming_plan(
+                details,
+                now_utc=now,
+                expected_zone_count=expected_zones,
+                expected_relay_ids=expected_relay_ids,
+                max_lead_minutes=irrigation_capture_max_lead_minutes,
+            )
+        except Exception as exc:
+            details["irrigation_state_rollover"] = {
+                "cleared": False,
+                "reason": f"{type(exc).__name__}: {exc}",
+            }
+        else:
+            new_plan = upcoming_plan_id != state.irrigation_plan_id
+            safe_to_prepare = (
+                hydra_safety.get("available") is True
+                and hydra_safety.get("fresh") is True
+                and hydra_safety.get("clear_now") is True
+                and relay_allowlist_valid
+                and not _active_relay_ids(details)
+            )
+            details["irrigation_state_rollover"] = {
+                "cleared": bool(new_plan and safe_to_prepare),
+                "new_plan": new_plan,
+                "safe_to_prepare": safe_to_prepare,
+                "previous_plan_id": state.irrigation_plan_id,
+                "upcoming_plan_id": upcoming_plan_id,
+            }
+            if new_plan and safe_to_prepare:
+                state = _clear_irrigation(state)
 
     if (
         irrigation_due
@@ -1266,13 +1319,7 @@ def run_full_failsafe_cycle(
                     message=failed.irrigation_failed_reason
                     or "Beregnung läuft bereits während der Suspendierung.",
                 )
-            capture_max_lead_minutes = _env_int(
-                environment,
-                "IRRIGATION_CAPTURE_MAX_LEAD_MINUTES",
-                45,
-                minimum=30,
-                maximum=120,
-            )
+            capture_max_lead_minutes = irrigation_capture_max_lead_minutes
             change_kind, reconciled_plan, change_reason = _reconcile_prestart_plan(
                 plan=zones,
                 suspended_relay_ids=set(suspended),
@@ -1824,7 +1871,7 @@ def run_full_failsafe_cycle(
                     details=details,
                     settings=settings,
                     decision_code="IRRIGATION_ALL_ZONES_CONFIRMED_COMPLETE",
-                    message="Alle sieben Zonen sind bestätigt beendet; der 90-Minuten-Nachlauf beginnt.",
+                    message="Alle sieben Zonen sind bestätigt beendet; der konfigurierte Sicherheitsnachlauf beginnt.",
                 )
             if not completed:
                 suspension_completed = _parse_time(
@@ -2162,7 +2209,7 @@ def run_full_failsafe_cycle(
                     decision_code="IRRIGATION_RUN_CANCELLED_EARLY",
                     message=(
                         "Die laufende Hydrawise-Folge wurde bestätigt vorzeitig beendet; "
-                        "keine weitere Zone startet und der 90-Minuten-Nachlauf beginnt."
+                        "keine weitere Zone startet und der konfigurierte Sicherheitsnachlauf beginnt."
                     ),
                 )
             completed.append(int(current_id or 0))
@@ -2192,7 +2239,7 @@ def run_full_failsafe_cycle(
                     else "IRRIGATION_ZONE_CONFIRMED_COMPLETE"
                 ),
                 message=(
-                    "Alle sieben Zonen sind bestätigt beendet; der 90-Minuten-Nachlauf beginnt."
+                    "Alle sieben Zonen sind bestätigt beendet; der konfigurierte Sicherheitsnachlauf beginnt."
                     if all_complete
                     else "Zone ist bestätigt beendet; die nächste Planzone wird vorbereitet."
                 ),
@@ -2214,7 +2261,7 @@ def run_full_failsafe_cycle(
     release_minutes = _env_int(
         environment,
         "HYDRAWISE_CLEAR_CONFIRMATION_MINUTES",
-        90,
+        120,
         minimum=1,
         maximum=1440,
     )
@@ -2282,7 +2329,7 @@ def run_full_failsafe_cycle(
             result=result,
             details=details,
             settings=settings,
-            decision_code="HYDRAWISE_90_MINUTE_HOLD",
+            decision_code="HYDRAWISE_CLEAR_CONFIRMATION_HOLD",
             message=release.reason,
         )
 
@@ -2292,9 +2339,15 @@ def run_full_failsafe_cycle(
         and override_action in PARK_OVERRIDE_ACTIONS
         and int(external_reason or 0) == AUTOMATION_EXTERNAL_REASON
     )
+    owned_park_release = (
+        state.parked_by_automation
+        and state.automation_restart_allowed
+        and activity in PARKED_ACTIVITIES
+    )
     external_override = (
         override_action not in NO_OVERRIDE
         and not park_override_is_ours
+        and not owned_park_release
         and not state.continuous_mowing_owned
     )
     if manual_lock or error_code != 0 or mower_state in ERROR_STATES or external_override:

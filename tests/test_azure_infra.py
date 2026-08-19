@@ -33,7 +33,7 @@ class AzureInfrastructureTests(unittest.TestCase):
             "HYDRAWISE_EXPECTED_RELAY_IDS: '9104894,9104906,9104909,9104911,9104913,9104920,9104921'",
             self.bicep,
         )
-        self.assertIn("HYDRAWISE_CLEAR_CONFIRMATION_MINUTES: '90'", self.bicep)
+        self.assertIn("HYDRAWISE_CLEAR_CONFIRMATION_MINUTES: '120'", self.bicep)
 
     def test_storage_uses_managed_identity_without_shared_key(self) -> None:
         self.assertIn("allowSharedKeyAccess: false", self.bicep)

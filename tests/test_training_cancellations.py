@@ -111,6 +111,20 @@ class TrainingCancellationTests(unittest.TestCase):
         )
         self.assertEqual(cancelled, [])
 
+    def test_cancelled_e1_releases_its_entire_buffer_before_a_training(self) -> None:
+        config = json.loads((ROOT / "mower" / "config.json").read_text(encoding="utf-8"))
+        day = date(2026, 8, 18)
+        blocks = build_training_blocks(
+            config["training"],
+            day,
+            1,
+            TZ,
+            {("som-ras-e1-di", day.isoformat())},
+        )
+        self.assertEqual([block.details["team"] for block in blocks], ["A"])
+        self.assertEqual(blocks[0].start.strftime("%H:%M"), "18:00")
+        self.assertEqual(blocks[0].end.strftime("%H:%M"), "20:30")
+
     def test_legacy_runtime_without_ids_is_resolved_by_exact_occurrence(self) -> None:
         config = json.loads((ROOT / "mower" / "config.json").read_text(encoding="utf-8"))
         training = config["training"]

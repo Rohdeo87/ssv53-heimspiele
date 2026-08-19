@@ -24,14 +24,14 @@ ENV = {
     "ENABLE_START_COMMANDS": "true",
     "ENABLE_IRRIGATION_COMMANDS": "true",
     "FULL_MOWER_CONFIRMATION": "SSV53-TRAINING-MATCH-PARK-START",
-    "FULL_FAILSAFE_CONFIRMATION": "SSV53-MOWER-HYDRAWISE-7-ZONES-90-MINUTES",
+    "FULL_FAILSAFE_CONFIRMATION": "SSV53-MOWER-HYDRAWISE-7-ZONES-120-MINUTES",
     "HUSQVARNA_CLIENT_ID": "client",
     "HUSQVARNA_CLIENT_SECRET": "secret",
     "HYDRAWISE_API_KEY": "key",
     "HYDRAWISE_CONTROLLER_ID": "controller",
     "HYDRAWISE_EXPECTED_ZONE_COUNT": "7",
     "HYDRAWISE_EXPECTED_RELAY_IDS": ",".join(str(value) for value in RELAYS),
-    "HYDRAWISE_CLEAR_CONFIRMATION_MINUTES": "90",
+    "HYDRAWISE_CLEAR_CONFIRMATION_MINUTES": "120",
     "MOWER_PARK_CONFIRMATION_MINUTES": "1",
 }
 
@@ -79,7 +79,7 @@ def hydrawise_status(*, relay_ids: list[int] | None = None, active: int | None =
                 "relay_id": relay_id,
                 "relay": index,
                 "name": f"Zone {index}",
-                "time": 1 if relay_id == active else 2 * 60 * 60,
+                "time": 1 if relay_id == active else 3 * 60 * 60,
                 "run": 600,
             }
             for index, relay_id in enumerate(selected, start=1)
@@ -125,7 +125,7 @@ class IrrigationRecoveryTests(unittest.TestCase):
         )
         return result, store
 
-    def test_success_requires_dock_and_restarts_ninety_minute_chain(self) -> None:
+    def test_success_requires_dock_and_restarts_configured_clear_chain(self) -> None:
         result, store = self._run(failed_state())
         saved = store.load()
         self.assertEqual(result.code, "IRRIGATION_FAILED_RESET")

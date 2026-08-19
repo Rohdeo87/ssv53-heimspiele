@@ -23,14 +23,14 @@ class FullFailsafePackageTests(unittest.TestCase):
                 joined = b"\n".join(archive.read(name) for name in names if name.endswith(".py"))
             self.assertEqual(
                 manifest["safety_stage"],
-                "FULL_FAILSAFE_7_ZONES_90_MIN_CAPABLE_LOCKED",
+                "FULL_FAILSAFE_7_ZONES_120_MIN_CAPABLE_LOCKED",
             )
             self.assertEqual(manifest["expected_hydrawise_zone_count"], 7)
             self.assertEqual(
                 manifest["expected_hydrawise_relay_ids"],
                 [9104894, 9104906, 9104909, 9104911, 9104913, 9104920, 9104921],
             )
-            self.assertEqual(manifest["hydrawise_continuous_clear_minutes"], 90)
+            self.assertEqual(manifest["hydrawise_continuous_clear_minutes"], 120)
             self.assertEqual(manifest["irrigation_plan_lease_minutes"], 3)
             self.assertEqual(
                 manifest["irrigation_plan_change_confirmation_minutes"],

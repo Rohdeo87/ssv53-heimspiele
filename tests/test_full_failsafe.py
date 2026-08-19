@@ -25,7 +25,7 @@ def settings(*, live: bool = True) -> RuntimeSettings:
             "ENABLE_START_COMMANDS": str(live).lower(),
             "ENABLE_IRRIGATION_COMMANDS": str(live).lower(),
             "FULL_MOWER_CONFIRMATION": "SSV53-TRAINING-MATCH-PARK-START" if live else "LOCKED",
-            "FULL_FAILSAFE_CONFIRMATION": "SSV53-MOWER-HYDRAWISE-7-ZONES-90-MINUTES" if live else "LOCKED",
+            "FULL_FAILSAFE_CONFIRMATION": "SSV53-MOWER-HYDRAWISE-7-ZONES-120-MINUTES" if live else "LOCKED",
             "PARK_LOOKAHEAD_MINUTES": "10",
         }
     )
@@ -38,7 +38,7 @@ ENV = {
     "HYDRAWISE_CONTROLLER_ID": "controller",
     "HYDRAWISE_EXPECTED_ZONE_COUNT": "7",
     "HYDRAWISE_EXPECTED_RELAY_IDS": ",".join(str(value) for value in RELAYS),
-    "HYDRAWISE_CLEAR_CONFIRMATION_MINUTES": "90",
+    "HYDRAWISE_CLEAR_CONFIRMATION_MINUTES": "120",
     "MOWER_PARK_CONFIRMATION_MINUTES": "1",
     "MOWER_PARK_PROGRESS_GRACE_MINUTES": "3",
     "IRRIGATION_FAILSAFE_DOCK_LEAD_MINUTES": "40",
@@ -84,6 +84,7 @@ def result(
     command: str | None = None,
     block_source: str | None = None,
     activity: str = "PARKED_IN_CS",
+    mower_state: str = "IN_OPERATION",
     battery: int = 100,
     active_ids: list[int] | None = None,
     clear: bool = True,
@@ -161,7 +162,7 @@ def result(
             "mower": {
                 "mower_id": "mower-1",
                 "activity": activity,
-                "state": "IN_OPERATION",
+                "state": mower_state,
                 "override_action": (
                     override_action
                     if override_action is not None
@@ -871,7 +872,7 @@ class FullFailsafeTests(unittest.TestCase):
             now=NOW + timedelta(minutes=89),
             start=lambda *args: zone_calls.append(args) or {},
         )
-        self.assertEqual(held.decision_code, "HYDRAWISE_90_MINUTE_HOLD")
+        self.assertEqual(held.decision_code, "HYDRAWISE_CLEAR_CONFIRMATION_HOLD")
         self.assertEqual(zone_calls, [])
 
     def test_excessive_duration_extension_fails_before_any_future_zone_start(self) -> None:
@@ -1115,6 +1116,60 @@ class FullFailsafeTests(unittest.TestCase):
         self.assertEqual(calls[0][1:3], (RELAYS[0], 1200))
         self.assertEqual(store.load().irrigation_phase, "START_RESERVED")
 
+    def test_water_start_requires_two_distinct_parked_cycles(self) -> None:
+        initial = irrigation_state(phase="READY")
+        initial = AutomationState.from_mapping(
+            {**initial.to_dict(), "park_confirmed_utc": None}
+        )
+        store = InMemoryStateStore(initial)
+        zone_calls = []
+
+        def run(at: datetime):
+            return run_full_failsafe_cycle(
+                now_utc=at,
+                settings=settings(),
+                environment=ENV,
+                past_due=False,
+                source="test",
+                read_only_runner=lambda **_: result(block_source="irrigation"),
+                state_store_factory=lambda _env: store,
+                park_sender=lambda *_: {"accepted": True},
+                start_sender=lambda *_: {"accepted": True},
+                suspend_zone_sender=lambda *_: {"message_type": "info"},
+                start_zone_sender=lambda *args: zone_calls.append(args)
+                or {"message_type": "info"},
+            )
+
+        first = run(NOW)
+        self.assertEqual(first.decision_code, "IRRIGATION_WAIT_FOR_CONFIRMED_PARK")
+        self.assertEqual(zone_calls, [])
+        self.assertEqual(store.load().park_confirmed_utc, NOW.isoformat())
+
+        second = run(NOW + timedelta(minutes=1))
+        self.assertEqual(second.decision_code, "IRRIGATION_ZONE_START_SENT")
+        self.assertEqual(len(zone_calls), 1)
+
+    def test_next_irrigation_plan_replaces_stale_complete_hold_at_capture_lead(self) -> None:
+        state = irrigation_state(phase="COMPLETE_HOLD")
+        state = AutomationState.from_mapping(
+            {
+                **state.to_dict(),
+                "irrigation_completed_relay_ids_json": __import__("json").dumps(RELAYS),
+                "irrigation_completed_utc": (NOW - timedelta(hours=20)).isoformat(),
+                "hydrawise_clear_since_utc": (NOW - timedelta(hours=20)).isoformat(),
+            }
+        )
+        suspend_calls = []
+        output, store = self._run(
+            state,
+            result(irrigation_start=NOW + timedelta(minutes=45)),
+            suspend=lambda *args: suspend_calls.append(args) or {"message_type": "info"},
+        )
+        self.assertEqual(output.decision_code, "IRRIGATION_ZONE_SUSPENDED")
+        self.assertEqual(len(suspend_calls), 1)
+        self.assertEqual(store.load().irrigation_phase, "SUSPENDING")
+        self.assertTrue(output.details["irrigation_state_rollover"]["cleared"])
+
     def test_unexpected_active_zone_fails_closed(self) -> None:
         output, store = self._run(
             irrigation_state(phase="START_RESERVED", current=RELAYS[0]),
@@ -1166,13 +1221,13 @@ class FullFailsafeTests(unittest.TestCase):
         self.assertEqual(store.load().irrigation_phase, "COMPLETE_HOLD")
         self.assertEqual(calls, {"park": [], "start": [], "suspend": [], "zone": []})
 
-    def test_ninety_minute_hold_blocks_mower_start(self) -> None:
+    def test_one_hundred_twenty_minute_hold_blocks_mower_start(self) -> None:
         state = irrigation_state(phase="COMPLETE_HOLD")
         state = AutomationState.from_mapping(
             {
                 **state.to_dict(),
-                "irrigation_completed_utc": (NOW - timedelta(minutes=89)).isoformat(),
-                "hydrawise_clear_since_utc": (NOW - timedelta(minutes=89)).isoformat(),
+                "irrigation_completed_utc": (NOW - timedelta(minutes=119)).isoformat(),
+                "hydrawise_clear_since_utc": (NOW - timedelta(minutes=119)).isoformat(),
             }
         )
         calls = []
@@ -1181,7 +1236,56 @@ class FullFailsafeTests(unittest.TestCase):
             result(),
             start=lambda *args: calls.append(args) or {},
         )
-        self.assertEqual(output.decision_code, "HYDRAWISE_90_MINUTE_HOLD")
+        self.assertEqual(output.decision_code, "HYDRAWISE_CLEAR_CONFIRMATION_HOLD")
+        self.assertEqual(calls, [])
+
+    def test_owned_irrigation_park_can_restart_in_cancelled_training_window(self) -> None:
+        state = irrigation_state(phase="COMPLETE_HOLD")
+        state = AutomationState.from_mapping(
+            {
+                **state.to_dict(),
+                "irrigation_completed_utc": (NOW - timedelta(minutes=120)).isoformat(),
+                "hydrawise_clear_since_utc": (NOW - timedelta(minutes=120)).isoformat(),
+                "last_hydrawise_success_utc": (NOW - timedelta(minutes=1)).isoformat(),
+            }
+        )
+        calls = []
+        output, store = self._run(
+            state,
+            result(
+                activity="PARKED_IN_CS",
+                override_action="FORCE_MOW",
+                external_reason_id=None,
+            ),
+            start=lambda *args: calls.append(args) or {"accepted": True},
+        )
+        self.assertEqual(output.decision_code, "CONTINUOUS_MOWING_START_SENT")
+        self.assertEqual(len(calls), 1)
+        self.assertTrue(store.load().continuous_mowing_owned)
+        self.assertIsNone(store.load().irrigation_phase)
+
+    def test_manual_pause_still_blocks_restart_after_owned_irrigation_park(self) -> None:
+        state = irrigation_state(phase="COMPLETE_HOLD")
+        state = AutomationState.from_mapping(
+            {
+                **state.to_dict(),
+                "irrigation_completed_utc": (NOW - timedelta(minutes=120)).isoformat(),
+                "hydrawise_clear_since_utc": (NOW - timedelta(minutes=120)).isoformat(),
+                "last_hydrawise_success_utc": (NOW - timedelta(minutes=1)).isoformat(),
+            }
+        )
+        calls = []
+        output, _store = self._run(
+            state,
+            result(
+                activity="NOT_APPLICABLE",
+                mower_state="PAUSED",
+                override_action="FORCE_MOW",
+                external_reason_id=None,
+            ),
+            start=lambda *args: calls.append(args) or {"accepted": True},
+        )
+        self.assertEqual(output.decision_code, "MANUAL_OR_ERROR_HOLD")
         self.assertEqual(calls, [])
 
     def test_continuous_restart_after_area_completion_uses_lower_battery_threshold(self) -> None:

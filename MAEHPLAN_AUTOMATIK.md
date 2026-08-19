@@ -14,7 +14,7 @@ standardmäßig auf `false` und die Bestätigungen auf `LOCKED`.
 - `mower/config.json`: wiederkehrende Trainingszeiten mit 30 Minuten Vorlauf und 30 Minuten Nachlauf.
 - Hydrawise API: exakt sieben aktuelle/nächste Zonen. Ein planmäßiger Lauf wird
   30 Minuten vorher gesperrt; nach sieben einzeln bestätigten Zonenenden muss
-  Hydrawise 90 Minuten fortlaufend frei bleiben.
+  Hydrawise 120 Minuten fortlaufend frei bleiben.
 - Husqvarna Authentication API und Automower Connect API: aktueller Status von „Schaf“, Akku, Aktivität, Fehlerzustand, Planner-Override und EPOS-Arbeitsbereich.
 
 ## Dauerhafte Workflows
@@ -53,7 +53,7 @@ Freie Mähfenster werden über Mitternacht hinweg verbunden.
   sieben späteren Planstarts suspendiert und dieselben sieben Zonen mit ihren
   jeweiligen Planlaufzeiten nacheinander gestartet. Erst nach jedem
   bestätigten Zonenstart und Zonenende folgt die nächste Zone.
-- Nach der siebten Zone bleibt der Mäher mindestens 90 Minuten geparkt. Jede
+- Nach der siebten Zone bleibt der Mäher mindestens 120 Minuten geparkt. Jede
   fehlende, alte oder widersprüchliche Antwort unterbricht die Freigabekette.
 - Überlappende Sperren werden zusammengeführt.
 - Freie Fenster unter 30 Minuten werden nicht für einen neuen Mähstart verwendet.
@@ -97,7 +97,7 @@ vollständig verriegelt:
 - Wird eine bereits manuell durch die Automatik gestartete Zone in Hydrawise
   vorzeitig gestoppt, werden nach bestätigtem Ende keine weiteren Zonen
   gestartet. Weil bereits Wasser geflossen sein kann, beginnt trotzdem der
-  vollständige 90-Minuten-Nachlauf. Eine vor Beginn komplett ausgesetzte Folge
+  vollständige 120-Minuten-Nachlauf. Eine vor Beginn komplett ausgesetzte Folge
   benötigt dagegen keinen Trocknungsnachlauf.
 - Doppelte Funktionsaufrufe können keinen doppelten Zonenstart auslösen: jeder
   Start wird vor dem API-Aufruf persistent reserviert. Ein unbestätigter Start,
@@ -105,7 +105,8 @@ vollständig verriegelt:
   fail-closed Fehler-Hold.
 - Ein Beregnungsblock setzt die Bestätigung auch dann zurück, wenn ein
   einzelner API-Wert widersprüchlich sein sollte.
-- Der Mäher muss seine Ladestation mindestens eine Minute bestätigt haben und
+- Der Mäher muss seine Ladestation in zwei aufeinanderfolgenden Minutenzyklen
+  bestätigt haben (mindestens eine Minute Abstand) und
   fehlerfrei sein. Neue Mähaufträge starten ab 90 Prozent Akku; ein bereits
   übernommener Dauer-Mähauftrag darf nach abgeschlossenem Arbeitsbereich ab
   60 Prozent erneut beginnen. Unterhalb dieser Schwelle lädt er weiter.
@@ -136,7 +137,7 @@ exakte Freigabe aller sieben Relay-IDs erneut live geprüft. Ein Konflikt oder
 eine aktive beziehungsweise bevorstehende Zone lehnt den Reset ab.
 
 Der Reset selbst sendet weder einen Husqvarna- noch einen Hydrawise-Befehl.
-Der Mäher bleibt im Dock und die fortlaufende 90-Minuten-Freigabekette beginnt
+Der Mäher bleibt im Dock und die fortlaufende 120-Minuten-Freigabekette beginnt
 neu. Die erwartete Revision muss unmittelbar vor dem Request aus dem aktuellen
 Sicherheitsbericht oder der Telemetrie entnommen werden; bei HTTP 409 darf kein
 zweiter Request mit geratenen Werten erfolgen, bevor die Ursache geprüft wurde.
