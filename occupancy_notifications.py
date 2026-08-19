@@ -157,34 +157,49 @@ def _branded_message(
     subject: str,
     headline: str,
     intro: str,
-    details: list[tuple[str, str]],
+    detail_groups: list[tuple[str, list[tuple[str, str]]]],
     closing: str,
     automatic_note: str,
 ) -> EmailMessage:
-    plain_details = "\n".join(f"{label}: {value}" for label, value in details)
+    plain_details = "\n\n".join(
+        group_title + "\n" + "\n".join(
+            f"{label}: {value}" for label, value in group_details
+        )
+        for group_title, group_details in detail_groups
+    )
     plain = (
         f"{headline}\n\n{intro}\n\n{plain_details}\n\n{closing}\n\n"
         "Viele Grüße\nSchönwalder SV 1953 e.V.\n"
     )
-    detail_rows = "".join(
+    detail_sections = "".join(
         f"""
-        <tr>
-          <td style="padding:13px 0;border-bottom:1px solid {APP_BORDER};">
-            <div style="font-size:12px;line-height:1.35;color:{APP_MUTED};">
-              {html.escape(label)}
-            </div>
-            <div style="margin-top:3px;font-size:15px;line-height:1.45;
-                        color:#171717;font-weight:700;">
-              {html.escape(value)}
-            </div>
-          </td>
-        </tr>"""
-        for label, value in details
+        <div style="margin-top:25px;font-size:13px;line-height:1.4;font-weight:800;
+                    letter-spacing:.2px;color:#285EA7;">
+          {html.escape(group_title)}
+        </div>
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
+               style="width:100%;margin-top:8px;border-collapse:collapse;">
+          {''.join(
+              f'''<tr>
+                <td style="width:35%;padding:12px 12px 12px 0;border-bottom:1px solid {APP_BORDER};
+                           font-size:13px;line-height:1.45;color:{APP_MUTED};vertical-align:top;">
+                  {html.escape(label)}
+                </td>
+                <td style="padding:12px 0;border-bottom:1px solid {APP_BORDER};font-size:15px;
+                           line-height:1.45;color:#171717;font-weight:700;vertical-align:top;">
+                  {html.escape(value)}
+                </td>
+              </tr>'''
+              for label, value in group_details
+          )}
+        </table>"""
+        for group_title, group_details in detail_groups
     )
     html_body = f"""\
 <!doctype html>
 <html lang="de">
-  <body style="margin:0;padding:0;background:#FFFFFF;font-family:Arial,Helvetica,sans-serif;
+  <body style="margin:0;padding:0;background:#FFFFFF;
+               font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,Helvetica,sans-serif;
                color:#111827;-webkit-text-size-adjust:100%;">
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
            style="width:100%;background:#FFFFFF;border-collapse:collapse;">
@@ -210,14 +225,14 @@ def _branded_message(
             </tr>
             <tr>
               <td style="padding:22px 24px 29px 24px;">
-                <div style="font-size:16px;line-height:1.65;color:#262626;">
+                <div style="max-width:500px;margin:0 auto;font-size:16px;line-height:1.65;
+                            color:#30343A;text-align:center;">
                   {html.escape(intro)}
                 </div>
-                <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
-                       style="margin-top:14px;border-collapse:collapse;">
-                  {detail_rows}
-                </table>
-                <div style="margin-top:20px;font-size:15px;line-height:1.6;color:#262626;">
+                {detail_sections}
+                <div style="margin-top:27px;padding:16px 18px;background:#FFFAEC;
+                            border-left:3px solid {APP_GOLD};font-size:15px;line-height:1.6;
+                            color:#302B20;">
                   {html.escape(closing)}
                 </div>
                 <div style="margin-top:25px;font-size:14px;line-height:1.6;color:#555555;">
@@ -350,16 +365,20 @@ def process_collision_notifications(
                     "Ein neu angesetztes Verbandsspiel überschneidet sich mit einer "
                     "bestehenden Platzbelegung."
                 ),
-                details=[
-                    ("Spiel", str(match.get("title") or "Heimspiel")),
-                    ("Anstoß", kickoff.strftime("%d.%m.%Y um %H:%M Uhr")),
-                    ("Bestehende Belegung", str(booking.get("title") or "Belegung")),
-                    (
-                        "Belegungszeit",
-                        f"{booking_start.strftime('%d.%m.%Y, %H:%M')} bis "
-                        f"{booking_end.strftime('%H:%M')} Uhr",
-                    ),
-                    ("Platz", place),
+                detail_groups=[
+                    ("NEUES VERBANDSSPIEL", [
+                        ("Spiel", str(match.get("title") or "Heimspiel")),
+                        ("Anstoß", kickoff.strftime("%d.%m.%Y um %H:%M Uhr")),
+                        ("Platz", place),
+                    ]),
+                    ("BESTEHENDE BUCHUNG", [
+                        ("Belegung", str(booking.get("title") or "Belegung")),
+                        (
+                            "Zeitraum",
+                            f"{booking_start.strftime('%d.%m.%Y, %H:%M')} bis "
+                            f"{booking_end.strftime('%H:%M')} Uhr",
+                        ),
+                    ]),
                 ],
                 closing="Bitte prüft und koordiniert die Platznutzung.",
                 automatic_note="Automatische Benachrichtigung aus dem SSV53-Belegungsplan",
@@ -392,10 +411,12 @@ def send_collision_test_mail(
             subject="[TEST] SSV53 Kollisionsbenachrichtigung",
             headline="Buchungskollision",
             intro="Die zentrale Benachrichtigung aus dem SSV53-Belegungsplan ist einsatzbereit.",
-            details=[
-                ("Status", "E-Mail-Versand funktioniert"),
-                ("Bereich", "Platzbelegungsplan"),
-                ("Empfänger", recipient),
+            detail_groups=[
+                ("SYSTEMTEST", [
+                    ("Status", "E-Mail-Versand funktioniert"),
+                    ("Bereich", "Platzbelegungsplan"),
+                    ("Empfänger", recipient),
+                ]),
             ],
             closing="Es ist keine weitere Aktion erforderlich.",
             automatic_note="Angeforderte Testmail aus dem SSV53-Belegungsplan",
