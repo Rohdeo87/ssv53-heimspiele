@@ -1271,11 +1271,26 @@
 
     .dialog-footer {
       display: flex;
-      justify-content: flex-end;
+      align-items: stretch;
+      justify-content: space-between;
       gap: 8px;
       padding: 11px 14px max(11px, env(safe-area-inset-bottom));
       border-top: 1px solid var(--line);
       background: var(--surface-soft);
+    }
+
+    .dialog-footer[hidden] {
+      display: none;
+    }
+
+    #trainer-occupancy-move {
+      margin-right: auto;
+    }
+
+    #trainer-occupancy-delete,
+    #training-cancellation-action,
+    #popup-link {
+      margin-left: auto;
     }
 
     .dialog-button {
@@ -1781,8 +1796,8 @@
         retryButton: document.getElementById("calendar-retry"),
         dialogLayer: document.getElementById("event-dialog-layer"),
         dialog: document.getElementById("event-dialog"),
+        dialogFooter: document.getElementById("event-dialog-footer"),
         closeDialogTop: document.getElementById("close-dialog-top"),
-        closeDialogBottom: document.getElementById("close-dialog-bottom"),
         popupTitle: document.getElementById("popup-title"),
         popupTime: document.getElementById("event-time"),
         popupDescription: document.getElementById("popup-description"),
@@ -6048,6 +6063,13 @@
           elements.popupLink.hidden = true;
         }
 
+        elements.dialogFooter.hidden = [
+          elements.trainerOccupancyMove,
+          elements.trainerOccupancyDelete,
+          elements.trainingCancellationAction,
+          elements.popupLink
+        ].every(function (action) { return action.hidden; });
+
         renderTrainerContactsForEvent(event);
         elements.dialogLayer.hidden = false;
         document.body.classList.add("dialog-open");
@@ -6105,7 +6127,7 @@
         action.disabled = false;
         const label = action.querySelector("span");
         const props = event && event.extendedProps || {};
-        label.textContent = "Belegung löschen";
+        label.textContent = "Termin absagen";
         if (!isTrainerCreatedOccupancy(event)) return;
         const creator = props.creator || {};
         const ownEntry = Boolean(state.currentCreator.id) &&
@@ -6217,7 +6239,7 @@
         if (!window.confirm(
           relocatedTraining
             ? "Dieses verlegte Training wirklich absagen? Die Änderung wirkt direkt auf die Platz- und Mäherplanung."
-            : "Diese manuelle Belegung wirklich löschen? Die Änderung wirkt direkt auf die Platz- und Mäherplanung."
+            : "Diesen Termin wirklich absagen? Die Änderung wirkt direkt auf die Platz- und Mäherplanung."
         )) return;
         elements.trainerOccupancyDelete.disabled = true;
         try {
@@ -6237,14 +6259,14 @@
           });
           const payload = await response.json().catch(function () { return {}; });
           if (!response.ok || !payload.ok) {
-            throw new Error(payload.error || "Die Belegung konnte nicht gelöscht werden.");
+            throw new Error(payload.error || "Der Termin konnte nicht abgesagt werden.");
           }
           closeEventDetails();
           loadCurrentRange(true);
         } catch (error) {
           elements.trainerOccupancyDelete.disabled = false;
           elements.trainingCancellationStatus.textContent = error && error.message
-            ? error.message : "Löschen fehlgeschlagen.";
+            ? error.message : "Absagen fehlgeschlagen.";
           elements.trainingCancellationStatus.hidden = false;
         }
       }
@@ -6698,7 +6720,6 @@
         bindSwipeNavigation();
 
         elements.closeDialogTop.addEventListener("click", closeEventDetails);
-        elements.closeDialogBottom.addEventListener("click", closeEventDetails);
         elements.trainingCancellationAction.addEventListener(
           "click",
           changeTrainingCancellation
@@ -7097,17 +7118,21 @@
         </section>
       </div>
 
-      <footer class="dialog-footer">
-        <button id="close-dialog-bottom" type="button" class="dialog-button">
-          Schließen
-        </button>
-        <button id="trainer-occupancy-delete" type="button" class="dialog-button dialog-button--training-action" hidden>
-          <i class="fa-solid fa-trash" aria-hidden="true"></i>
-          <span>Belegung löschen</span>
-        </button>
+      <footer id="event-dialog-footer" class="dialog-footer">
         <button id="trainer-occupancy-move" type="button" class="dialog-button dialog-button--move-action" hidden>
           <i class="fa-solid fa-right-left" aria-hidden="true"></i>
           <span>Auf anderen Platz verlegen</span>
+        </button>
+        <button id="trainer-occupancy-delete" type="button" class="dialog-button dialog-button--training-action" hidden>
+          <svg
+            class="training-cancellation-action-icon training-cancellation-action-icon--cancel"
+            viewBox="0 0 24 24"
+            aria-hidden="true">
+            <path d="M7 3v3M17 3v3M4 9h16" />
+            <path d="M6 5h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z" />
+            <path d="m9 12 6 6m0-6-6 6" />
+          </svg>
+          <span>Termin absagen</span>
         </button>
         <button
           id="training-cancellation-action"

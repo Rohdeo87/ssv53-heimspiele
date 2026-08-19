@@ -147,6 +147,26 @@ test("Verlegen ist eine eigenständige blaue Aktion und nicht rot", () => {
   );
 });
 
+test("Detaildialog ordnet Verschieben links und Absagen rechts ohne unteren Schließen-Button an", () => {
+  const footerStart = html.indexOf('<footer id="event-dialog-footer"');
+  const footerEnd = html.indexOf("</footer>", footerStart);
+  const footer = html.slice(footerStart, footerEnd);
+  assert.ok(footerStart >= 0 && footerEnd > footerStart);
+  assert.ok(
+    footer.indexOf('id="trainer-occupancy-move"') <
+    footer.indexOf('id="training-cancellation-action"')
+  );
+  assert.ok(
+    footer.indexOf('id="trainer-occupancy-move"') <
+    footer.indexOf('id="trainer-occupancy-delete"')
+  );
+  assert.doesNotMatch(html, /id="close-dialog-bottom"/);
+  assert.doesNotMatch(html, /closeDialogBottom/);
+  assert.match(footer, /id="trainer-occupancy-delete"[\s\S]*?<span>Termin absagen<\/span>/);
+  assert.match(html, /#trainer-occupancy-move\s*\{\s*margin-right: auto/);
+  assert.match(html, /#training-cancellation-action,[\s\S]*?#popup-link\s*\{\s*margin-left: auto/);
+});
+
 test("nur Trainer können eine Appack-Belegung anlegen", () => {
   assert.match(html, /canCreateTrainerOccupancies: hasActiveTrainerRole\(profileJSON\)/);
   assert.match(html, /id="trainer-add-occupancy"[^>]*aria-label="Belegung hinzufügen"[^>]*hidden/);
@@ -174,7 +194,7 @@ test("nur Trainer können eine Appack-Belegung anlegen", () => {
   assert.match(cancellationHandler, /if \(relocatedTraining\)/);
   assert.match(cancellationHandler, /fetch\(TRAINER_OCCUPANCY_API_URL/);
   assert.match(cancellationHandler, /confirmation: "TRAINER_BELEGUNG_LOESCHEN"/);
-  assert.match(deleter, /Diese manuelle Belegung wirklich löschen/);
+  assert.match(deleter, /Diesen Termin wirklich absagen/);
 });
 
 test("realer mehrfach verlegter F-Termin behält den normalen Absagebutton", () => {
