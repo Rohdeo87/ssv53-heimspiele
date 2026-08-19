@@ -12,6 +12,7 @@ REQUIRED_FILES = (
     "function_app.py",
     "host.json",
     "order_mail.py",
+    "occupancy_notifications.py",
     "occupancy/__init__.py",
     "occupancy/config.json",
     "occupancy/match_model.py",
@@ -111,6 +112,10 @@ def build_package(repository_root: Path, output_path: Path) -> dict[str, object]
         "training_cancellation_release_delay_minutes": 30,
         "dynamic_special_occupancy_implemented": True,
         "dynamic_special_occupancy_fail_closed": True,
+        "trainer_collision_notifications_implemented": True,
+        "trainer_contact_registration_write_only": True,
+        "trainer_contact_mail_verification_required": True,
+        "notification_timer_separate_from_mower": True,
         "expected_hydrawise_zone_count": 7,
         "expected_hydrawise_relay_ids": [
             9104894,

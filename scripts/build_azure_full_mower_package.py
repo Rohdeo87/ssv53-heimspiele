@@ -12,6 +12,7 @@ REQUIRED_FILES = (
     "function_app.py",
     "host.json",
     "order_mail.py",
+    "occupancy_notifications.py",
     "occupancy/__init__.py",
     "occupancy/config.json",
     "occupancy/match_model.py",

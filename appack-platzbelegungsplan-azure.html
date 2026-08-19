@@ -1625,6 +1625,8 @@
         "https://func-ssv53platzpflege-prod-q7kbw54s.azurewebsites.net/api/training-cancellations";
       const TRAINER_OCCUPANCY_API_URL =
         "https://func-ssv53platzpflege-prod-q7kbw54s.azurewebsites.net/api/trainer-occupancies";
+      const OCCUPANCY_CONTACT_REGISTER_API_URL =
+        "https://func-ssv53platzpflege-prod-q7kbw54s.azurewebsites.net/api/occupancy-contact-register";
       const OCCUPANCY_FETCH_TIMEOUT = 15000;
       const OCCUPANCY_FETCH_RETRIES = 2;
       const OCCUPANCY_RETRY_DELAY = 500;
@@ -3556,6 +3558,12 @@
             state.trainerContactsVerifiedThisSession = true;
             state.trainerContactsPromise = null;
 
+            registerOccupancyNotificationContacts(result.contacts).catch(function () {
+              if (window.console && typeof window.console.warn === "function") {
+                console.warn("[SSV53] Benachrichtigungskontakte konnten nicht registriert werden.");
+              }
+            });
+
             if (window.console && typeof window.console.info === "function") {
               console.info(
                 "[SSV53] Fußball-Ansprechpartner geladen:",
@@ -3585,6 +3593,52 @@
           });
 
         return state.trainerContactsPromise;
+      }
+
+      function registerOccupancyNotificationContacts(contacts) {
+        const minimalContacts = (Array.isArray(contacts) ? contacts : [])
+          .filter(function (contact) {
+            return Boolean(
+              contact && contact.name && contact.email &&
+              contact.keys && contact.keys.size
+            );
+          })
+          .slice(0, 100)
+          .map(function (contact) {
+            return {
+              name: String(contact.name).trim().slice(0, 120),
+              email: String(contact.email).trim().toLowerCase().slice(0, 180),
+              teamKeys: Array.from(contact.keys)
+                .filter(function (key) {
+                  return /^(?:team|year):[a-z0-9:-]{1,72}$/i.test(String(key));
+                })
+                .slice(0, 40)
+            };
+          })
+          .filter(function (contact) {
+            return contact.name && contact.email && contact.teamKeys.length;
+          });
+        if (!minimalContacts.length) return Promise.resolve(false);
+        return fetch(OCCUPANCY_CONTACT_REGISTER_API_URL, {
+          method: "POST",
+          mode: "cors",
+          cache: "no-store",
+          credentials: "omit",
+          headers: {
+            "Accept": "application/json",
+            "Content-Type": "text/plain;charset=UTF-8"
+          },
+          body: JSON.stringify({
+            contacts: minimalContacts,
+            confirmation: "APPACK_KONTAKTE_VERIFIZIEREN"
+          })
+        }).then(function (response) {
+          if (!response.ok) {
+            throw new Error("Kontaktregistrierung fehlgeschlagen");
+          }
+          /* Die write-only API-Antwort enthält bewusst keine Kontaktdaten. */
+          return true;
+        });
       }
 
       function reduceEventTeamKeys(keys) {

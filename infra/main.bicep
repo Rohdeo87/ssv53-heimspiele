@@ -380,6 +380,7 @@ resource functionAppSettings 'Microsoft.Web/sites/config@2024-04-01' = {
     SSV53_STATE_TABLE_NAME: stateTableName
     SSV53_STORAGE_ACCOUNT_URL: storage.properties.primaryEndpoints.table
     TRAINING_CANCELLATION_RELEASE_DELAY_MINUTES: '30'
+    SSV53_OCCUPANCY_COLLISION_NOTIFICATIONS_ENABLED: 'false'
     SSV53_DYNAMIC_CONFIG_ENABLED: string(dynamicConfigEnabled)
     SSV53_CONFIG_STORAGE_ACCOUNT_URL: storage.properties.primaryEndpoints.blob
     SSV53_CONFIG_CONTAINER: runtimeConfigContainerName
