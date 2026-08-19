@@ -118,9 +118,11 @@ class OccupancyNotificationTests(unittest.TestCase):
         plain = message_part(sent[0], "text/plain")
         branded_html = message_part(sent[0], "text/html")
         self.assertIn("18:30", plain)
-        self.assertIn("Überschneidung erkannt", branded_html)
-        self.assertIn("#285EA7", branded_html)
+        self.assertIn("Buchungskollision", branded_html)
+        self.assertIn("#E0AA3F", branded_html)
         self.assertIn("Icon_Verein.png", branded_html)
+        self.assertNotIn("SSV53&nbsp;&nbsp; Belegungsplan", branded_html)
+        self.assertNotIn("background:#285EA7", branded_html)
         self.assertNotIn("personenbezogen", sent[0].as_string().lower())
         self.assertNotIn("kontaktdaten", sent[0].as_string().lower())
 
@@ -185,7 +187,7 @@ class OccupancyNotificationTests(unittest.TestCase):
         )
         self.assertTrue(all("[TEST]" in message["Subject"] for message in sent))
         self.assertTrue(all(message.is_multipart() for message in sent))
-        self.assertTrue(all("Test erfolgreich" in message_part(message, "text/html") for message in sent))
+        self.assertTrue(all("Buchungskollision" in message_part(message, "text/html") for message in sent))
         self.assertTrue(all("keine weitere Aktion" in message_part(message, "text/plain") for message in sent))
 
 

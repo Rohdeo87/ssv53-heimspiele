@@ -15,10 +15,7 @@ from azure.identity import ManagedIdentityCredential
 
 from occupancy.service import build_occupancy_payload
 from order_mail import (
-    APP_BG,
-    APP_BLUE,
     APP_BORDER,
-    APP_DARK_BLUE,
     APP_GOLD,
     APP_LOGO_URL,
     APP_MUTED,
@@ -160,7 +157,6 @@ def _branded_message(
     subject: str,
     headline: str,
     intro: str,
-    badge: str,
     details: list[tuple[str, str]],
     closing: str,
     automatic_note: str,
@@ -173,27 +169,14 @@ def _branded_message(
     detail_rows = "".join(
         f"""
         <tr>
-          <td style="padding:0 0 10px 0;">
-            <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
-                   style="width:100%;border-collapse:separate;border-spacing:0;
-                          background:#F4F6FA;border:1px solid {APP_BORDER};border-radius:12px;">
-              <tr>
-                <td style="width:38px;padding:12px 0 12px 13px;vertical-align:middle;">
-                  <span style="display:inline-block;width:28px;height:28px;border-radius:50%;
-                               background:#E8EFF8;color:{APP_BLUE};text-align:center;
-                               font-size:16px;line-height:28px;font-weight:800;">&#8226;</span>
-                </td>
-                <td style="padding:11px 13px 11px 10px;vertical-align:middle;">
-                  <div style="font-size:12px;line-height:1.35;color:{APP_MUTED};">
-                    {html.escape(label)}
-                  </div>
-                  <div style="margin-top:2px;font-size:15px;line-height:1.4;
-                              color:#1F2937;font-weight:700;">
-                    {html.escape(value)}
-                  </div>
-                </td>
-              </tr>
-            </table>
+          <td style="padding:13px 0;border-bottom:1px solid {APP_BORDER};">
+            <div style="font-size:12px;line-height:1.35;color:{APP_MUTED};">
+              {html.escape(label)}
+            </div>
+            <div style="margin-top:3px;font-size:15px;line-height:1.45;
+                        color:#171717;font-weight:700;">
+              {html.escape(value)}
+            </div>
           </td>
         </tr>"""
         for label, value in details
@@ -201,56 +184,40 @@ def _branded_message(
     html_body = f"""\
 <!doctype html>
 <html lang="de">
-  <body style="margin:0;padding:0;background:{APP_BG};font-family:Arial,Helvetica,sans-serif;
+  <body style="margin:0;padding:0;background:#FFFFFF;font-family:Arial,Helvetica,sans-serif;
                color:#111827;-webkit-text-size-adjust:100%;">
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
-           style="width:100%;background:{APP_BG};border-collapse:collapse;">
+           style="width:100%;background:#FFFFFF;border-collapse:collapse;">
       <tr>
-        <td align="center" style="padding:0 0 28px 0;">
+        <td align="center" style="padding:28px 16px;">
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
-                 style="width:100%;max-width:620px;background:{APP_BLUE};border-collapse:collapse;">
+                 style="width:100%;max-width:580px;background:#FFFFFF;border-collapse:collapse;">
             <tr>
-              <td style="padding:18px 22px;color:#FFFFFF;font-size:22px;line-height:1.25;
-                         font-weight:700;">SSV53&nbsp;&nbsp; Belegungsplan</td>
-            </tr>
-          </table>
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
-                 style="width:calc(100% - 20px);max-width:600px;margin-top:14px;background:#FFFFFF;
-                        border-collapse:separate;border-spacing:0;border-radius:20px;overflow:hidden;
-                        box-shadow:0 5px 16px rgba(17,24,39,.10);">
-            <tr>
-              <td align="center" style="padding:22px 22px 8px 22px;">
+              <td align="center" style="padding:2px 22px 8px 22px;">
                 <img src="{APP_LOGO_URL}" alt="Schönwalder SV 1953 e.V." width="72"
                      style="display:block;width:72px;height:72px;object-fit:contain;border:0;">
               </td>
             </tr>
             <tr>
               <td align="center" style="padding:4px 24px 0 24px;">
-                <div style="margin-top:7px;font-size:27px;line-height:1.25;
+                <div style="margin-top:8px;font-size:28px;line-height:1.25;
                             font-weight:800;color:#080808;">
                   {html.escape(headline)}
                 </div>
-                <div style="height:2px;background:{APP_GOLD};width:72%;max-width:390px;
-                            margin:14px auto 0 auto;"></div>
+                <div style="height:2px;background:{APP_GOLD};width:76%;max-width:410px;
+                            margin:16px auto 0 auto;"></div>
               </td>
             </tr>
             <tr>
               <td style="padding:22px 24px 29px 24px;">
-                <div style="font-size:16px;line-height:1.65;color:#202020;">
+                <div style="font-size:16px;line-height:1.65;color:#262626;">
                   {html.escape(intro)}
                 </div>
-                <div style="margin-top:22px;font-size:16px;line-height:1.4;
-                            font-weight:800;color:{APP_BLUE};">
-                  {html.escape(badge)}
-                </div>
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
-                       style="margin-top:10px;border-collapse:collapse;">
+                       style="margin-top:14px;border-collapse:collapse;">
                   {detail_rows}
                 </table>
-                <div style="margin-top:13px;padding:15px 16px;border-radius:12px;
-                            background:#F4F6FA;border:1px solid {APP_BORDER};
-                            font-size:14px;line-height:1.6;color:#374151;">
-                  <strong style="color:{APP_BLUE};">Nächster Schritt</strong><br>
+                <div style="margin-top:20px;font-size:15px;line-height:1.6;color:#262626;">
                   {html.escape(closing)}
                 </div>
                 <div style="margin-top:25px;font-size:14px;line-height:1.6;color:#555555;">
@@ -378,12 +345,11 @@ def process_collision_notifications(
                 settings,
                 recipient,
                 subject="SSV53: Überschneidung im Belegungsplan",
-                headline="Überschneidung erkannt",
+                headline="Buchungskollision",
                 intro=(
                     "Ein neu angesetztes Verbandsspiel überschneidet sich mit einer "
                     "bestehenden Platzbelegung."
                 ),
-                badge="PRÜFUNG ERFORDERLICH",
                 details=[
                     ("Spiel", str(match.get("title") or "Heimspiel")),
                     ("Anstoß", kickoff.strftime("%d.%m.%Y um %H:%M Uhr")),
@@ -424,9 +390,8 @@ def send_collision_test_mail(
             settings,
             recipient,
             subject="[TEST] SSV53 Kollisionsbenachrichtigung",
-            headline="Test erfolgreich",
+            headline="Buchungskollision",
             intro="Die zentrale Benachrichtigung aus dem SSV53-Belegungsplan ist einsatzbereit.",
-            badge="SYSTEMTEST",
             details=[
                 ("Status", "E-Mail-Versand funktioniert"),
                 ("Bereich", "Platzbelegungsplan"),
