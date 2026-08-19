@@ -81,8 +81,9 @@ def _bounded_text(value: Any, *, field: str, maximum: int, required: bool = Fals
 def _optional_image(value: Any) -> str:
     """Profilbilder sind Komfortdaten und dürfen eine Belegung nie blockieren."""
     text = str(value or "").strip()
-    # Kurze URLs bleiben erhalten; übergroße Base64-/Blob-Werte werden verworfen.
-    return text if len(text) <= 2048 else ""
+    # Geeignete URLs und kompakte Datenbilder bleiben erhalten; größere Werte
+    # werden beim Anzeigen frisch aus Workbook oder Profil aufgelöst.
+    return text if len(text.encode("utf-8")) <= 60_000 else ""
 
 
 def _event_row_key(event_id: str) -> str:

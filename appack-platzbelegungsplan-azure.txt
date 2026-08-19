@@ -3039,8 +3039,8 @@
         };
       }
 
-      function findCurrentCreatorWorkbookContact() {
-        const profile = state.currentCreator || {};
+      function findCreatorWorkbookContact(creator) {
+        const profile = creator || {};
         const profileName = normalizeMatchText(profile.name);
         const profileEmail = String(profile.email || "").trim().toLowerCase();
         const profileChat = String(profile.chatId || "").trim().toLowerCase();
@@ -3057,6 +3057,10 @@
           return normalizeMatchText(contact.name).split(/\s+/).includes(profileName);
         });
         return nameMatches.length === 1 ? nameMatches[0] : null;
+      }
+
+      function findCurrentCreatorWorkbookContact() {
+        return findCreatorWorkbookContact(state.currentCreator);
       }
 
       function extractContactCategoryTeamKeys(value) {
@@ -3878,8 +3882,34 @@
         const props = event.extendedProps || {};
         if (props.eventKind === "special" && props.creator && props.creator.name) {
           elements.trainerContactsHeading.lastChild.textContent = " Erstellt von";
-          elements.trainerContactList.appendChild(createTrainerContactCard(props.creator));
           elements.trainerContacts.hidden = false;
+          const eventKey = getDialogEventKey(event);
+          if (!state.trainerContactsReady && !state.trainerContactsError) {
+            setTrainerContactStatus("Kontaktdaten werden geladen …", false);
+            loadTrainerContacts(false).then(function () {
+              if (state.currentDialogEventKey === eventKey && !elements.dialogLayer.hidden) {
+                renderTrainerContactsForEvent(event);
+              }
+            }).catch(function () {
+              if (state.currentDialogEventKey === eventKey && !elements.dialogLayer.hidden) {
+                renderTrainerContactsForEvent(event);
+              }
+            });
+            return;
+          }
+
+          const fallback = Object.assign({}, props.creator);
+          const isOwnEntry = Boolean(fallback.id) &&
+            fallback.id === String(state.currentCreator.id || "");
+          if (isOwnEntry) {
+            Object.keys(state.currentCreator).forEach(function (key) {
+              if (state.currentCreator[key]) fallback[key] = state.currentCreator[key];
+            });
+          }
+          const workbookContact = findCreatorWorkbookContact(fallback);
+          const creatorContact = mergeCreatorContact(fallback, workbookContact);
+          elements.trainerContactList.appendChild(createTrainerContactCard(creatorContact));
+          setTrainerContactStatus("", false);
           return;
         }
 

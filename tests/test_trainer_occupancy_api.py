@@ -158,7 +158,7 @@ class TrainerOccupancyApiTests(unittest.TestCase):
         response = function_app.ssv53_trainer_occupancies(request(payload))
         self.assertEqual(response.status_code, 200)
         event = self.store.events["trainer-test-001"]
-        self.assertEqual(event.creator_image, "")
+        self.assertTrue(event.creator_image.startswith("data:image/jpeg;base64,"))
         self.assertEqual(event.creator_name, "Juliane Beispiel")
         self.assertEqual(event.creator_email, "juliane@example.de")
 
