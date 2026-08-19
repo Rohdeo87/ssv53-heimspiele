@@ -47,6 +47,7 @@ from special_occupancy import (
     AzureTableSpecialOccupancyStore,
     enabled as special_occupancy_enabled,
     event_to_mower_block,
+    relocated_training_occurrence_keys,
 )
 
 
@@ -275,6 +276,9 @@ def run_read_only_cycle(
             special_events = special_store.list_active(
                 special_horizon_start,
                 special_horizon_end,
+            )
+            effective_cancellations.update(
+                relocated_training_occurrence_keys(special_events)
             )
             special_blocks = [
                 block

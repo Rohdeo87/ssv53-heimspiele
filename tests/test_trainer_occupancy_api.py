@@ -151,6 +151,60 @@ class TrainerOccupancyApiTests(unittest.TestCase):
         )
         self.assertNotIn("trainer-test-001", self.store.events)
 
+    def test_recurring_training_moves_atomically_to_other_pitch(self) -> None:
+        payload = {
+            "action": "move",
+            "commandId": "trainer-move:test-a-thursday",
+            "eventId": "training:sommer:som-ras-a-do:2026-08-20",
+            "targetResourceId": "kunstrasen",
+            "requesterId": "trainer-17",
+            "creator": {"id": "trainer-17", "name": "Trainer Beispiel"},
+            "confirmation": "TRAINER_BELEGUNG_VERSCHIEBEN",
+        }
+        response = function_app.ssv53_trainer_occupancies(request(payload))
+        self.assertEqual(response.status_code, 200, response.get_body())
+        event = next(iter(self.store.events.values()))
+        self.assertEqual(event.resource_id, "kunstrasen")
+        self.assertEqual(
+            event.replaced_training_event_id,
+            "training:sommer:som-ras-a-do:2026-08-20",
+        )
+        self.assertTrue(event.suppress_training)
+        self.assertIsNone(event_to_mower_block(event, Block))
+
+        # Ein anderer Trainer darf einen verlegten regulären Termin wieder
+        # auf den Rasen zurücklegen; dort entsteht sofort der Sicherheitsblock.
+        payload.update({
+            "commandId": "trainer-move:test-a-thursday-back",
+            "eventId": "one-off:" + event.event_id,
+            "targetResourceId": "rasen",
+            "requesterId": "trainer-99",
+        })
+        response = function_app.ssv53_trainer_occupancies(request(payload))
+        self.assertEqual(response.status_code, 200, response.get_body())
+        moved_back = self.store.events[event.event_id]
+        self.assertEqual(moved_back.resource_id, "rasen")
+        self.assertIsNotNone(event_to_mower_block(moved_back, Block))
+
+    def test_move_to_occupied_pitch_requires_same_second_confirmation(self) -> None:
+        payload = {
+            "action": "move",
+            "commandId": "trainer-move:test-c-wednesday",
+            "eventId": "training:sommer:som-ras-c-mi:2026-08-19",
+            "targetResourceId": "kunstrasen",
+            "requesterId": "trainer-17",
+            "creator": {"id": "trainer-17", "name": "Trainer Beispiel"},
+            "confirmation": "TRAINER_BELEGUNG_VERSCHIEBEN",
+        }
+        response = function_app.ssv53_trainer_occupancies(request(payload))
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(json.loads(response.get_body())["code"], "OCCUPANCY_CONFLICT")
+        self.assertEqual(self.store.events, {})
+        payload["overlapConfirmation"] = "UEBERSCHNEIDUNG_TROTZDEM_SPEICHERN"
+        response = function_app.ssv53_trainer_occupancies(request(payload))
+        self.assertEqual(response.status_code, 200, response.get_body())
+        self.assertEqual(next(iter(self.store.events.values())).resource_id, "kunstrasen")
+
 
     def test_oversized_optional_profile_image_never_blocks_creation(self) -> None:
         payload = self.payload()

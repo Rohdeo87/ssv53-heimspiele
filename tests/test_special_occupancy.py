@@ -14,6 +14,7 @@ from special_occupancy import (
     event_to_mower_block,
     merge_public_special_events,
     parse_admin_request,
+    relocated_training_occurrence_keys,
 )
 
 
@@ -139,6 +140,44 @@ class SpecialOccupancyTests(unittest.TestCase):
         self.store.apply(command, now_utc=self.now)
         self.assertIsNone(
             event_to_mower_block(self.store.events["test-sperre"], Block)
+        )
+
+    def test_relocation_suppresses_only_linked_training_across_places(self) -> None:
+        command = self._command(
+            event_id="trainer-move-c",
+            resource_id="kunstrasen",
+            start="2026-08-19T17:30:00+02:00",
+            end="2026-08-19T19:00:00+02:00",
+        )
+        command["event"]["replacesTrainingEventId"] = (
+            "training:sommer:som-ras-c-mi:2026-08-19"
+        )
+        self.store.apply(command, now_utc=self.now)
+        special = self.store.events["trainer-move-c"]
+        payload = {"events": [
+            {
+                "id": "training:sommer:som-ras-c-mi:2026-08-19",
+                "source": "training",
+                "resourceId": "rasen",
+                "start": "2026-08-19T17:30:00+02:00",
+                "end": "2026-08-19T19:00:00+02:00",
+            },
+            {
+                "id": "training:sommer:som-ras-c-fr:2026-08-21",
+                "source": "training",
+                "resourceId": "rasen",
+                "start": "2026-08-21T17:00:00+02:00",
+                "end": "2026-08-21T18:30:00+02:00",
+            },
+        ]}
+        merged = merge_public_special_events(payload, [special])
+        ids = {item["id"] for item in merged["events"]}
+        self.assertNotIn("training:sommer:som-ras-c-mi:2026-08-19", ids)
+        self.assertIn("training:sommer:som-ras-c-fr:2026-08-21", ids)
+        self.assertIn("one-off:trainer-move-c", ids)
+        self.assertEqual(
+            relocated_training_occurrence_keys([special]),
+            {("som-ras-c-mi", "2026-08-19")},
         )
 
     def test_special_is_a_safe_park_and_restart_source(self) -> None:

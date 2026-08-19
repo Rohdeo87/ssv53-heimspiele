@@ -1770,7 +1770,8 @@
         trainerOccupancyCancel: document.getElementById("trainer-occupancy-cancel"),
         trainerOccupancySubmit: document.getElementById("trainer-occupancy-submit"),
         trainerOccupancyStatus: document.getElementById("trainer-occupancy-status"),
-        trainerOccupancyDelete: document.getElementById("trainer-occupancy-delete")
+        trainerOccupancyDelete: document.getElementById("trainer-occupancy-delete"),
+        trainerOccupancyMove: document.getElementById("trainer-occupancy-move")
       };
 
       function syncCalendarViewport() {
@@ -4517,6 +4518,7 @@
           durationRule: String(item.durationRule || ""),
           competitionFormat: String(item.competitionFormat || ""),
           matchType: String(item.matchType || ""),
+          replacesTrainingEventId: String(item.replacesTrainingEventId || ""),
           creator: item.creator && typeof item.creator === "object" ? item.creator : null
         };
 
@@ -5925,6 +5927,7 @@
         elements.popupDescription.innerHTML = sanitizePopupDescription(props.description);
         renderTrainingCancellationAction(event);
         renderTrainerOccupancyDeleteAction(event);
+        renderTrainerOccupancyMoveAction(event);
 
         const detailLink = String(props.detailLink || "").trim();
         if (isSafeLink(detailLink)) {
@@ -5977,6 +5980,7 @@
       function isTrainerCreatedOccupancy(event) {
         const props = event && event.extendedProps || {};
         return props.eventKind === "special" &&
+          !String(props.replacesTrainingEventId || "") &&
           String(props.occurrenceId || "").startsWith("one-off:trainer-");
       }
 
@@ -5989,6 +5993,101 @@
         const ownEntry = Boolean(state.currentCreator.id) &&
           state.currentCreator.id === String(creator.id || "");
         action.hidden = !(ownEntry || state.canAdministerTrainerOccupancies);
+      }
+
+      function renderTrainerOccupancyMoveAction(event) {
+        const action = elements.trainerOccupancyMove;
+        action.hidden = true;
+        action.disabled = false;
+        if (!state.canManageTrainingCancellations || !event) return;
+        const props = event.extendedProps || {};
+        const recurringTraining = props.eventKind === "training" &&
+          Boolean(props.occurrenceId) && props.cancelled !== true;
+        const relocatedTraining = props.eventKind === "special" &&
+          Boolean(props.replacesTrainingEventId);
+        const manualEntry = isTrainerCreatedOccupancy(event);
+        const creator = props.creator || {};
+        const ownEntry = Boolean(state.currentCreator.id) &&
+          state.currentCreator.id === String(creator.id || "");
+        if (!recurringTraining && !relocatedTraining &&
+          !(manualEntry && (ownEntry || state.canAdministerTrainerOccupancies))) return;
+        const currentResource = String(props.calendarId || "");
+        const targetLabel = currentResource === "rasen" ? "Kunstrasen" : "Rasen";
+        action.querySelector("span").textContent = "Auf " + targetLabel + " verlegen";
+        action.hidden = false;
+      }
+
+      function formatOccupancyConflicts(conflicts) {
+        return (conflicts || []).map(function (item) {
+          const conflictStart = new Date(item.start);
+          const conflictEnd = new Date(item.end);
+          return "• " + item.title + " (" +
+            conflictStart.toLocaleString("de-DE", {dateStyle: "short", timeStyle: "short"}) +
+            " - " + conflictEnd.toLocaleTimeString("de-DE", {hour: "2-digit", minute: "2-digit"}) + ")";
+        }).join("\n");
+      }
+
+      async function moveTrainerOccupancy() {
+        const event = state.currentDialogEvent;
+        if (!event || elements.trainerOccupancyMove.hidden) return;
+        const props = event.extendedProps || {};
+        const currentResource = String(props.calendarId || "");
+        const targetResource = currentResource === "rasen" ? "kunstrasen" : "rasen";
+        const targetLabel = targetResource === "rasen" ? "Rasenplatz" : "Kunstrasenplatz";
+        const mowerNote = targetResource === "rasen"
+          ? " Der Rasen wird dadurch unmittelbar in der Mäherplanung gesperrt."
+          : " Der bisherige Rasenschutz wird erst nach erfolgreicher Azure-Speicherung aufgehoben.";
+        if (!window.confirm("Diesen Termin auf den " + targetLabel + " verlegen?" + mowerNote)) return;
+        elements.trainerOccupancyMove.disabled = true;
+        try {
+          await loadTrainerContacts(false).catch(function () {});
+          const creator = mergeCreatorContact(
+            state.currentCreator,
+            findCurrentCreatorWorkbookContact()
+          );
+          const randomPart = window.crypto && typeof window.crypto.randomUUID === "function"
+            ? window.crypto.randomUUID() : Date.now().toString(36);
+          const requestBody = {
+            action: "move",
+            commandId: "trainer-move:" + randomPart,
+            eventId: props.occurrenceId,
+            targetResourceId: targetResource,
+            requesterId: state.currentCreator.id,
+            isAppAdministrator: state.canAdministerTrainerOccupancies,
+            creator: creator,
+            confirmation: "TRAINER_BELEGUNG_VERSCHIEBEN"
+          };
+          const sendRequest = function () { return fetch(TRAINER_OCCUPANCY_API_URL, {
+            method: "POST", mode: "cors", cache: "no-store", credentials: "omit",
+            headers: {"Accept": "application/json", "Content-Type": "text/plain;charset=UTF-8"},
+            body: JSON.stringify(requestBody)
+          }); };
+          let response = await sendRequest();
+          let payload = await response.json().catch(function () { return {}; });
+          if (response.status === 409 && payload.code === "OCCUPANCY_CONFLICT") {
+            if (!window.confirm(
+              "Der Zielplatz ist bereits belegt:\n\n" +
+              formatOccupancyConflicts(payload.conflicts) +
+              "\n\nTrotzdem verlegen?"
+            )) {
+              elements.trainerOccupancyMove.disabled = false;
+              return;
+            }
+            requestBody.overlapConfirmation = "UEBERSCHNEIDUNG_TROTZDEM_SPEICHERN";
+            response = await sendRequest();
+            payload = await response.json().catch(function () { return {}; });
+          }
+          if (!response.ok || !payload.ok) {
+            throw new Error(payload.error || "Der Termin konnte nicht verlegt werden.");
+          }
+          closeEventDetails();
+          window.setTimeout(function () { loadCurrentRange(true); }, 600);
+        } catch (error) {
+          elements.trainerOccupancyMove.disabled = false;
+          elements.trainingCancellationStatus.textContent = error && error.message
+            ? error.message : "Die Verlegung ist fehlgeschlagen. Die bisherige Belegung bleibt bestehen.";
+          elements.trainingCancellationStatus.hidden = false;
+        }
       }
 
       async function deleteTrainerOccupancy() {
@@ -6381,6 +6480,7 @@
           );
         });
         elements.trainerOccupancyDelete.addEventListener("click", deleteTrainerOccupancy);
+        elements.trainerOccupancyMove.addEventListener("click", moveTrainerOccupancy);
         document.addEventListener("keydown", function (event) {
           if (event.key === "Escape" && !elements.trainerOccupancyDialogLayer.hidden) {
             event.preventDefault();
@@ -6845,6 +6945,10 @@
         <button id="trainer-occupancy-delete" type="button" class="dialog-button dialog-button--training-action" hidden>
           <i class="fa-solid fa-trash" aria-hidden="true"></i>
           Belegung löschen
+        </button>
+        <button id="trainer-occupancy-move" type="button" class="dialog-button dialog-button--training-action" hidden>
+          <i class="fa-solid fa-right-left" aria-hidden="true"></i>
+          <span>Auf anderen Platz verlegen</span>
         </button>
         <button
           id="training-cancellation-action"

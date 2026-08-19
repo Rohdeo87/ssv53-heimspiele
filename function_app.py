@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import logging
 import os
 from datetime import datetime, timedelta, timezone
@@ -405,12 +406,21 @@ def _trainer_occupancy_conflicts(
     end: datetime,
     resource_id: str,
     store,
+    ignored_event_ids: set[str] | None = None,
 ) -> list[dict]:
     """Prüft denselben physischen Platz gegen Plan, Spiele und Sondertermine."""
     config_path = os.environ.get("OCCUPANCY_CONFIG_PATH", "occupancy/config.json")
     matches_path, _ = _occupancy_matches_path()
     candidates: dict[str, dict] = {}
-    for season in ("Sommer", "Winter"):
+    ignored = {
+        str(value or "").strip().lower()
+        for value in (ignored_event_ids or set())
+    }
+    # Dieselbe Saisonwahl wie im Appack-Kalender verhindert Warnungen durch
+    # einen lediglich alternativ dargestellten Winterplan im Sommer (und
+    # umgekehrt). Sondertermine bleiben ohnehin saisonunabhängig sichtbar.
+    season = "Winter" if start.month in {11, 12, 1, 2} else "Sommer"
+    for season in (season,):
         payload = build_occupancy_payload(
             config_path=config_path,
             matches_path=matches_path,
@@ -420,6 +430,8 @@ def _trainer_occupancy_conflicts(
             generated_at=datetime.now(timezone.utc),
         )
         for item in payload.get("events", []):
+            if str(item.get("id") or "").strip().lower() in ignored:
+                continue
             if str(item.get("resourceId") or "") != resource_id:
                 continue
             event_start = datetime.fromisoformat(str(item.get("occupancyStart") or item["start"]))
@@ -438,6 +450,8 @@ def _trainer_occupancy_conflicts(
                 )
                 candidates[key] = dict(item, start=event_start.isoformat(), end=event_end.isoformat())
     for event in store.list_active(start, end):
+        if event.event_id in ignored or ("one-off:" + event.event_id) in ignored:
+            continue
         if event.resource_id == resource_id and event.end > start and event.start < end:
             item = event.to_public_event()
             candidates[item["id"]] = item
@@ -451,6 +465,94 @@ def _trainer_occupancy_conflicts(
         }
         for item in sorted(candidates.values(), key=lambda value: value["start"])
     ]
+
+
+def _trainer_move_source(
+    body: dict,
+    store,
+    *,
+    now_utc: datetime,
+) -> tuple[dict, str, str]:
+    """Löst eine Verlegung serverseitig auf; Client-Zeiten sind nie maßgeblich."""
+
+    source_id = str(body.get("eventId") or "").strip().lower()
+    requester_id = str(body.get("requesterId") or "").strip()
+    is_admin = bool(body.get("isAppAdministrator"))
+    if source_id.startswith("training:"):
+        parts = source_id.split(":")
+        if len(parts) < 4:
+            raise SpecialOccupancyError("EVENT_NOT_FOUND", "Der Trainingstermin wurde nicht gefunden.", status_code=404)
+        try:
+            day = datetime.fromisoformat(parts[-1]).date()
+        except ValueError as exc:
+            raise SpecialOccupancyError("EVENT_NOT_FOUND", "Der Trainingstermin wurde nicht gefunden.", status_code=404) from exc
+        season = parts[1].capitalize()
+        occurrences = build_training_occurrences(
+            config_path=os.environ.get("OCCUPANCY_CONFIG_PATH", "occupancy/config.json"),
+            start=day.isoformat(),
+            end=(day + timedelta(days=1)).isoformat(),
+            season=season,
+        )
+        occurrence = next(
+            (item for item in occurrences if str(item.get("id") or "").strip().lower() == source_id),
+            None,
+        )
+        if occurrence is None:
+            raise SpecialOccupancyError("EVENT_NOT_FOUND", "Der Trainingstermin wurde nicht gefunden.", status_code=404)
+        event_id = "trainer-move-" + hashlib.sha256(source_id.encode("utf-8")).hexdigest()[:32]
+        creator = body.get("creator") if isinstance(body.get("creator"), dict) else {}
+        event = {
+            "id": event_id,
+            "title": occurrence.get("title") or "Training",
+            "start": occurrence.get("start"),
+            "end": occurrence.get("end"),
+            "resourceId": occurrence.get("resourceId"),
+            "area": occurrence.get("area") or "vorne & hinten",
+            "description": occurrence.get("description") or "",
+            "creator": creator,
+            "replacesTrainingEventId": source_id,
+        }
+        return event, source_id, str(occurrence.get("resourceId") or "").lower()
+
+    event_id = source_id.removeprefix("one-off:")
+    existing = store.get_active(event_id)
+    if existing is None:
+        raise SpecialOccupancyError("EVENT_NOT_FOUND", "Die Belegung wurde nicht gefunden.", status_code=404)
+    if (
+        not existing.replaced_training_event_id
+        and not is_admin
+        and (not requester_id or requester_id != existing.creator_id)
+    ):
+        raise SpecialOccupancyError(
+            "MOVE_FORBIDDEN",
+            "Diese Belegung darf nur vom Ersteller oder App-Administrator verschoben werden.",
+            status_code=403,
+        )
+    event = {
+        "id": existing.event_id,
+        "title": existing.title,
+        "start": existing.start.isoformat(),
+        "end": existing.end.isoformat(),
+        "resourceId": existing.resource_id,
+        "area": existing.area,
+        "description": existing.description,
+        "creator": {
+            "id": existing.creator_id,
+            "name": existing.creator_name,
+            "phone": existing.creator_phone,
+            "mobile": existing.creator_mobile,
+            "email": existing.creator_email,
+            "chatId": existing.creator_chat_id,
+            "image": existing.creator_image,
+            "instagram": existing.creator_instagram,
+            "website": existing.creator_website,
+            "facebook": existing.creator_facebook,
+            "role": existing.creator_role,
+            "infoHtml": existing.creator_info_html,
+        },
+        "replacesTrainingEventId": existing.replaced_training_event_id,
+    }
+    return event, source_id, existing.resource_id
 
 
 @app.route(
@@ -486,10 +588,16 @@ def ssv53_trainer_occupancies(req: func.HttpRequest) -> func.HttpResponse:
                 "Der Request muss ein JSON-Objekt enthalten.",
             )
         action = str(body.get("action") or "create").strip().lower()
-        expected_confirmation = (
-            "TRAINER_BELEGUNG_LOESCHEN" if action == "delete"
-            else "TRAINER_BELEGUNG_SPEICHERN"
-        )
+        expected_confirmation = {
+            "create": "TRAINER_BELEGUNG_SPEICHERN",
+            "delete": "TRAINER_BELEGUNG_LOESCHEN",
+            "move": "TRAINER_BELEGUNG_VERSCHIEBEN",
+        }.get(action)
+        if expected_confirmation is None:
+            raise SpecialOccupancyError(
+                "ACTION_INVALID",
+                "action muss create, move oder delete sein.",
+            )
         if body.get("confirmation") != expected_confirmation:
             raise SpecialOccupancyError(
                 "CONFIRMATION_INVALID",
@@ -513,8 +621,71 @@ def ssv53_trainer_occupancies(req: func.HttpRequest) -> func.HttpResponse:
             )
             LOGGER.warning("SSV53_TRAINER_OCCUPANCY_DELETED event_id=%s", event_id)
             return _trainer_occupancy_response(result, status_code=200)
+        if action == "move":
+            event, source_id, source_resource = _trainer_move_source(
+                body,
+                store,
+                now_utc=now_utc,
+            )
+            target_resource = str(body.get("targetResourceId") or "").strip().lower()
+            if target_resource not in {"rasen", "kunstrasen"}:
+                raise SpecialOccupancyError(
+                    "RESOURCE_INVALID",
+                    "Der Zielplatz muss Rasen oder Kunstrasen sein.",
+                )
+            if target_resource == source_resource:
+                raise SpecialOccupancyError(
+                    "MOVE_TARGET_UNCHANGED",
+                    "Der Termin liegt bereits auf diesem Platz.",
+                )
+            start = datetime.fromisoformat(str(event["start"]).replace("Z", "+00:00"))
+            end = datetime.fromisoformat(str(event["end"]).replace("Z", "+00:00"))
+            if start.tzinfo is None or end.tzinfo is None or end <= start:
+                raise SpecialOccupancyError("DATETIME_INVALID", "Der Terminzeitraum ist ungültig.")
+            now_local = now_utc.astimezone(ZoneInfo("Europe/Berlin"))
+            if end.astimezone(ZoneInfo("Europe/Berlin")) <= now_local:
+                raise SpecialOccupancyError("EVENT_IN_PAST", "Ein beendeter Termin kann nicht verschoben werden.")
+            event["resourceId"] = target_resource
+            event["suppressTraining"] = bool(event.get("replacesTrainingEventId"))
+            event["mowerBufferBeforeMinutes"] = 30
+            event["mowerBufferAfterMinutes"] = 30
+            conflicts = _trainer_occupancy_conflicts(
+                start=start.astimezone(ZoneInfo("Europe/Berlin")),
+                end=end.astimezone(ZoneInfo("Europe/Berlin")),
+                resource_id=target_resource,
+                store=store,
+                ignored_event_ids={
+                    source_id,
+                    str(event["id"]),
+                    "one-off:" + str(event["id"]),
+                    str(event.get("replacesTrainingEventId") or ""),
+                },
+            )
+            if conflicts and body.get("overlapConfirmation") != "UEBERSCHNEIDUNG_TROTZDEM_SPEICHERN":
+                return _trainer_occupancy_response(
+                    {
+                        "ok": False,
+                        "code": "OCCUPANCY_CONFLICT",
+                        "error": "Der Zielplatz ist in diesem Zeitraum bereits belegt.",
+                        "conflicts": conflicts,
+                    },
+                    status_code=409,
+                )
+            command = {
+                "commandId": str(body.get("commandId") or ""),
+                "action": "upsert",
+                "event": event,
+            }
+            result = store.apply(command, now_utc=now_utc)
+            LOGGER.warning(
+                "SSV53_TRAINER_OCCUPANCY_MOVED event_id=%s source=%s target=%s",
+                event["id"],
+                source_resource,
+                target_resource,
+            )
+            return _trainer_occupancy_response(result, status_code=200)
         if action != "create":
-            raise SpecialOccupancyError("ACTION_INVALID", "action muss create oder delete sein.")
+            raise SpecialOccupancyError("ACTION_INVALID", "action muss create, move oder delete sein.")
         now_local = now_utc.astimezone(ZoneInfo("Europe/Berlin"))
         try:
             start = datetime.fromisoformat(

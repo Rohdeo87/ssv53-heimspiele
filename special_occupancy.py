@@ -143,6 +143,7 @@ class SpecialOccupancyEvent:
     creator_facebook: str
     creator_role: str
     creator_info_html: str
+    replaced_training_event_id: str
     suppress_training: bool
     mower_buffer_before_minutes: int
     mower_buffer_after_minutes: int
@@ -199,6 +200,16 @@ class SpecialOccupancyEvent:
             maximum=500,
         )
         creator = raw.get("creator") if isinstance(raw.get("creator"), Mapping) else {}
+        replaced_training_event_id = _bounded_text(
+            raw.get("replacesTrainingEventId"),
+            field="replacesTrainingEventId",
+            maximum=240,
+        ).lower()
+        if replaced_training_event_id and not replaced_training_event_id.startswith("training:"):
+            raise SpecialOccupancyError(
+                "REPLACED_TRAINING_INVALID",
+                "replacesTrainingEventId muss einen Trainingstermin bezeichnen.",
+            )
         suppress_training = bool(raw.get("suppressTraining", True))
         now = _utc(now_utc)
         return cls(
@@ -221,6 +232,7 @@ class SpecialOccupancyEvent:
             creator_facebook=_bounded_text(creator.get("facebook"), field="creator.facebook", maximum=500),
             creator_role=_bounded_text(creator.get("role"), field="creator.role", maximum=180),
             creator_info_html=_bounded_text(creator.get("infoHtml"), field="creator.infoHtml", maximum=1000),
+            replaced_training_event_id=replaced_training_event_id,
             suppress_training=suppress_training,
             mower_buffer_before_minutes=_buffer(
                 raw.get("mowerBufferBeforeMinutes"),
@@ -256,6 +268,7 @@ class SpecialOccupancyEvent:
             creator_facebook=str(entity.get("CreatorFacebook", "")),
             creator_role=str(entity.get("CreatorRole", "")),
             creator_info_html=str(entity.get("CreatorInfoHtml", "")),
+            replaced_training_event_id=str(entity.get("ReplacedTrainingEventId", "")),
             suppress_training=bool(entity.get("SuppressTraining", True)),
             mower_buffer_before_minutes=int(entity.get("MowerBufferBeforeMinutes", 30)),
             mower_buffer_after_minutes=int(entity.get("MowerBufferAfterMinutes", 30)),
@@ -291,6 +304,7 @@ class SpecialOccupancyEvent:
             "CreatorFacebook": self.creator_facebook,
             "CreatorRole": self.creator_role,
             "CreatorInfoHtml": self.creator_info_html,
+            "ReplacedTrainingEventId": self.replaced_training_event_id,
             "SuppressTraining": self.suppress_training,
             "MowerBufferBeforeMinutes": self.mower_buffer_before_minutes,
             "MowerBufferAfterMinutes": self.mower_buffer_after_minutes,
@@ -309,6 +323,7 @@ class SpecialOccupancyEvent:
             "source": "special",
             "season": None,
             "team": "",
+            "replacesTrainingEventId": self.replaced_training_event_id,
             "area": self.area,
             "description": self.description,
             "creator": {
@@ -817,11 +832,21 @@ def merge_public_special_events(
                 for event in events
                 if not (
                     str(event.get("source") or "").lower() == "training"
-                    and str(event.get("resourceId") or "").lower()
-                    == special.resource_id
-                    and _areas_overlap(event.get("area"), special.area)
-                    and _event_dt(event, "end") > special.start
-                    and _event_dt(event, "start") < special.end
+                    and (
+                        (
+                            special.replaced_training_event_id
+                            and str(event.get("id") or "").lower()
+                            == special.replaced_training_event_id
+                        )
+                        or (
+                            not special.replaced_training_event_id
+                            and str(event.get("resourceId") or "").lower()
+                            == special.resource_id
+                            and _areas_overlap(event.get("area"), special.area)
+                            and _event_dt(event, "end") > special.start
+                            and _event_dt(event, "start") < special.end
+                        )
+                    )
                 )
             ]
         events.append(special.to_public_event())
@@ -855,6 +880,19 @@ def fail_closed_public_events(
             description=(
                 "Sonderbelegungen konnten vorübergehend nicht aus Azure geladen werden."
             ),
+            creator_id="",
+            creator_name="",
+            creator_phone="",
+            creator_mobile="",
+            creator_email="",
+            creator_chat_id="",
+            creator_image="",
+            creator_instagram="",
+            creator_website="",
+            creator_facebook="",
+            creator_role="",
+            creator_info_html="",
+            replaced_training_event_id="",
             suppress_training=True,
             mower_buffer_before_minutes=0,
             mower_buffer_after_minutes=0,
@@ -882,3 +920,25 @@ def event_to_mower_block(
             "dynamic_special_occupancy": True,
         },
     )
+
+
+def relocated_training_occurrence_keys(
+    events: list[SpecialOccupancyEvent],
+) -> set[tuple[str, str]]:
+    """Liefert die durch atomare Platzverlegungen ersetzten Trainingsvorkommen."""
+
+    keys: set[tuple[str, str]] = set()
+    for event in events:
+        value = str(event.replaced_training_event_id or "").strip().lower()
+        parts = value.split(":")
+        if len(parts) < 4 or parts[0] != "training":
+            continue
+        schedule_id = ":".join(parts[2:-1]).strip()
+        day = parts[-1].strip()
+        try:
+            datetime.fromisoformat(day)
+        except ValueError:
+            continue
+        if schedule_id:
+            keys.add((schedule_id, day))
+    return keys

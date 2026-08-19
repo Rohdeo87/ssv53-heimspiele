@@ -144,6 +144,11 @@ test("nur Trainer können eine Appack-Belegung anlegen", () => {
   assert.match(saver, /confirmation: "TRAINER_BELEGUNG_SPEICHERN"/);
   assert.match(saver, /overlapConfirmation = "UEBERSCHNEIDUNG_TROTZDEM_SPEICHERN"/);
   assert.match(html, /id="trainer-occupancy-delete"[^>]*hidden/);
+  assert.match(html, /id="trainer-occupancy-move"[^>]*hidden/);
+  const mover = extractFunction("moveTrainerOccupancy");
+  assert.match(mover, /confirmation: "TRAINER_BELEGUNG_VERSCHIEBEN"/);
+  assert.match(mover, /overlapConfirmation = "UEBERSCHNEIDUNG_TROTZDEM_SPEICHERN"/);
+  assert.match(mover, /targetResource === "rasen"/);
 });
 
 test("Trainerbelegung schreibt nur validierte strukturierte Felder", () => {
