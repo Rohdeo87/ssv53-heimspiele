@@ -962,6 +962,56 @@
       -webkit-backdrop-filter: blur(2px);
     }
 
+    .action-confirmation-layer {
+      z-index: 1400;
+      align-items: center;
+    }
+
+    .action-confirmation-dialog {
+      position: relative;
+      width: min(100%, 420px);
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.76);
+      border-top: 5px solid var(--gold);
+      border-radius: 16px;
+      background: var(--surface);
+      color: var(--text);
+      box-shadow: 0 24px 70px rgba(10, 16, 24, 0.36);
+      animation: dialog-in 180ms ease-out;
+    }
+
+    .action-confirmation-content {
+      padding: 22px 20px 18px;
+    }
+
+    .action-confirmation-title {
+      margin: 0 0 10px;
+      font-size: 1.15rem;
+      font-weight: 800;
+    }
+
+    .action-confirmation-message {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.5;
+      white-space: pre-line;
+    }
+
+    .action-confirmation-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      padding: 12px;
+      border-top: 1px solid var(--line);
+      background: var(--surface-soft);
+    }
+
+    .action-confirmation-accept[data-destructive="true"] {
+      border-color: #b71c16;
+      background: #c6281e;
+      color: #ffffff;
+    }
+
     .event-dialog {
       --dialog-accent: var(--brand);
       --dialog-accent-text: #ffffff;
@@ -1818,8 +1868,42 @@
         trainerOccupancySubmit: document.getElementById("trainer-occupancy-submit"),
         trainerOccupancyStatus: document.getElementById("trainer-occupancy-status"),
         trainerOccupancyDelete: document.getElementById("trainer-occupancy-delete"),
-        trainerOccupancyMove: document.getElementById("trainer-occupancy-move")
+        trainerOccupancyMove: document.getElementById("trainer-occupancy-move"),
+        actionConfirmationLayer: document.getElementById("action-confirmation-layer"),
+        actionConfirmationDialog: document.getElementById("action-confirmation-dialog"),
+        actionConfirmationMessage: document.getElementById("action-confirmation-message"),
+        actionConfirmationCancel: document.getElementById("action-confirmation-cancel"),
+        actionConfirmationAccept: document.getElementById("action-confirmation-accept")
       };
+
+      let pendingActionConfirmationResolve = null;
+
+      function finishActionConfirmation(confirmed) {
+        const resolve = pendingActionConfirmationResolve;
+        pendingActionConfirmationResolve = null;
+        elements.actionConfirmationLayer.hidden = true;
+        elements.actionConfirmationAccept.removeAttribute("data-destructive");
+        if (resolve) resolve(Boolean(confirmed));
+      }
+
+      function requestActionConfirmation(message, confirmLabel, destructive) {
+        if (pendingActionConfirmationResolve) finishActionConfirmation(false);
+        elements.actionConfirmationMessage.textContent = String(message || "");
+        elements.actionConfirmationAccept.textContent = confirmLabel || "Bestätigen";
+        if (destructive) {
+          elements.actionConfirmationAccept.dataset.destructive = "true";
+        } else {
+          elements.actionConfirmationAccept.removeAttribute("data-destructive");
+        }
+        const result = new Promise(function (resolve) {
+          pendingActionConfirmationResolve = resolve;
+        });
+        elements.actionConfirmationLayer.hidden = false;
+        window.requestAnimationFrame(function () {
+          elements.actionConfirmationAccept.focus();
+        });
+        return result;
+      }
 
       function syncCalendarViewport() {
         if (state.layoutFrame) return;
@@ -4554,6 +4638,32 @@
         return rows.join("");
       }
 
+      function toClubWallClockDate(value) {
+        const instant = value instanceof Date ? value : new Date(value);
+        if (Number.isNaN(instant.getTime())) return new Date(NaN);
+        const parts = new Intl.DateTimeFormat("en-GB", {
+          timeZone: "Europe/Berlin",
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          hourCycle: "h23"
+        }).formatToParts(instant).reduce(function (result, part) {
+          if (part.type !== "literal") result[part.type] = Number(part.value);
+          return result;
+        }, {});
+        return new Date(
+          parts.year,
+          parts.month - 1,
+          parts.day,
+          parts.hour,
+          parts.minute,
+          parts.second
+        );
+      }
+
       function mapAzureOccupancyEvent(item) {
         if (!item || typeof item !== "object") {
           throw new Error("Azure enthält einen ungültigen Termin");
@@ -4566,12 +4676,12 @@
           );
         }
 
-        const publicStart = new Date(item.start);
-        const publicEnd = new Date(item.end);
+        const publicStartInstant = new Date(item.start);
+        const publicEndInstant = new Date(item.end);
         if (
-          Number.isNaN(publicStart.getTime()) ||
-          Number.isNaN(publicEnd.getTime()) ||
-          publicEnd <= publicStart
+          Number.isNaN(publicStartInstant.getTime()) ||
+          Number.isNaN(publicEndInstant.getTime()) ||
+          publicEndInstant <= publicStartInstant
         ) {
           throw new Error("Azure enthält einen Termin mit ungültiger Spielzeit");
         }
@@ -4590,30 +4700,43 @@
         const isTraining = source === "training";
         const isCancelledTraining = isTraining && item.cancelled === true;
         const title = String(item.title || "Belegung").trim() || "Belegung";
-        const occupancyStart = isOfficialMatch
+        const occupancyStartInstant = isOfficialMatch
           ? new Date(item.occupancyStart)
-          : publicStart;
-        const occupancyEnd = isOfficialMatch
+          : publicStartInstant;
+        const occupancyEndInstant = isOfficialMatch
           ? new Date(item.occupancyEnd)
-          : publicEnd;
+          : publicEndInstant;
         if (
-          Number.isNaN(occupancyStart.getTime()) ||
-          Number.isNaN(occupancyEnd.getTime()) ||
-          occupancyEnd <= occupancyStart ||
+          Number.isNaN(occupancyStartInstant.getTime()) ||
+          Number.isNaN(occupancyEndInstant.getTime()) ||
+          occupancyEndInstant <= occupancyStartInstant ||
           (isOfficialMatch && (
-            occupancyStart > publicStart ||
-            occupancyEnd < publicEnd
+            occupancyStartInstant > publicStartInstant ||
+            occupancyEndInstant < publicEndInstant
           ))
         ) {
           throw new Error("Azure enthält einen Termin mit ungültiger Platzbelegung");
         }
 
         if (isOfficialMatch && (
-          publicStart.getTime() - occupancyStart.getTime() !== 60 * 60 * 1000 ||
-          occupancyEnd.getTime() - publicEnd.getTime() !== 60 * 60 * 1000
+          publicStartInstant.getTime() - occupancyStartInstant.getTime() !== 60 * 60 * 1000 ||
+          occupancyEndInstant.getTime() - publicEndInstant.getTime() !== 60 * 60 * 1000
         )) {
           throw new Error("Azure-Spiel enthält nicht den vorgeschriebenen 60-Minuten-Puffer");
         }
+
+        /*
+         * Der Belegungsplan gehört immer zur Vereinszeitzone Europe/Berlin.
+         * FullCalendar läuft absichtlich im lokalen WebView-Modus; deshalb
+         * werden die Azure-Zeitpunkte als Berliner Wanduhrzeit abgebildet.
+         * So bleibt 18:30 auch auf einem iPhone mit abweichender Gerätezone
+         * 18:30, während die unveränderten Instant-Werte oben weiterhin alle
+         * Dauer- und Sicherheitspuffer validieren.
+         */
+        const publicStart = toClubWallClockDate(publicStartInstant);
+        const publicEnd = toClubWallClockDate(publicEndInstant);
+        const occupancyStart = toClubWallClockDate(occupancyStartInstant);
+        const occupancyEnd = toClubWallClockDate(occupancyEndInstant);
 
         const extendedProps = {
           calendarId: resourceId,
@@ -6177,7 +6300,11 @@
         const mowerNote = targetResource === "rasen"
           ? " Der Rasen wird dadurch unmittelbar in der Mäherplanung gesperrt."
           : " Der bisherige Rasenschutz wird erst nach erfolgreicher Azure-Speicherung aufgehoben.";
-        if (!window.confirm("Diesen Termin auf den " + targetLabel + " verlegen?" + mowerNote)) return;
+        if (!(await requestActionConfirmation(
+          "Diesen Termin auf den " + targetLabel + " verlegen?" + mowerNote,
+          "Termin verlegen",
+          false
+        ))) return;
         elements.trainerOccupancyMove.disabled = true;
         try {
           await loadTrainerContacts(false).catch(function () {});
@@ -6205,11 +6332,13 @@
           let response = await sendRequest();
           let payload = await response.json().catch(function () { return {}; });
           if (response.status === 409 && payload.code === "OCCUPANCY_CONFLICT") {
-            if (!window.confirm(
+            if (!(await requestActionConfirmation(
               "Der Zielplatz ist bereits belegt:\n\n" +
               formatOccupancyConflicts(payload.conflicts) +
-              "\n\nTrotzdem verlegen?"
-            )) {
+              "\n\nTrotzdem verlegen?",
+              "Trotzdem verlegen",
+              false
+            ))) {
               elements.trainerOccupancyMove.disabled = false;
               return;
             }
@@ -6236,11 +6365,13 @@
         const relocatedTraining = Boolean(
           event.extendedProps && event.extendedProps.replacesTrainingEventId
         );
-        if (!window.confirm(
+        if (!(await requestActionConfirmation(
           relocatedTraining
             ? "Dieses verlegte Training wirklich absagen? Die Änderung wirkt direkt auf die Platz- und Mäherplanung."
-            : "Diesen Termin wirklich absagen? Die Änderung wirkt direkt auf die Platz- und Mäherplanung."
-        )) return;
+            : "Diesen Termin wirklich absagen? Die Änderung wirkt direkt auf die Platz- und Mäherplanung.",
+          "Termin absagen",
+          true
+        ))) return;
         elements.trainerOccupancyDelete.disabled = true;
         try {
           const randomPart = window.crypto && typeof window.crypto.randomUUID === "function"
@@ -6284,7 +6415,11 @@
         const question = cancelled
           ? "Soll die Absage wirklich widerrufen werden? Das Training wird wieder als Platzbelegung berücksichtigt."
           : "Soll dieses Training wirklich abgesagt werden?";
-        if (!window.confirm(question)) return;
+        if (!(await requestActionConfirmation(
+          question,
+          cancelled ? "Absage widerrufen" : "Termin absagen",
+          !cancelled
+        ))) return;
 
         elements.trainingCancellationAction.disabled = true;
         elements.trainingCancellationAction.querySelector(
@@ -6380,6 +6515,13 @@
       }
 
       function handleDialogKeydown(event) {
+        if (!elements.actionConfirmationLayer.hidden) {
+          if (event.key === "Escape") {
+            event.preventDefault();
+            finishActionConfirmation(false);
+          }
+          return;
+        }
         if (elements.dialogLayer.hidden) return;
 
         if (event.key === "Escape") {
@@ -6516,9 +6658,11 @@
           elements.trainerOccupancyStatus.hidden = false;
           return;
         }
-        if (resourceId === "rasen" && !window.confirm(
-          "Diese Belegung sperrt den Rasen für den Mäher zusätzlich 30 Minuten vor und 30 Minuten nach dem Termin. Speichern?"
-        )) return;
+        if (resourceId === "rasen" && !(await requestActionConfirmation(
+          "Diese Belegung sperrt den Rasen für den Mäher zusätzlich 30 Minuten vor und 30 Minuten nach dem Termin. Speichern?",
+          "Termin anlegen",
+          false
+        ))) return;
 
         elements.trainerOccupancySubmit.disabled = true;
         elements.trainerOccupancyStatus.textContent = "Belegung wird gespeichert …";
@@ -6569,10 +6713,12 @@
                 conflictStart.toLocaleString("de-DE", {dateStyle: "short", timeStyle: "short"}) +
                 " – " + conflictEnd.toLocaleTimeString("de-DE", {hour: "2-digit", minute: "2-digit"}) + ")";
             }).join("\n");
-            if (!window.confirm(
+            if (!(await requestActionConfirmation(
               "Der Termin überschneidet sich mit:\n\n" + conflictText +
-              "\n\nTrotzdem speichern?"
-            )) {
+              "\n\nTrotzdem speichern?",
+              "Trotzdem anlegen",
+              false
+            ))) {
               elements.trainerOccupancySubmit.disabled = false;
               elements.trainerOccupancyStatus.textContent =
                 "Die Belegung wurde wegen der Überschneidung nicht gespeichert.";
@@ -6637,6 +6783,17 @@
       }
 
       function bindInterface() {
+        elements.actionConfirmationCancel.addEventListener("click", function () {
+          finishActionConfirmation(false);
+        });
+        elements.actionConfirmationAccept.addEventListener("click", function () {
+          finishActionConfirmation(true);
+        });
+        elements.actionConfirmationLayer.addEventListener("click", function (event) {
+          if (event.target.hasAttribute("data-action-confirmation-close")) {
+            finishActionConfirmation(false);
+          }
+        });
         elements.trainerAddOccupancy.addEventListener(
           "click",
           openTrainerOccupancyDialog
@@ -6663,7 +6820,11 @@
         elements.trainerOccupancyDelete.addEventListener("click", deleteTrainerOccupancy);
         elements.trainerOccupancyMove.addEventListener("click", moveTrainerOccupancy);
         document.addEventListener("keydown", function (event) {
-          if (event.key === "Escape" && !elements.trainerOccupancyDialogLayer.hidden) {
+          if (
+            event.key === "Escape" &&
+            elements.actionConfirmationLayer.hidden &&
+            !elements.trainerOccupancyDialogLayer.hidden
+          ) {
             event.preventDefault();
             closeTrainerOccupancyDialog();
           }
@@ -7035,6 +7196,34 @@
           </button>
         </footer>
       </form>
+    </section>
+  </div>
+
+  <div id="action-confirmation-layer" class="dialog-layer action-confirmation-layer" hidden>
+    <div class="dialog-backdrop" data-action-confirmation-close aria-hidden="true"></div>
+    <section
+      id="action-confirmation-dialog"
+      class="action-confirmation-dialog"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="action-confirmation-title"
+      aria-describedby="action-confirmation-message"
+      tabindex="-1">
+      <div class="action-confirmation-content">
+        <h2 id="action-confirmation-title" class="action-confirmation-title">Bitte bestätigen</h2>
+        <p id="action-confirmation-message" class="action-confirmation-message"></p>
+      </div>
+      <footer class="action-confirmation-actions">
+        <button id="action-confirmation-cancel" type="button" class="dialog-button">
+          Abbrechen
+        </button>
+        <button
+          id="action-confirmation-accept"
+          type="button"
+          class="dialog-button dialog-button--primary action-confirmation-accept">
+          Bestätigen
+        </button>
+      </footer>
     </section>
   </div>
 

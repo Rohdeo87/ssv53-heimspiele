@@ -1,6 +1,7 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+const {spawnSync} = require("node:child_process");
 const test = require("node:test");
 
 const html = fs.readFileSync(
@@ -45,6 +46,7 @@ function harness() {
     "function normalizeCssColor(value, fallback) { return value || fallback; }",
     "function getContrastColor() { return '#fff'; }",
     "function buildAzureEventDescription(item) { return item.description || ''; }",
+    extractFunction("toClubWallClockDate"),
     extractFunction("mapAzureOccupancyEvent"),
     extractFunction("enforceOccupancyGeometry"),
     extractFunction("getVisibleEventTimes"),
@@ -57,6 +59,21 @@ function harness() {
   ].join("\n\n");
   return new Function(source)();
 }
+
+test("Azure-Zeiten werden auf allen Geräten als Berliner Vereinszeit angezeigt", () => {
+  const helper = extractFunction("toClubWallClockDate");
+  const script = [
+    helper,
+    "const value = toClubWallClockDate('2026-08-20T18:30:00+02:00');",
+    "process.stdout.write([value.getFullYear(), value.getMonth() + 1, value.getDate(), value.getHours(), value.getMinutes()].join('-'));"
+  ].join("\n");
+  const result = spawnSync(process.execPath, ["-e", script], {
+    encoding: "utf8",
+    env: {...process.env, TZ: "America/New_York"}
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout, "2026-8-20-18-30");
+});
 
 test("Spiel blockiert occupancyStart bis occupancyEnd, zeigt aber start bis end", () => {
   const api = harness();
@@ -180,7 +197,8 @@ test("abgesagtes Training bleibt grau mit Status und stabiler Termin-ID sichtbar
   assert.equal(mapped.color, "#8a8f8c");
   assert.match(html, /cancelledBadge\.textContent = "Abgesagt"/);
   assert.match(html, /"Absage widerrufen" : "Termin absagen"/);
-  assert.match(html, /window\.confirm\(question\)/);
+  assert.match(html, /await requestActionConfirmation\([\s\S]*?question/);
+  assert.doesNotMatch(html, /window\.confirm\s*\(/);
 });
 
 test("Absageaktionen gelten für reguläre und verlegte Trainings", () => {

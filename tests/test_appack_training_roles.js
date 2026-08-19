@@ -313,3 +313,57 @@ test("Appack übermittelt keine Trainer-Kontakte für Kollisionsmails", () => {
   assert.doesNotMatch(html, /registerOccupancyNotificationContacts/);
   assert.doesNotMatch(html, /APPACK_KONTAKTE_VERIFIZIEREN/);
 });
+
+test("Aktionsbestätigungen funktionieren ohne native WebView-Dialoge", async () => {
+  assert.doesNotMatch(html, /window\.confirm\s*\(/);
+  assert.match(html, /id="action-confirmation-layer"/);
+  assert.match(html, /role="alertdialog"/);
+
+  function fakeButton() {
+    return {
+      textContent: "",
+      dataset: {},
+      focused: false,
+      focus() { this.focused = true; },
+      removeAttribute(name) {
+        if (name === "data-destructive") delete this.dataset.destructive;
+      }
+    };
+  }
+  const elements = {
+    actionConfirmationLayer: {hidden: true},
+    actionConfirmationMessage: {textContent: ""},
+    actionConfirmationAccept: fakeButton()
+  };
+  const confirmation = new Function(
+    "elements",
+    "window",
+    [
+      "let pendingActionConfirmationResolve = null;",
+      extractFunction("finishActionConfirmation"),
+      extractFunction("requestActionConfirmation"),
+      "return {requestActionConfirmation, finishActionConfirmation};"
+    ].join("\n\n")
+  )(elements, {requestAnimationFrame(callback) { callback(); }});
+
+  const accepted = confirmation.requestActionConfirmation(
+    "Termin wirklich absagen?",
+    "Termin absagen",
+    true
+  );
+  assert.equal(elements.actionConfirmationLayer.hidden, false);
+  assert.equal(elements.actionConfirmationMessage.textContent, "Termin wirklich absagen?");
+  assert.equal(elements.actionConfirmationAccept.textContent, "Termin absagen");
+  assert.equal(elements.actionConfirmationAccept.dataset.destructive, "true");
+  assert.equal(elements.actionConfirmationAccept.focused, true);
+  confirmation.finishActionConfirmation(true);
+  assert.equal(await accepted, true);
+  assert.equal(elements.actionConfirmationLayer.hidden, true);
+});
+
+test("Verlegen, Absagen und Anlegen nutzen den WebView-sicheren Bestätigungsdialog", () => {
+  assert.match(extractFunction("moveTrainerOccupancy"), /await requestActionConfirmation/);
+  assert.match(extractFunction("deleteTrainerOccupancy"), /await requestActionConfirmation/);
+  assert.match(extractFunction("changeTrainingCancellation"), /await requestActionConfirmation/);
+  assert.match(extractFunction("saveTrainerOccupancy"), /await requestActionConfirmation/);
+});
