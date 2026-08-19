@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import unittest
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
 import azure.functions as func
@@ -14,6 +14,7 @@ from special_occupancy import (
     event_to_mower_block,
     merge_public_special_events,
 )
+from training_cancellations import InMemoryCancellationStore
 
 
 FIXED_NOW = datetime(2026, 8, 18, 12, 0, tzinfo=timezone.utc)
@@ -32,21 +33,29 @@ def request(body: dict) -> func.HttpRequest:
 class TrainerOccupancyApiTests(unittest.TestCase):
     def setUp(self) -> None:
         self.store = InMemorySpecialOccupancyStore()
+        self.cancellation_store = InMemoryCancellationStore()
         self.store_patch = patch.object(
             function_app.AzureTableSpecialOccupancyStore,
             "from_environment",
             return_value=self.store,
         )
         self.clock_patch = patch.object(function_app, "datetime", wraps=datetime)
+        self.cancellation_store_patch = patch.object(
+            function_app.AzureTableCancellationStore,
+            "from_environment",
+            return_value=self.cancellation_store,
+        )
         self.env_patch = patch.dict(
             function_app.os.environ,
             {"SSV53_SPECIAL_OCCUPANCY_ENABLED": "true"},
         )
         self.store_patch.start()
+        self.cancellation_store_patch.start()
         clock = self.clock_patch.start()
         clock.now.return_value = FIXED_NOW
         self.env_patch.start()
         self.addCleanup(self.store_patch.stop)
+        self.addCleanup(self.cancellation_store_patch.stop)
         self.addCleanup(self.clock_patch.stop)
         self.addCleanup(self.env_patch.stop)
 
@@ -225,6 +234,79 @@ class TrainerOccupancyApiTests(unittest.TestCase):
         public_event = moved.to_public_event()
         self.assertEqual(public_event["creator"]["name"], "Juliane Beispiel")
         self.assertEqual(public_event["movedBy"]["name"], "App Administrator")
+
+    def test_relocated_training_can_be_cancelled_after_multiple_moves(self) -> None:
+        payload = {
+            "action": "move",
+            "commandId": "trainer-move:f-first",
+            "eventId": "training:sommer:som-kr-f-do:2026-08-20",
+            "targetResourceId": "rasen",
+            "requesterId": "trainer-17",
+            "creator": {"id": "trainer-17", "name": "Trainer Beispiel"},
+            "confirmation": "TRAINER_BELEGUNG_VERSCHIEBEN",
+            "overlapConfirmation": "UEBERSCHNEIDUNG_TROTZDEM_SPEICHERN",
+        }
+        response = function_app.ssv53_trainer_occupancies(request(payload))
+        self.assertEqual(response.status_code, 200, response.get_body())
+        event = next(iter(self.store.events.values()))
+        payload.update({
+            "commandId": "trainer-move:f-second",
+            "eventId": "one-off:" + event.event_id,
+            "targetResourceId": "kunstrasen",
+        })
+        response = function_app.ssv53_trainer_occupancies(request(payload))
+        self.assertEqual(response.status_code, 200, response.get_body())
+
+        delete = {
+            "action": "delete",
+            "commandId": "trainer-delete:f-relocated",
+            "eventId": "one-off:" + event.event_id,
+            "requesterId": "another-trainer",
+            "confirmation": "TRAINER_BELEGUNG_LOESCHEN",
+        }
+        response = function_app.ssv53_trainer_occupancies(request(delete))
+        self.assertEqual(response.status_code, 200, response.get_body())
+        response_body = json.loads(response.get_body())
+        original_id = "training:sommer:som-kr-f-do:2026-08-20"
+        self.assertEqual(response_body["cancelledTrainingEventId"], original_id)
+        self.assertNotIn(event.event_id, self.store.events)
+        self.assertIn(original_id, self.cancellation_store.items)
+        cancellation = self.cancellation_store.items[original_id]
+        self.assertEqual(
+            cancellation.release_not_before_utc,
+            FIXED_NOW + timedelta(minutes=30),
+        )
+
+    def test_relocated_training_stays_blocked_if_cancellation_fails(self) -> None:
+        payload = {
+            "action": "move",
+            "commandId": "trainer-move:f-fail-closed",
+            "eventId": "training:sommer:som-kr-f-do:2026-08-20",
+            "targetResourceId": "rasen",
+            "requesterId": "trainer-17",
+            "creator": {"id": "trainer-17", "name": "Trainer Beispiel"},
+            "confirmation": "TRAINER_BELEGUNG_VERSCHIEBEN",
+            "overlapConfirmation": "UEBERSCHNEIDUNG_TROTZDEM_SPEICHERN",
+        }
+        response = function_app.ssv53_trainer_occupancies(request(payload))
+        self.assertEqual(response.status_code, 200, response.get_body())
+        event = next(iter(self.store.events.values()))
+        delete = {
+            "action": "delete",
+            "commandId": "trainer-delete:f-fail-closed",
+            "eventId": "one-off:" + event.event_id,
+            "requesterId": "trainer-17",
+            "confirmation": "TRAINER_BELEGUNG_LOESCHEN",
+        }
+        with patch.object(
+            self.cancellation_store,
+            "cancel",
+            side_effect=RuntimeError("storage unavailable"),
+        ):
+            response = function_app.ssv53_trainer_occupancies(request(delete))
+        self.assertEqual(response.status_code, 503, response.get_body())
+        self.assertIn(event.event_id, self.store.events)
+        self.assertIsNotNone(event_to_mower_block(event, Block))
 
     def test_move_to_occupied_pitch_requires_same_second_confirmation(self) -> None:
         payload = {

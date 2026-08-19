@@ -6098,8 +6098,17 @@
         const action = elements.trainerOccupancyDelete;
         action.hidden = true;
         action.disabled = false;
+        const label = action.querySelector("span");
+        const props = event && event.extendedProps || {};
+        const relocatedTraining = props.eventKind === "special" &&
+          Boolean(props.replacesTrainingEventId);
+        label.textContent = relocatedTraining ? "Termin absagen" : "Belegung löschen";
+        if (relocatedTraining) {
+          action.hidden = !state.canManageTrainingCancellations;
+          return;
+        }
         if (!isTrainerCreatedOccupancy(event)) return;
-        const creator = event.extendedProps.creator || {};
+        const creator = props.creator || {};
         const ownEntry = Boolean(state.currentCreator.id) &&
           state.currentCreator.id === String(creator.id || "");
         action.hidden = !(ownEntry || state.canAdministerTrainerOccupancies);
@@ -6203,8 +6212,13 @@
       async function deleteTrainerOccupancy() {
         const event = state.currentDialogEvent;
         if (!event || elements.trainerOccupancyDelete.hidden) return;
+        const relocatedTraining = Boolean(
+          event.extendedProps && event.extendedProps.replacesTrainingEventId
+        );
         if (!window.confirm(
-          "Diese manuelle Belegung wirklich löschen? Die Änderung wirkt direkt auf die Platz- und Mäherplanung."
+          relocatedTraining
+            ? "Dieses verlegte Training wirklich absagen? Die Änderung wirkt direkt auf die Platz- und Mäherplanung."
+            : "Diese manuelle Belegung wirklich löschen? Die Änderung wirkt direkt auf die Platz- und Mäherplanung."
         )) return;
         elements.trainerOccupancyDelete.disabled = true;
         try {
@@ -7054,7 +7068,7 @@
         </button>
         <button id="trainer-occupancy-delete" type="button" class="dialog-button dialog-button--training-action" hidden>
           <i class="fa-solid fa-trash" aria-hidden="true"></i>
-          Belegung löschen
+          <span>Belegung löschen</span>
         </button>
         <button id="trainer-occupancy-move" type="button" class="dialog-button dialog-button--move-action" hidden>
           <i class="fa-solid fa-right-left" aria-hidden="true"></i>

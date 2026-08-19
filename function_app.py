@@ -509,26 +509,7 @@ def _trainer_move_source(
     requester_id = str(body.get("requesterId") or "").strip()
     is_admin = bool(body.get("isAppAdministrator"))
     if source_id.startswith("training:"):
-        parts = source_id.split(":")
-        if len(parts) < 4:
-            raise SpecialOccupancyError("EVENT_NOT_FOUND", "Der Trainingstermin wurde nicht gefunden.", status_code=404)
-        try:
-            day = datetime.fromisoformat(parts[-1]).date()
-        except ValueError as exc:
-            raise SpecialOccupancyError("EVENT_NOT_FOUND", "Der Trainingstermin wurde nicht gefunden.", status_code=404) from exc
-        season = parts[1].capitalize()
-        occurrences = build_training_occurrences(
-            config_path=os.environ.get("OCCUPANCY_CONFIG_PATH", "occupancy/config.json"),
-            start=day.isoformat(),
-            end=(day + timedelta(days=1)).isoformat(),
-            season=season,
-        )
-        occurrence = next(
-            (item for item in occurrences if str(item.get("id") or "").strip().lower() == source_id),
-            None,
-        )
-        if occurrence is None:
-            raise SpecialOccupancyError("EVENT_NOT_FOUND", "Der Trainingstermin wurde nicht gefunden.", status_code=404)
+        occurrence = _trainer_training_occurrence(source_id)
         event_id = "trainer-move-" + hashlib.sha256(source_id.encode("utf-8")).hexdigest()[:32]
         moved_by = body.get("creator") if isinstance(body.get("creator"), dict) else {}
         event = {
@@ -606,6 +587,48 @@ def _trainer_move_source(
     return event, source_id, existing.resource_id
 
 
+def _trainer_training_occurrence(event_id: str) -> dict:
+    """Löst ausschließlich eine konfigurierte, konkrete Trainingsinstanz auf."""
+
+    source_id = str(event_id or "").strip().lower()
+    parts = source_id.split(":")
+    if len(parts) < 4 or not source_id.startswith("training:"):
+        raise SpecialOccupancyError(
+            "EVENT_NOT_FOUND",
+            "Der Trainingstermin wurde nicht gefunden.",
+            status_code=404,
+        )
+    try:
+        day = datetime.fromisoformat(parts[-1]).date()
+    except ValueError as exc:
+        raise SpecialOccupancyError(
+            "EVENT_NOT_FOUND",
+            "Der Trainingstermin wurde nicht gefunden.",
+            status_code=404,
+        ) from exc
+    occurrences = build_training_occurrences(
+        config_path=os.environ.get("OCCUPANCY_CONFIG_PATH", "occupancy/config.json"),
+        start=day.isoformat(),
+        end=(day + timedelta(days=1)).isoformat(),
+        season=parts[1].capitalize(),
+    )
+    occurrence = next(
+        (
+            item
+            for item in occurrences
+            if str(item.get("id") or "").strip().lower() == source_id
+        ),
+        None,
+    )
+    if occurrence is None:
+        raise SpecialOccupancyError(
+            "EVENT_NOT_FOUND",
+            "Der Trainingstermin wurde nicht gefunden.",
+            status_code=404,
+        )
+    return occurrence
+
+
 @app.route(
     route="trainer-occupancies",
     methods=["POST", "OPTIONS"],
@@ -664,12 +687,42 @@ def ssv53_trainer_occupancies(req: func.HttpRequest) -> func.HttpResponse:
                 raise SpecialOccupancyError("EVENT_NOT_FOUND", "Die Belegung wurde nicht gefunden.", status_code=404)
             requester_id = str(body.get("requesterId") or "").strip()
             is_admin = bool(body.get("isAppAdministrator"))
-            if not is_admin and (not requester_id or requester_id != existing.creator_id):
+            is_relocated_training = bool(existing.replaced_training_event_id)
+            if (
+                not is_relocated_training
+                and not is_admin
+                and (not requester_id or requester_id != existing.creator_id)
+            ):
                 raise SpecialOccupancyError("DELETE_FORBIDDEN", "Diese Belegung darf nur vom Ersteller oder App-Administrator gelöscht werden.", status_code=403)
+            cancelled_training_event_id = ""
+            if is_relocated_training:
+                # Zuerst die ursprüngliche Instanz absagen, erst danach den
+                # Ersatztermin entfernen. Ein Teilfehler bleibt so fail-closed:
+                # Der Platz wird niemals versehentlich vorzeitig freigegeben.
+                occurrence = _trainer_training_occurrence(
+                    existing.replaced_training_event_id
+                )
+                delay = int(
+                    os.environ.get(
+                        "TRAINING_CANCELLATION_RELEASE_DELAY_MINUTES",
+                        "30",
+                    )
+                )
+                cancellation_store = AzureTableCancellationStore.from_environment(
+                    os.environ
+                )
+                cancellation_store.cancel(
+                    occurrence,
+                    now_utc=now_utc,
+                    release_delay_minutes=delay,
+                )
+                cancelled_training_event_id = existing.replaced_training_event_id
             result = store.apply(
                 {"commandId": str(body.get("commandId") or ""), "action": "delete", "eventId": event_id},
                 now_utc=now_utc,
             )
+            if cancelled_training_event_id:
+                result["cancelledTrainingEventId"] = cancelled_training_event_id
             LOGGER.warning("SSV53_TRAINER_OCCUPANCY_DELETED event_id=%s", event_id)
             return _trainer_occupancy_response(result, status_code=200)
         if action == "move":
