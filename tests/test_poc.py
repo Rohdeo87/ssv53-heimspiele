@@ -413,6 +413,48 @@ class RequestProtectionTest(unittest.TestCase):
             state = json.loads(state_path.read_text(encoding="utf-8"))
             self.assertTrue(state["security_lock"])
 
+    def test_regular_match_page_contact_captcha_does_not_set_security_lock(self):
+        with tempfile.TemporaryDirectory() as folder:
+            state_path = Path(folder) / "request_state.json"
+            client = self.make_client(state_path=state_path)
+            client.session = Mock()
+            page = """
+                <html><head><title>Spielbericht - FUSSBALL.DE</title></head><body>
+                <main><h1>Spielgemeinschaft Schoenwalde - VfL Nauen II</h1></main>
+                <section class="contact-form-wrapper">
+                  <h3>Falsches Ergebnis melden</h3>
+                  <div id="captcha_1" class="captcha">
+                    <img alt="renew captcha">
+                    <a href="/ajax.captcha/-/captcha-scope/contact"></a>
+                    <input name="captcha-code" placeholder="Sicherheitscode*">
+                  </div>
+                </section></body></html>
+            """
+            client.session.get.return_value = response(
+                200,
+                page,
+                {"Content-Type": "text/html; charset=UTF-8"},
+            )
+
+            self.assertEqual(page, client.get_text("https://www.fussball.de/spiel/test"))
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            self.assertFalse(state["security_lock"])
+
+    def test_standalone_captcha_page_with_http_200_sets_security_lock(self):
+        with tempfile.TemporaryDirectory() as folder:
+            state_path = Path(folder) / "request_state.json"
+            client = self.make_client(state_path=state_path)
+            client.session = Mock()
+            client.session.get.return_value = response(
+                200,
+                "<html><title>Captcha required</title><body><h1>Captcha required</h1></body></html>",
+                {"Content-Type": "text/html; charset=UTF-8"},
+            )
+            with self.assertRaises(SecurityLockError):
+                client.get_text("https://www.fussball.de/captcha")
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            self.assertTrue(state["security_lock"])
+
     def test_existing_security_lock_prevents_network_request(self):
         with tempfile.TemporaryDirectory() as folder:
             state_path = Path(folder) / "request_state.json"

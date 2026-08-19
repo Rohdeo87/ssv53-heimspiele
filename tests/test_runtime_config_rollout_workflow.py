@@ -11,10 +11,18 @@ class RuntimeConfigRolloutWorkflowTests(unittest.TestCase):
     def setUpClass(cls):
         cls.content = WORKFLOW.read_text(encoding="utf-8")
 
-    def test_runtime_source_is_the_checked_out_migration_commit(self):
-        self.assertIn('SOURCE_SHA="$(git rev-parse HEAD)"', self.content)
-        self.assertIn('cp "public/$name" "$SOURCE_DIR/$name"', self.content)
-        self.assertNotIn("github.event.repository.default_branch", self.content)
+    def test_runtime_code_is_migration_branch_but_source_is_atomic_main_commit(self):
+        self.assertIn("ref: feature/azure-mower-migration", self.content)
+        self.assertIn(
+            "SOURCE_BRANCH: ${{ github.event.repository.default_branch }}",
+            self.content,
+        )
+        self.assertIn(
+            'SOURCE_SHA="$(git rev-parse "refs/remotes/origin/$SOURCE_BRANCH")"',
+            self.content,
+        )
+        self.assertIn('git show "$SOURCE_SHA:public/$name"', self.content)
+        self.assertNotIn('cp "public/$name" "$SOURCE_DIR/$name"', self.content)
 
     def test_publish_safety_gates_and_atomic_rollback_remain_required(self):
         self.assertIn('[ "$GITHUB_REF_NAME" = "$MIGRATION_BRANCH" ]', self.content)

@@ -42,6 +42,11 @@ class RuntimeConfigAutomationTests(unittest.TestCase):
 
     def test_rollout_uses_fresh_main_data_and_current_timing_engine(self) -> None:
         self.assertIn("included_matches.json summary.json quality_report.json", self.rollout)
+        self.assertIn(
+            "SOURCE_BRANCH: ${{ github.event.repository.default_branch }}",
+            self.rollout,
+        )
+        self.assertIn('git show "$SOURCE_SHA:public/$name"', self.rollout)
         self.assertIn("scripts/build_runtime_config_bundle.py", self.rollout)
         self.assertIn("--timing-config config.json", self.rollout)
         self.assertIn('MAX_SOURCE_AGE_MINUTES: "720"', self.rollout)

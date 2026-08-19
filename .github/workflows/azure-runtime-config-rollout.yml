@@ -28,6 +28,7 @@ concurrency:
 
 env:
   MIGRATION_BRANCH: feature/azure-mower-migration
+  SOURCE_BRANCH: ${{ github.event.repository.default_branch }}
   RUNTIME_CONTAINER: runtime-config
   MAX_SOURCE_AGE_MINUTES: "720"
 
@@ -67,7 +68,7 @@ jobs:
           python -m compileall -q mower occupancy scripts function_app.py
           python -m unittest discover -s tests -p "test_*.py" -v
 
-      - name: Geprüften Spielbestand des Migrationsstands laden
+      - name: Geprüften Spielbestand atomar aus main laden
         id: source
         shell: bash
         run: |
@@ -75,10 +76,12 @@ jobs:
           SOURCE_DIR="$RUNNER_TEMP/runtime-source"
           mkdir -p "$SOURCE_DIR"
 
-          SOURCE_SHA="$(git rev-parse HEAD)"
+          git fetch --no-tags --depth=1 origin \
+            "+refs/heads/$SOURCE_BRANCH:refs/remotes/origin/$SOURCE_BRANCH"
+          SOURCE_SHA="$(git rev-parse "refs/remotes/origin/$SOURCE_BRANCH")"
 
           for name in included_matches.json summary.json quality_report.json; do
-            cp "public/$name" "$SOURCE_DIR/$name"
+            git show "$SOURCE_SHA:public/$name" > "$SOURCE_DIR/$name"
             test -s "$SOURCE_DIR/$name"
           done
 

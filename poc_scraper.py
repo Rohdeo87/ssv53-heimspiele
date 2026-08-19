@@ -125,10 +125,12 @@ class Client:
     DEFAULT_RATE_LIMIT_BLOCK_SECONDS = 6 * 60 * 60
     RETRYABLE_STATUS_CODES = {502, 503, 504}
     SECURITY_STATUS_CODES = {403, 406}
-    CHALLENGE_MARKERS = (
+    TECHNICAL_CHALLENGE_MARKERS = (
         "cf-chl-",
         "/cdn-cgi/challenge-platform/",
         "challenge-platform",
+    )
+    VISIBLE_CHALLENGE_MARKERS = (
         "checking your browser",
         "verify you are human",
         "verification required",
@@ -305,9 +307,36 @@ class Client:
         text = str(response.text or "")
         sample = text[:250000].casefold()
 
-        for marker in cls.CHALLENGE_MARKERS:
+        # Technische Challenge-Signaturen sind eindeutig und sperren sofort.
+        # Reine Begriffe wie ``captcha`` duerfen dagegen nicht im gesamten
+        # Quelltext gesucht werden: regulaere FUSSBALL.DE-Spielseiten enthalten
+        # ein CAPTCHA im Kontaktformular "Falsches Ergebnis melden".
+        for marker in cls.TECHNICAL_CHALLENGE_MARKERS:
             if marker in sample:
                 return f"Challenge-Marker erkannt: {marker}"
+
+        title = ""
+        heading_text = ""
+        visible_text = ""
+        if "text/html" in content_type or "<html" in sample:
+            soup = BeautifulSoup(text, "html.parser")
+            title = normalize_space(soup.title.get_text(" ", strip=True)).casefold() if soup.title else ""
+            heading_text = normalize_space(
+                " ".join(node.get_text(" ", strip=True) for node in soup.select("h1, h2, [role='heading']"))
+            ).casefold()
+            for node in soup.select("script, style, noscript, template"):
+                node.decompose()
+            visible_text = normalize_space(soup.get_text(" ", strip=True)).casefold()
+
+        for marker in cls.VISIBLE_CHALLENGE_MARKERS:
+            if marker in title or marker in heading_text:
+                return f"Sicherheitsseite anhand sichtbarer Ueberschrift erkannt: {marker}"
+            # Kleine Zwischen-/Sperrseiten haben oft keine semantische
+            # Ueberschrift. Dort bleibt ein sichtbarer Challenge-Hinweis
+            # dennoch sperrend; umfangreiche regulaere Seiten werden nicht
+            # wegen eingebetteter Kontaktformulare blockiert.
+            if len(visible_text) < 5000 and marker in visible_text:
+                return f"Sicherheitsseite anhand sichtbarem Hinweis erkannt: {marker}"
 
         # Zusätzliche strukturelle Signale typischer Challenge-Seiten. Ein
         # einzelner Cloudflare-Header reicht bewusst nicht aus, da reguläre
@@ -317,12 +346,6 @@ class Client:
             or "cf-ray" in str(response.headers).casefold() and "challenge" in sample
         ):
             return "Cloudflare-Sicherheitsseite erkannt"
-
-        if response.status_code == 200 and "text/html" in content_type:
-            title_match = re.search(r"<title[^>]*>(.*?)</title>", sample, re.DOTALL)
-            title = normalize_space(title_match.group(1)) if title_match else ""
-            if title in {"forbidden", "not acceptable", "access denied"}:
-                return f"Sicherheitsseite anhand Seitentitel erkannt: {title}"
 
         return ""
 
