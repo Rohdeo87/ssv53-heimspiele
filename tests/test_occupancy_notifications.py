@@ -10,6 +10,7 @@ from occupancy_notifications import (
     collision_recipients,
     find_collisions,
     process_collision_notifications,
+    send_collision_test_mail,
 )
 
 
@@ -155,6 +156,20 @@ class OccupancyNotificationTests(unittest.TestCase):
     def test_contact_registration_routes_are_removed(self) -> None:
         self.assertFalse(hasattr(function_app, "ssv53_occupancy_contact_register"))
         self.assertFalse(hasattr(function_app, "ssv53_occupancy_contact_verify"))
+
+    def test_test_mail_only_uses_server_configured_central_recipients(self) -> None:
+        sent = []
+        result = send_collision_test_mail(
+            environment(),
+            mail_sender=lambda settings, message: sent.append(message),
+        )
+        self.assertEqual(result, {"ok": True, "sent": 2})
+        self.assertEqual(
+            [message["To"] for message in sent],
+            ["info@ssv53.de", "thomas.rohde@ssv53.de"],
+        )
+        self.assertTrue(all("[TEST]" in message["Subject"] for message in sent))
+        self.assertTrue(all("keine echte neue Kollision" in message.get_content() for message in sent))
 
 
 if __name__ == "__main__":

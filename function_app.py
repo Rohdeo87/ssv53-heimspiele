@@ -15,7 +15,7 @@ from mower.irrigation_recovery import (
     reset_failed_irrigation,
 )
 from occupancy.service import build_occupancy_payload, build_training_occurrences
-from occupancy_notifications import process_collision_notifications
+from occupancy_notifications import process_collision_notifications, send_collision_test_mail
 from training_cancellations import AzureTableCancellationStore
 from special_occupancy import (
     AzureTableSpecialOccupancyStore,
@@ -1021,6 +1021,20 @@ def ssv53_order_mail(req: func.HttpRequest) -> func.HttpResponse:
 
     action = str(body.get("action") or "").strip().lower()
     try:
+        if action == "send-collision-test":
+            if body.get("confirmation") != "SSV53-COLLISION-TEST":
+                return _order_mail_response(
+                    {
+                        "ok": False,
+                        "code": "CONFIRMATION_INVALID",
+                        "error": "Die Testmail-Bestätigung ist ungültig.",
+                    },
+                    status_code=400,
+                )
+            result = send_collision_test_mail(os.environ)
+            LOGGER.info("SSV53_OCCUPANCY_COLLISION_TEST_MAIL_OK sent=%s", result["sent"])
+            return _order_mail_response(result)
+
         if action == "check":
             result = check_smtp_connection(os.environ)
             LOGGER.info("SSV53_ORDER_MAIL_SMTP_CHECK_OK")

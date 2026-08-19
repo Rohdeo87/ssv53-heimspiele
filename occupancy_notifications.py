@@ -255,3 +255,31 @@ def process_collision_notifications(
                 directory.mark_delivery(fingerprint, "failed", now_utc)
                 raise
     return {"collisions": len(collisions), "sent": sent}
+
+
+def send_collision_test_mail(
+    values: Mapping[str, str],
+    *,
+    mail_sender: MailSender = _send_message,
+) -> dict[str, int | bool]:
+    """Sendet eine neutrale Testmail nur an die serverseitig festgelegten Empfänger."""
+    if not enabled(values):
+        raise RuntimeError("Kollisionsbenachrichtigungen sind nicht aktiviert.")
+    recipients = collision_recipients(values)
+    settings = OrderMailSettings.from_mapping(values)
+    sent = 0
+    for recipient in recipients:
+        message = EmailMessage()
+        message["From"] = formataddr((settings.from_name, settings.from_address))
+        message["To"] = recipient
+        message["Subject"] = "[TEST] SSV53 Kollisionsbenachrichtigung"
+        message.set_content(
+            "Dies ist eine angeforderte Testmail der zentralen "
+            "Platzbelegungs-Kollisionsbenachrichtigung.\n\n"
+            "Es liegt keine echte neue Kollision zugrunde. Trainerinnen und Trainer "
+            "erhalten keine Kopie dieser Nachricht.\n\n"
+            "Schönwalder SV 1953 e.V."
+        )
+        mail_sender(settings, message)
+        sent += 1
+    return {"ok": True, "sent": sent}
