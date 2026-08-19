@@ -1586,6 +1586,7 @@
 
       const VISIBLE_START_TIME = "07:00:00";
       const VISIBLE_END_TIME = "23:00:00";
+      const TODAY_AFTERNOON_SCROLL_TIME = "14:00:00";
 
       /*
        * Vertikale Kalenderdichte. Eine Zeile entspricht 30 Minuten.
@@ -1688,7 +1689,7 @@
         trainerContactsVerifiedThisSession: false,
         activeSeason: "Sommer",
         activeCalendarId: "all",
-        activeView: "resourceTimeGridDay",
+        activeView: "resourceTimeGridWeek",
         calendar: null,
         rangeKey: "",
         fetchToken: 0,
@@ -4834,6 +4835,32 @@
         };
       }
 
+      function focusTodayInWeek() {
+        if (!state.calendar) return;
+
+        const today = new Date();
+        state.activeView = "resourceTimeGridWeek";
+        state.pendingWeekLanding = "today";
+        state.rangeKey = "";
+        storageSet(storageKey("view"), state.activeView);
+        updateViewButtons();
+
+        if (
+          normalizeCalendarViewType(state.calendar.view.type) !==
+          "resourceTimeGridWeek"
+        ) {
+          state.calendar.changeView("resourceTimeGridWeek", today);
+        } else {
+          state.calendar.gotoDate(today);
+        }
+
+        window.requestAnimationFrame(function () {
+          applyGridWidth();
+          schedulePendingWeekLanding();
+          state.calendar.scrollToTime(TODAY_AFTERNOON_SCROLL_TIME);
+        });
+      }
+
       function getOccupancyEventTimes(event) {
         const props = event && event.extendedProps || {};
         if (props.sourceType === "official-match-feed") {
@@ -4891,7 +4918,7 @@
       }
 
       function getInitialScrollTime() {
-        return VISIBLE_START_TIME;
+        return TODAY_AFTERNOON_SCROLL_TIME;
       }
 
       function capitalizeFirst(value) {
@@ -5082,9 +5109,35 @@
         const scroller = getWeekHorizontalScroller();
         if (!scroller) return false;
         const edges = getWeekScrollEdges(scroller);
-        const target = state.pendingWeekLanding === "end"
+        let target = state.pendingWeekLanding === "end"
           ? edges.maxScroll
           : 0;
+        if (state.pendingWeekLanding === "today") {
+          const todayKey = formatApiDate(new Date());
+          const todayColumns = Array.from(elements.calendar.querySelectorAll(
+            '.fc-resourceTimeGridWeek-view .fc-timegrid-col[data-date="' +
+              todayKey + '"]'
+          ));
+          if (!todayColumns.length) return false;
+          const scrollerRect = scroller.getBoundingClientRect();
+          const todayRects = todayColumns.map(function (column) {
+            return column.getBoundingClientRect();
+          });
+          const todayLeft = Math.min.apply(null, todayRects.map(function (rect) {
+            return rect.left;
+          }));
+          const todayRight = Math.max.apply(null, todayRects.map(function (rect) {
+            return rect.right;
+          }));
+          target = Math.max(
+            0,
+            Math.min(
+              edges.maxScroll,
+              scroller.scrollLeft + (todayLeft + todayRight) / 2 -
+                scrollerRect.left - scrollerRect.width / 2
+            )
+          );
+        }
 
         if (typeof scroller.scrollTo === "function") {
           scroller.scrollTo({ left: target, top: scroller.scrollTop });
@@ -5689,6 +5742,7 @@
         state.calendar = new window.FullCalendar.Calendar(elements.calendar, {
           timeZone: "local",
           initialView: state.activeView,
+          initialDate: new Date(),
           schedulerLicenseKey: "0174423468-fcs-1727782425",
           locale: "de",
           firstDay: 1,
@@ -6302,14 +6356,9 @@
           ? storedSeason
           : getAutomaticSeason();
 
-        const storedView = storageGet(storageKey("view"));
-        const defaultView = window.matchMedia("(max-width: 699px)").matches
-          ? "resourceTimeGridDay"
-          : "resourceTimeGridWeek";
-        state.activeView = storedView === "resourceTimeGridDay" ||
-          storedView === "resourceTimeGridWeek"
-          ? storedView
-          : defaultView;
+        state.activeView = "resourceTimeGridWeek";
+        state.pendingWeekLanding = "today";
+        storageSet(storageKey("view"), state.activeView);
 
         initializeResourcePresentation();
         ensureActiveCalendarSelection();
@@ -6372,11 +6421,11 @@
         });
 
         elements.todayButton.addEventListener("click", function () {
-          if (state.calendar) state.calendar.today();
+          focusTodayInWeek();
         });
 
         elements.currentDateButton.addEventListener("click", function () {
-          if (state.calendar) state.calendar.today();
+          focusTodayInWeek();
         });
 
         elements.trainerContactRetry.addEventListener("click", function () {
