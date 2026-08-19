@@ -188,13 +188,8 @@ test("Kalender öffnet die heutige Woche und Heute behält die gewählte Ansicht
   assert.match(html, /elements\.todayButton\.addEventListener\("click", function \(\) \{\s*focusTodayInCurrentView\(\)/);
 });
 
-test("Benachrichtigungskontakte werden minimal und write-only registriert", () => {
-  const registration = extractFunction("registerOccupancyNotificationContacts");
-  assert.match(registration, /name: String\(contact\.name\)/);
-  assert.match(registration, /email: String\(contact\.email\)/);
-  assert.match(registration, /teamKeys: Array\.from\(contact\.keys\)/);
-  assert.match(registration, /APPACK_KONTAKTE_VERIFIZIEREN/);
-  assert.match(registration, /"Content-Type": "text\/plain;charset=UTF-8"/);
-  assert.doesNotMatch(registration, /localStorage|sessionStorage|response\.json/);
-  assert.match(html, /registerOccupancyNotificationContacts\(result\.contacts\)/);
+test("Appack übermittelt keine Trainer-Kontakte für Kollisionsmails", () => {
+  assert.doesNotMatch(html, /occupancy-contact-register/);
+  assert.doesNotMatch(html, /registerOccupancyNotificationContacts/);
+  assert.doesNotMatch(html, /APPACK_KONTAKTE_VERIFIZIEREN/);
 });

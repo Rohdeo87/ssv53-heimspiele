@@ -15,12 +15,7 @@ from mower.irrigation_recovery import (
     reset_failed_irrigation,
 )
 from occupancy.service import build_occupancy_payload, build_training_occurrences
-from occupancy_notifications import (
-    process_contact_verifications,
-    process_collision_notifications,
-    register_contacts,
-    verify_contact,
-)
+from occupancy_notifications import process_collision_notifications
 from training_cancellations import AzureTableCancellationStore
 from special_occupancy import (
     AzureTableSpecialOccupancyStore,
@@ -90,18 +85,13 @@ def ssv53_mower_timer(
 def ssv53_occupancy_notification_timer(timer: func.TimerRequest) -> None:
     """Eigenständiger Mailzyklus ohne Aufruf oder Befehlsweg zum Mäher."""
     try:
-        verification_sent = process_contact_verifications(
-            datetime.now(timezone.utc),
-            os.environ,
-        )
         notification_result = process_collision_notifications(
             datetime.now(timezone.utc),
             os.environ,
         )
-        if verification_sent or notification_result["collisions"]:
+        if notification_result["collisions"]:
             LOGGER.info(
-                "SSV53_OCCUPANCY_NOTIFICATION_SUMMARY verifications=%s collisions=%s sent=%s",
-                verification_sent,
+                "SSV53_OCCUPANCY_NOTIFICATION_SUMMARY collisions=%s sent=%s",
                 notification_result["collisions"],
                 notification_result["sent"],
             )
@@ -433,86 +423,6 @@ def _trainer_occupancy_response(
         mimetype="application/json",
         charset="utf-8",
         headers=_occupancy_headers(cache=False),
-    )
-
-
-@app.route(
-    route="occupancy-contact-register",
-    methods=["POST", "OPTIONS"],
-    auth_level=func.AuthLevel.ANONYMOUS,
-)
-def ssv53_occupancy_contact_register(req: func.HttpRequest) -> func.HttpResponse:
-    """Write-only Registrierung; gibt niemals Kontakte oder Adressen zurück."""
-    if req.method.upper() == "OPTIONS":
-        return func.HttpResponse(status_code=204, headers=_occupancy_headers(cache=False))
-    try:
-        body = req.get_json()
-        if not isinstance(body, dict):
-            raise ValueError("Der Request muss ein JSON-Objekt enthalten.")
-        if body.get("confirmation") != "APPACK_KONTAKTE_VERIFIZIEREN":
-            raise ValueError("Die Sicherheitsbestätigung fehlt.")
-        contacts = body.get("contacts")
-        if not isinstance(contacts, list):
-            raise ValueError("contacts muss eine Liste sein.")
-        result = register_contacts(
-            contacts,
-            os.environ,
-            now_utc=datetime.now(timezone.utc),
-        )
-        LOGGER.info(
-            "SSV53_OCCUPANCY_CONTACT_SYNC accepted=%s pending=%s",
-            result["accepted"],
-            result["pending"],
-        )
-        return _trainer_occupancy_response({"ok": True})
-    except ValueError as exc:
-        return _trainer_occupancy_response({"ok": False, "error": str(exc)}, 400)
-    except RuntimeError as exc:
-        return _trainer_occupancy_response({"ok": False, "error": str(exc)}, 503)
-    except Exception:
-        LOGGER.exception("SSV53_OCCUPANCY_CONTACT_SYNC_ERROR")
-        return _trainer_occupancy_response(
-            {"ok": False, "error": "Kontakte konnten nicht sicher registriert werden."},
-            503,
-        )
-
-
-@app.route(
-    route="occupancy-contact-verify",
-    methods=["GET"],
-    auth_level=func.AuthLevel.ANONYMOUS,
-)
-def ssv53_occupancy_contact_verify(req: func.HttpRequest) -> func.HttpResponse:
-    """Aktiviert eine Zuordnung ausschließlich über einen zufälligen Einmallink."""
-    try:
-        verified = verify_contact(
-            req.params.get("token") or "",
-            os.environ,
-            now_utc=datetime.now(timezone.utc),
-        )
-    except Exception:
-        LOGGER.exception("SSV53_OCCUPANCY_CONTACT_VERIFY_ERROR")
-        verified = False
-    if verified:
-        title = "Bestätigung erfolgreich"
-        text = "Du erhältst künftig Hinweise zu Spielüberschneidungen deiner Mannschaft."
-        status = 200
-    else:
-        title = "Link ungültig oder abgelaufen"
-        text = "Bitte öffne den Belegungsplan erneut, damit bei Bedarf ein neuer Link versendet wird."
-        status = 400
-    html = (
-        "<!doctype html><html lang=\"de\"><meta charset=\"utf-8\">"
-        "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
-        f"<title>{title}</title><body style=\"font-family:system-ui;padding:2rem;max-width:38rem;margin:auto\">"
-        f"<h1>{title}</h1><p>{text}</p><p>Schönwalder SV 1953 e.V.</p></body></html>"
-    )
-    return func.HttpResponse(
-        html,
-        status_code=status,
-        mimetype="text/html",
-        charset="utf-8",
-        headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"},
     )
 
 
