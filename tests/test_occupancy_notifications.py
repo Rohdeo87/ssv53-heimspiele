@@ -17,6 +17,14 @@ from occupancy_notifications import (
 NOW = datetime(2026, 8, 19, 10, 0, tzinfo=timezone.utc)
 
 
+def message_part(message, content_type: str) -> str:
+    return next(
+        part.get_content()
+        for part in message.walk()
+        if part.get_content_type() == content_type
+    )
+
+
 def environment(**overrides: str) -> dict[str, str]:
     values = {
         "SSV53_OCCUPANCY_COLLISION_NOTIFICATIONS_ENABLED": "true",
@@ -107,7 +115,14 @@ class OccupancyNotificationTests(unittest.TestCase):
         self.assertNotIn("trainer@example.de", combined)
         self.assertNotIn("trainer privat", combined)
         self.assertNotIn("+49 170", combined)
-        self.assertIn("18:30", sent[0].get_content())
+        plain = message_part(sent[0], "text/plain")
+        branded_html = message_part(sent[0], "text/html")
+        self.assertIn("18:30", plain)
+        self.assertIn("Überschneidung erkannt", branded_html)
+        self.assertIn("#285EA7", branded_html)
+        self.assertIn("Icon_Verein.png", branded_html)
+        self.assertNotIn("personenbezogen", sent[0].as_string().lower())
+        self.assertNotIn("kontaktdaten", sent[0].as_string().lower())
 
     def test_changed_relevant_time_creates_new_notification(self) -> None:
         store = MemoryStore()
@@ -169,7 +184,9 @@ class OccupancyNotificationTests(unittest.TestCase):
             ["info@ssv53.de", "thomas.rohde@ssv53.de"],
         )
         self.assertTrue(all("[TEST]" in message["Subject"] for message in sent))
-        self.assertTrue(all("keine echte neue Kollision" in message.get_content() for message in sent))
+        self.assertTrue(all(message.is_multipart() for message in sent))
+        self.assertTrue(all("Test erfolgreich" in message_part(message, "text/html") for message in sent))
+        self.assertTrue(all("keine weitere Aktion" in message_part(message, "text/plain") for message in sent))
 
 
 if __name__ == "__main__":

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import html
 import re
 from datetime import datetime, timedelta
 from email.message import EmailMessage
@@ -13,7 +14,18 @@ from azure.data.tables import TableClient, UpdateMode
 from azure.identity import ManagedIdentityCredential
 
 from occupancy.service import build_occupancy_payload
-from order_mail import EMAIL_PATTERN, OrderMailSettings, _open_authenticated_smtp
+from order_mail import (
+    APP_BG,
+    APP_BLUE,
+    APP_BORDER,
+    APP_DARK_BLUE,
+    APP_GOLD,
+    APP_LOGO_URL,
+    APP_MUTED,
+    EMAIL_PATTERN,
+    OrderMailSettings,
+    _open_authenticated_smtp,
+)
 from special_occupancy import AzureTableSpecialOccupancyStore, merge_public_special_events
 from training_cancellations import AzureTableCancellationStore
 
@@ -141,6 +153,119 @@ def _send_message(settings: OrderMailSettings, message: EmailMessage) -> None:
         smtp.send_message(message)
 
 
+def _branded_message(
+    settings: OrderMailSettings,
+    recipient: str,
+    *,
+    subject: str,
+    headline: str,
+    intro: str,
+    badge: str,
+    details: list[tuple[str, str]],
+    closing: str,
+    automatic_note: str,
+) -> EmailMessage:
+    plain_details = "\n".join(f"{label}: {value}" for label, value in details)
+    plain = (
+        f"{headline}\n\n{intro}\n\n{plain_details}\n\n{closing}\n\n"
+        "Viele Grüße\nSchönwalder SV 1953 e.V.\n"
+    )
+    detail_rows = "".join(
+        f"""
+        <tr>
+          <td style="padding:11px 14px;border-bottom:1px solid {APP_BORDER};
+                     font-size:12px;line-height:1.4;color:{APP_MUTED};width:34%;">
+            {html.escape(label)}
+          </td>
+          <td style="padding:11px 14px;border-bottom:1px solid {APP_BORDER};
+                     font-size:14px;line-height:1.45;color:#1F2937;font-weight:700;">
+            {html.escape(value)}
+          </td>
+        </tr>"""
+        for label, value in details
+    )
+    html_body = f"""\
+<!doctype html>
+<html lang="de">
+  <body style="margin:0;padding:0;background:{APP_BG};font-family:Arial,Helvetica,sans-serif;
+               color:#111827;-webkit-text-size-adjust:100%;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
+           style="width:100%;background:{APP_BG};border-collapse:collapse;">
+      <tr>
+        <td align="center" style="padding:24px 10px;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
+                 style="width:100%;max-width:620px;background:#FFFFFF;border-collapse:separate;
+                        border-spacing:0;border-radius:18px;overflow:hidden;">
+            <tr>
+              <td style="height:7px;background:{APP_BLUE};font-size:0;line-height:0;">&nbsp;</td>
+            </tr>
+            <tr>
+              <td align="center" style="padding:25px 22px 8px 22px;">
+                <img src="{APP_LOGO_URL}" alt="Schönwalder SV 1953 e.V." width="72"
+                     style="display:block;width:72px;height:72px;object-fit:contain;border:0;">
+              </td>
+            </tr>
+            <tr>
+              <td align="center" style="padding:4px 24px 0 24px;">
+                <span style="display:inline-block;padding:7px 11px;border-radius:999px;
+                             background:#FFF4D6;color:{APP_DARK_BLUE};font-size:11px;
+                             letter-spacing:.4px;font-weight:800;">
+                  {html.escape(badge)}
+                </span>
+                <div style="margin-top:13px;font-size:25px;line-height:1.25;
+                            font-weight:800;color:#111111;">
+                  {html.escape(headline)}
+                </div>
+                <div style="margin-top:8px;font-size:14px;line-height:1.5;color:#555555;">
+                  Schönwalder SV 1953 e.V.
+                </div>
+                <div style="height:2px;background:{APP_GOLD};width:70%;max-width:420px;
+                            margin:16px auto 0 auto;"></div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:22px 24px 29px 24px;">
+                <div style="font-size:15px;line-height:1.6;color:#374151;">
+                  {html.escape(intro)}
+                </div>
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
+                       style="margin-top:19px;border-collapse:separate;border-spacing:0;
+                              border:1px solid {APP_BORDER};border-radius:14px;
+                              background:#F8FAFC;overflow:hidden;">
+                  {detail_rows}
+                </table>
+                <div style="margin-top:21px;padding:15px 16px;border-radius:14px;
+                            background:#EEF4FB;font-size:14px;line-height:1.6;color:#374151;">
+                  <strong style="color:{APP_DARK_BLUE};">Nächster Schritt</strong><br>
+                  {html.escape(closing)}
+                </div>
+                <div style="margin-top:27px;font-size:14px;line-height:1.6;color:#374151;">
+                  Viele Grüße<br>
+                  <strong style="color:{APP_DARK_BLUE};">Schönwalder SV 1953 e.V.</strong>
+                </div>
+              </td>
+            </tr>
+          </table>
+          <div style="max-width:620px;margin:13px auto 0 auto;padding:0 12px;
+                      text-align:center;font-size:11px;line-height:1.5;color:#8A94A3;">
+            {html.escape(automatic_note)}
+          </div>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
+"""
+    message = EmailMessage()
+    message["From"] = formataddr((settings.from_name, settings.from_address))
+    message["To"] = recipient
+    message["Reply-To"] = settings.from_address
+    message["Subject"] = subject
+    message.set_content(plain)
+    message.add_alternative(html_body, subtype="html")
+    return message
+
+
 def _event_dt(event: Mapping[str, Any], *fields: str) -> datetime:
     for field in fields:
         value = event.get(field)
@@ -228,24 +353,36 @@ def process_collision_notifications(
             )
             if not directory.claim_delivery(fingerprint, now_utc):
                 continue
-            message = EmailMessage()
-            message["From"] = formataddr((settings.from_name, settings.from_address))
-            message["To"] = recipient
-            message["Subject"] = "SSV53: Spiel kollidiert mit Platzbelegung"
             kickoff = _event_dt(match, "kickoff", "start")
             booking_start = _event_dt(booking, "start")
             booking_end = _event_dt(booking, "end")
-            message.set_content(
-                "Hallo,\n\n"
-                "ein Verbandsspiel überschneidet sich mit einer bestehenden Platzbelegung:\n\n"
-                f"Spiel: {match.get('title') or 'Heimspiel'}\n"
-                f"Anstoß: {kickoff.strftime('%d.%m.%Y %H:%M')} Uhr\n"
-                f"Bestehende Belegung: {booking.get('title') or 'Belegung'}\n"
-                f"Belegungszeit: {booking_start.strftime('%d.%m.%Y %H:%M')} bis {booking_end.strftime('%H:%M')} Uhr\n"
-                f"Platz: {match.get('resourceId') or ''}\n\n"
-                "Bitte prüft und koordiniert die Platznutzung. Diese Nachricht enthält keine "
-                "Kontaktdaten von Trainerinnen, Trainern oder Erstellern.\n\n"
-                "Schönwalder SV 1953 e.V."
+            resource = str(match.get("resourceId") or "")
+            place = {"rasen": "Rasenplatz", "kunstrasen": "Kunstrasenplatz"}.get(
+                resource.lower(), resource or "Nicht angegeben"
+            )
+            message = _branded_message(
+                settings,
+                recipient,
+                subject="SSV53: Überschneidung im Belegungsplan",
+                headline="Überschneidung erkannt",
+                intro=(
+                    "Ein neu angesetztes Verbandsspiel überschneidet sich mit einer "
+                    "bestehenden Platzbelegung."
+                ),
+                badge="PRÜFUNG ERFORDERLICH",
+                details=[
+                    ("Spiel", str(match.get("title") or "Heimspiel")),
+                    ("Anstoß", kickoff.strftime("%d.%m.%Y um %H:%M Uhr")),
+                    ("Bestehende Belegung", str(booking.get("title") or "Belegung")),
+                    (
+                        "Belegungszeit",
+                        f"{booking_start.strftime('%d.%m.%Y, %H:%M')} bis "
+                        f"{booking_end.strftime('%H:%M')} Uhr",
+                    ),
+                    ("Platz", place),
+                ],
+                closing="Bitte prüft und koordiniert die Platznutzung.",
+                automatic_note="Automatische Benachrichtigung aus dem SSV53-Belegungsplan",
             )
             try:
                 mail_sender(settings, message)
@@ -269,16 +406,20 @@ def send_collision_test_mail(
     settings = OrderMailSettings.from_mapping(values)
     sent = 0
     for recipient in recipients:
-        message = EmailMessage()
-        message["From"] = formataddr((settings.from_name, settings.from_address))
-        message["To"] = recipient
-        message["Subject"] = "[TEST] SSV53 Kollisionsbenachrichtigung"
-        message.set_content(
-            "Dies ist eine angeforderte Testmail der zentralen "
-            "Platzbelegungs-Kollisionsbenachrichtigung.\n\n"
-            "Es liegt keine echte neue Kollision zugrunde. Trainerinnen und Trainer "
-            "erhalten keine Kopie dieser Nachricht.\n\n"
-            "Schönwalder SV 1953 e.V."
+        message = _branded_message(
+            settings,
+            recipient,
+            subject="[TEST] SSV53 Kollisionsbenachrichtigung",
+            headline="Test erfolgreich",
+            intro="Die zentrale Benachrichtigung aus dem SSV53-Belegungsplan ist einsatzbereit.",
+            badge="SYSTEMTEST",
+            details=[
+                ("Status", "E-Mail-Versand funktioniert"),
+                ("Bereich", "Platzbelegungsplan"),
+                ("Empfänger", recipient),
+            ],
+            closing="Es ist keine weitere Aktion erforderlich.",
+            automatic_note="Angeforderte Testmail aus dem SSV53-Belegungsplan",
         )
         mail_sender(settings, message)
         sent += 1
