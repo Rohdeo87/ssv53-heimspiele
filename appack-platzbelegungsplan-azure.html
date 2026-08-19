@@ -4835,28 +4835,24 @@
         };
       }
 
-      function focusTodayInWeek() {
+      function focusTodayInCurrentView() {
         if (!state.calendar) return;
 
         const today = new Date();
-        state.activeView = "resourceTimeGridWeek";
-        state.pendingWeekLanding = "today";
+        state.activeView = normalizeCalendarViewType(state.calendar.view.type);
+        state.pendingWeekLanding = state.activeView === "resourceTimeGridWeek"
+          ? "today"
+          : "";
         state.rangeKey = "";
         storageSet(storageKey("view"), state.activeView);
         updateViewButtons();
-
-        if (
-          normalizeCalendarViewType(state.calendar.view.type) !==
-          "resourceTimeGridWeek"
-        ) {
-          state.calendar.changeView("resourceTimeGridWeek", today);
-        } else {
-          state.calendar.gotoDate(today);
-        }
+        state.calendar.gotoDate(today);
 
         window.requestAnimationFrame(function () {
           applyGridWidth();
-          schedulePendingWeekLanding();
+          if (state.activeView === "resourceTimeGridWeek") {
+            schedulePendingWeekLanding();
+          }
           state.calendar.scrollToTime(TODAY_AFTERNOON_SCROLL_TIME);
         });
       }
@@ -4879,14 +4875,9 @@
       function getCalendarEventTimeText(event) {
         const props = event && event.extendedProps || {};
         if (props.sourceType === "official-match-feed") {
-          const occupancy = getOccupancyEventTimes(event);
           const kickoff = new Date(props.kickoff || props.displayStart || "");
-          if (
-            occupancy.start && occupancy.end &&
-            !Number.isNaN(kickoff.getTime())
-          ) {
-            return "Gesperrt " + formatTimeRange(occupancy.start, occupancy.end) +
-              " · Anstoß " + formatTime(kickoff) + " Uhr";
+          if (!Number.isNaN(kickoff.getTime())) {
+            return "Anstoß " + formatTime(kickoff) + " Uhr";
           }
         }
         const visible = getVisibleEventTimes(event);
@@ -6421,11 +6412,11 @@
         });
 
         elements.todayButton.addEventListener("click", function () {
-          focusTodayInWeek();
+          focusTodayInCurrentView();
         });
 
         elements.currentDateButton.addEventListener("click", function () {
-          focusTodayInWeek();
+          focusTodayInCurrentView();
         });
 
         elements.trainerContactRetry.addEventListener("click", function () {

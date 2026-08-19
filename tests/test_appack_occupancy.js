@@ -96,7 +96,7 @@ test("Spiel blockiert occupancyStart bis occupancyEnd, zeigt aber start bis end"
       end: mapped.end,
       extendedProps: mapped.extendedProps
     }),
-    "Gesperrt 18:00–21:30 Uhr · Anstoß 19:00 Uhr"
+    "Anstoß 19:00 Uhr"
   );
 });
 

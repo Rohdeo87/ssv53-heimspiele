@@ -164,9 +164,9 @@ test("Trainerbelegung schreibt nur validierte strukturierte Felder", () => {
   assert.match(html, /elements\.todayButton\.addEventListener\("click"/);
 });
 
-test("Kalender öffnet die heutige Woche am Nachmittag und Heute fokussiert sie erneut", () => {
+test("Kalender öffnet die heutige Woche und Heute behält die gewählte Ansicht", () => {
   const initialLoader = extractFunction("loadInitialData");
-  const focusToday = extractFunction("focusTodayInWeek");
+  const focusToday = extractFunction("focusTodayInCurrentView");
   const weekLanding = extractFunction("applyPendingWeekLanding");
 
   assert.match(html, /activeView: "resourceTimeGridWeek"/);
@@ -174,10 +174,11 @@ test("Kalender öffnet die heutige Woche am Nachmittag und Heute fokussiert sie 
   assert.match(html, /initialDate: new Date\(\)/);
   assert.match(initialLoader, /state\.activeView = "resourceTimeGridWeek"/);
   assert.match(initialLoader, /state\.pendingWeekLanding = "today"/);
-  assert.match(focusToday, /changeView\("resourceTimeGridWeek", today\)/);
+  assert.doesNotMatch(focusToday, /changeView\(/);
+  assert.match(focusToday, /normalizeCalendarViewType\(state\.calendar\.view\.type\)/);
   assert.match(focusToday, /gotoDate\(today\)/);
   assert.match(focusToday, /scrollToTime\(TODAY_AFTERNOON_SCROLL_TIME\)/);
   assert.match(weekLanding, /data-date=/);
   assert.match(weekLanding, /todayLeft \+ todayRight/);
-  assert.match(html, /elements\.todayButton\.addEventListener\("click", function \(\) \{\s*focusTodayInWeek\(\)/);
+  assert.match(html, /elements\.todayButton\.addEventListener\("click", function \(\) \{\s*focusTodayInCurrentView\(\)/);
 });
