@@ -151,3 +151,16 @@ test("Mäheraktionen sind für Fahren, Laden, Sperren und manuelle Bedienung ein
   assert.equal(disconnected.showPark, false);
   assert.equal(disconnected.showStart, false);
 });
+
+test("nächster Mäherstart unterscheidet Plan, Beregnung und Ladeschätzung", () => {
+  const names = ["localDay(value)", "calendarTime(v,referenceValue)", "time(v)", "nextMowerStart(s)"];
+  const source = names.map((name) => html.split("\n").find((line) => line.includes(`function ${name}`))).join("\n");
+  const nextStart = new Function(`var EVENT_TIME_ZONE="Europe/Berlin";\n${source}\nreturn nextMowerStart;`)();
+  const future = new Date(Date.now() + 60 * 60000).toISOString();
+  const later = new Date(Date.now() + 120 * 60000).toISOString();
+
+  assert.match(nextStart({ mower: { activity: "CHARGING", batteryPercent: 70, nextStartAt: future }, automation: { continuousMowingOwned: true }, occupancy: {} }), /^Geschätzt: /);
+  assert.match(nextStart({ mower: { activity: "PARKED_IN_CS" }, automation: {}, occupancy: { current: { end: later } } }), /^Nach Plan: /);
+  assert.equal(nextStart({ mower: { activity: "PARKED_IN_CS" }, automation: { irrigationPhase: "RUNNING" }, occupancy: {} }), "Nach Beregnungsende + 120 Min.");
+  assert.equal(nextStart({ mower: { activity: "MOWING" }, automation: {}, occupancy: {} }), "Bereits gestartet");
+});
