@@ -9,6 +9,8 @@ from zoneinfo import ZoneInfo
 
 import azure.functions as func
 
+from daily_safety_report import process_daily_report
+
 from mower.controller import run_control_cycle
 from mower.irrigation_recovery import (
     IrrigationRecoveryError,
@@ -102,6 +104,26 @@ def ssv53_occupancy_notification_timer(timer: func.TimerRequest) -> None:
     except Exception:
         # Keine Request-Bodys, Namen oder E-Mail-Adressen protokollieren.
         LOGGER.exception("SSV53_OCCUPANCY_COLLISION_NOTIFICATION_ERROR")
+
+@app.timer_trigger(
+    # UTC-Kandidaten decken Sommer- und Winterzeit ab. Die lokale Zeitprüfung
+    # und der Tages-Claim verhindern Versand außerhalb von 07 Uhr und Duplikate.
+    schedule="0 0 5,6,7,8 * * *",
+    arg_name="timer",
+    run_on_startup=False,
+    use_monitor=True,
+)
+def ssv53_daily_safety_report_timer(timer: func.TimerRequest) -> None:
+    """Täglicher, befehlsfreier Bericht aus vorhandener Telemetrie."""
+    try:
+        result = process_daily_report(datetime.now(timezone.utc), os.environ)
+        LOGGER.info(
+            "SSV53_DAILY_REPORT %s",
+            json.dumps(result, ensure_ascii=False, sort_keys=True),
+        )
+    except Exception:
+        # Keine Zugangsdaten oder Empfängeradressen protokollieren.
+        LOGGER.exception("SSV53_DAILY_REPORT_ERROR")
 
 def _occupancy_matches_path() -> tuple[str, str]:
     """Öffentliche Belegung aus dem gemeinsamen strukturierten Matchmodell.

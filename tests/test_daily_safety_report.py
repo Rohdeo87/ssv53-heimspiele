@@ -1,0 +1,131 @@
+from datetime import datetime, timezone
+
+import pytest
+
+from daily_safety_report import (
+    COMPLETION_DECISION,
+    DailyReportError,
+    parse_cycle_rows,
+    process_daily_report,
+    report_recipient,
+    should_attempt_delivery,
+    summarize_report,
+)
+
+
+def row(when: str, *, activity="MOWING", decision="", sent=False, error=0):
+    return {
+        "timestamp": when,
+        "activity": activity,
+        "mower_state": "IN_OPERATION" if not error else "ERROR",
+        "error_code": error,
+        "battery_percent": 72,
+        "decision_code": decision,
+        "command_sent": sent,
+        "hydrawise_available": True,
+        "hydrawise_fresh": True,
+        "hydrawise_active_zones": 0,
+        "next_irrigation_start_utc": "2026-08-21T02:00:00Z",
+        "blocked_source": "",
+        "parking_source": "",
+    }
+
+
+def test_delivery_window_tracks_berlin_summer_and_winter_time():
+    assert should_attempt_delivery(datetime(2026, 8, 20, 5, 0, tzinfo=timezone.utc))
+    assert should_attempt_delivery(datetime(2026, 12, 20, 6, 0, tzinfo=timezone.utc))
+    assert not should_attempt_delivery(datetime(2026, 8, 20, 4, 59, tzinfo=timezone.utc))
+
+
+def test_summary_counts_unique_mowing_minutes_and_only_confirmed_completions():
+    observations = parse_cycle_rows(
+        [
+            row("2026-08-19T05:00:01Z"),
+            row("2026-08-19T05:00:40Z"),  # same telemetry minute
+            row("2026-08-19T05:01:01Z", activity="LEAVING"),
+            row(
+                "2026-08-19T05:02:01Z",
+                activity="PARKED_IN_CS",
+                decision=COMPLETION_DECISION,
+                sent=True,
+            ),
+            row(
+                "2026-08-19T05:03:01Z",
+                activity="PARKED_IN_CS",
+                decision=COMPLETION_DECISION,
+                sent=False,
+            ),
+        ]
+    )
+    summary = summarize_report(
+        observations,
+        now_utc=datetime(2026, 8, 20, 5, 0, tzinfo=timezone.utc),
+        exception_count_24h=0,
+    )
+    assert summary.mowing_minutes_7d == 2
+    assert summary.completed_area_cycles_7d == 1
+    assert summary.average_daily_mowing_minutes_7d == 0
+
+
+def test_recipient_is_required_and_validated():
+    assert report_recipient({"SSV53_DAILY_REPORT_RECIPIENT": "Thomas.Rohde@ssv53.de"}) == "thomas.rohde@ssv53.de"
+    with pytest.raises(DailyReportError):
+        report_recipient({"SSV53_DAILY_REPORT_RECIPIENT": "not-an-email"})
+
+
+class Store:
+    def __init__(self, claim=True):
+        self.claim_result = claim
+        self.marks = []
+
+    def claim(self, report_date, now_utc):
+        return self.claim_result
+
+    def mark(self, report_date, status, now_utc):
+        self.marks.append(status)
+
+
+class Queries:
+    def __init__(self):
+        self.calls = 0
+
+    def execute(self, query, *, timespan):
+        self.calls += 1
+        if query.startswith("exceptions"):
+            return [{"exception_count": 0}]
+        return [row("2026-08-20T04:59:01Z")]
+
+
+def test_process_sends_once_and_marks_success(monkeypatch):
+    values = {
+        "SSV53_DAILY_REPORT_ENABLED": "true",
+        "SSV53_DAILY_REPORT_RECIPIENT": "thomas.rohde@ssv53.de",
+        "SSV53_ORDER_MAIL_SMTP_HOST": "smtp.example.test",
+        "SSV53_ORDER_MAIL_SMTP_PORT": "587",
+        "SSV53_ORDER_MAIL_SMTP_USERNAME": "info@ssv53.de",
+        "SSV53_ORDER_MAIL_SMTP_PASSWORD": "secret",
+        "SSV53_ORDER_MAIL_FROM_ADDRESS": "info@ssv53.de",
+        "SSV53_ORDER_MAIL_FROM_NAME": "Schönwalder SV 1953 e.V.",
+    }
+    sent = []
+    store = Store()
+    result = process_daily_report(
+        datetime(2026, 8, 20, 5, 0, tzinfo=timezone.utc),
+        values,
+        query_client=Queries(),
+        store=store,
+        mail_sender=lambda settings, message: sent.append(message),
+    )
+    assert result["sent"] is True
+    assert store.marks == ["sent"]
+    assert sent[0]["To"] == "thomas.rohde@ssv53.de"
+    assert "Rasenfläche vollständig" in sent[0].get_body(preferencelist=("plain",)).get_content()
+
+    duplicate = process_daily_report(
+        datetime(2026, 8, 20, 6, 0, tzinfo=timezone.utc),
+        values,
+        query_client=Queries(),
+        store=Store(claim=False),
+        mail_sender=lambda settings, message: pytest.fail("duplicate mail"),
+    )
+    assert duplicate["reason"] == "already_claimed"

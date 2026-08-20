@@ -9,6 +9,7 @@ from pathlib import Path, PurePosixPath
 
 
 REQUIRED_FILES = (
+    "daily_safety_report.py",
     "function_app.py",
     "host.json",
     "order_mail.py",
