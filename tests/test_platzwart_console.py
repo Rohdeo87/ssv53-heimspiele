@@ -98,6 +98,26 @@ class PlatzwartSafetyIntegrationTests(unittest.TestCase):
         self.assertEqual(cycle.decision_code, "OPERATOR_PARK_HOLD")
         self.assertFalse(cycle.command_sent)
 
+    def test_operator_park_is_reasserted_if_mower_unexpectedly_leaves(self) -> None:
+        sent = []
+        initial = AutomationState(
+            parked_by_automation=True,
+            automation_park_source="operator",
+            automation_restart_allowed=False,
+            park_command_sent_utc=(NOW - timedelta(minutes=10)).isoformat(),
+            park_confirmed_utc=(NOW - timedelta(minutes=5)).isoformat(),
+        )
+        cycle, state = self.run_cycle(
+            initial,
+            result(activity="MOWING"),
+            park_sender=lambda *_args: sent.append("park") or {"ok": True},
+        )
+        self.assertEqual(sent, ["park"])
+        self.assertEqual(cycle.decision_code, "PARK_COMMAND_REASSERTED")
+        self.assertTrue(state.parked_by_automation)
+        self.assertEqual(state.automation_park_source, "operator")
+        self.assertFalse(state.automation_restart_allowed)
+
     def test_explicit_start_still_obeys_safe_start_path(self) -> None:
         sent = []
         initial = self.pending(

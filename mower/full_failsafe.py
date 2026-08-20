@@ -1186,6 +1186,11 @@ def run_full_failsafe_cycle(
         bool(_source_parts(block_source) & PARK_GUARD_BLOCK_SOURCES)
         or state.irrigation_phase in ACTIVE_IRRIGATION_PHASES
         or state.irrigation_phase == "FAILED"
+        or (
+            state.parked_by_automation
+            and state.automation_park_source == "operator"
+            and not state.automation_restart_allowed
+        )
     )
     automation_park_lost = (
         state.parked_by_automation
