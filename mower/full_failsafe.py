@@ -767,6 +767,10 @@ def _persist_result(
     message: str,
     command_sent: bool = False,
 ) -> CycleResult:
+    # Persist the decision that this write cycle actually reached.  The
+    # read-only planner result can still describe a raw Husqvarna override,
+    # while the full failsafe has safely adopted or otherwise handled it.
+    state = replace(state, last_decision_code=decision_code)
     try:
         store.save(state, expected_revision=original.revision)
         persisted, error = True, None

@@ -346,6 +346,7 @@ def _state_payload(state: AutomationState) -> dict[str, Any]:
         "parkedByAutomation": state.parked_by_automation,
         "parkReason": state.automation_park_source,
         "parkConfirmedAt": state.park_confirmed_utc,
+        "continuousMowingOwned": state.continuous_mowing_owned,
         "irrigationPhase": state.irrigation_phase,
         "irrigationCompletedAt": state.irrigation_completed_utc,
         "hydrawiseClearSince": state.hydrawise_clear_since_utc,

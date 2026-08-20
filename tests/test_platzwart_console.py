@@ -212,6 +212,7 @@ class PlatzwartSafetyIntegrationTests(unittest.TestCase):
         self.assertFalse(cycle.command_sent)
         self.assertEqual(cycle.decision_code, "CONTINUOUS_MOWING_ACTIVE")
         self.assertTrue(state.continuous_mowing_owned)
+        self.assertEqual(state.last_decision_code, "CONTINUOUS_MOWING_ACTIVE")
         self.assertIsNotNone(state.continuous_mowing_work_area_id)
         self.assertIsNotNone(state.continuous_mowing_window_end_utc)
         self.assertEqual(state.operator_request_status, "COMPLETED")

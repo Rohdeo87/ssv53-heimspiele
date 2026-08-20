@@ -28,6 +28,7 @@ test("Platzwart-Seite ist syntaktisch gültig und enthält keine Zugangsdaten", 
   assert.match(html, /Wird ausgeführt/);
   assert.match(html, /waitForAction/);
   assert.match(html, /Gebucht von:/);
+  assert.match(html, /continuousMowingOwned/);
   assert.doesNotMatch(html, /mowe_forced/i);
   assert.doesNotMatch(html, /HUSQVARNA_CLIENT_SECRET|HYDRAWISE_API_KEY|SSV53_PLATZWART_PIN_HASH/);
 });
