@@ -5,6 +5,9 @@ import hashlib
 import hmac
 import json
 import secrets
+import threading
+import urllib.request
+from zoneinfo import ZoneInfo
 from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from typing import Any, Mapping
@@ -23,8 +26,14 @@ PIN_ITERATIONS_MINIMUM = 200_000
 SESSION_MINUTES = 30
 REQUEST_MINUTES = 10
 ALLOWED_ACTIONS = frozenset(
-    {"PARK_MOWER", "START_MOWING", "START_IRRIGATION", "STOP_IRRIGATION_AFTER_ZONE"}
+    {
+        "PARK_MOWER", "START_MOWING", "START_IRRIGATION",
+        "START_IRRIGATION_ZONE", "STOP_IRRIGATION_AFTER_ZONE",
+    }
 )
+
+_CLUBHOUSE_CACHE_LOCK = threading.Lock()
+_CLUBHOUSE_CACHE: dict[str, Any] = {"expires": None, "events": [], "available": False}
 
 
 class PlatzwartError(RuntimeError):
@@ -345,6 +354,69 @@ def _state_payload(state: AutomationState) -> dict[str, Any]:
     }
 
 
+def _ics_value(line: str) -> tuple[str, str]:
+    left, _, value = line.partition(":")
+    return left.split(";", 1)[0].upper(), value.strip()
+
+
+def _ics_datetime(value: str) -> datetime:
+    if value.endswith("Z"):
+        return datetime.strptime(value, "%Y%m%dT%H%M%SZ").replace(tzinfo=timezone.utc)
+    if "T" in value:
+        return datetime.strptime(value, "%Y%m%dT%H%M%S").replace(tzinfo=ZoneInfo("Europe/Berlin"))
+    return datetime.strptime(value, "%Y%m%d").replace(tzinfo=ZoneInfo("Europe/Berlin"))
+
+
+def _clubhouse_events(environment: Mapping[str, str], now_utc: datetime) -> dict[str, Any]:
+    url = str(environment.get("SSV53_CLUBHOUSE_CALENDAR_URL") or "").strip()
+    if not url:
+        return {"available": False, "events": [], "message": "Vereinsheim-Kalender ist nicht eingerichtet."}
+    now = now_utc.astimezone(timezone.utc)
+    with _CLUBHOUSE_CACHE_LOCK:
+        expires = _CLUBHOUSE_CACHE.get("expires")
+        if isinstance(expires, datetime) and now < expires:
+            return {
+                "available": bool(_CLUBHOUSE_CACHE.get("available")),
+                "events": list(_CLUBHOUSE_CACHE.get("events") or []),
+                "message": _CLUBHOUSE_CACHE.get("message"),
+            }
+    try:
+        request = urllib.request.Request(url, headers={"User-Agent": "SSV53-Platzwart/1.0"})
+        with urllib.request.urlopen(request, timeout=8) as response:
+            raw = response.read(256_000).decode("utf-8", errors="replace")
+        unfolded = raw.replace("\r\n ", "").replace("\r\n\t", "").splitlines()
+        events: list[dict[str, Any]] = []
+        current: dict[str, str] | None = None
+        for line in unfolded:
+            if line == "BEGIN:VEVENT":
+                current = {}
+            elif line == "END:VEVENT" and current is not None:
+                try:
+                    start = _ics_datetime(current["DTSTART"])
+                    end = _ics_datetime(current.get("DTEND") or current["DTSTART"])
+                    if end.astimezone(timezone.utc) >= now:
+                        events.append({
+                            "title": current.get("SUMMARY") or "Vereinsheim belegt",
+                            "start": start.astimezone(timezone.utc).isoformat(),
+                            "end": end.astimezone(timezone.utc).isoformat(),
+                        })
+                except (KeyError, ValueError):
+                    pass
+                current = None
+            elif current is not None and ":" in line:
+                key, value = _ics_value(line)
+                if key in {"DTSTART", "DTEND", "SUMMARY"}:
+                    current[key] = value.replace("\\,", ",").replace("\\n", " ")
+        events.sort(key=lambda item: item["start"])
+        payload = {"available": True, "events": events[:5], "message": None}
+    except Exception:
+        payload = {"available": False, "events": [], "message": "Vereinsheim-Daten sind gerade nicht erreichbar."}
+    with _CLUBHOUSE_CACHE_LOCK:
+        _CLUBHOUSE_CACHE.update(payload)
+        _CLUBHOUSE_CACHE["expires"] = now + timedelta(minutes=5)
+    return payload
+
+
 def live_status(environment: Mapping[str, str], now_utc: datetime) -> dict[str, Any]:
     settings = RuntimeSettings.from_mapping(environment)
     result = run_read_only_cycle(
@@ -407,6 +479,7 @@ def live_status(environment: Mapping[str, str], now_utc: datetime) -> dict[str, 
             "parking": current_plan.get("parking_block"),
         },
         "automation": _state_payload(state),
+        "clubhouse": _clubhouse_events(environment, now_utc),
     }
 
 
@@ -416,6 +489,9 @@ def request_action(
     confirmation: str,
     environment: Mapping[str, str],
     now_utc: datetime,
+    *,
+    zone: int | None = None,
+    run_seconds: int | None = None,
 ) -> dict[str, Any]:
     normalized = action.strip().upper()
     if normalized not in ALLOWED_ACTIONS:
@@ -424,6 +500,14 @@ def request_action(
         raise PlatzwartError("REQUEST_ID_INVALID", "Die Anfragenummer fehlt oder ist ungültig.")
     if confirmation != normalized:
         raise PlatzwartError("CONFIRMATION_INVALID", "Die Aktion wurde nicht eindeutig bestätigt.")
+    if normalized == "START_IRRIGATION_ZONE":
+        if zone is None or not 1 <= int(zone) <= 99:
+            raise PlatzwartError("ZONE_INVALID", "Bitte eine gültige Beregnungszone wählen.")
+        if run_seconds is None or not 60 <= int(run_seconds) <= 7200:
+            raise PlatzwartError("DURATION_INVALID", "Die Laufzeit muss zwischen 1 und 120 Minuten liegen.")
+    else:
+        zone = None
+        run_seconds = None
     settings = RuntimeSettings.from_mapping(environment)
     if not settings.full_failsafe_write_gate_enabled:
         raise PlatzwartError("AUTOMATION_LOCKED", "Die sichere Automatik ist nicht vollständig freigegeben.", 409)
@@ -433,7 +517,7 @@ def request_action(
         return {"accepted": True, "requestId": request_id, "status": original.operator_request_status}
     if original.operator_request_status == "PENDING":
         raise PlatzwartError("ACTION_PENDING", "Eine andere Bedienaktion wird bereits sicher verarbeitet.", 409)
-    if normalized == "START_IRRIGATION" and original.irrigation_phase is not None:
+    if normalized in {"START_IRRIGATION", "START_IRRIGATION_ZONE"} and original.irrigation_phase is not None:
         raise PlatzwartError(
             "IRRIGATION_ALREADY_ACTIVE",
             "Ein Beregnungsablauf oder Sicherheitsnachlauf ist bereits aktiv.",
@@ -458,6 +542,8 @@ def request_action(
         operator_request_expires_utc=(now_utc.astimezone(timezone.utc) + timedelta(minutes=REQUEST_MINUTES)).isoformat(),
         operator_request_status="PENDING",
         operator_request_result=None,
+        operator_request_zone=zone,
+        operator_request_run_seconds=run_seconds,
     )
     try:
         store.save(updated, expected_revision=original.revision)

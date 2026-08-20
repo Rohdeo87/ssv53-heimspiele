@@ -622,6 +622,12 @@ def ssv53_platzwart_action(req: func.HttpRequest) -> func.HttpResponse:
             str(body.get("confirmation") or ""),
             os.environ,
             now,
+            zone=(int(body["zone"]) if body.get("zone") is not None else None),
+            run_seconds=(
+                int(body["runSeconds"])
+                if body.get("runSeconds") is not None
+                else None
+            ),
         )
         LOGGER.warning(
             "SSV53_PLATZWART_ACTION_ACCEPTED action=%s request_id=%s device=%s",

@@ -21,6 +21,11 @@ test("Platzwart-Seite ist syntaktisch gültig und enthält keine Zugangsdaten", 
   });
   assert.match(html, /platzwart/i);
   assert.match(html, /STOP_IRRIGATION_AFTER_ZONE/);
+  assert.match(html, /START_IRRIGATION_ZONE/);
+  assert.match(html, /Automatik einschalten/);
+  assert.match(html, /refresh-spinner/);
+  assert.match(html, /clubhouse-events/);
+  assert.doesNotMatch(html, /mowe_forced/i);
   assert.doesNotMatch(html, /HUSQVARNA_CLIENT_SECRET|HYDRAWISE_API_KEY|SSV53_PLATZWART_PIN_HASH/);
 });
 

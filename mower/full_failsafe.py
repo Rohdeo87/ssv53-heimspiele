@@ -273,6 +273,42 @@ def _validated_operator_plan(
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest(), zones
 
 
+def _validated_operator_single_zone_plan(
+    details: dict[str, Any],
+    *,
+    now_utc: datetime,
+    expected_zone_count: int,
+    expected_relay_ids: frozenset[int],
+    requested_zone: int | None,
+    requested_run_seconds: int | None,
+) -> tuple[str, list[dict[str, Any]]]:
+    if requested_zone is None or requested_run_seconds is None:
+        raise RuntimeError("Zone oder Laufzeit fehlt.")
+    if not 60 <= requested_run_seconds <= 7200:
+        raise RuntimeError("Die Laufzeit muss zwischen 1 und 120 Minuten liegen.")
+    _plan_id, zones = _validated_operator_plan(
+        details,
+        now_utc=now_utc,
+        expected_zone_count=expected_zone_count,
+        expected_relay_ids=expected_relay_ids,
+    )
+    selected = [zone for zone in zones if int(zone["zone"]) == requested_zone]
+    if len(selected) != 1:
+        raise RuntimeError("Die gewählte Zone gehört nicht zu den sieben freigegebenen Zonen.")
+    start = now_utc + timedelta(minutes=45)
+    for zone in zones:
+        zone["selected"] = int(zone["zone"]) == requested_zone
+        zone["operator_single_zone"] = True
+        if zone["selected"]:
+            zone["run_seconds"] = requested_run_seconds
+        end = start + timedelta(seconds=int(zone["run_seconds"]))
+        zone["scheduled_start_utc"] = start.isoformat()
+        zone["scheduled_end_utc"] = end.isoformat()
+        start = end
+    canonical = json.dumps(zones, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest(), zones
+
+
 def _active_relay_ids(details: dict[str, Any]) -> set[int]:
     safety = _as_dict(_as_dict(details.get("hydrawise")).get("safety"))
     values = safety.get("active_relay_ids")
@@ -944,10 +980,10 @@ def run_full_failsafe_cycle(
     irrigation_due = (
         irrigation_due
         or irrigation_capture_due
-        or operator_action == "START_IRRIGATION"
+        or operator_action in {"START_IRRIGATION", "START_IRRIGATION_ZONE"}
     )
     if (
-        operator_action == "START_IRRIGATION"
+        operator_action in {"START_IRRIGATION", "START_IRRIGATION_ZONE"}
         and state.irrigation_phase in ACTIVE_IRRIGATION_PHASES
     ):
         state = _finish_operator_request(
@@ -1038,6 +1074,15 @@ def run_full_failsafe_cycle(
                     expected_zone_count=expected_zones,
                     expected_relay_ids=expected_relay_ids,
                 )
+            elif operator_action == "START_IRRIGATION_ZONE":
+                plan_id, zones = _validated_operator_single_zone_plan(
+                    details,
+                    now_utc=now,
+                    expected_zone_count=expected_zones,
+                    expected_relay_ids=expected_relay_ids,
+                    requested_zone=state.operator_request_zone,
+                    requested_run_seconds=state.operator_request_run_seconds,
+                )
             else:
                 plan_id, zones = _validated_upcoming_plan(
                     details,
@@ -1077,14 +1122,18 @@ def run_full_failsafe_cycle(
                 irrigation_change_candidate_since_utc=None,
                 irrigation_cancelled_without_run_utc=None,
             )
-            if operator_action == "START_IRRIGATION":
+            if operator_action in {"START_IRRIGATION", "START_IRRIGATION_ZONE"}:
                 state = _finish_operator_request(
                     state,
-                    "Der sichere Sieben-Zonen-Ablauf wurde vorbereitet.",
+                    (
+                        "Die einzelne Zone wurde sicher vorbereitet."
+                        if operator_action == "START_IRRIGATION_ZONE"
+                        else "Der sichere Sieben-Zonen-Ablauf wurde vorbereitet."
+                    ),
                 )
                 operator_action = None
         except Exception as exc:
-            if operator_action == "START_IRRIGATION":
+            if operator_action in {"START_IRRIGATION", "START_IRRIGATION_ZONE"}:
                 rejected = _finish_operator_request(
                     state,
                     f"Beregnungsstart abgelehnt: {exc}",
@@ -1416,6 +1465,12 @@ def run_full_failsafe_cycle(
             )
 
         zones = _plan_from_state(state)
+        execution_zones = [zone for zone in zones if zone.get("selected", True) is not False]
+        single_zone_plan = (
+            len(execution_zones) == 1
+            and bool(execution_zones[0].get("operator_single_zone"))
+        )
+        execution_zone_count = len(execution_zones)
         active_ids = _active_relay_ids(details)
         completed = _json_ints(state.irrigation_completed_relay_ids_json)
         suspended = _json_ints(state.irrigation_suspended_relay_ids_json)
@@ -1424,6 +1479,7 @@ def run_full_failsafe_cycle(
             len(zones) != expected_zones
             or len(set(all_ids)) != expected_zones
             or set(all_ids) != expected_relay_ids
+            or execution_zone_count < 1
         ):
             failed = _failed_irrigation(
                 state,
@@ -1483,14 +1539,19 @@ def run_full_failsafe_cycle(
                     or "Beregnung läuft bereits während der Suspendierung.",
                 )
             capture_max_lead_minutes = irrigation_capture_max_lead_minutes
-            change_kind, reconciled_plan, change_reason = _reconcile_prestart_plan(
-                plan=zones,
-                suspended_relay_ids=set(suspended),
-                details=details,
-                now_utc=now,
-                expected_relay_ids=expected_relay_ids,
-                capture_max_lead_minutes=capture_max_lead_minutes,
-            )
+            if single_zone_plan:
+                change_kind, reconciled_plan, change_reason = (
+                    "UNCHANGED", zones, "Manuell gewählte Einzelzone bleibt unverändert."
+                )
+            else:
+                change_kind, reconciled_plan, change_reason = _reconcile_prestart_plan(
+                    plan=zones,
+                    suspended_relay_ids=set(suspended),
+                    details=details,
+                    now_utc=now,
+                    expected_relay_ids=expected_relay_ids,
+                    capture_max_lead_minutes=capture_max_lead_minutes,
+                )
             if change_kind == "UNCHANGED":
                 state = _clear_change_candidate(state)
             else:
@@ -1760,7 +1821,7 @@ def run_full_failsafe_cycle(
                 message=failed.irrigation_failed_reason or "Unerwartete Zone.",
             )
 
-        if state.irrigation_phase in {"READY", "RUNNING"} and (
+        if not single_zone_plan and state.irrigation_phase in {"READY", "RUNNING"} and (
             completed or current_id is not None
         ):
             duration_kind, duration_plan, duration_reason = (
@@ -1950,20 +2011,25 @@ def run_full_failsafe_cycle(
                     ),
                 )
             if not completed and current_id is None:
-                change_kind, reconciled_plan, change_reason = _reconcile_prestart_plan(
-                    plan=zones,
-                    suspended_relay_ids=set(suspended),
-                    details=details,
-                    now_utc=now,
-                    expected_relay_ids=expected_relay_ids,
-                    capture_max_lead_minutes=_env_int(
-                        environment,
-                        "IRRIGATION_CAPTURE_MAX_LEAD_MINUTES",
-                        45,
-                        minimum=30,
-                        maximum=120,
-                    ),
-                )
+                if single_zone_plan:
+                    change_kind, reconciled_plan, change_reason = (
+                        "UNCHANGED", zones, "Manuell gewählte Einzelzone bleibt unverändert."
+                    )
+                else:
+                    change_kind, reconciled_plan, change_reason = _reconcile_prestart_plan(
+                        plan=zones,
+                        suspended_relay_ids=set(suspended),
+                        details=details,
+                        now_utc=now,
+                        expected_relay_ids=expected_relay_ids,
+                        capture_max_lead_minutes=_env_int(
+                            environment,
+                            "IRRIGATION_CAPTURE_MAX_LEAD_MINUTES",
+                            45,
+                            minimum=30,
+                            maximum=120,
+                        ),
+                    )
                 if change_kind == "UNCHANGED":
                     state = _clear_change_candidate(state)
                 else:
@@ -2041,7 +2107,10 @@ def run_full_failsafe_cycle(
                         decision_code="IRRIGATION_PLAN_CHANGED",
                         message=failed.irrigation_failed_reason or "Beregnungsplan unklar.",
                     )
-            next_zone = next((zone for zone in zones if int(zone["relay_id"]) not in completed), None)
+            next_zone = next(
+                (zone for zone in execution_zones if int(zone["relay_id"]) not in completed),
+                None,
+            )
             if next_zone is None:
                 complete = replace(
                     state,
@@ -2058,7 +2127,11 @@ def run_full_failsafe_cycle(
                     details=details,
                     settings=settings,
                     decision_code="IRRIGATION_ALL_ZONES_CONFIRMED_COMPLETE",
-                    message="Alle sieben Zonen sind bestätigt beendet; der konfigurierte Sicherheitsnachlauf beginnt.",
+                    message=(
+                        "Die gewählte Zone ist bestätigt beendet; der konfigurierte Sicherheitsnachlauf beginnt."
+                        if single_zone_plan
+                        else "Alle sieben Zonen sind bestätigt beendet; der konfigurierte Sicherheitsnachlauf beginnt."
+                    ),
                 )
             if not completed:
                 suspension_completed = _parse_time(
@@ -2113,7 +2186,7 @@ def run_full_failsafe_cycle(
                 maximum=10,
             )
             projected_end = _projected_irrigation_end(
-                plan=zones,
+                plan=execution_zones,
                 completed_relay_ids=set(completed),
                 current_relay_id=None,
                 current_started_utc=None,
@@ -2411,7 +2484,7 @@ def run_full_failsafe_cycle(
                     "planned_run_seconds": int(current_zone["run_seconds"]),
                     "confirmed_clear_utc": now.isoformat(),
                     "remaining_zones_cancelled": (
-                        expected_zones - len(set(completed))
+                        execution_zone_count - len(set(completed))
                     ),
                 }
                 return _persist_result(
@@ -2428,7 +2501,7 @@ def run_full_failsafe_cycle(
                     ),
                 )
             completed.append(int(current_id or 0))
-            all_complete = len(set(completed)) == expected_zones
+            all_complete = len(set(completed)) == execution_zone_count
             advanced = replace(
                 state,
                 revision=state.revision + 1,
@@ -2454,7 +2527,11 @@ def run_full_failsafe_cycle(
                     else "IRRIGATION_ZONE_CONFIRMED_COMPLETE"
                 ),
                 message=(
-                    "Alle sieben Zonen sind bestätigt beendet; der konfigurierte Sicherheitsnachlauf beginnt."
+                    (
+                        "Die gewählte Zone ist bestätigt beendet; der konfigurierte Sicherheitsnachlauf beginnt."
+                        if single_zone_plan
+                        else "Alle sieben Zonen sind bestätigt beendet; der konfigurierte Sicherheitsnachlauf beginnt."
+                    )
                     if all_complete
                     else "Zone ist bestätigt beendet; die nächste Planzone wird vorbereitet."
                 ),

@@ -3,10 +3,13 @@ from __future__ import annotations
 import json
 import unittest
 from datetime import timedelta
+from unittest.mock import patch
 
 from mower.state import AutomationState
 from mower.state_store import InMemoryStateStore
 from platzwart_console import (
+    _CLUBHOUSE_CACHE,
+    _clubhouse_events,
     PlatzwartError,
     create_activation_hash,
     create_pin_hash,
@@ -43,6 +46,40 @@ class PlatzwartAuthenticationTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             create_activation_hash("too-short")
 
+    def test_clubhouse_feed_returns_only_upcoming_events(self) -> None:
+        feed = """BEGIN:VCALENDAR\r
+BEGIN:VEVENT\r
+DTSTART;TZID=Europe/Berlin:20260812T180000\r
+DTEND;TZID=Europe/Berlin:20260812T200000\r
+SUMMARY:Vergangen\r
+END:VEVENT\r
+BEGIN:VEVENT\r
+DTSTART;TZID=Europe/Berlin:20260821T180000\r
+DTEND;TZID=Europe/Berlin:20260821T200000\r
+SUMMARY:Vorstandssitzung\r
+END:VEVENT\r
+END:VCALENDAR\r
+"""
+
+        class Response:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                return None
+
+            def read(self, _limit):
+                return feed.encode("utf-8")
+
+        _CLUBHOUSE_CACHE.update({"expires": None, "events": [], "available": False})
+        with patch("platzwart_console.urllib.request.urlopen", return_value=Response()):
+            result = _clubhouse_events(
+                {"SSV53_CLUBHOUSE_CALENDAR_URL": "https://example.invalid/feed"},
+                NOW,
+            )
+        self.assertTrue(result["available"])
+        self.assertEqual([item["title"] for item in result["events"]], ["Vorstandssitzung"])
+
 
 class PlatzwartSafetyIntegrationTests(unittest.TestCase):
     def run_cycle(self, initial: AutomationState, live_result, **senders):
@@ -57,8 +94,8 @@ class PlatzwartSafetyIntegrationTests(unittest.TestCase):
             state_store_factory=lambda _environment: store,
             park_sender=senders.get("park_sender", lambda *_args: {"ok": True}),
             start_sender=senders.get("start_sender", lambda *_args: {"ok": True}),
-            suspend_zone_sender=lambda *_args: {"ok": True},
-            start_zone_sender=lambda *_args: {"ok": True},
+            suspend_zone_sender=senders.get("suspend_zone_sender", lambda *_args: {"ok": True}),
+            start_zone_sender=senders.get("start_zone_sender", lambda *_args: {"ok": True}),
         )
         return cycle, store.load()
 
@@ -150,6 +187,63 @@ class PlatzwartSafetyIntegrationTests(unittest.TestCase):
         self.assertEqual({item["relay_id"] for item in plan}, set(RELAYS))
         self.assertTrue(all(item["operator_manual"] is True for item in plan))
         self.assertEqual(state.operator_request_status, "COMPLETED")
+
+    def test_manual_single_zone_keeps_all_safety_relays_but_runs_only_selection(self) -> None:
+        cycle, state = self.run_cycle(
+            self.pending(
+                "START_IRRIGATION_ZONE",
+                operator_request_zone=3,
+                operator_request_run_seconds=25 * 60,
+            ),
+            result(activity="MOWING"),
+        )
+        self.assertTrue(cycle.command_sent)
+        self.assertEqual(cycle.decision_code, "PARK_COMMAND_SENT")
+        plan = json.loads(state.irrigation_plan_json or "[]")
+        self.assertEqual({item["relay_id"] for item in plan}, set(RELAYS))
+        selected = [item for item in plan if item.get("selected")]
+        self.assertEqual(len(selected), 1)
+        self.assertEqual(selected[0]["zone"], 3)
+        self.assertEqual(selected[0]["run_seconds"], 25 * 60)
+        self.assertTrue(selected[0]["operator_single_zone"])
+        self.assertEqual(state.operator_request_status, "COMPLETED")
+
+    def test_manual_single_zone_starts_only_selected_zone_with_selected_duration(self) -> None:
+        plan = zones(start_utc=NOW + timedelta(minutes=30))
+        for item in plan:
+            item["selected"] = item["zone"] == 3
+            item["operator_single_zone"] = True
+        plan[2]["run_seconds"] = 25 * 60
+        sent = []
+        initial = AutomationState(
+            parked_by_automation=True,
+            automation_park_source="irrigation",
+            automation_restart_allowed=True,
+            park_command_sent_utc=(NOW - timedelta(minutes=5)).isoformat(),
+            park_confirmed_utc=(NOW - timedelta(minutes=2)).isoformat(),
+            irrigation_phase="READY",
+            irrigation_plan_id="single-zone-plan",
+            irrigation_plan_json=json.dumps(plan),
+            irrigation_suspended_relay_ids_json=json.dumps(RELAYS),
+            irrigation_suspension_until_utc=(NOW + timedelta(hours=5)).isoformat(),
+            irrigation_suspension_completed_utc=(NOW - timedelta(minutes=1)).isoformat(),
+            irrigation_completed_relay_ids_json="[]",
+        )
+        cycle, state = self.run_cycle(
+            initial,
+            result(activity="CHARGING"),
+            start_zone_sender=lambda _key, relay, seconds, _controller: sent.append(
+                (relay, seconds)
+            ) or {"ok": True},
+        )
+        self.assertEqual(
+            sent,
+            [(RELAYS[2], 25 * 60)],
+            msg=(cycle.decision_code, cycle.message, cycle.details),
+        )
+        self.assertEqual(cycle.decision_code, "IRRIGATION_ZONE_START_SENT")
+        self.assertEqual(state.irrigation_phase, "START_RESERVED")
+        self.assertEqual(state.irrigation_current_relay_id, RELAYS[2])
 
     def test_stop_between_zones_starts_hold_without_starting_another_zone(self) -> None:
         plan = zones(start_utc=NOW + timedelta(minutes=30))

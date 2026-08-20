@@ -81,6 +81,8 @@ class AutomationState:
     operator_request_expires_utc: str | None = None
     operator_request_status: str | None = None
     operator_request_result: str | None = None
+    operator_request_zone: int | None = None
+    operator_request_run_seconds: int | None = None
 
     def __post_init__(self) -> None:
         if self.schema_version != 1:
@@ -295,6 +297,10 @@ class AutomationState:
             ),
             operator_request_status=_normalize_optional_text(values.get("operator_request_status")),
             operator_request_result=_normalize_optional_text(values.get("operator_request_result")),
+            operator_request_zone=_normalize_optional_int(values.get("operator_request_zone")),
+            operator_request_run_seconds=_normalize_optional_int(
+                values.get("operator_request_run_seconds")
+            ),
         )
 
     def to_dict(self) -> dict[str, Any]:
