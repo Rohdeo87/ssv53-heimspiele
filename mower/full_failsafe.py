@@ -127,6 +127,17 @@ def _finish_operator_request(
     )
 
 
+def _occupancy_block_key(block: Mapping[str, Any]) -> str | None:
+    """Bindet eine Platzwart-Freigabe an genau den angezeigten Belegungsblock."""
+
+    start = str(block.get("start") or "").strip()
+    end = str(block.get("end") or "").strip()
+    source = str(block.get("source") or "").strip().lower()
+    if not start or not end or not source:
+        return None
+    return "|".join((start, end, source))
+
+
 def _park_valid_until(
     *,
     now_utc: datetime,
@@ -1256,7 +1267,91 @@ def run_full_failsafe_cycle(
                 )
             state = _failed_irrigation(state, f"{type(exc).__name__}: {exc}")
 
-    occupancy_sources = _source_parts(block_source) & frozenset({"training", "match", "special"})
+    occupancy_only_sources = frozenset({"training", "match", "special"})
+    current_occupancy_key = _occupancy_block_key(blocked_now)
+    current_occupancy_end = _parse_time(blocked_now.get("end"))
+    all_current_block_sources = (
+        _source_parts(blocked_now.get("source"))
+        | _source_parts(parking_block.get("source"))
+    )
+    requested_override_key = str(
+        state.operator_request_occupancy_override_key or ""
+    ).strip()
+    occupancy_override_request = (
+        operator_action == "START_MOWING" and bool(requested_override_key)
+    )
+    occupancy_block_is_overrideable = (
+        current_occupancy_key is not None
+        and current_occupancy_end is not None
+        and current_occupancy_end > now
+        and bool(all_current_block_sources)
+        and all_current_block_sources.issubset(occupancy_only_sources)
+        and state.irrigation_phase is None
+    )
+    if occupancy_override_request and (
+        not occupancy_block_is_overrideable
+        or requested_override_key != current_occupancy_key
+    ):
+        rejected = _finish_operator_request(
+            state,
+            "Der bestätigte Belegungsblock ist nicht mehr aktuell oder enthält eine nicht überstimmbare Sicherheitssperre.",
+            status="REJECTED",
+        )
+        return _persist_result(
+            store=store,
+            original=original,
+            state=rejected,
+            result=result,
+            details=details,
+            settings=settings,
+            decision_code="OPERATOR_OCCUPANCY_OVERRIDE_REJECTED",
+            message="Der Mäher blieb geparkt; die Belegungsausnahme war nicht mehr eindeutig gültig.",
+        )
+
+    saved_override_until = _parse_time(state.operator_occupancy_override_until_utc)
+    saved_override_key = str(state.operator_occupancy_override_key or "").strip()
+    saved_override_valid = (
+        occupancy_block_is_overrideable
+        and saved_override_key == current_occupancy_key
+        and saved_override_until is not None
+        and saved_override_until == current_occupancy_end
+        and now < saved_override_until
+    )
+    occupancy_override_active = occupancy_override_request or saved_override_valid
+    if occupancy_override_request:
+        state = replace(
+            state,
+            revision=state.revision + 1,
+            operator_occupancy_override_key=current_occupancy_key,
+            operator_occupancy_override_until_utc=current_occupancy_end.isoformat(),
+        )
+    elif not saved_override_valid and (
+        state.operator_occupancy_override_key is not None
+        or state.operator_occupancy_override_until_utc is not None
+    ):
+        state = replace(
+            state,
+            revision=state.revision + 1,
+            operator_occupancy_override_key=None,
+            operator_occupancy_override_until_utc=None,
+        )
+
+    effective_blocked_now = {} if occupancy_override_active else blocked_now
+    effective_parking_block = {} if occupancy_override_active else parking_block
+    details["operator_occupancy_override"] = {
+        "active": occupancy_override_active,
+        "block_key": current_occupancy_key if occupancy_override_active else None,
+        "until_utc": (
+            current_occupancy_end.isoformat()
+            if occupancy_override_active and current_occupancy_end is not None
+            else None
+        ),
+        "does_not_override_irrigation": True,
+    }
+
+    occupancy_sources = _source_parts(
+        effective_parking_block.get("source")
+    ) & occupancy_only_sources
     external_park_evidence = (
         override_action in PARK_OVERRIDE_ACTIONS
         or (
@@ -1265,7 +1360,7 @@ def run_full_failsafe_cycle(
         )
     )
     if (
-        parking_block
+        effective_parking_block
         and occupancy_sources
         and not state.parked_by_automation
         and external_park_evidence
@@ -1303,7 +1398,10 @@ def run_full_failsafe_cycle(
             ),
         )
 
-    wants_park = str(decision.get("hypothetical_command") or "").upper() == "PARK"
+    wants_park = (
+        str(decision.get("hypothetical_command") or "").upper() == "PARK"
+        and not occupancy_override_active
+    )
     if operator_action == "PARK_MOWER":
         wants_park = True
     if (
@@ -1318,7 +1416,7 @@ def run_full_failsafe_cycle(
             _source_parts(state.automation_park_source)
         )
     )
-    if parking_block and not owns_matching_park:
+    if effective_parking_block and not owns_matching_park:
         wants_park = True
     if result.decision_code.startswith("HYDRAWISE_") and activity in PARKABLE_ACTIVITIES:
         wants_park = True
@@ -1337,7 +1435,10 @@ def run_full_failsafe_cycle(
         wants_park = True
 
     park_guard_required = (
-        bool(_source_parts(block_source) & PARK_GUARD_BLOCK_SOURCES)
+        bool(
+            _source_parts(effective_parking_block.get("source"))
+            & PARK_GUARD_BLOCK_SOURCES
+        )
         or state.irrigation_phase in ACTIVE_IRRIGATION_PHASES
         or state.irrigation_phase == "FAILED"
         or (
@@ -1402,7 +1503,7 @@ def run_full_failsafe_cycle(
         block_end = _park_valid_until(
             now_utc=now,
             state=state,
-            parking_block=parking_block,
+            parking_block=effective_parking_block,
         )
         if not settings.enable_park_commands:
             return _persist_result(
@@ -1435,10 +1536,10 @@ def run_full_failsafe_cycle(
             action="PARK",
             target=mower_id,
             reason=(
-                f"reassert|{park_source}|{parking_block.get('start', '')}|"
-                f"{parking_block.get('end', '')}|{state.irrigation_phase or ''}"
+                f"reassert|{park_source}|{effective_parking_block.get('start', '')}|"
+                f"{effective_parking_block.get('end', '')}|{state.irrigation_phase or ''}"
                 if park_reassert_due
-                else f"{park_source}|{parking_block.get('start', '')}|{parking_block.get('end', '')}"
+                else f"{park_source}|{effective_parking_block.get('start', '')}|{effective_parking_block.get('end', '')}"
             ),
             valid_until_utc=block_end,
         )
@@ -2847,7 +2948,7 @@ def run_full_failsafe_cycle(
                 ),
             )
 
-    if blocked_now or parking_block:
+    if effective_blocked_now or effective_parking_block:
         return _persist_result(
             store=store,
             original=original,
@@ -3081,6 +3182,16 @@ def run_full_failsafe_cycle(
         )
 
     window = _as_dict(current_plan.get("mowing_window_now"))
+    if occupancy_override_active and current_occupancy_end is not None:
+        # Der ausdrücklich bestätigte Start gilt nur bis zum Ende genau dieses
+        # Belegungsblocks. Danach übernimmt wieder der normale Planer.
+        window = {
+            "start": now.isoformat(),
+            "end": (
+                current_occupancy_end
+                + timedelta(minutes=settings.park_lookahead_minutes)
+            ).isoformat(),
+        }
     window_end = _parse_time(window.get("end"))
     if window_end is None:
         return _persist_result(
@@ -3200,8 +3311,9 @@ def run_full_failsafe_cycle(
                 "bis zur nächsten sicheren Rückkehrfrist weiter."
             ),
         )
+    required_window = 1 if occupancy_override_active else minimum_window
     if (
-        (not failsafe_refresh and (remaining < minimum_window or duration < minimum_window))
+        (not failsafe_refresh and (remaining < required_window or duration < required_window))
         or (failsafe_refresh and duration < 1)
     ):
         return _persist_result(

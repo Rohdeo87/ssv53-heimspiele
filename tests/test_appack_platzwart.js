@@ -133,7 +133,7 @@ test("Mäheraktionen sind für Fahren, Laden, Sperren und manuelle Bedienung ein
 
   assert.deepEqual(
     { ...actions({ mower: { activity: "MOWING", connected: true, errorCode: 0 }, irrigation: { safety: safe }, automation: { continuousMowingOwned: true }, occupancy: {} }), startQuestion: undefined },
-    { showPark: true, showStart: false, startLabel: "Mäher starten", startQuestion: undefined }
+    { showPark: true, showStart: false, startLabel: "Mäher starten", startQuestion: undefined, occupancyOverrideKey: "" }
   );
   const charging = actions({ mower: { activity: "CHARGING", batteryPercent: 70, connected: true, errorCode: 0 }, irrigation: { safety: safe }, automation: { continuousMowingOwned: true }, occupancy: {} });
   assert.equal(charging.showPark, false);
@@ -145,9 +145,21 @@ test("Mäheraktionen sind für Fahren, Laden, Sperren und manuelle Bedienung ein
   assert.equal(blocked.showPark, false);
   assert.equal(blocked.showStart, false);
 
-  const manual = actions({ overall: { code: "EXTERNAL_OVERRIDE" }, mower: { activity: "CHARGING", connected: true, errorCode: 0 }, irrigation: { safety: safe }, automation: {}, occupancy: { current: { title: "Training" } } });
+  const occupied = actions({ mower: { activity: "PARKED_IN_CS", connected: true, errorCode: 0 }, irrigation: { safety: safe }, automation: {}, occupancy: { current: { title: "Training A", start: "2026-08-20T18:00:00+02:00", end: "2026-08-20T20:00:00+02:00", source: "training" }, parking: { title: "Training A" } } });
+  assert.equal(occupied.showStart, true);
+  assert.equal(occupied.occupancyOverrideKey, "2026-08-20T18:00:00+02:00|2026-08-20T20:00:00+02:00|training");
+  assert.match(occupied.startQuestion, /Beregnungs- und Gerätesperren bleiben aktiv/);
+
+  const irrigationUnsafe = actions({ mower: { activity: "PARKED_IN_CS", connected: true, errorCode: 0 }, irrigation: { safety: { ...safe, clear_now: false } }, automation: {}, occupancy: { current: { title: "Training", start: "a", end: "b", source: "training" } } });
+  assert.equal(irrigationUnsafe.showStart, false);
+
+  const manual = actions({ overall: { code: "EXTERNAL_OVERRIDE" }, mower: { activity: "CHARGING", connected: true, errorCode: 0 }, irrigation: { safety: safe }, automation: {}, occupancy: { current: { title: "Training", start: "2026-08-20T18:00:00+02:00", end: "2026-08-20T20:00:00+02:00", source: "training" } } });
   assert.equal(manual.showStart, true);
-  assert.equal(manual.startLabel, "Automatik einschalten");
+  assert.equal(manual.startLabel, "Mäher starten");
+  assert.ok(manual.occupancyOverrideKey);
+
+  const irrigationBlock = actions({ mower: { activity: "PARKED_IN_CS", connected: true, errorCode: 0 }, irrigation: { safety: safe }, automation: {}, occupancy: { current: { title: "Mischblock", start: "a", end: "b", source: "training+irrigation" } } });
+  assert.equal(irrigationBlock.showStart, false);
 
   const disconnected = actions({ mower: { activity: "MOWING", connected: false, errorCode: 0 }, irrigation: { safety: safe }, automation: {}, occupancy: {} });
   assert.equal(disconnected.showPark, false);

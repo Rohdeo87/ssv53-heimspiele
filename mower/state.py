@@ -84,6 +84,9 @@ class AutomationState:
     operator_request_zone: int | None = None
     operator_request_run_seconds: int | None = None
     operator_request_cutting_height_mm: int | None = None
+    operator_request_occupancy_override_key: str | None = None
+    operator_occupancy_override_key: str | None = None
+    operator_occupancy_override_until_utc: str | None = None
 
     def __post_init__(self) -> None:
         if self.schema_version != 1:
@@ -115,6 +118,7 @@ class AutomationState:
             "last_command_utc",
             "operator_requested_utc",
             "operator_request_expires_utc",
+            "operator_occupancy_override_until_utc",
         ):
             _require_utc_iso(getattr(self, field_name), field_name)
 
@@ -304,6 +308,18 @@ class AutomationState:
             ),
             operator_request_cutting_height_mm=_normalize_optional_int(
                 values.get("operator_request_cutting_height_mm")
+            ),
+            operator_request_occupancy_override_key=_normalize_optional_text(
+                values.get("operator_request_occupancy_override_key")
+            ),
+            operator_occupancy_override_key=_normalize_optional_text(
+                values.get("operator_occupancy_override_key")
+            ),
+            operator_occupancy_override_until_utc=_require_utc_iso(
+                _normalize_optional_text(
+                    values.get("operator_occupancy_override_until_utc")
+                ),
+                "operator_occupancy_override_until_utc",
             ),
         )
 

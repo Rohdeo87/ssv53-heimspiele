@@ -645,14 +645,34 @@ def request_action(
     zone: int | None = None,
     run_seconds: int | None = None,
     cutting_height_mm: int | None = None,
+    occupancy_override_key: str | None = None,
 ) -> dict[str, Any]:
     normalized = action.strip().upper()
     if normalized not in ALLOWED_ACTIONS:
         raise PlatzwartError("ACTION_INVALID", "Diese Bedienaktion ist nicht erlaubt.")
     if not request_id or len(request_id) > 64:
         raise PlatzwartError("REQUEST_ID_INVALID", "Die Anfragenummer fehlt oder ist ungültig.")
-    if confirmation != normalized:
+    normalized_override_key = str(occupancy_override_key or "").strip()
+    occupancy_override_requested = normalized == "START_MOWING" and bool(
+        normalized_override_key
+    )
+    expected_confirmation = (
+        "START_MOWING_OCCUPANCY_OVERRIDE"
+        if occupancy_override_requested
+        else normalized
+    )
+    if confirmation != expected_confirmation:
         raise PlatzwartError("CONFIRMATION_INVALID", "Die Aktion wurde nicht eindeutig bestätigt.")
+    if normalized_override_key and not occupancy_override_requested:
+        raise PlatzwartError(
+            "OCCUPANCY_OVERRIDE_INVALID",
+            "Eine Belegungsausnahme ist nur für einen ausdrücklich bestätigten Mäherstart erlaubt.",
+        )
+    if len(normalized_override_key) > 512:
+        raise PlatzwartError(
+            "OCCUPANCY_OVERRIDE_INVALID",
+            "Die bestätigte Belegung ist ungültig.",
+        )
     if normalized == "START_IRRIGATION_ZONE":
         if zone is None or not 1 <= int(zone) <= 99:
             raise PlatzwartError("ZONE_INVALID", "Bitte eine gültige Beregnungszone wählen.")
@@ -714,6 +734,9 @@ def request_action(
         operator_request_zone=zone,
         operator_request_run_seconds=run_seconds,
         operator_request_cutting_height_mm=cutting_height_mm,
+        operator_request_occupancy_override_key=(
+            normalized_override_key or None
+        ),
     )
     try:
         store.save(updated, expected_revision=original.revision)

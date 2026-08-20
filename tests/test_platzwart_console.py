@@ -375,6 +375,191 @@ class PlatzwartSafetyIntegrationTests(unittest.TestCase):
         self.assertTrue(cycle.command_sent)
         self.assertEqual(state.operator_request_status, "COMPLETED")
 
+    def test_occupancy_override_requires_distinct_confirmation(self) -> None:
+        store = InMemoryStateStore()
+
+        class AuditStore:
+            def audit(self, *_args, **_kwargs):
+                return None
+
+        with patch(
+            "platzwart_console.AzureTableStateStore.from_environment",
+            return_value=store,
+        ), patch(
+            "platzwart_console.ConsoleTableStore.from_environment",
+            return_value=AuditStore(),
+        ), patch(
+            "platzwart_console.RuntimeSettings.from_mapping",
+            return_value=settings(),
+        ):
+            with self.assertRaises(PlatzwartError) as context:
+                request_action(
+                    "START_MOWING",
+                    "occupied-start-wrong-confirmation",
+                    "START_MOWING",
+                    ENV,
+                    NOW,
+                    occupancy_override_key="start|end|training",
+                )
+            self.assertEqual(context.exception.code, "CONFIRMATION_INVALID")
+            accepted = request_action(
+                "START_MOWING",
+                "occupied-start-confirmed",
+                "START_MOWING_OCCUPANCY_OVERRIDE",
+                ENV,
+                NOW,
+                occupancy_override_key="start|end|training",
+            )
+        self.assertTrue(accepted["accepted"])
+        self.assertEqual(
+            store.load().operator_request_occupancy_override_key,
+            "start|end|training",
+        )
+
+    def test_confirmed_current_training_can_start_but_only_for_that_block(self) -> None:
+        live = result(command="PARK", block_source="training", activity="CHARGING")
+        block = {
+            "start": (NOW - timedelta(minutes=30)).isoformat(),
+            "end": (NOW + timedelta(hours=2)).isoformat(),
+            "title": "Training A",
+            "source": "training",
+        }
+        live.details["current_plan"]["blocked_now"] = block
+        live.details["current_plan"]["parking_block"] = block
+        key = "|".join((block["start"], block["end"], block["source"]))
+        sent = []
+        initial = self.pending(
+            "START_MOWING",
+            operator_request_occupancy_override_key=key,
+            parked_by_automation=True,
+            automation_park_source="training",
+            automation_restart_allowed=True,
+            park_confirmed_utc=(NOW - timedelta(minutes=5)).isoformat(),
+            hydrawise_clear_since_utc=(NOW - timedelta(minutes=121)).isoformat(),
+            last_hydrawise_success_utc=(NOW - timedelta(minutes=1)).isoformat(),
+        )
+        cycle, state = self.run_cycle(
+            initial,
+            live,
+            start_sender=lambda *_args: sent.append(_args) or {"ok": True},
+        )
+        self.assertEqual(len(sent), 1)
+        self.assertEqual(cycle.decision_code, "CONTINUOUS_MOWING_START_SENT")
+        self.assertTrue(cycle.command_sent)
+        self.assertTrue(state.continuous_mowing_owned)
+        self.assertEqual(state.operator_occupancy_override_key, key)
+        self.assertEqual(
+            state.operator_occupancy_override_until_utc,
+            (NOW + timedelta(hours=2)).isoformat(),
+        )
+        self.assertEqual(state.operator_request_status, "COMPLETED")
+
+    def test_occupancy_override_never_overrides_irrigation_or_changed_block(self) -> None:
+        for source, changed_key in (("training+irrigation", False), ("training", True)):
+            with self.subTest(source=source, changed_key=changed_key):
+                live = result(command="PARK", block_source=source, activity="CHARGING")
+                block = {
+                    "start": (NOW - timedelta(minutes=30)).isoformat(),
+                    "end": (NOW + timedelta(hours=2)).isoformat(),
+                    "title": "Training A",
+                    "source": source,
+                }
+                live.details["current_plan"]["blocked_now"] = block
+                live.details["current_plan"]["parking_block"] = block
+                actual_key = "|".join((block["start"], block["end"], block["source"]))
+                requested_key = "anderer|block|training" if changed_key else actual_key
+                calls = []
+                initial = self.pending(
+                    "START_MOWING",
+                    operator_request_occupancy_override_key=requested_key,
+                    hydrawise_clear_since_utc=(NOW - timedelta(minutes=121)).isoformat(),
+                    last_hydrawise_success_utc=(NOW - timedelta(minutes=1)).isoformat(),
+                )
+                cycle, state = self.run_cycle(
+                    initial,
+                    live,
+                    start_sender=lambda *_args: calls.append(_args) or {"ok": True},
+                )
+                self.assertEqual(calls, [])
+                self.assertEqual(cycle.decision_code, "OPERATOR_OCCUPANCY_OVERRIDE_REJECTED")
+                self.assertEqual(state.operator_request_status, "REJECTED")
+
+    def test_active_occupancy_override_is_not_reparked_but_a_new_block_is(self) -> None:
+        block = {
+            "start": (NOW - timedelta(minutes=30)).isoformat(),
+            "end": (NOW + timedelta(hours=2)).isoformat(),
+            "title": "Training A",
+            "source": "training",
+        }
+        key = "|".join((block["start"], block["end"], block["source"]))
+        initial = AutomationState(
+            continuous_mowing_owned=True,
+            continuous_mowing_work_area_id=849199,
+            continuous_mowing_window_end_utc=block["end"],
+            operator_occupancy_override_key=key,
+            operator_occupancy_override_until_utc=block["end"],
+            hydrawise_clear_since_utc=(NOW - timedelta(minutes=121)).isoformat(),
+            last_hydrawise_success_utc=(NOW - timedelta(minutes=1)).isoformat(),
+        )
+        live = result(command="PARK", block_source="training", activity="MOWING")
+        live.details["current_plan"]["blocked_now"] = block
+        live.details["current_plan"]["parking_block"] = block
+        park_calls = []
+        cycle, state = self.run_cycle(
+            initial,
+            live,
+            park_sender=lambda *_args: park_calls.append(_args) or {"ok": True},
+        )
+        self.assertEqual(park_calls, [])
+        self.assertEqual(cycle.decision_code, "CONTINUOUS_MOWING_ACTIVE")
+        self.assertEqual(state.operator_occupancy_override_key, key)
+
+        changed = dict(block)
+        changed["start"] = (NOW - timedelta(minutes=5)).isoformat()
+        changed["end"] = (NOW + timedelta(hours=3)).isoformat()
+        changed["title"] = "Anderer Termin"
+        live_changed = result(command="PARK", block_source="training", activity="MOWING")
+        live_changed.details["current_plan"]["blocked_now"] = changed
+        live_changed.details["current_plan"]["parking_block"] = changed
+        park_calls = []
+        cycle, state = self.run_cycle(
+            initial,
+            live_changed,
+            park_sender=lambda *_args: park_calls.append(_args) or {"ok": True},
+        )
+        self.assertEqual(len(park_calls), 1)
+        self.assertEqual(cycle.decision_code, "PARK_COMMAND_SENT")
+        self.assertIsNone(state.operator_occupancy_override_key)
+
+    def test_confirmed_occupancy_override_still_waits_for_hydrawise_release(self) -> None:
+        live = result(
+            command="PARK",
+            block_source="training",
+            activity="CHARGING",
+            clear=False,
+        )
+        block = {
+            "start": (NOW - timedelta(minutes=30)).isoformat(),
+            "end": (NOW + timedelta(hours=2)).isoformat(),
+            "title": "Training A",
+            "source": "training",
+        }
+        live.details["current_plan"]["blocked_now"] = block
+        live.details["current_plan"]["parking_block"] = block
+        key = "|".join((block["start"], block["end"], block["source"]))
+        start_calls = []
+        cycle, state = self.run_cycle(
+            self.pending(
+                "START_MOWING",
+                operator_request_occupancy_override_key=key,
+            ),
+            live,
+            start_sender=lambda *_args: start_calls.append(_args) or {"ok": True},
+        )
+        self.assertEqual(start_calls, [])
+        self.assertEqual(cycle.decision_code, "HYDRAWISE_CLEAR_CONFIRMATION_HOLD")
+        self.assertEqual(state.operator_request_status, "PENDING")
+
     def test_explicit_start_adopts_already_mowing_external_override(self) -> None:
         sent = []
         initial = self.pending(
