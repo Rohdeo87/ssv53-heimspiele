@@ -32,6 +32,10 @@ test("Platzwart-Seite ist syntaktisch gültig und enthält keine Zugangsdaten", 
   assert.match(html, /weekday:"long",day:"2-digit",month:"long",year:"numeric"/);
   assert.match(html, /function submitPin\(\)/);
   assert.doesNotMatch(html, /id="login-button"/);
+  assert.match(html, /function clearActionError\(\)/);
+  assert.match(html, /Mäher-, Beregnungs-, Platzbelegungs- und Vereinsheimdaten konnten nicht geladen werden/);
+  assert.match(html, /Bedienaktion konnte nicht an die Platzpflege-Steuerung übermittelt werden/);
+  assert.doesNotMatch(html, />Failed to fetch</);
   assert.match(html, /continuousMowingOwned/);
   assert.match(html, /Automatik aktiv/);
   assert.match(html, /Mäher nicht erreichbar/);
