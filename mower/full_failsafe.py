@@ -21,6 +21,7 @@ from mower.cutting_height import (
 )
 from mower.husqvarna_actions import park_until_further_notice
 from mower.husqvarna_cutting_height_actions import set_work_area_cutting_height
+from mower.husqvarna_statistics_actions import reset_cutting_blade_usage_time
 from mower.husqvarna_start_actions import start_in_work_area
 from mower.hydrawise import (
     evaluate_continuous_clear_confirmation,
@@ -41,6 +42,7 @@ SuspendZoneSender = Callable[[str, int, int, str | int | None], dict[str, Any]]
 StartZoneSender = Callable[[str, int, int, str | int | None], dict[str, Any]]
 StopZoneSender = Callable[[str, int, str | int | None], dict[str, Any]]
 CuttingHeightSender = Callable[[str, str, str, int, int], dict[str, Any]]
+BladeUsageResetSender = Callable[[str, str, str], dict[str, Any]]
 
 PARKABLE_ACTIVITIES = frozenset({"MOWING", "LEAVING"})
 PARK_COMMAND_ACTIVITIES = frozenset(
@@ -886,6 +888,7 @@ def run_full_failsafe_cycle(
     start_zone_sender: StartZoneSender = start_zone_for,
     stop_zone_sender: StopZoneSender = stop_zone_now,
     cutting_height_sender: CuttingHeightSender = set_work_area_cutting_height,
+    blade_usage_reset_sender: BladeUsageResetSender = reset_cutting_blade_usage_time,
 ) -> CycleResult:
     """Fail-closed Gesamtsteuerung für Mäher, Belegung und sieben Zonen."""
 
@@ -1016,7 +1019,7 @@ def run_full_failsafe_cycle(
         )
         operator_action = None
 
-    # A height change never takes precedence over a safety return. It is only
+    # Maintenance counter changes never take precedence over a safety return. They are only
     # sent in a completely clear cycle; otherwise the pending request waits
     # while the ordinary park/irrigation logic continues unchanged.
     hydra_safety_for_height = _as_dict(
@@ -1031,6 +1034,54 @@ def run_full_failsafe_cycle(
         and hydra_safety_for_height.get("fresh") is True
         and hydra_safety_for_height.get("clear_now") is True
     )
+    if operator_action == "RESET_BLADE_USAGE" and height_cycle_is_clear:
+        safe_to_reset = (
+            settings.full_failsafe_write_gate_enabled
+            and mower.get("connected") is True
+            and error_code == 0
+            and bool(mower_id)
+        )
+        if not safe_to_reset:
+            rejected = _finish_operator_request(
+                state,
+                "Die Klingenlaufzeit wurde nicht zurückgesetzt, weil der Mäher nicht eindeutig verfügbar ist.",
+                status="REJECTED",
+            )
+            return _persist_result(
+                store=store, original=original, state=rejected, result=result,
+                details=details, settings=settings,
+                decision_code="BLADE_USAGE_RESET_REJECTED",
+                message="Die Klingenlaufzeit blieb unverändert.",
+            )
+        try:
+            response = blade_usage_reset_sender(
+                str(environment.get("HUSQVARNA_CLIENT_ID", "")).strip(),
+                str(environment.get("HUSQVARNA_CLIENT_SECRET", "")).strip(),
+                mower_id,
+            )
+        except Exception as exc:
+            rejected = _finish_operator_request(
+                state,
+                f"Klingenlaufzeit konnte nicht zurückgesetzt werden: {exc}",
+                status="REJECTED",
+            )
+            return _persist_result(
+                store=store, original=original, state=rejected, result=result,
+                details=details, settings=settings,
+                decision_code="BLADE_USAGE_RESET_REJECTED",
+                message="Die Klingenlaufzeit blieb unverändert.",
+            )
+        completed = _finish_operator_request(
+            state, "Die Klingenlaufzeit wurde zurückgesetzt."
+        )
+        details["blade_usage_reset"] = {"response": response}
+        return _persist_result(
+            store=store, original=original, state=completed, result=result,
+            details=details, settings=settings,
+            decision_code="BLADE_USAGE_RESET",
+            message="Die Klingenlaufzeit wurde zurückgesetzt.",
+            command_sent=True,
+        )
     if operator_action == "SET_CUTTING_HEIGHT" and height_cycle_is_clear:
         requested_mm = state.operator_request_cutting_height_mm
         area_id = int(target_area.get("id") or 0)

@@ -27,6 +27,16 @@ def mower_item(
             "battery": {"batteryPercent": 97},
             "metadata": {"connected": True, "statusTimestamp": 1785600000123},
             "settings": {"cuttingHeight": 5},
+            "statistics": {
+                "cuttingBladeUsageTime": 7200,
+                "numberOfChargingCycles": 41,
+                "numberOfCollisions": 3,
+                "totalChargingTime": 54000,
+                "totalCuttingTime": 360000,
+                "totalDriveDistance": 123456,
+                "totalRunningTime": 410000,
+                "totalSearchingTime": 8000,
+            },
             "mower": {
                 "activity": "PARKED_IN_CS",
                 "state": "RESTRICTED",
@@ -79,6 +89,9 @@ class HusqvarnaParsingTests(unittest.TestCase):
         self.assertEqual(snapshot.work_areas[0]["cutting_height_percent"], 12)
         self.assertFalse(snapshot.work_areas[0]["use_global_cutting_height"])
         self.assertEqual(snapshot.global_cutting_height_percent, 5)
+        self.assertEqual(snapshot.statistics["cutting_blade_usage_seconds"], 7200)
+        self.assertEqual(snapshot.statistics["charging_cycles"], 41)
+        self.assertEqual(snapshot.statistics["total_cutting_seconds"], 360000)
 
     def test_named_mower_is_selected(self) -> None:
         selected = select_mower(
@@ -119,8 +132,9 @@ class HusqvarnaParsingTests(unittest.TestCase):
         import mower.husqvarna_actions as park_actions
         import mower.husqvarna_start_actions as start_actions
         import mower.husqvarna_cutting_height_actions as height_actions
+        import mower.husqvarna_statistics_actions as statistics_actions
 
-        for module in (park_actions, start_actions, height_actions):
+        for module in (park_actions, start_actions, height_actions, statistics_actions):
             source = inspect.getsource(module)
             self.assertIn("get_access_token", source)
             self.assertNotIn("AUTH_URL", source)

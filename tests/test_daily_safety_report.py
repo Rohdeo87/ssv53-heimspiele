@@ -4,6 +4,7 @@ import pytest
 
 from daily_safety_report import (
     DailyReportError,
+    dashboard_statistics,
     parse_cycle_rows,
     process_daily_report,
     report_recipient,
@@ -73,6 +74,27 @@ def test_summary_counts_only_unique_epos_confirmed_completions():
     assert summary.current_work_area_progress == 12
     assert summary.last_completed_area_utc is not None
     assert summary.average_daily_mowing_minutes_7d == 0
+
+
+def test_dashboard_statistics_reuses_confirmed_seven_day_metrics():
+    class DashboardQueries:
+        def execute(self, query, *, timespan):
+            assert "work_area_last_completed" in query
+            assert timespan == "P8D"
+            return [
+                row("2026-08-20T04:58:01Z", completed=1787198400, progress=100),
+                row("2026-08-20T04:59:01Z", completed=1787198400, progress=8),
+            ]
+
+    value = dashboard_statistics(
+        datetime(2026, 8, 20, 5, 0, tzinfo=timezone.utc),
+        {},
+        query_client=DashboardQueries(),
+    )
+    assert value["available"] is True
+    assert value["completedAreaCycles7d"] == 1
+    assert value["mowingMinutes7d"] == 2
+    assert value["lastCompletedAreaUtc"] is not None
 
 
 def test_recipient_is_required_and_validated():

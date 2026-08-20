@@ -234,6 +234,7 @@ class FullFailsafeTests(unittest.TestCase):
             start_zone_sender=senders.get("zone", lambda *_: {"message_type": "info"}),
             stop_zone_sender=senders.get("stop_zone", lambda *_: {"message_type": "info"}),
             cutting_height_sender=senders.get("height", lambda *_: {"accepted": True}),
+            blade_usage_reset_sender=senders.get("blade_reset", lambda *_: {"accepted": True}),
         )
         return output, store
 
@@ -296,6 +297,45 @@ class FullFailsafeTests(unittest.TestCase):
             park=lambda *args: park_calls.append(args) or {"accepted": True},
         )
         self.assertEqual(height_calls, [])
+        self.assertEqual(len(park_calls), 1)
+        self.assertEqual(output.decision_code, "PARK_COMMAND_SENT")
+        self.assertEqual(store.load().operator_request_status, "PENDING")
+
+    def test_blade_usage_reset_is_sent_once_in_clear_cycle(self) -> None:
+        calls = []
+        initial = AutomationState(
+            operator_request_id="blade-1",
+            operator_request_action="RESET_BLADE_USAGE",
+            operator_requested_utc=(NOW - timedelta(seconds=10)).isoformat(),
+            operator_request_expires_utc=(NOW + timedelta(minutes=10)).isoformat(),
+            operator_request_status="PENDING",
+        )
+        output, store = self._run(
+            initial,
+            result(activity="MOWING"),
+            blade_reset=lambda *args: calls.append(args) or {"accepted": True},
+        )
+        self.assertEqual(calls, [("client", "secret", "mower-1")])
+        self.assertEqual(output.decision_code, "BLADE_USAGE_RESET")
+        self.assertEqual(store.load().operator_request_status, "COMPLETED")
+
+    def test_safety_park_has_priority_over_blade_usage_reset(self) -> None:
+        reset_calls = []
+        park_calls = []
+        initial = AutomationState(
+            operator_request_id="blade-2",
+            operator_request_action="RESET_BLADE_USAGE",
+            operator_requested_utc=(NOW - timedelta(seconds=10)).isoformat(),
+            operator_request_expires_utc=(NOW + timedelta(minutes=10)).isoformat(),
+            operator_request_status="PENDING",
+        )
+        output, store = self._run(
+            initial,
+            result(activity="MOWING", block_source="training", command="PARK"),
+            blade_reset=lambda *args: reset_calls.append(args),
+            park=lambda *args: park_calls.append(args) or {"accepted": True},
+        )
+        self.assertEqual(reset_calls, [])
         self.assertEqual(len(park_calls), 1)
         self.assertEqual(output.decision_code, "PARK_COMMAND_SENT")
         self.assertEqual(store.load().operator_request_status, "PENDING")

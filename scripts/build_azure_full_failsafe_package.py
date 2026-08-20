@@ -34,6 +34,7 @@ REQUIRED_FILES = (
     "mower/husqvarna_actions.py",
     "mower/husqvarna_cutting_height_actions.py",
     "mower/husqvarna_start_actions.py",
+    "mower/husqvarna_statistics_actions.py",
     "mower/cutting_height.py",
     "mower/hydrawise.py",
     "mower/irrigation_recovery.py",
@@ -90,6 +91,7 @@ def collect_files(repository_root: Path) -> list[tuple[str, bytes]]:
     if mower_action_files != [
         "mower/husqvarna_actions.py",
         "mower/husqvarna_start_actions.py",
+        "mower/husqvarna_statistics_actions.py",
     ]:
         raise ValueError("Husqvarna-Schreiblogik liegt nicht ausschließlich in den geprüften Modulen.")
     height_write_files = sorted(

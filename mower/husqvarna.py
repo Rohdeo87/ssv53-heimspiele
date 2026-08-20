@@ -39,10 +39,12 @@ class MowerSnapshot:
     connected: bool | None = None
     status_timestamp_ms: int | None = None
     global_cutting_height_percent: int | None = None
+    statistics: dict[str, int | None] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         value = asdict(self)
         value["work_areas"] = list(self.work_areas)
+        value["statistics"] = dict(self.statistics or {})
         return value
 
 
@@ -261,6 +263,24 @@ def _parse_work_areas(raw: Any) -> tuple[dict[str, Any], ...]:
     return tuple(result)
 
 
+def _parse_statistics(raw: Any) -> dict[str, int | None]:
+    source = as_dict(raw)
+    fields = {
+        "cutting_blade_usage_seconds": "cuttingBladeUsageTime",
+        "charging_cycles": "numberOfChargingCycles",
+        "collisions": "numberOfCollisions",
+        "total_charging_seconds": "totalChargingTime",
+        "total_cutting_seconds": "totalCuttingTime",
+        "total_drive_metres": "totalDriveDistance",
+        "total_running_seconds": "totalRunningTime",
+        "total_searching_seconds": "totalSearchingTime",
+    }
+    return {
+        target: _parse_external_reason(source.get(api_name))
+        for target, api_name in fields.items()
+    }
+
+
 def parse_snapshot(item: dict[str, Any]) -> MowerSnapshot:
     attributes = as_dict(item.get("attributes"))
     system = as_dict(attributes.get("system"))
@@ -302,4 +322,5 @@ def parse_snapshot(item: dict[str, Any]) -> MowerSnapshot:
         global_cutting_height_percent=_parse_external_reason(
             settings_data.get("cuttingHeight")
         ),
+        statistics=_parse_statistics(attributes.get("statistics")),
     )

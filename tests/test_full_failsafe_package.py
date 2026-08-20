@@ -69,6 +69,7 @@ class FullFailsafePackageTests(unittest.TestCase):
             self.assertIn("mower/full_failsafe.py", names)
             self.assertIn("mower/irrigation_recovery.py", names)
             self.assertIn("mower/hydrawise_actions.py", names)
+            self.assertIn("mower/husqvarna_statistics_actions.py", names)
             local_modules = {
                 name[:-3].replace("/", ".")
                 for name in names

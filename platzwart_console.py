@@ -29,6 +29,7 @@ from mower.cutting_height import (
 from mower.runtime import RuntimeSettings
 from mower.state import AutomationState
 from mower.state_store import AzureTableStateStore, StateConflictError
+from daily_safety_report import dashboard_statistics
 
 
 PIN_ITERATIONS_MINIMUM = 200_000
@@ -40,11 +41,34 @@ ALLOWED_ACTIONS = frozenset(
         "START_IRRIGATION_ZONE", "STOP_IRRIGATION_AFTER_ZONE",
         "STOP_IRRIGATION_NOW",
         "SET_CUTTING_HEIGHT",
+        "RESET_BLADE_USAGE",
     }
 )
 
 _CLUBHOUSE_CACHE_LOCK = threading.Lock()
 _CLUBHOUSE_CACHE: dict[str, Any] = {"expires": None, "events": [], "available": False}
+_STATISTICS_CACHE_LOCK = threading.Lock()
+_STATISTICS_CACHE: dict[str, Any] = {"expires": None, "available": False}
+
+
+def _dashboard_statistics(environment: Mapping[str, str], now_utc: datetime) -> dict[str, Any]:
+    with _STATISTICS_CACHE_LOCK:
+        expires = _STATISTICS_CACHE.get("expires")
+        if isinstance(expires, datetime) and now_utc < expires:
+            return {key: value for key, value in _STATISTICS_CACHE.items() if key != "expires"}
+    try:
+        payload = dashboard_statistics(now_utc, environment)
+        payload["message"] = None
+    except Exception:
+        payload = {
+            "available": False,
+            "message": "Die 7-Tage-Auswertung ist gerade nicht erreichbar.",
+        }
+    with _STATISTICS_CACHE_LOCK:
+        _STATISTICS_CACHE.clear()
+        _STATISTICS_CACHE.update(payload)
+        _STATISTICS_CACHE["expires"] = now_utc + timedelta(minutes=5)
+    return payload
 
 
 class PlatzwartError(RuntimeError):
@@ -603,6 +627,15 @@ def live_status(environment: Mapping[str, str], now_utc: datetime) -> dict[str, 
         for zone in hydrawise.get("zones", [])
         if isinstance(zone, dict)
     ]
+    device_statistics = dict(mower.get("statistics") or {})
+    statistics = {
+        **_dashboard_statistics(environment, now_utc),
+        "currentAreaProgress": target.get("progress"),
+        "bladeUsageSeconds": device_statistics.get("cutting_blade_usage_seconds"),
+        "totalCuttingSeconds": device_statistics.get("total_cutting_seconds"),
+        "chargingCycles": device_statistics.get("charging_cycles"),
+        "totalRunningSeconds": device_statistics.get("total_running_seconds"),
+    }
     return {
         "generatedAt": now_utc.astimezone(timezone.utc).isoformat(),
         "overall": {"code": state.last_decision_code, "message": result.message},
@@ -631,6 +664,7 @@ def live_status(environment: Mapping[str, str], now_utc: datetime) -> dict[str, 
             "safeWindows": current_plan.get("safe_mowing_windows") or [],
         },
         "automation": _state_payload(state),
+        "statistics": statistics,
         "clubhouse": _clubhouse_events(environment, now_utc),
     }
 

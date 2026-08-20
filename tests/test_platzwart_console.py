@@ -10,6 +10,7 @@ from mower.state_store import InMemoryStateStore
 from platzwart_console import (
     _CLUBHOUSE_CACHE,
     _clubhouse_events,
+    _STATISTICS_CACHE,
     _restart_battery_percent,
     PlatzwartError,
     create_activation_hash,
@@ -51,10 +52,14 @@ class PlatzwartAuthenticationTests(unittest.TestCase):
         ), patch(
             "platzwart_console._clubhouse_events",
             return_value={"available": True, "events": [], "message": None},
+        ), patch(
+            "platzwart_console._dashboard_statistics",
+            return_value={"available": True, "completedAreaCycles7d": 3},
         ):
             payload = live_status(environment, NOW)
         self.assertEqual(payload["mower"]["restartBatteryPercent"], 92)
         self.assertEqual(len(payload["occupancy"]["safeWindows"]), 1)
+        self.assertEqual(payload["statistics"]["completedAreaCycles7d"], 3)
 
     def test_four_digit_pin_is_salted_and_verified(self) -> None:
         encoded = create_pin_hash("4072", salt=b"0123456789abcdef")
@@ -308,6 +313,38 @@ class PlatzwartSafetyIntegrationTests(unittest.TestCase):
         self.assertTrue(accepted["accepted"])
         self.assertEqual(store.load().operator_request_cutting_height_mm, 30)
         self.assertEqual(store.load().operator_request_action, "SET_CUTTING_HEIGHT")
+
+    def test_blade_usage_reset_requires_exact_confirmation_and_is_queued(self) -> None:
+        with self.assertRaises(PlatzwartError) as context:
+            request_action(
+                "RESET_BLADE_USAGE", "blade-invalid", "RESET", ENV, NOW
+            )
+        self.assertEqual(context.exception.code, "CONFIRMATION_INVALID")
+        store = InMemoryStateStore()
+
+        class AuditStore:
+            def audit(self, *_args, **_kwargs):
+                return None
+
+        with patch(
+            "platzwart_console.AzureTableStateStore.from_environment",
+            return_value=store,
+        ), patch(
+            "platzwart_console.ConsoleTableStore.from_environment",
+            return_value=AuditStore(),
+        ), patch(
+            "platzwart_console.RuntimeSettings.from_mapping",
+            return_value=settings(),
+        ):
+            accepted = request_action(
+                "RESET_BLADE_USAGE",
+                "blade-valid",
+                "RESET_BLADE_USAGE",
+                ENV,
+                NOW,
+            )
+        self.assertTrue(accepted["accepted"])
+        self.assertEqual(store.load().operator_request_action, "RESET_BLADE_USAGE")
 
     def test_operator_park_never_grants_automatic_restart(self) -> None:
         sent = []

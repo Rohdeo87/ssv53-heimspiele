@@ -62,6 +62,11 @@ test("Platzwart-Seite ist syntaktisch gültig und enthält keine Zugangsdaten", 
   assert.match(html, /mower-connection/);
   assert.match(html, /cutting-height-current/);
   assert.match(html, /SET_CUTTING_HEIGHT/);
+  assert.match(html, /Mäherstatistiken/);
+  assert.match(html, /Vollständige Mähungen · 7 Tage/);
+  assert.match(html, /Klingenlaufzeit zurücksetzen/);
+  assert.match(html, /RESET_BLADE_USAGE/);
+  assert.match(html, /Wurden die Klingen wirklich gewechselt/);
   assert.match(html, /Empfohlen: mindestens 30 mm/);
   assert.match(html, /value<25/);
   assert.match(html, /dringend empfohlen/);

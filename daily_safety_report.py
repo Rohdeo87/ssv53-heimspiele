@@ -423,6 +423,41 @@ def summarize_report(
     )
 
 
+def dashboard_statistics(
+    now_utc: datetime,
+    values: Mapping[str, str],
+    *,
+    query_client: ApplicationInsightsQueryClient | Any | None = None,
+) -> dict[str, Any]:
+    """Returns the established seven-day mowing metrics without sending mail."""
+
+    local_now = now_utc.astimezone(REPORT_TIME_ZONE)
+    period_start_local = datetime.combine(
+        local_now.date() - timedelta(days=6), time.min, REPORT_TIME_ZONE
+    )
+    client = query_client or ApplicationInsightsQueryClient.from_environment(values)
+    rows = client.execute(
+        _cycle_query(period_start_local.astimezone(timezone.utc), now_utc),
+        timespan="P8D",
+    )
+    summary = summarize_report(
+        parse_cycle_rows(rows),
+        now_utc=now_utc,
+        exception_count_24h=0,
+    )
+    return {
+        "available": True,
+        "mowingMinutes7d": summary.mowing_minutes_7d,
+        "averageDailyMowingMinutes7d": summary.average_daily_mowing_minutes_7d,
+        "completedAreaCycles7d": summary.completed_area_cycles_7d,
+        "lastCompletedAreaUtc": (
+            summary.last_completed_area_utc.isoformat()
+            if summary.last_completed_area_utc is not None
+            else None
+        ),
+    }
+
+
 def _minutes(value: int) -> str:
     hours, minutes = divmod(max(0, int(value)), 60)
     return f"{hours} Std. {minutes:02d} Min."
