@@ -43,6 +43,10 @@ def mower_item(
                     "attributes": {
                         "name": "Rasenfläche",
                         "enable": True,
+                        "type": "SYSTEMATIC",
+                        "progress": 65,
+                        "lastTimeCompleted": 1787184000,
+                        "lastTimeAbandoned": 1787170000,
                     },
                 }
             ],
@@ -63,6 +67,9 @@ class HusqvarnaParsingTests(unittest.TestCase):
         self.assertEqual(snapshot.activity, "PARKED_IN_CS")
         self.assertEqual(snapshot.external_reason_id, 253053)
         self.assertEqual(snapshot.work_areas[0]["name"], "Rasenfläche")
+        self.assertEqual(snapshot.work_areas[0]["type"], "SYSTEMATIC")
+        self.assertEqual(snapshot.work_areas[0]["progress"], 65)
+        self.assertEqual(snapshot.work_areas[0]["last_time_completed"], 1787184000)
 
     def test_named_mower_is_selected(self) -> None:
         selected = select_mower(

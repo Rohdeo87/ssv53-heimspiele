@@ -31,7 +31,6 @@ from order_mail import (
 REPORT_PARTITION = "ssv53-daily-safety-report-v1"
 REPORT_TIME_ZONE = ZoneInfo("Europe/Berlin")
 MOWING_ACTIVITIES = frozenset({"MOWING", "LEAVING"})
-COMPLETION_DECISION = "CONTINUOUS_MOWING_TURNAROUND_SENT"
 QUERY_SCOPE = "https://api.applicationinsights.io/.default"
 MAX_QUERY_ROWS = 20_000
 
@@ -55,6 +54,9 @@ class CycleObservation:
     next_irrigation_start_utc: datetime | None
     blocked_source: str
     parking_source: str
+    work_area_type: str
+    work_area_progress: int
+    work_area_last_completed: int
 
 
 @dataclass(frozen=True)
@@ -70,6 +72,8 @@ class DailyReportSummary:
     mowing_minutes_7d: int
     average_daily_mowing_minutes_7d: int
     completed_area_cycles_7d: int
+    current_work_area_progress: int
+    last_completed_area_utc: datetime | None
     daily_mowing_minutes: tuple[tuple[date, int], ...]
     current_activity: str
     current_state: str
@@ -285,7 +289,10 @@ traces
     hydrawise_active_zones=toint(p.details.hydrawise.safety.active_zone_count),
     next_irrigation_start_utc=tostring(p.details.irrigation_outage_guard.next_scheduled_start_utc),
     blocked_source=tostring(p.details.current_plan.blocked_now.source),
-    parking_source=tostring(p.details.current_plan.parking_block.source)
+    parking_source=tostring(p.details.current_plan.parking_block.source),
+    work_area_type=tostring(p.details.mower.target_work_area.type),
+    work_area_progress=toint(p.details.mower.target_work_area.progress),
+    work_area_last_completed=tolong(p.details.mower.target_work_area.last_time_completed)
 | order by timestamp asc
 """.strip()
 
@@ -322,6 +329,9 @@ def parse_cycle_rows(rows: Sequence[Mapping[str, Any]]) -> list[CycleObservation
             next_irrigation_start_utc=_parse_utc(row.get("next_irrigation_start_utc")),
             blocked_source=str(row.get("blocked_source") or ""),
             parking_source=str(row.get("parking_source") or ""),
+            work_area_type=str(row.get("work_area_type") or "").upper(),
+            work_area_progress=_as_int(row.get("work_area_progress")),
+            work_area_last_completed=_as_int(row.get("work_area_last_completed")),
         )
     return sorted(observations.values(), key=lambda item: item.timestamp_utc)
 
@@ -345,8 +355,19 @@ def summarize_report(
             daily_minutes[item.timestamp_utc.astimezone(REPORT_TIME_ZONE).date()] += 1
     days = tuple((start_day + timedelta(days=index), daily_minutes[start_day + timedelta(days=index)]) for index in range(7))
     mowing_minutes = sum(minutes for _, minutes in days)
-    completed_cycles = sum(
-        1 for item in relevant if item.decision_code == COMPLETION_DECISION and item.command_sent
+    completion_values = {
+        item.work_area_last_completed
+        for item in relevant
+        if item.work_area_last_completed > 0
+        and datetime.fromtimestamp(
+            item.work_area_last_completed, timezone.utc
+        ) >= period_start_utc - timedelta(hours=3)
+    }
+    completed_cycles = len(completion_values)
+    last_completed_area_utc = (
+        datetime.fromtimestamp(max(completion_values), timezone.utc)
+        if completion_values
+        else None
     )
     gaps = 0
     for previous, current in zip(last_24h, last_24h[1:]):
@@ -384,6 +405,8 @@ def summarize_report(
         mowing_minutes_7d=mowing_minutes,
         average_daily_mowing_minutes_7d=round(mowing_minutes / 7),
         completed_area_cycles_7d=completed_cycles,
+        current_work_area_progress=latest.work_area_progress if latest else 0,
+        last_completed_area_utc=last_completed_area_utc,
         daily_mowing_minutes=days,
         current_activity=latest.activity if latest else "UNBEKANNT",
         current_state=latest.mower_state if latest else "UNBEKANNT",
@@ -433,7 +456,9 @@ def build_message(
         ("Befehle 24 h", str(summary.command_count_24h)),
         ("Mähzeit 7 Tage", _minutes(summary.mowing_minutes_7d)),
         ("Ø Mähzeit pro Tag", _minutes(summary.average_daily_mowing_minutes_7d)),
-        ("Rasenfläche vollständig", f"{summary.completed_area_cycles_7d} Durchgänge"),
+        ("Aktueller Flächenfortschritt", f"{summary.current_work_area_progress} %"),
+        ("Bestätigte Abschlüsse (7 Tage)", f"{summary.completed_area_cycles_7d}"),
+        ("Letzter bestätigter Abschluss", _local_time(summary.last_completed_area_utc)),
         (
             "Hydrawise",
             "frisch und erreichbar"
@@ -465,8 +490,8 @@ def build_message(
             "Mähzeiten der letzten sieben Tage:",
             *[f"{day.strftime('%d.%m.%Y')}: {_minutes(minutes)}" for day, minutes in summary.daily_mowing_minutes],
             "",
-            "Vollständige Rasenflächen-Durchgänge werden ausschließlich über den "
-            "systemseitigen Abschluss mit anschließendem automatischem Neustart gezählt.",
+            "Bestätigte Flächenabschlüsse werden ausschließlich aus dem Husqvarna-EPOS-Feld "
+            "lastTimeCompleted ermittelt. Mähzeit und Heimfahrten gelten nicht als Abschluss.",
         ]
     )
     html_body = f"""<!doctype html>
@@ -482,7 +507,7 @@ def build_message(
 <tr><td><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">{fact_rows}</table></td></tr>
 <tr><td style="padding-top:25px;font-size:13px;font-weight:800;color:#285EA7;">MÄHZEITEN – LETZTE 7 TAGE</td></tr>
 <tr><td><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">{daily_rows}</table></td></tr>
-<tr><td style="padding-top:22px;color:{APP_MUTED};font-size:12px;line-height:1.55;">Vollständige Rasenflächen-Durchgänge werden ausschließlich über den systemseitigen Abschluss mit anschließendem automatischem Neustart gezählt. Unklare oder abgebrochene Fahrten werden nicht als vollständig gewertet.</td></tr>
+<tr><td style="padding-top:22px;color:{APP_MUTED};font-size:12px;line-height:1.55;">Bestätigte Flächenabschlüsse werden ausschließlich aus dem Husqvarna-EPOS-Feld lastTimeCompleted ermittelt. Mähzeit, Heimfahrten und automatische Neustarts gelten nicht als Abschluss.</td></tr>
 <tr><td style="padding-top:24px;color:{APP_MUTED};font-size:12px;">Automatischer, ausschließlich lesender Bericht aus Azure · Schönwalder SV 1953 e.V.</td></tr>
 </table></td></tr></table></body></html>"""
     message = EmailMessage()

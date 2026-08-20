@@ -3,7 +3,6 @@ from datetime import datetime, timezone
 import pytest
 
 from daily_safety_report import (
-    COMPLETION_DECISION,
     DailyReportError,
     parse_cycle_rows,
     process_daily_report,
@@ -13,7 +12,7 @@ from daily_safety_report import (
 )
 
 
-def row(when: str, *, activity="MOWING", decision="", sent=False, error=0):
+def row(when: str, *, activity="MOWING", decision="", sent=False, error=0, progress=0, completed=0):
     return {
         "timestamp": when,
         "activity": activity,
@@ -28,6 +27,9 @@ def row(when: str, *, activity="MOWING", decision="", sent=False, error=0):
         "next_irrigation_start_utc": "2026-08-21T02:00:00Z",
         "blocked_source": "",
         "parking_source": "",
+        "work_area_type": "SYSTEMATIC",
+        "work_area_progress": progress,
+        "work_area_last_completed": completed,
     }
 
 
@@ -37,7 +39,7 @@ def test_delivery_window_tracks_berlin_summer_and_winter_time():
     assert not should_attempt_delivery(datetime(2026, 8, 20, 4, 59, tzinfo=timezone.utc))
 
 
-def test_summary_counts_unique_mowing_minutes_and_only_confirmed_completions():
+def test_summary_counts_only_unique_epos_confirmed_completions():
     observations = parse_cycle_rows(
         [
             row("2026-08-19T05:00:01Z"),
@@ -46,14 +48,18 @@ def test_summary_counts_unique_mowing_minutes_and_only_confirmed_completions():
             row(
                 "2026-08-19T05:02:01Z",
                 activity="PARKED_IN_CS",
-                decision=COMPLETION_DECISION,
+                decision="CONTINUOUS_MOWING_TURNAROUND_SENT",
                 sent=True,
+                progress=100,
+                completed=1787115600,
             ),
             row(
                 "2026-08-19T05:03:01Z",
                 activity="PARKED_IN_CS",
-                decision=COMPLETION_DECISION,
+                decision="CONTINUOUS_MOWING_TURNAROUND_SENT",
                 sent=False,
+                progress=12,
+                completed=1787115600,
             ),
         ]
     )
@@ -64,6 +70,8 @@ def test_summary_counts_unique_mowing_minutes_and_only_confirmed_completions():
     )
     assert summary.mowing_minutes_7d == 2
     assert summary.completed_area_cycles_7d == 1
+    assert summary.current_work_area_progress == 12
+    assert summary.last_completed_area_utc is not None
     assert summary.average_daily_mowing_minutes_7d == 0
 
 
@@ -119,7 +127,7 @@ def test_process_sends_once_and_marks_success(monkeypatch):
     assert result["sent"] is True
     assert store.marks == ["sent"]
     assert sent[0]["To"] == "thomas.rohde@ssv53.de"
-    assert "Rasenfläche vollständig" in sent[0].get_body(preferencelist=("plain",)).get_content()
+    assert "Bestätigte Abschlüsse (7 Tage)" in sent[0].get_body(preferencelist=("plain",)).get_content()
 
     duplicate = process_daily_report(
         datetime(2026, 8, 20, 6, 0, tzinfo=timezone.utc),

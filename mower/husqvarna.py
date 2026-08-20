@@ -237,6 +237,14 @@ def _parse_work_areas(raw: Any) -> tuple[dict[str, Any], ...]:
                     "enable",
                     source.get("enabled"),
                 ),
+                "type": str(source.get("type") or "").upper() or None,
+                "progress": _parse_external_reason(source.get("progress")),
+                "last_time_completed": _parse_external_reason(
+                    source.get("lastTimeCompleted")
+                ),
+                "last_time_abandoned": _parse_external_reason(
+                    source.get("lastTimeAbandoned")
+                ),
             }
         )
     return tuple(result)
