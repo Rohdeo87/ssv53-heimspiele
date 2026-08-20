@@ -38,6 +38,7 @@ class MowerSnapshot:
     work_areas: tuple[dict[str, Any], ...]
     connected: bool | None = None
     status_timestamp_ms: int | None = None
+    global_cutting_height_percent: int | None = None
 
     def to_dict(self) -> dict[str, Any]:
         value = asdict(self)
@@ -247,6 +248,14 @@ def _parse_work_areas(raw: Any) -> tuple[dict[str, Any], ...]:
                 "last_time_abandoned": _parse_external_reason(
                     source.get("lastTimeAbandoned")
                 ),
+                "cutting_height_percent": _parse_external_reason(
+                    source.get("cuttingHeight")
+                ),
+                "use_global_cutting_height": (
+                    bool(source.get("useGlobalCuttingHeight"))
+                    if isinstance(source.get("useGlobalCuttingHeight"), bool)
+                    else None
+                ),
             }
         )
     return tuple(result)
@@ -259,6 +268,7 @@ def parse_snapshot(item: dict[str, Any]) -> MowerSnapshot:
     mower_data = as_dict(attributes.get("mower"))
     planner_data = as_dict(attributes.get("planner"))
     metadata = as_dict(attributes.get("metadata"))
+    settings_data = as_dict(attributes.get("settings"))
     override_data = as_dict(planner_data.get("override"))
 
     return MowerSnapshot(
@@ -289,4 +299,7 @@ def parse_snapshot(item: dict[str, Any]) -> MowerSnapshot:
             else None
         ),
         status_timestamp_ms=_parse_timestamp(metadata.get("statusTimestamp")),
+        global_cutting_height_percent=_parse_external_reason(
+            settings_data.get("cuttingHeight")
+        ),
     )

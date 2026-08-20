@@ -45,6 +45,11 @@ test("Platzwart-Seite ist syntaktisch gültig und enthält keine Zugangsdaten", 
   assert.match(html, /Mäher nicht erreichbar/);
   assert.match(html, /Mäher sucht Verbindung/);
   assert.match(html, /mower-connection/);
+  assert.match(html, /cutting-height-current/);
+  assert.match(html, /SET_CUTTING_HEIGHT/);
+  assert.match(html, /Empfohlen: mindestens 30 mm/);
+  assert.match(html, /value<25/);
+  assert.match(html, /dringend empfohlen/);
   assert.doesNotMatch(html, /mowe_forced/i);
   assert.doesNotMatch(html, /HUSQVARNA_CLIENT_SECRET|HYDRAWISE_API_KEY|SSV53_PLATZWART_PIN_HASH/);
 });

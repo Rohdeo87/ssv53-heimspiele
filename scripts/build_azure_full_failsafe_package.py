@@ -32,7 +32,9 @@ REQUIRED_FILES = (
     "mower/full_mower.py",
     "mower/husqvarna.py",
     "mower/husqvarna_actions.py",
+    "mower/husqvarna_cutting_height_actions.py",
     "mower/husqvarna_start_actions.py",
+    "mower/cutting_height.py",
     "mower/hydrawise.py",
     "mower/irrigation_recovery.py",
     "mower/hydrawise_actions.py",
@@ -90,6 +92,15 @@ def collect_files(repository_root: Path) -> list[tuple[str, bytes]]:
         "mower/husqvarna_start_actions.py",
     ]:
         raise ValueError("Husqvarna-Schreiblogik liegt nicht ausschließlich in den geprüften Modulen.")
+    height_write_files = sorted(
+        name
+        for name, content in files
+        if b"/workAreas/" in content and b'method="PATCH"' in content
+    )
+    if height_write_files != ["mower/husqvarna_cutting_height_actions.py"]:
+        raise ValueError(
+            "Schnitthöhen-Schreiblogik liegt nicht ausschließlich im geprüften Modul."
+        )
     hydrawise_action_files = sorted(name for name, content in files if b"setzone.php" in content)
     if hydrawise_action_files != ["mower/hydrawise_actions.py"]:
         raise ValueError("Hydrawise-Schreiblogik liegt nicht ausschließlich im geprüften Aktionsmodul.")
@@ -106,6 +117,8 @@ def build_package(repository_root: Path, output_path: Path) -> dict[str, object]
         "automatic_park_implemented": True,
         "automatic_continuous_mowing_implemented": True,
         "automatic_irrigation_start_implemented": True,
+        "work_area_cutting_height_control_implemented": True,
+        "work_area_cutting_height_mm_range": [20, 60],
         "manual_failed_irrigation_reset_implemented": True,
         "manual_reset_requires_function_auth": True,
         "manual_reset_sends_device_commands": False,

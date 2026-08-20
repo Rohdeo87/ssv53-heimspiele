@@ -14,6 +14,7 @@ from platzwart_console import (
     create_activation_hash,
     create_pin_hash,
     issue_session,
+    request_action,
     require_session,
     verify_pin,
 )
@@ -236,6 +237,47 @@ class PlatzwartSafetyIntegrationTests(unittest.TestCase):
             operator_request_status="PENDING",
             **values,
         )
+
+    def test_cutting_height_request_is_validated_and_persisted_in_mm(self) -> None:
+        for invalid in (19, 61):
+            with self.subTest(invalid=invalid), self.assertRaises(PlatzwartError) as context:
+                request_action(
+                    "SET_CUTTING_HEIGHT",
+                    "height-invalid",
+                    "SET_CUTTING_HEIGHT",
+                    ENV,
+                    NOW,
+                    cutting_height_mm=invalid,
+                )
+            self.assertEqual(context.exception.code, "CUTTING_HEIGHT_INVALID")
+
+        store = InMemoryStateStore()
+
+        class AuditStore:
+            def audit(self, *_args, **_kwargs):
+                return None
+
+        with patch(
+            "platzwart_console.AzureTableStateStore.from_environment",
+            return_value=store,
+        ), patch(
+            "platzwart_console.ConsoleTableStore.from_environment",
+            return_value=AuditStore(),
+        ), patch(
+            "platzwart_console.RuntimeSettings.from_mapping",
+            return_value=settings(),
+        ):
+            accepted = request_action(
+                "SET_CUTTING_HEIGHT",
+                "height-valid",
+                "SET_CUTTING_HEIGHT",
+                ENV,
+                NOW,
+                cutting_height_mm=30,
+            )
+        self.assertTrue(accepted["accepted"])
+        self.assertEqual(store.load().operator_request_cutting_height_mm, 30)
+        self.assertEqual(store.load().operator_request_action, "SET_CUTTING_HEIGHT")
 
     def test_operator_park_never_grants_automatic_restart(self) -> None:
         sent = []

@@ -24,6 +24,7 @@ REQUIRED_FILES = (
     "mower/config.json",
     "mower/config_source.py",
     "mower/controller.py",
+    "mower/cutting_height.py",
     "mower/decision.py",
     "mower/dry_run.py",
     "mower/husqvarna.py",

@@ -59,6 +59,8 @@ class FullFailsafePackageTests(unittest.TestCase):
             self.assertTrue(manifest["manual_failed_irrigation_reset_implemented"])
             self.assertTrue(manifest["manual_reset_requires_function_auth"])
             self.assertFalse(manifest["manual_reset_sends_device_commands"])
+            self.assertTrue(manifest["work_area_cutting_height_control_implemented"])
+            self.assertEqual(manifest["work_area_cutting_height_mm_range"], [20, 60])
             self.assertTrue(manifest["central_collision_notifications_implemented"])
             self.assertTrue(manifest["collision_notification_recipients_server_configured"])
             self.assertTrue(manifest["trainer_contact_registration_removed"])

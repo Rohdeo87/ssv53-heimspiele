@@ -15,7 +15,12 @@ from mower.decision import (
     PARK_OVERRIDE_ACTIONS,
 )
 from mower.dry_run import run_read_only_cycle
+from mower.cutting_height import (
+    cutting_height_mm_to_percent,
+    supports_metric_cutting_height,
+)
 from mower.husqvarna_actions import park_until_further_notice
+from mower.husqvarna_cutting_height_actions import set_work_area_cutting_height
 from mower.husqvarna_start_actions import start_in_work_area
 from mower.hydrawise import (
     evaluate_continuous_clear_confirmation,
@@ -35,6 +40,7 @@ StartSender = Callable[[str, str, str, int, int], dict[str, Any]]
 SuspendZoneSender = Callable[[str, int, int, str | int | None], dict[str, Any]]
 StartZoneSender = Callable[[str, int, int, str | int | None], dict[str, Any]]
 StopZoneSender = Callable[[str, int, str | int | None], dict[str, Any]]
+CuttingHeightSender = Callable[[str, str, str, int, int], dict[str, Any]]
 
 PARKABLE_ACTIVITIES = frozenset({"MOWING", "LEAVING"})
 PARK_COMMAND_ACTIVITIES = frozenset(
@@ -868,6 +874,7 @@ def run_full_failsafe_cycle(
     suspend_zone_sender: SuspendZoneSender = suspend_zone_until,
     start_zone_sender: StartZoneSender = start_zone_for,
     stop_zone_sender: StopZoneSender = stop_zone_now,
+    cutting_height_sender: CuttingHeightSender = set_work_area_cutting_height,
 ) -> CycleResult:
     """Fail-closed Gesamtsteuerung für Mäher, Belegung und sieben Zonen."""
 
@@ -997,6 +1004,98 @@ def run_full_failsafe_cycle(
             "Der sichere Beregnungsablauf läuft bereits.",
         )
         operator_action = None
+
+    # A height change never takes precedence over a safety return. It is only
+    # sent in a completely clear cycle; otherwise the pending request waits
+    # while the ordinary park/irrigation logic continues unchanged.
+    hydra_safety_for_height = _as_dict(
+        _as_dict(details.get("hydrawise")).get("safety")
+    )
+    height_cycle_is_clear = (
+        not parking_block
+        and not blocked_now
+        and state.irrigation_phase is None
+        and str(decision.get("hypothetical_command") or "").upper() != "PARK"
+        and hydra_safety_for_height.get("available") is True
+        and hydra_safety_for_height.get("fresh") is True
+        and hydra_safety_for_height.get("clear_now") is True
+    )
+    if operator_action == "SET_CUTTING_HEIGHT" and height_cycle_is_clear:
+        requested_mm = state.operator_request_cutting_height_mm
+        area_id = int(target_area.get("id") or 0)
+        safe_to_change = (
+            settings.full_failsafe_write_gate_enabled
+            and mower.get("connected") is True
+            and error_code == 0
+            and supports_metric_cutting_height(mower.get("model"))
+            and area_id > 0
+            and target_area.get("enabled") is not False
+            and target_area.get("use_global_cutting_height") is False
+            and requested_mm is not None
+        )
+        if not safe_to_change:
+            rejected = _finish_operator_request(
+                state,
+                "Die Schnitthöhe wurde nicht geändert, weil Mäher oder Rasenfläche nicht eindeutig sicher verfügbar sind.",
+                status="REJECTED",
+            )
+            return _persist_result(
+                store=store,
+                original=original,
+                state=rejected,
+                result=result,
+                details=details,
+                settings=settings,
+                decision_code="CUTTING_HEIGHT_REJECTED",
+                message="Die Schnitthöhe blieb unverändert.",
+            )
+        try:
+            target_percent = cutting_height_mm_to_percent(requested_mm)
+            client_id = str(environment.get("HUSQVARNA_CLIENT_ID", "")).strip()
+            client_secret = str(environment.get("HUSQVARNA_CLIENT_SECRET", "")).strip()
+            response = cutting_height_sender(
+                client_id,
+                client_secret,
+                mower_id,
+                area_id,
+                target_percent,
+            )
+        except Exception as exc:
+            rejected = _finish_operator_request(
+                state,
+                f"Schnitthöhe konnte nicht geändert werden: {exc}",
+                status="REJECTED",
+            )
+            return _persist_result(
+                store=store,
+                original=original,
+                state=rejected,
+                result=result,
+                details=details,
+                settings=settings,
+                decision_code="CUTTING_HEIGHT_REJECTED",
+                message="Die Schnitthöhe blieb unverändert.",
+            )
+        completed = _finish_operator_request(
+            state,
+            f"Die Schnitthöhe wurde auf {requested_mm} mm eingestellt.",
+        )
+        details["cutting_height_action"] = {
+            "millimetres": requested_mm,
+            "percent": target_percent,
+            "response": response,
+        }
+        return _persist_result(
+            store=store,
+            original=original,
+            state=completed,
+            result=result,
+            details=details,
+            settings=settings,
+            decision_code="CUTTING_HEIGHT_SET",
+            message=f"Die Schnitthöhe wurde auf {requested_mm} mm eingestellt.",
+            command_sent=True,
+        )
     irrigation_failsafe_deadline = (
         next_irrigation_start
         - timedelta(minutes=irrigation_failsafe_lead_minutes)

@@ -628,6 +628,11 @@ def ssv53_platzwart_action(req: func.HttpRequest) -> func.HttpResponse:
                 if body.get("runSeconds") is not None
                 else None
             ),
+            cutting_height_mm=(
+                int(body["cuttingHeightMm"])
+                if body.get("cuttingHeightMm") is not None
+                else None
+            ),
         )
         LOGGER.warning(
             "SSV53_PLATZWART_ACTION_ACCEPTED action=%s request_id=%s device=%s",

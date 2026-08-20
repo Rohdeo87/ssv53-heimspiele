@@ -18,6 +18,14 @@ from azure.data.tables import TableClient, UpdateMode
 from azure.identity import ManagedIdentityCredential
 
 from mower.dry_run import run_read_only_cycle
+from mower.cutting_height import (
+    LOW_HEIGHT_WARNING_BELOW_MM,
+    MAXIMUM_MM,
+    MINIMUM_MM,
+    RECOMMENDED_MINIMUM_MM,
+    cutting_height_percent_to_mm,
+    supports_metric_cutting_height,
+)
 from mower.runtime import RuntimeSettings
 from mower.state import AutomationState
 from mower.state_store import AzureTableStateStore, StateConflictError
@@ -31,6 +39,7 @@ ALLOWED_ACTIONS = frozenset(
         "PARK_MOWER", "START_MOWING", "START_IRRIGATION",
         "START_IRRIGATION_ZONE", "STOP_IRRIGATION_AFTER_ZONE",
         "STOP_IRRIGATION_NOW",
+        "SET_CUTTING_HEIGHT",
     }
 )
 
@@ -543,6 +552,20 @@ def live_status(environment: Mapping[str, str], now_utc: datetime) -> dict[str, 
     current_plan = dict(details.get("current_plan") or {})
     mower.pop("mower_id", None)
     target = dict(mower.get("target_work_area") or {})
+    cutting_height_percent = (
+        mower.get("global_cutting_height_percent")
+        if target.get("use_global_cutting_height") is True
+        else target.get("cutting_height_percent")
+    )
+    cutting_height_mm = None
+    cutting_height_supported = supports_metric_cutting_height(mower.get("model"))
+    if cutting_height_supported and cutting_height_percent is not None:
+        try:
+            cutting_height_mm = cutting_height_percent_to_mm(
+                int(cutting_height_percent)
+            )
+        except (TypeError, ValueError):
+            cutting_height_mm = None
     raw_safety = dict(hydrawise.get("safety") or {})
     safety = {
         key: raw_safety.get(key)
@@ -582,6 +605,12 @@ def live_status(environment: Mapping[str, str], now_utc: datetime) -> dict[str, 
             "statusTimestamp": mower.get("status_timestamp_ms"),
             "restrictedReason": mower.get("restricted_reason"),
             "workArea": target.get("name"), "workAreaProgress": target.get("progress"),
+            "cuttingHeightMm": cutting_height_mm,
+            "cuttingHeightSupported": cutting_height_supported,
+            "cuttingHeightMinimumMm": MINIMUM_MM,
+            "cuttingHeightMaximumMm": MAXIMUM_MM,
+            "cuttingHeightRecommendedMinimumMm": RECOMMENDED_MINIMUM_MM,
+            "cuttingHeightWarningBelowMm": LOW_HEIGHT_WARNING_BELOW_MM,
         },
         "irrigation": {
             "status": hydrawise.get("status"), "safety": safety,
@@ -605,6 +634,7 @@ def request_action(
     *,
     zone: int | None = None,
     run_seconds: int | None = None,
+    cutting_height_mm: int | None = None,
 ) -> dict[str, Any]:
     normalized = action.strip().upper()
     if normalized not in ALLOWED_ACTIONS:
@@ -618,9 +648,25 @@ def request_action(
             raise PlatzwartError("ZONE_INVALID", "Bitte eine gültige Beregnungszone wählen.")
         if run_seconds is None or not 60 <= int(run_seconds) <= 7200:
             raise PlatzwartError("DURATION_INVALID", "Die Laufzeit muss zwischen 1 und 120 Minuten liegen.")
+        cutting_height_mm = None
+    elif normalized == "SET_CUTTING_HEIGHT":
+        if cutting_height_mm is None:
+            raise PlatzwartError("CUTTING_HEIGHT_INVALID", "Bitte eine Schnitthöhe wählen.")
+        try:
+            cutting_height_mm = int(cutting_height_mm)
+        except (TypeError, ValueError) as exc:
+            raise PlatzwartError("CUTTING_HEIGHT_INVALID", "Bitte eine gültige Schnitthöhe wählen.") from exc
+        if not MINIMUM_MM <= cutting_height_mm <= MAXIMUM_MM:
+            raise PlatzwartError(
+                "CUTTING_HEIGHT_INVALID",
+                f"Die Schnitthöhe muss zwischen {MINIMUM_MM} und {MAXIMUM_MM} mm liegen.",
+            )
+        zone = None
+        run_seconds = None
     else:
         zone = None
         run_seconds = None
+        cutting_height_mm = None
     settings = RuntimeSettings.from_mapping(environment)
     if not settings.full_failsafe_write_gate_enabled:
         raise PlatzwartError("AUTOMATION_LOCKED", "Die sichere Automatik ist nicht vollständig freigegeben.", 409)
@@ -657,6 +703,7 @@ def request_action(
         operator_request_result=None,
         operator_request_zone=zone,
         operator_request_run_seconds=run_seconds,
+        operator_request_cutting_height_mm=cutting_height_mm,
     )
     try:
         store.save(updated, expected_revision=original.revision)

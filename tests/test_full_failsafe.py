@@ -161,6 +161,8 @@ def result(
             },
             "mower": {
                 "mower_id": "mower-1",
+                "model": "Husqvarna Automower 580 EPOS",
+                "connected": True,
                 "activity": activity,
                 "state": mower_state,
                 "override_action": (
@@ -175,7 +177,7 @@ def result(
                 "external_reason_id": external_reason_id,
                 "error_code": 0,
                 "battery_percent": battery,
-                "target_work_area": {"id": 849199, "name": "Rasenfläche", "enabled": True},
+                "target_work_area": {"id": 849199, "name": "Rasenfläche", "enabled": True, "cutting_height_percent": 12, "use_global_cutting_height": False},
             },
             "safety": {"read_only": True, "command_sent": False},
         },
@@ -231,6 +233,7 @@ class FullFailsafeTests(unittest.TestCase):
             suspend_zone_sender=senders.get("suspend", lambda *_: {"message_type": "info"}),
             start_zone_sender=senders.get("zone", lambda *_: {"message_type": "info"}),
             stop_zone_sender=senders.get("stop_zone", lambda *_: {"message_type": "info"}),
+            cutting_height_sender=senders.get("height", lambda *_: {"accepted": True}),
         )
         return output, store
 
@@ -253,6 +256,49 @@ class FullFailsafeTests(unittest.TestCase):
                 start_zone_sender=lambda *args: calls["zone"].append(args),
             )
         self.assertEqual(calls, {"read": [], "park": [], "start": [], "suspend": [], "zone": []})
+
+    def test_cutting_height_targets_verified_work_area_without_other_commands(self) -> None:
+        calls = []
+        initial = AutomationState(
+            operator_request_id="height-1",
+            operator_request_action="SET_CUTTING_HEIGHT",
+            operator_requested_utc=(NOW - timedelta(seconds=10)).isoformat(),
+            operator_request_expires_utc=(NOW + timedelta(minutes=10)).isoformat(),
+            operator_request_status="PENDING",
+            operator_request_cutting_height_mm=30,
+        )
+        output, store = self._run(
+            initial,
+            result(activity="MOWING"),
+            height=lambda *args: calls.append(args) or {"accepted": True},
+            park=lambda *_: self.fail("Kein Parkbefehl erwartet"),
+            start=lambda *_: self.fail("Kein Startbefehl erwartet"),
+        )
+        self.assertEqual(calls, [("client", "secret", "mower-1", 849199, 25)])
+        self.assertEqual(output.decision_code, "CUTTING_HEIGHT_SET")
+        self.assertEqual(store.load().operator_request_status, "COMPLETED")
+
+    def test_safety_park_has_priority_over_cutting_height(self) -> None:
+        height_calls = []
+        park_calls = []
+        initial = AutomationState(
+            operator_request_id="height-2",
+            operator_request_action="SET_CUTTING_HEIGHT",
+            operator_requested_utc=(NOW - timedelta(seconds=10)).isoformat(),
+            operator_request_expires_utc=(NOW + timedelta(minutes=10)).isoformat(),
+            operator_request_status="PENDING",
+            operator_request_cutting_height_mm=24,
+        )
+        output, store = self._run(
+            initial,
+            result(activity="MOWING", block_source="training", command="PARK"),
+            height=lambda *args: height_calls.append(args),
+            park=lambda *args: park_calls.append(args) or {"accepted": True},
+        )
+        self.assertEqual(height_calls, [])
+        self.assertEqual(len(park_calls), 1)
+        self.assertEqual(output.decision_code, "PARK_COMMAND_SENT")
+        self.assertEqual(store.load().operator_request_status, "PENDING")
 
     def test_external_station_park_is_not_taken_over_for_training_or_match(self) -> None:
         for source in ("training", "match", "training+match"):

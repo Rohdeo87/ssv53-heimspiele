@@ -83,6 +83,7 @@ class AutomationState:
     operator_request_result: str | None = None
     operator_request_zone: int | None = None
     operator_request_run_seconds: int | None = None
+    operator_request_cutting_height_mm: int | None = None
 
     def __post_init__(self) -> None:
         if self.schema_version != 1:
@@ -300,6 +301,9 @@ class AutomationState:
             operator_request_zone=_normalize_optional_int(values.get("operator_request_zone")),
             operator_request_run_seconds=_normalize_optional_int(
                 values.get("operator_request_run_seconds")
+            ),
+            operator_request_cutting_height_mm=_normalize_optional_int(
+                values.get("operator_request_cutting_height_mm")
             ),
         )
 
