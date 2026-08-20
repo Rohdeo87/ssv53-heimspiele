@@ -6,6 +6,7 @@ import hmac
 import json
 import secrets
 import threading
+import urllib.parse
 import urllib.request
 from zoneinfo import ZoneInfo
 from dataclasses import replace
@@ -354,23 +355,39 @@ def _state_payload(state: AutomationState) -> dict[str, Any]:
     }
 
 
-def _ics_value(line: str) -> tuple[str, str]:
-    left, _, value = line.partition(":")
-    return left.split(";", 1)[0].upper(), value.strip()
+def _appack_graphql(token: str, query: str, variables: Mapping[str, Any]) -> dict[str, Any]:
+    body = json.dumps({"query": query, "variables": dict(variables)}).encode("utf-8")
+    request = urllib.request.Request(
+        "https://api.appack.de/graphql",
+        data=body,
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+            "User-Agent": "SSV53-Platzwart/1.0",
+        },
+        method="POST",
+    )
+    with urllib.request.urlopen(request, timeout=8) as response:
+        payload = json.loads(response.read(512_000).decode("utf-8"))
+    if not isinstance(payload, dict) or payload.get("errors"):
+        raise RuntimeError("Appack-Reservierungsdaten konnten nicht gelesen werden.")
+    return dict(payload.get("data") or {})
 
 
-def _ics_datetime(value: str) -> datetime:
-    if value.endswith("Z"):
-        return datetime.strptime(value, "%Y%m%dT%H%M%SZ").replace(tzinfo=timezone.utc)
-    if "T" in value:
-        return datetime.strptime(value, "%Y%m%dT%H%M%S").replace(tzinfo=ZoneInfo("Europe/Berlin"))
-    return datetime.strptime(value, "%Y%m%d").replace(tzinfo=ZoneInfo("Europe/Berlin"))
+def _iso_datetime(value: Any) -> datetime | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise ValueError("Zeitangabe enthält keine Zeitzone.")
+    return parsed.astimezone(timezone.utc)
 
 
 def _clubhouse_events(environment: Mapping[str, str], now_utc: datetime) -> dict[str, Any]:
-    url = str(environment.get("SSV53_CLUBHOUSE_CALENDAR_URL") or "").strip()
+    url = str(environment.get("SSV53_CLUBHOUSE_RESERVATION_URL") or "").strip()
     if not url:
-        return {"available": False, "events": [], "message": "Vereinsheim-Kalender ist nicht eingerichtet."}
+        return {"available": False, "events": [], "message": "Vereinsheim-Reservierungen sind nicht eingerichtet."}
     now = now_utc.astimezone(timezone.utc)
     with _CLUBHOUSE_CACHE_LOCK:
         expires = _CLUBHOUSE_CACHE.get("expires")
@@ -381,33 +398,77 @@ def _clubhouse_events(environment: Mapping[str, str], now_utc: datetime) -> dict
                 "message": _CLUBHOUSE_CACHE.get("message"),
             }
     try:
-        request = urllib.request.Request(url, headers={"User-Agent": "SSV53-Platzwart/1.0"})
-        with urllib.request.urlopen(request, timeout=8) as response:
-            raw = response.read(256_000).decode("utf-8", errors="replace")
-        unfolded = raw.replace("\r\n ", "").replace("\r\n\t", "").splitlines()
-        events: list[dict[str, Any]] = []
-        current: dict[str, str] | None = None
-        for line in unfolded:
-            if line == "BEGIN:VEVENT":
-                current = {}
-            elif line == "END:VEVENT" and current is not None:
-                try:
-                    start = _ics_datetime(current["DTSTART"])
-                    end = _ics_datetime(current.get("DTEND") or current["DTSTART"])
-                    if end.astimezone(timezone.utc) >= now:
-                        events.append({
-                            "title": current.get("SUMMARY") or "Vereinsheim belegt",
-                            "start": start.astimezone(timezone.utc).isoformat(),
-                            "end": end.astimezone(timezone.utc).isoformat(),
-                        })
-                except (KeyError, ValueError):
-                    pass
-                current = None
-            elif current is not None and ":" in line:
-                key, value = _ics_value(line)
-                if key in {"DTSTART", "DTEND", "SUMMARY"}:
-                    current[key] = value.replace("\\,", ",").replace("\\n", " ")
-        events.sort(key=lambda item: item["start"])
+        redirect_request = urllib.request.Request(
+            url, headers={"User-Agent": "SSV53-Platzwart/1.0"}
+        )
+        with urllib.request.urlopen(redirect_request, timeout=8) as response:
+            resolved_url = response.geturl()
+        parsed = urllib.parse.urlparse(resolved_url)
+        token = urllib.parse.parse_qs(parsed.query).get("jwt", [""])[0]
+        component = urllib.parse.parse_qs(parsed.query).get("component", [""])[0]
+        if len(token) < 40 or not component:
+            raise RuntimeError("Appack-Einbettungslink ist ungültig.")
+        resources_data = _appack_graphql(
+            token,
+            "query FindResources($componentId:String!){findBookingResources(componentId:$componentId){id name}}",
+            {"componentId": component},
+        )
+        resources = resources_data.get("findBookingResources") or []
+        clubhouse = next(
+            (
+                item for item in resources
+                if isinstance(item, dict)
+                and str(item.get("name") or "").strip().casefold() == "vereinsheim"
+            ),
+            None,
+        )
+        if not clubhouse or not clubhouse.get("id"):
+            raise RuntimeError("Ressource Vereinsheim wurde nicht gefunden.")
+        berlin = ZoneInfo("Europe/Berlin")
+        today = now.astimezone(berlin).date()
+        calendar_end = today + timedelta(days=90)
+        calendar_data = _appack_graphql(
+            token,
+            "query FindCalendar($resourceId:ID!,$start:Date!,$end:Date!){findBookingCalendar(resourceId:$resourceId,start:$start,end:$end){start end items}}",
+            {
+                "resourceId": str(clubhouse["id"]),
+                "start": f"{today.isoformat()}T00:00:00.000Z",
+                "end": f"{calendar_end.isoformat()}T23:59:59.000Z",
+            },
+        )
+        calendar = dict(calendar_data.get("findBookingCalendar") or {})
+        statuses = calendar.get("items") or []
+        booked_days = [
+            today + timedelta(days=index)
+            for index, status in enumerate(statuses)
+            if str(status).upper() == "FULLY_BOOKED"
+        ][:8]
+        events_by_key: dict[tuple[str, str], dict[str, Any]] = {}
+        for day in booked_days:
+            plans_data = _appack_graphql(
+                token,
+                "query FindPlans($resourceId:ID!,$day:String,$includeBooked:Boolean){findResourcePlans(resourceId:$resourceId,day:$day,includeBooked:$includeBooked){slots{start end available blocked bookingId}}}",
+                {"resourceId": str(clubhouse["id"]), "day": day.isoformat(), "includeBooked": True},
+            )
+            for plan in plans_data.get("findResourcePlans") or []:
+                for slot in (plan.get("slots") or []) if isinstance(plan, dict) else []:
+                    if not isinstance(slot, dict) or slot.get("available") is not False:
+                        continue
+                    if not slot.get("bookingId") or not slot.get("start") or not slot.get("end"):
+                        continue
+                    start = _iso_datetime(slot["start"])
+                    end = _iso_datetime(slot["end"])
+                    if start is None or end is None or end <= now or start.astimezone(berlin).date() != day:
+                        continue
+                    key = (start.isoformat(), end.isoformat())
+                    events_by_key[key] = {
+                        "title": "Vereinsheim belegt",
+                        "start": start.isoformat(),
+                        "end": end.isoformat(),
+                    }
+            if len(events_by_key) >= 5:
+                break
+        events = sorted(events_by_key.values(), key=lambda item: item["start"])[:5]
         payload = {"available": True, "events": events[:5], "message": None}
     except Exception:
         payload = {"available": False, "events": [], "message": "Vereinsheim-Daten sind gerade nicht erreichbar."}

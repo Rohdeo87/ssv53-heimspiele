@@ -46,21 +46,7 @@ class PlatzwartAuthenticationTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             create_activation_hash("too-short")
 
-    def test_clubhouse_feed_returns_only_upcoming_events(self) -> None:
-        feed = """BEGIN:VCALENDAR\r
-BEGIN:VEVENT\r
-DTSTART;TZID=Europe/Berlin:20260812T180000\r
-DTEND;TZID=Europe/Berlin:20260812T200000\r
-SUMMARY:Vergangen\r
-END:VEVENT\r
-BEGIN:VEVENT\r
-DTSTART;TZID=Europe/Berlin:20260821T180000\r
-DTEND;TZID=Europe/Berlin:20260821T200000\r
-SUMMARY:Vorstandssitzung\r
-END:VEVENT\r
-END:VCALENDAR\r
-"""
-
+    def test_clubhouse_reservations_return_times_without_personal_data(self) -> None:
         class Response:
             def __enter__(self):
                 return self
@@ -68,17 +54,39 @@ END:VCALENDAR\r
             def __exit__(self, *_args):
                 return None
 
-            def read(self, _limit):
-                return feed.encode("utf-8")
+            def geturl(self):
+                return "https://application.appack.de/resource-management/de?component=component-1&jwt=" + "x" * 80
 
         _CLUBHOUSE_CACHE.update({"expires": None, "events": [], "available": False})
-        with patch("platzwart_console.urllib.request.urlopen", return_value=Response()):
+        graphql_results = [
+            {"findBookingResources": [{"id": "resource-1", "name": "Vereinsheim"}]},
+            {"findBookingCalendar": {"items": ["FULLY_BOOKED", "AVAILABLE"]}},
+            {
+                "findResourcePlans": [
+                    {
+                        "slots": [
+                            {
+                                "start": "2026-08-13T05:00:00Z",
+                                "end": "2026-08-13T21:45:00Z",
+                                "available": False,
+                                "blocked": False,
+                                "bookingId": "booking-secret",
+                            }
+                        ]
+                    }
+                ]
+            },
+        ]
+        with patch("platzwart_console.urllib.request.urlopen", return_value=Response()), patch(
+            "platzwart_console._appack_graphql", side_effect=graphql_results
+        ):
             result = _clubhouse_events(
-                {"SSV53_CLUBHOUSE_CALENDAR_URL": "https://example.invalid/feed"},
+                {"SSV53_CLUBHOUSE_RESERVATION_URL": "https://example.invalid/embed"},
                 NOW,
             )
-        self.assertTrue(result["available"])
-        self.assertEqual([item["title"] for item in result["events"]], ["Vorstandssitzung"])
+        self.assertTrue(result["available"], msg=result)
+        self.assertEqual([item["title"] for item in result["events"]], ["Vereinsheim belegt"])
+        self.assertNotIn("booking-secret", json.dumps(result))
 
 
 class PlatzwartSafetyIntegrationTests(unittest.TestCase):
