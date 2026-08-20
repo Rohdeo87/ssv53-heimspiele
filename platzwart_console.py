@@ -445,7 +445,7 @@ def _clubhouse_events(environment: Mapping[str, str], now_utc: datetime) -> dict
             for index, status in enumerate(statuses)
             if str(status).upper() == "FULLY_BOOKED"
         ][:8]
-        events_by_key: dict[tuple[str, str], dict[str, Any]] = {}
+        slots_by_key: dict[tuple[str, str, str], dict[str, Any]] = {}
         for day in booked_days:
             plans_data = _appack_graphql(
                 token,
@@ -462,20 +462,44 @@ def _clubhouse_events(environment: Mapping[str, str], now_utc: datetime) -> dict
                     end = _iso_datetime(slot["end"])
                     if start is None or end is None or end <= now or start.astimezone(berlin).date() != day:
                         continue
-                    key = (start.isoformat(), end.isoformat())
+                    booking_id = str(slot["bookingId"])
+                    key = (booking_id, start.isoformat(), end.isoformat())
                     booking = slot.get("booking") if isinstance(slot.get("booking"), dict) else {}
                     booked_by = " ".join(str(booking.get("profileName") or "").split())[:100]
                     content = " ".join(str(booking.get("comment") or "").split())[:200]
-                    events_by_key[key] = {
+                    slots_by_key[key] = {
+                        "bookingId": booking_id,
                         "title": content or "Vereinsheim belegt",
                         "bookedBy": booked_by or "Nicht angegeben",
-                        "start": start.isoformat(),
-                        "end": end.isoformat(),
+                        "start": start,
+                        "end": end,
                     }
-            if len(events_by_key) >= 5:
-                break
-        events = sorted(events_by_key.values(), key=lambda item: item["start"])[:5]
-        payload = {"available": True, "events": events[:5], "message": None}
+        merged_by_booking: list[dict[str, Any]] = []
+        for item in sorted(
+            slots_by_key.values(),
+            key=lambda value: (value["bookingId"], value["start"], value["end"]),
+        ):
+            previous = merged_by_booking[-1] if merged_by_booking else None
+            if (
+                previous is not None
+                and previous["bookingId"] == item["bookingId"]
+                and previous["title"] == item["title"]
+                and previous["bookedBy"] == item["bookedBy"]
+                and item["start"] <= previous["end"]
+            ):
+                previous["end"] = max(previous["end"], item["end"])
+            else:
+                merged_by_booking.append(dict(item))
+        events = [
+            {
+                "title": item["title"],
+                "bookedBy": item["bookedBy"],
+                "start": item["start"].isoformat(),
+                "end": item["end"].isoformat(),
+            }
+            for item in sorted(merged_by_booking, key=lambda value: value["start"])
+        ][:5]
+        payload = {"available": True, "events": events, "message": None}
     except Exception:
         payload = {"available": False, "events": [], "message": "Vereinsheim-Daten sind gerade nicht erreichbar."}
     with _CLUBHOUSE_CACHE_LOCK:

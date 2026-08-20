@@ -101,6 +101,68 @@ class PlatzwartAuthenticationTests(unittest.TestCase):
         self.assertNotIn("profileMail", plans_query)
         self.assertNotIn("profileId", plans_query)
 
+    def test_clubhouse_hour_slots_of_one_booking_are_merged(self) -> None:
+        class Response:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                return None
+
+            def geturl(self):
+                return "https://application.appack.de/resource-management/de?component=component-1&jwt=" + "x" * 80
+
+        def slot(start_hour: int, end_hour: int, booking_id: str) -> dict:
+            return {
+                "start": f"2026-09-05T{start_hour:02d}:00:00Z",
+                "end": f"2026-09-05T{end_hour:02d}:00:00Z",
+                "available": False,
+                "blocked": False,
+                "bookingId": booking_id,
+                "booking": {
+                    "profileName": "Julian Böhm",
+                    "comment": "Handballsaison Start",
+                },
+            }
+
+        _CLUBHOUSE_CACHE.update({"expires": None, "events": [], "available": False})
+        statuses = ["AVAILABLE"] * 23 + ["FULLY_BOOKED"]
+        graphql_results = [
+            {"findBookingResources": [{"id": "resource-1", "name": "Vereinsheim"}]},
+            {"findBookingCalendar": {"items": statuses}},
+            {
+                "findResourcePlans": [
+                    {
+                        "slots": [
+                            slot(5, 6, "one-booking"),
+                            slot(6, 7, "one-booking"),
+                            slot(7, 8, "one-booking"),
+                            slot(8, 9, "one-booking"),
+                            slot(9, 10, "other-booking"),
+                        ]
+                    }
+                ]
+            },
+        ]
+        with patch("platzwart_console.urllib.request.urlopen", return_value=Response()), patch(
+            "platzwart_console._appack_graphql", side_effect=graphql_results
+        ):
+            result = _clubhouse_events(
+                {"SSV53_CLUBHOUSE_RESERVATION_URL": "https://example.invalid/embed"},
+                NOW,
+            )
+
+        self.assertTrue(result["available"], msg=result)
+        self.assertEqual(len(result["events"]), 2)
+        first, second = result["events"]
+        self.assertEqual(first["start"], "2026-09-05T05:00:00+00:00")
+        self.assertEqual(first["end"], "2026-09-05T09:00:00+00:00")
+        self.assertEqual(second["start"], "2026-09-05T09:00:00+00:00")
+        self.assertEqual(second["end"], "2026-09-05T10:00:00+00:00")
+        serialized = json.dumps(result)
+        self.assertNotIn("one-booking", serialized)
+        self.assertNotIn("other-booking", serialized)
+
 
 class PlatzwartSafetyIntegrationTests(unittest.TestCase):
     def run_cycle(self, initial: AutomationState, live_result, **senders):
