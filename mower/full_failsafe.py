@@ -2642,7 +2642,12 @@ def run_full_failsafe_cycle(
         and not owned_park_release
         and not state.continuous_mowing_owned
     )
-    if manual_lock or error_code != 0 or mower_state in ERROR_STATES or external_override:
+    if (
+        manual_lock
+        or error_code != 0
+        or mower_state in ERROR_STATES
+        or (external_override and operator_action != "START_MOWING")
+    ):
         return _persist_result(
             store=store,
             original=original,
@@ -2834,9 +2839,43 @@ def run_full_failsafe_cycle(
     }
     if mowing_now and not failsafe_refresh:
         if operator_action == "START_MOWING":
+            work_area_id = int(target_area.get("id") or 0)
+            if work_area_id <= 0 or target_area.get("enabled") is False:
+                return _persist_result(
+                    store=store,
+                    original=original,
+                    state=state,
+                    result=result,
+                    details=details,
+                    settings=settings,
+                    decision_code="WORK_AREA_NOT_SAFE",
+                    message="Die Rasenfläche ist nicht eindeutig und aktiv identifiziert.",
+                )
+            if not settings.full_failsafe_write_gate_enabled:
+                return _persist_result(
+                    store=store,
+                    original=original,
+                    state=state,
+                    result=result,
+                    details=details,
+                    settings=settings,
+                    decision_code="FULL_FAILSAFE_START_LOCKED",
+                    message="Die sichere Automatik ist noch gesperrt.",
+                )
             state = _finish_operator_request(
                 state,
-                "Der Mäher mäht bereits innerhalb des sicheren Zeitfensters.",
+                "Der bereits fahrende Mäher wurde von der sicheren Automatik übernommen.",
+            )
+            state = replace(
+                state,
+                revision=state.revision + 1,
+                continuous_mowing_owned=True,
+                continuous_mowing_work_area_id=work_area_id,
+                continuous_mowing_window_end_utc=safe_command_deadline.isoformat(),
+                parked_by_automation=False,
+                automation_park_source=None,
+                automation_restart_allowed=False,
+                automation_park_until_utc=None,
             )
         return _persist_result(
             store=store,

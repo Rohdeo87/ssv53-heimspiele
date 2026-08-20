@@ -46,7 +46,7 @@ class PlatzwartAuthenticationTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             create_activation_hash("too-short")
 
-    def test_clubhouse_reservations_return_times_without_personal_data(self) -> None:
+    def test_clubhouse_reservations_return_content_and_display_name_only(self) -> None:
         class Response:
             def __enter__(self):
                 return self
@@ -71,6 +71,12 @@ class PlatzwartAuthenticationTests(unittest.TestCase):
                                 "available": False,
                                 "blocked": False,
                                 "bookingId": "booking-secret",
+                                "booking": {
+                                    "profileName": "  Erika   Musterfrau  ",
+                                    "comment": "  Vorstandssitzung   Jugend  ",
+                                    "profileMail": "must-not-leak@example.invalid",
+                                    "profileId": "profile-secret",
+                                },
                             }
                         ]
                     }
@@ -79,14 +85,21 @@ class PlatzwartAuthenticationTests(unittest.TestCase):
         ]
         with patch("platzwart_console.urllib.request.urlopen", return_value=Response()), patch(
             "platzwart_console._appack_graphql", side_effect=graphql_results
-        ):
+        ) as graphql:
             result = _clubhouse_events(
                 {"SSV53_CLUBHOUSE_RESERVATION_URL": "https://example.invalid/embed"},
                 NOW,
             )
         self.assertTrue(result["available"], msg=result)
-        self.assertEqual([item["title"] for item in result["events"]], ["Vereinsheim belegt"])
+        self.assertEqual([item["title"] for item in result["events"]], ["Vorstandssitzung Jugend"])
+        self.assertEqual([item["bookedBy"] for item in result["events"]], ["Erika Musterfrau"])
         self.assertNotIn("booking-secret", json.dumps(result))
+        self.assertNotIn("must-not-leak", json.dumps(result))
+        self.assertNotIn("profile-secret", json.dumps(result))
+        plans_query = graphql.call_args_list[2].args[1]
+        self.assertIn("profileName comment", plans_query)
+        self.assertNotIn("profileMail", plans_query)
+        self.assertNotIn("profileId", plans_query)
 
 
 class PlatzwartSafetyIntegrationTests(unittest.TestCase):
@@ -181,6 +194,26 @@ class PlatzwartSafetyIntegrationTests(unittest.TestCase):
         )
         self.assertEqual(sent, ["start"])
         self.assertTrue(cycle.command_sent)
+        self.assertEqual(state.operator_request_status, "COMPLETED")
+
+    def test_explicit_start_adopts_already_mowing_external_override(self) -> None:
+        sent = []
+        initial = self.pending(
+            "START_MOWING",
+            hydrawise_clear_since_utc=(NOW - timedelta(minutes=121)).isoformat(),
+            last_hydrawise_success_utc=(NOW - timedelta(minutes=1)).isoformat(),
+        )
+        cycle, state = self.run_cycle(
+            initial,
+            result(activity="MOWING", override_action="FORCE_MOW"),
+            start_sender=lambda *_args: sent.append("start") or {"ok": True},
+        )
+        self.assertEqual(sent, [])
+        self.assertFalse(cycle.command_sent)
+        self.assertEqual(cycle.decision_code, "CONTINUOUS_MOWING_ACTIVE")
+        self.assertTrue(state.continuous_mowing_owned)
+        self.assertIsNotNone(state.continuous_mowing_work_area_id)
+        self.assertIsNotNone(state.continuous_mowing_window_end_utc)
         self.assertEqual(state.operator_request_status, "COMPLETED")
 
     def test_manual_irrigation_first_parks_and_captures_all_seven_zones(self) -> None:

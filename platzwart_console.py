@@ -447,7 +447,7 @@ def _clubhouse_events(environment: Mapping[str, str], now_utc: datetime) -> dict
         for day in booked_days:
             plans_data = _appack_graphql(
                 token,
-                "query FindPlans($resourceId:ID!,$day:String,$includeBooked:Boolean){findResourcePlans(resourceId:$resourceId,day:$day,includeBooked:$includeBooked){slots{start end available blocked bookingId}}}",
+                "query FindPlans($resourceId:ID!,$day:String,$includeBooked:Boolean){findResourcePlans(resourceId:$resourceId,day:$day,includeBooked:$includeBooked){slots{start end available blocked bookingId booking{profileName comment}}}}",
                 {"resourceId": str(clubhouse["id"]), "day": day.isoformat(), "includeBooked": True},
             )
             for plan in plans_data.get("findResourcePlans") or []:
@@ -461,8 +461,12 @@ def _clubhouse_events(environment: Mapping[str, str], now_utc: datetime) -> dict
                     if start is None or end is None or end <= now or start.astimezone(berlin).date() != day:
                         continue
                     key = (start.isoformat(), end.isoformat())
+                    booking = slot.get("booking") if isinstance(slot.get("booking"), dict) else {}
+                    booked_by = " ".join(str(booking.get("profileName") or "").split())[:100]
+                    content = " ".join(str(booking.get("comment") or "").split())[:200]
                     events_by_key[key] = {
-                        "title": "Vereinsheim belegt",
+                        "title": content or "Vereinsheim belegt",
+                        "bookedBy": booked_by or "Nicht angegeben",
                         "start": start.isoformat(),
                         "end": end.isoformat(),
                     }
