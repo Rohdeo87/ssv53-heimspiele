@@ -12,6 +12,7 @@ REQUIRED_FILES = (
     "host.json",
     "order_mail.py",
     "occupancy_notifications.py",
+    "platzwart_console.py",
     "occupancy/__init__.py",
     "occupancy/config.json",
     "occupancy/match_model.py",

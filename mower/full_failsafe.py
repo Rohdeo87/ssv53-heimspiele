@@ -97,6 +97,29 @@ def _restart_allowed(source: str) -> bool:
     return bool(parts) and parts.issubset(SAFE_PARK_SOURCES)
 
 
+def _operator_action(state: AutomationState, now_utc: datetime) -> str | None:
+    if state.operator_request_status != "PENDING":
+        return None
+    expires = _parse_time(state.operator_request_expires_utc)
+    if expires is None or now_utc >= expires:
+        return None
+    return str(state.operator_request_action or "").strip().upper() or None
+
+
+def _finish_operator_request(
+    state: AutomationState,
+    result: str,
+    *,
+    status: str = "COMPLETED",
+) -> AutomationState:
+    return replace(
+        state,
+        revision=state.revision + 1,
+        operator_request_status=status,
+        operator_request_result=result,
+    )
+
+
 def _park_valid_until(
     *,
     now_utc: datetime,
@@ -202,6 +225,50 @@ def _validated_upcoming_plan(
             if not -5 <= gap <= 120:
                 raise RuntimeError("Die sieben Hydrawise-Zonen bilden keinen lückenlosen Lauf.")
         previous_end = end
+    canonical = json.dumps(zones, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest(), zones
+
+
+def _validated_operator_plan(
+    details: dict[str, Any],
+    *,
+    now_utc: datetime,
+    expected_zone_count: int,
+    expected_relay_ids: frozenset[int],
+) -> tuple[str, list[dict[str, Any]]]:
+    observations = _zone_observation_by_relay(details)
+    if set(observations) != set(expected_relay_ids):
+        raise RuntimeError("Hydrawise liefert nicht exakt die sieben freigegebenen Zonen.")
+    start = now_utc + timedelta(minutes=45)
+    zones: list[dict[str, Any]] = []
+    ordered = sorted(observations.values(), key=lambda item: int(item.get("zone") or 0))
+    for raw in ordered:
+        relay_id = int(raw.get("relay_id") or 0)
+        zone_number = int(raw.get("zone") or 0)
+        run_seconds = int(raw.get("run_seconds") or 0)
+        if (
+            raw.get("valid") is not True
+            or bool(raw.get("running"))
+            or relay_id not in expected_relay_ids
+            or zone_number <= 0
+            or not 60 <= run_seconds <= 7200
+        ):
+            raise RuntimeError("Mindestens eine Zone besitzt keine sicher bestätigte Laufzeit.")
+        end = start + timedelta(seconds=run_seconds)
+        zones.append(
+            {
+                "relay_id": relay_id,
+                "zone": zone_number,
+                "name": str(raw.get("name") or f"Zone {zone_number}"),
+                "run_seconds": run_seconds,
+                "scheduled_start_utc": start.isoformat(),
+                "scheduled_end_utc": end.isoformat(),
+                "operator_manual": True,
+            }
+        )
+        start = end
+    if len(zones) != expected_zone_count:
+        raise RuntimeError("Der manuelle Beregnungsplan enthält nicht exakt sieben Zonen.")
     canonical = json.dumps(zones, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest(), zones
 
@@ -312,6 +379,9 @@ def _reconcile_prestart_plan(
     tolerance_seconds: int = 120,
 ) -> tuple[str, list[dict[str, Any]] | None, str]:
     """Ordnet bestätigbare Hydrawise-Änderungen vor dem ersten Wasserstart ein."""
+
+    if plan and all(zone.get("operator_manual") is True for zone in plan):
+        return "UNCHANGED", plan, "Vom Platzwart bestätigter Sieben-Zonen-Lauf."
 
     live_by_relay = _live_zone_by_relay(details)
     observations = _zone_observation_by_relay(details)
@@ -808,6 +878,13 @@ def run_full_failsafe_cycle(
     original = store.load()
     previous_activity = str(original.last_mower_activity or "").upper()
     state = _cycle_state(original, result, now)
+    operator_action = _operator_action(state, now)
+    if state.operator_request_status == "PENDING" and operator_action is None:
+        state = _finish_operator_request(
+            state,
+            "Die Bedienanforderung ist ohne Gerätebefehl abgelaufen.",
+            status="EXPIRED",
+        )
 
     if state.maintenance_mode:
         return _persist_result(
@@ -864,7 +941,20 @@ def run_full_failsafe_cycle(
         <= next_irrigation_start - now
         <= timedelta(minutes=irrigation_capture_max_lead_minutes)
     )
-    irrigation_due = irrigation_due or irrigation_capture_due
+    irrigation_due = (
+        irrigation_due
+        or irrigation_capture_due
+        or operator_action == "START_IRRIGATION"
+    )
+    if (
+        operator_action == "START_IRRIGATION"
+        and state.irrigation_phase in ACTIVE_IRRIGATION_PHASES
+    ):
+        state = _finish_operator_request(
+            state,
+            "Der sichere Beregnungsablauf läuft bereits.",
+        )
+        operator_action = None
     irrigation_failsafe_deadline = (
         next_irrigation_start
         - timedelta(minutes=irrigation_failsafe_lead_minutes)
@@ -941,19 +1031,27 @@ def run_full_failsafe_cycle(
         )
     if irrigation_due and state.irrigation_phase is None:
         try:
-            plan_id, zones = _validated_upcoming_plan(
-                details,
-                now_utc=now,
-                expected_zone_count=expected_zones,
-                expected_relay_ids=expected_relay_ids,
-                max_lead_minutes=_env_int(
-                    environment,
-                    "IRRIGATION_CAPTURE_MAX_LEAD_MINUTES",
-                    45,
-                    minimum=30,
-                    maximum=120,
-                ),
-            )
+            if operator_action == "START_IRRIGATION":
+                plan_id, zones = _validated_operator_plan(
+                    details,
+                    now_utc=now,
+                    expected_zone_count=expected_zones,
+                    expected_relay_ids=expected_relay_ids,
+                )
+            else:
+                plan_id, zones = _validated_upcoming_plan(
+                    details,
+                    now_utc=now,
+                    expected_zone_count=expected_zones,
+                    expected_relay_ids=expected_relay_ids,
+                    max_lead_minutes=_env_int(
+                        environment,
+                        "IRRIGATION_CAPTURE_MAX_LEAD_MINUTES",
+                        45,
+                        minimum=30,
+                        maximum=120,
+                    ),
+                )
             state = replace(
                 state,
                 revision=state.revision + 1,
@@ -979,7 +1077,29 @@ def run_full_failsafe_cycle(
                 irrigation_change_candidate_since_utc=None,
                 irrigation_cancelled_without_run_utc=None,
             )
+            if operator_action == "START_IRRIGATION":
+                state = _finish_operator_request(
+                    state,
+                    "Der sichere Sieben-Zonen-Ablauf wurde vorbereitet.",
+                )
+                operator_action = None
         except Exception as exc:
+            if operator_action == "START_IRRIGATION":
+                rejected = _finish_operator_request(
+                    state,
+                    f"Beregnungsstart abgelehnt: {exc}",
+                    status="REJECTED",
+                )
+                return _persist_result(
+                    store=store,
+                    original=original,
+                    state=rejected,
+                    result=result,
+                    details=details,
+                    settings=settings,
+                    decision_code="OPERATOR_IRRIGATION_REJECTED",
+                    message="Der manuelle Beregnungsstart erfüllt die Sicherheitsbedingungen nicht.",
+                )
             state = _failed_irrigation(state, f"{type(exc).__name__}: {exc}")
 
     occupancy_sources = _source_parts(block_source) & frozenset({"training", "match", "special"})
@@ -1030,6 +1150,13 @@ def run_full_failsafe_cycle(
         )
 
     wants_park = str(decision.get("hypothetical_command") or "").upper() == "PARK"
+    if operator_action == "PARK_MOWER":
+        wants_park = True
+    if (
+        state.irrigation_phase in ACTIVE_IRRIGATION_PHASES
+        and not state.parked_by_automation
+    ):
+        wants_park = True
     owns_matching_park = (
         state.parked_by_automation
         and bool(_source_parts(block_source))
@@ -1102,8 +1229,14 @@ def run_full_failsafe_cycle(
 
     if wants_park:
         park_source = (
-            block_source
-            or ("irrigation" if irrigation_outage_park_due else "")
+            ("operator" if operator_action == "PARK_MOWER" else "")
+            or block_source
+            or (
+                "irrigation"
+                if irrigation_outage_park_due
+                or state.irrigation_phase in ACTIVE_IRRIGATION_PHASES
+                else ""
+            )
             or (str(state.automation_park_source or "").strip().lower() if park_reassert_due else "")
             or "hydrawise_unconfirmed"
         )
@@ -1188,6 +1321,11 @@ def run_full_failsafe_cycle(
             park_source=park_source,
             restart_allowed=_restart_allowed(park_source),
         )
+        if operator_action == "PARK_MOWER":
+            command_state = _finish_operator_request(
+                command_state,
+                "Der sichere Parkbefehl wurde gesendet.",
+            )
         details["park_action"] = {
             "type": "ParkUntilFurtherNotice",
             "response": response,
@@ -1295,6 +1433,26 @@ def run_full_failsafe_cycle(
                 settings=settings,
                 decision_code="IRRIGATION_PLAN_INVALID",
                 message=failed.irrigation_failed_reason or "Beregnungsplan ungültig.",
+            )
+
+        if (
+            operator_action == "STOP_IRRIGATION_AFTER_ZONE"
+            and state.irrigation_phase in {"PLANNED", "SUSPENDING"}
+            and not active_ids
+        ):
+            stopped = _finish_operator_request(
+                _cancel_irrigation_without_run(state, now_utc=now),
+                "Die Beregnungsfolge wurde vor dem Wasserstart beendet.",
+            )
+            return _persist_result(
+                store=store,
+                original=original,
+                state=stopped,
+                result=result,
+                details=details,
+                settings=settings,
+                decision_code="IRRIGATION_OPERATOR_CANCELLED_BEFORE_RUN",
+                message="Die Beregnung wurde vor dem Wasserstart sicher beendet.",
             )
 
         if state.irrigation_phase in {"PLANNED", "SUSPENDING"}:
@@ -1762,6 +1920,30 @@ def run_full_failsafe_cycle(
                 )
 
         if state.irrigation_phase == "READY":
+            if operator_action == "STOP_IRRIGATION_AFTER_ZONE":
+                stopped = replace(
+                    _finish_operator_request(
+                        state,
+                        "Die Beregnungsfolge wurde vor dem nächsten Zonenstart beendet.",
+                    ),
+                    revision=state.revision + 2,
+                    irrigation_phase="COMPLETE_HOLD",
+                    irrigation_completed_utc=now.isoformat(),
+                    hydrawise_clear_since_utc=now.isoformat(),
+                )
+                return _persist_result(
+                    store=store,
+                    original=original,
+                    state=stopped,
+                    result=result,
+                    details=details,
+                    settings=settings,
+                    decision_code="IRRIGATION_OPERATOR_STOPPED_BETWEEN_ZONES",
+                    message=(
+                        "Keine weitere Zone startet; der 120-Minuten-"
+                        "Sicherheitsnachlauf beginnt."
+                    ),
+                )
             if not completed and current_id is None:
                 change_kind, reconciled_plan, change_reason = _reconcile_prestart_plan(
                     plan=zones,
@@ -2139,6 +2321,34 @@ def run_full_failsafe_cycle(
                     decision_code="IRRIGATION_CONFIRM_ZONE_END",
                     message="Das Zonenende wird fortlaufend bestätigt.",
                 )
+            if operator_action == "STOP_IRRIGATION_AFTER_ZONE":
+                stopped = replace(
+                    _finish_operator_request(
+                        state,
+                        "Die laufende Zone ist bestätigt beendet; keine weitere Zone startet.",
+                    ),
+                    revision=state.revision + 2,
+                    irrigation_phase="COMPLETE_HOLD",
+                    irrigation_current_relay_id=None,
+                    irrigation_zone_start_reserved_utc=None,
+                    irrigation_zone_started_utc=None,
+                    irrigation_zone_clear_since_utc=None,
+                    irrigation_completed_utc=now.isoformat(),
+                    hydrawise_clear_since_utc=now.isoformat(),
+                )
+                return _persist_result(
+                    store=store,
+                    original=original,
+                    state=stopped,
+                    result=result,
+                    details=details,
+                    settings=settings,
+                    decision_code="IRRIGATION_OPERATOR_STOPPED_AFTER_ZONE",
+                    message=(
+                        "Die Zone ist bestätigt beendet; der 120-Minuten-"
+                        "Sicherheitsnachlauf beginnt."
+                    ),
+                )
             started_at = _parse_time(state.irrigation_zone_started_utc)
             current_zone = next(
                 (
@@ -2363,6 +2573,25 @@ def run_full_failsafe_cycle(
         )
 
     if (
+        state.parked_by_automation
+        and not state.automation_restart_allowed
+        and operator_action != "START_MOWING"
+    ):
+        return _persist_result(
+            store=store,
+            original=original,
+            state=state,
+            result=result,
+            details=details,
+            settings=settings,
+            decision_code="OPERATOR_PARK_HOLD",
+            message=(
+                "Der Platzwart hat den Mäher geparkt; ein ausdrücklicher "
+                "sicherer Start ist erforderlich."
+            ),
+        )
+
+    if (
         state.continuous_mowing_owned
         and override_action in PARK_OVERRIDE_ACTIONS
         and not state.parked_by_automation
@@ -2522,6 +2751,11 @@ def run_full_failsafe_cycle(
         "failsafe_refresh_required": failsafe_refresh,
     }
     if mowing_now and not failsafe_refresh:
+        if operator_action == "START_MOWING":
+            state = _finish_operator_request(
+                state,
+                "Der Mäher mäht bereits innerhalb des sicheren Zeitfensters.",
+            )
         return _persist_result(
             store=store,
             original=original,
@@ -2665,6 +2899,11 @@ def run_full_failsafe_cycle(
         mowing_window_end_utc=command_end,
         continuous_mowing=True,
     )
+    if operator_action == "START_MOWING":
+        command_state = _finish_operator_request(
+            command_state,
+            "Der sichere Mähstart wurde gesendet.",
+        )
     if (
         state.irrigation_phase == "COMPLETE_HOLD"
         or state.irrigation_cancelled_without_run_utc is not None

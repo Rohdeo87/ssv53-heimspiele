@@ -75,6 +75,12 @@ class AutomationState:
     last_command_fingerprint: str | None = None
     last_command_utc: str | None = None
     maintenance_mode: bool = False
+    operator_request_id: str | None = None
+    operator_request_action: str | None = None
+    operator_requested_utc: str | None = None
+    operator_request_expires_utc: str | None = None
+    operator_request_status: str | None = None
+    operator_request_result: str | None = None
 
     def __post_init__(self) -> None:
         if self.schema_version != 1:
@@ -104,6 +110,8 @@ class AutomationState:
             "irrigation_change_candidate_since_utc",
             "irrigation_cancelled_without_run_utc",
             "last_command_utc",
+            "operator_requested_utc",
+            "operator_request_expires_utc",
         ):
             _require_utc_iso(getattr(self, field_name), field_name)
 
@@ -275,6 +283,18 @@ class AutomationState:
                 "last_command_utc",
             ),
             maintenance_mode=bool(values.get("maintenance_mode", False)),
+            operator_request_id=_normalize_optional_text(values.get("operator_request_id")),
+            operator_request_action=_normalize_optional_text(values.get("operator_request_action")),
+            operator_requested_utc=_require_utc_iso(
+                _normalize_optional_text(values.get("operator_requested_utc")),
+                "operator_requested_utc",
+            ),
+            operator_request_expires_utc=_require_utc_iso(
+                _normalize_optional_text(values.get("operator_request_expires_utc")),
+                "operator_request_expires_utc",
+            ),
+            operator_request_status=_normalize_optional_text(values.get("operator_request_status")),
+            operator_request_result=_normalize_optional_text(values.get("operator_request_result")),
         )
 
     def to_dict(self) -> dict[str, Any]:

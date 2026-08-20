@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Platzpflege</title>
+  <style>
+    :root{--blue:#285ea7;--blue-dark:#17457f;--gold:#c7a238;--green:#19723b;--red:#c62828;--amber:#9b6500;--ink:#172033;--muted:#657084;--line:#dfe4ec;--soft:#f4f6f9}
+    *{box-sizing:border-box}body{margin:0;background:#fff;color:var(--ink);font-family:Arial,Helvetica,sans-serif;font-size:18px;line-height:1.4}
+    button,input{font:inherit}.shell{max-width:720px;margin:auto;padding:calc(18px + env(safe-area-inset-top)) 18px calc(30px + env(safe-area-inset-bottom))}
+    .head{text-align:center;margin-bottom:22px}.logo{width:78px;height:78px;object-fit:contain}.head h1{font-size:30px;margin:8px 0 10px}.gold{width:180px;height:3px;border:0;background:var(--gold);margin:0 auto}
+    .hidden{display:none!important}.notice,.card{border:1px solid var(--line);border-radius:18px;padding:18px;margin:14px 0;background:#fff;box-shadow:0 4px 16px rgba(20,38,70,.07)}
+    .notice{border-left:7px solid var(--blue)}.notice.good{border-left-color:var(--green)}.notice.warn{border-left-color:var(--amber)}.notice.bad{border-left-color:var(--red)}
+    .eyebrow{font-size:14px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}h2{font-size:23px;margin:4px 0 12px}.big{font-size:25px;font-weight:800;margin:4px 0}.muted{color:var(--muted)}
+    .facts{display:grid;grid-template-columns:1fr auto;gap:10px 16px;margin:14px 0}.facts span:nth-child(even){font-weight:700;text-align:right}.divider{height:1px;background:var(--line);margin:14px 0}
+    .btn{width:100%;min-height:64px;border:0;border-radius:14px;margin-top:11px;padding:13px 18px;font-weight:800;color:#fff;background:var(--blue);box-shadow:0 3px 8px rgba(40,94,167,.22)}
+    .btn:active{transform:translateY(1px)}.btn:disabled{background:#b5becb;box-shadow:none}.btn.stop{background:var(--red)}.btn.secondary{background:#fff;color:var(--blue);border:2px solid var(--blue);box-shadow:none}.btn.goldbtn{background:#8b6b08}
+    .pin{display:grid;grid-template-columns:repeat(4,54px);justify-content:center;gap:10px;margin:18px 0}.pin input{width:54px;height:62px;text-align:center;font-size:30px;font-weight:800;border:2px solid var(--line);border-radius:12px}
+    .field{width:100%;min-height:58px;padding:12px;border:2px solid var(--line);border-radius:12px;margin:12px 0}.error{color:var(--red);font-weight:700;margin-top:12px}.updated{text-align:center;color:var(--muted);font-size:15px;margin:12px 0}.zones{padding:0;list-style:none;margin:10px 0}.zones li{display:flex;justify-content:space-between;border-top:1px solid var(--line);padding:10px 0}
+    dialog{border:0;border-radius:20px;padding:0;max-width:520px;width:calc(100% - 30px);box-shadow:0 20px 60px rgba(0,0,0,.3)}dialog::backdrop{background:rgba(12,20,34,.6)}.dialog-body{padding:22px}.dialog-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;background:var(--soft);padding:14px}.dialog-actions .btn{margin:0;min-height:58px}
+    @media(max-width:430px){body{font-size:17px}.shell{padding-left:12px;padding-right:12px}.card{padding:16px}.head h1{font-size:27px}}
+  </style>
+</head>
+<body>
+<main class="shell">
+  <header class="head">
+    <img class="logo" src="https://cdn.appack.de/ssv53/images/Icon_Verein.png" alt="SSV 53">
+    <h1>Platzpflege</h1><hr class="gold">
+  </header>
+
+  <section id="denied" class="notice bad hidden"><div class="big">Kein Zugriff</div><p>Diese Seite ist nur für die aktive Rolle „Platzwart“ freigegeben.</p></section>
+
+  <section id="activate" class="card hidden">
+    <div class="eyebrow">Einmalige Einrichtung</div><h2>Dieses Gerät aktivieren</h2>
+    <p>Bitte den persönlichen Aktivierungscode einmalig eingeben. Danach genügt auf diesem Gerät die vierstellige PIN.</p>
+    <input id="activation-code" class="field" autocomplete="one-time-code" autocapitalize="off" placeholder="Aktivierungscode">
+    <button id="activate-button" class="btn">Gerät aktivieren</button>
+    <div id="activate-error" class="error hidden"></div>
+  </section>
+
+  <section id="login" class="card hidden">
+    <div class="eyebrow">Geschützter Bereich</div><h2>PIN eingeben</h2>
+    <div class="pin" id="pin-boxes">
+      <input inputmode="numeric" maxlength="1" aria-label="PIN Ziffer 1"><input inputmode="numeric" maxlength="1" aria-label="PIN Ziffer 2"><input inputmode="numeric" maxlength="1" aria-label="PIN Ziffer 3"><input inputmode="numeric" maxlength="1" aria-label="PIN Ziffer 4">
+    </div>
+    <button id="login-button" class="btn">Anmelden</button>
+    <div id="login-error" class="error hidden"></div>
+  </section>
+
+  <section id="dashboard" class="hidden">
+    <div id="overall" class="notice"><div class="eyebrow">Gesamtzustand</div><div id="overall-title" class="big">Daten werden geladen</div><div id="overall-text" class="muted"></div></div>
+
+    <article class="card"><div class="eyebrow">Mäher</div><h2 id="mower-title">Status wird geladen</h2>
+      <div class="facts"><span>Akku</span><span id="battery">–</span><span>Rasenfläche</span><span id="progress">–</span><span>Fehler</span><span id="mower-error">–</span></div>
+      <button class="btn stop" data-action="PARK_MOWER" data-title="Mäher sicher parken" data-question="Soll der Mäher jetzt sicher in die Ladestation geschickt werden?">Mäher sicher parken</button>
+      <button class="btn" data-action="START_MOWING" data-title="Mähen sicher starten" data-question="Soll die Automatik den Mäher starten, sobald alle Sicherheitsprüfungen erfüllt sind?">Mähen sicher starten</button>
+    </article>
+
+    <article class="card"><div class="eyebrow">Beregnung</div><h2 id="water-title">Status wird geladen</h2>
+      <div id="water-text" class="muted"></div><ul id="zones" class="zones"></ul>
+      <button class="btn goldbtn" data-action="START_IRRIGATION" data-title="Beregnung sicher starten" data-question="Sollen alle sieben Zonen mit den aktuell bestätigten Hydrawise-Laufzeiten gestartet werden? Der Start erfolgt erst nach sicher bestätigtem Parken.">Sieben Zonen sicher starten</button>
+      <button class="btn stop" data-action="STOP_IRRIGATION_AFTER_ZONE" data-title="Beregnung sicher beenden" data-question="Die laufende Zone wird nicht hart unterbrochen. Nach ihrem bestätigten Ende startet keine weitere Zone und der 120-Minuten-Nachlauf beginnt. Fortfahren?">Nach aktueller Zone beenden</button>
+    </article>
+
+    <article class="card"><div class="eyebrow">Platzbelegung</div><h2 id="occupancy-title">Status wird geladen</h2><div id="occupancy-text" class="muted"></div></article>
+    <div id="action-error" class="error hidden"></div>
+    <button id="refresh" class="btn secondary">Daten aktualisieren</button><div id="updated" class="updated"></div>
+  </section>
+</main>
+
+<dialog id="confirm-dialog"><div class="dialog-body"><div class="eyebrow">Bitte bestätigen</div><h2 id="confirm-title"></h2><p id="confirm-question"></p></div><div class="dialog-actions"><button id="confirm-cancel" class="btn secondary">Abbrechen</button><button id="confirm-go" class="btn">Bestätigen</button></div></dialog>
+
+<script>
+  var profileJSON = [#if profile_json?has_content]${profile_json}[#else]{}[/#if];
+  document.addEventListener("DOMContentLoaded",function(){"use strict";
+    var API="https://func-ssv53platzpflege-prod-q7kbw54s.azurewebsites.net/api/platzwart";
+    var DEVICE_KEY="ssv53_platzwart_device_v1",SESSION_KEY="ssv53_platzwart_session_v1";
+    var state={status:null,pendingAction:null,timer:0,loading:false};
+    function norm(v){return String(v||"").trim().toLocaleLowerCase("de-DE").replace(/ä/g,"ae").replace(/ö/g,"oe").replace(/ü/g,"ue").replace(/ß/g,"ss").replace(/[\s_-]+/g,"")}
+    function isPlatzwart(p){if(!p||typeof p!=="object")return false;var values=[];if(Array.isArray(p.roleKeys))values=values.concat(p.roleKeys);if(Array.isArray(p.roles))p.roles.forEach(function(r){values.push(r&&r.enumKey,r&&r.value)});return values.some(function(v){return norm(v)==="platzwart"})}
+    function show(id){["denied","activate","login","dashboard"].forEach(function(x){document.getElementById(x).classList.toggle("hidden",x!==id)})}
+    function stored(key){try{return JSON.parse(localStorage.getItem(key)||"null")}catch(e){return null}}
+    function session(){try{return JSON.parse(sessionStorage.getItem(SESSION_KEY)||"null")}catch(e){return null}}
+    function api(path,options){options=options||{};var s=session();var headers={"Content-Type":"application/json"};if(s&&s.token)headers.Authorization="Bearer "+s.token;return fetch(API+path,{method:options.method||"GET",headers:headers,body:options.body?JSON.stringify(options.body):undefined,cache:"no-store"}).then(function(r){return r.json().catch(function(){return{error:"Ungültige Serverantwort"}}).then(function(data){if(!r.ok){var e=new Error(data.error||"Anfrage fehlgeschlagen");e.code=data.code;e.status=r.status;throw e}return data})})}
+    function text(id,value){document.getElementById(id).textContent=value==null||value===""?"–":String(value)}
+    function time(v){if(!v)return"–";var d=new Date(v);return isNaN(d.getTime())?"–":d.toLocaleString("de-DE",{weekday:"short",hour:"2-digit",minute:"2-digit"})+" Uhr"}
+    function activity(v){return({MOWING:"Mäht",LEAVING:"Fährt auf den Platz",GOING_HOME:"Fährt zur Station",PARKED_IN_CS:"Geparkt",CHARGING:"Lädt"})[v]||v||"Unbekannt"}
+    function phase(v){return({PLANNED:"Wird vorbereitet",SUSPENDING:"Zeitplan wird gesichert",READY:"Startbereit",START_RESERVED:"Zonenstart wird geprüft",RUNNING:"Beregnung läuft",COMPLETE_HOLD:"120-Minuten-Nachlauf",FAILED:"Störung – bleibt gesperrt"})[v]||(v?String(v):"Beregnung aus")}
+    function render(s){state.status=s;var a=s.automation||{},m=s.mower||{},w=s.irrigation||{},safe=w.safety||{},o=s.occupancy||{};var bad=Number(m.errorCode||0)!==0||a.irrigationPhase==="FAILED";var busy=!!a.pendingAction;
+      document.getElementById("overall").className="notice "+(bad?"bad":busy?"warn":"good");text("overall-title",bad?"Achtung – Prüfung erforderlich":busy?"Aktion wird sicher geprüft":"Anlage arbeitet planmäßig");text("overall-text",a.lastOperatorResult||s.overall&&s.overall.message||"");
+      text("mower-title",activity(m.activity));text("battery",m.batteryPercent==null?"–":m.batteryPercent+" %");text("progress",m.workAreaProgress==null?"–":m.workAreaProgress+" %");text("mower-error",Number(m.errorCode||0)===0?"Kein Fehler":"Code "+m.errorCode);
+      text("water-title",phase(a.irrigationPhase));text("water-text",safe.reason||w.status||"");var list=document.getElementById("zones");list.innerHTML="";(Array.isArray(w.zones)?w.zones:[]).forEach(function(z){var li=document.createElement("li");li.innerHTML="<span>"+(z.name||"Zone "+z.zone)+"</span><strong>"+(z.running?"Läuft":Math.round(Number(z.run_seconds||0)/60)+" Min.")+"</strong>";list.appendChild(li)});
+      var block=o.current||o.parking; text("occupancy-title",block?"Platz ist gesperrt":"Platz ist frei");text("occupancy-text",block?(block.title+" · bis "+time(block.end)):(o.next?"Nächste Belegung: "+o.next.title+" · "+time(o.next.start):"Keine bevorstehende Belegung"));
+      document.querySelectorAll("[data-action]").forEach(function(b){var action=b.dataset.action;b.disabled=busy||(action==="STOP_IRRIGATION_AFTER_ZONE"?!a.irrigationPhase||["COMPLETE_HOLD","FAILED"].indexOf(a.irrigationPhase)>=0:action==="START_IRRIGATION"?!!a.irrigationPhase:false)});text("updated","Aktualisiert: "+new Date(s.generatedAt).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit",second:"2-digit"})+" Uhr");
+    }
+    function load(){if(state.loading)return Promise.resolve();state.loading=true;document.getElementById("refresh").disabled=true;return api("/status").then(render).catch(function(e){if(e.status===401){sessionStorage.removeItem(SESSION_KEY);show("login")}else{var box=document.getElementById("action-error");box.textContent=e.message;box.classList.remove("hidden")}}).finally(function(){state.loading=false;document.getElementById("refresh").disabled=false})}
+    document.getElementById("activate-button").onclick=function(){var button=this,code=document.getElementById("activation-code").value.trim(),box=document.getElementById("activate-error");button.disabled=true;box.classList.add("hidden");api("/enroll",{method:"POST",body:{activationCode:code}}).then(function(d){localStorage.setItem(DEVICE_KEY,JSON.stringify(d));show("login")}).catch(function(e){box.textContent=e.message;box.classList.remove("hidden")}).finally(function(){button.disabled=false})};
+    var pins=Array.from(document.querySelectorAll("#pin-boxes input"));pins.forEach(function(p,i){p.oninput=function(){p.value=p.value.replace(/\D/g,"").slice(-1);if(p.value&&pins[i+1])pins[i+1].focus()};p.onkeydown=function(e){if(e.key==="Backspace"&&!p.value&&pins[i-1])pins[i-1].focus()}});
+    document.getElementById("login-button").onclick=function(){var button=this,dev=stored(DEVICE_KEY),pin=pins.map(function(p){return p.value}).join(""),box=document.getElementById("login-error");button.disabled=true;box.classList.add("hidden");if(!dev){button.disabled=false;show("activate");return}api("/login",{method:"POST",body:{pin:pin,deviceId:dev.deviceId,deviceToken:dev.deviceToken}}).then(function(d){sessionStorage.setItem(SESSION_KEY,JSON.stringify(d));pins.forEach(function(p){p.value=""});show("dashboard");load();clearInterval(state.timer);state.timer=setInterval(load,30000)}).catch(function(e){box.textContent=e.message;box.classList.remove("hidden")}).finally(function(){button.disabled=false})};
+    var dialog=document.getElementById("confirm-dialog");document.querySelectorAll("[data-action]").forEach(function(b){b.onclick=function(){state.pendingAction=b.dataset.action;text("confirm-title",b.dataset.title);text("confirm-question",b.dataset.question);dialog.showModal()}});document.getElementById("confirm-cancel").onclick=function(){dialog.close();state.pendingAction=null};document.getElementById("confirm-go").onclick=function(){var action=state.pendingAction;dialog.close();if(!action)return;document.querySelectorAll("[data-action]").forEach(function(b){b.disabled=true});api("/action",{method:"POST",body:{action:action,confirmation:action,requestId:(crypto.randomUUID?crypto.randomUUID():Date.now()+"-"+Math.random())}}).then(function(){return load()}).catch(function(e){var box=document.getElementById("action-error");box.textContent=e.message;box.classList.remove("hidden")}).finally(function(){state.pendingAction=null})};document.getElementById("refresh").onclick=load;
+    if(!isPlatzwart(profileJSON)){show("denied");return}if(!stored(DEVICE_KEY)){show("activate");return}if(!session()){show("login");return}show("dashboard");load();state.timer=setInterval(load,30000);
+  });
+</script>
+</body>
+</html>

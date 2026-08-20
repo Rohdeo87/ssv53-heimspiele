@@ -32,6 +32,14 @@ from special_occupancy import (
     parse_admin_request,
 )
 from order_mail import OrderMailError, check_smtp_connection, send_order_ready_mail
+from platzwart_console import (
+    PlatzwartError,
+    enroll as platzwart_enroll,
+    live_status as platzwart_live_status,
+    login as platzwart_login,
+    request_action as platzwart_request_action,
+    require_session as require_platzwart_session,
+)
 
 
 app = func.FunctionApp()
@@ -450,6 +458,193 @@ def _trainer_occupancy_response(
         charset="utf-8",
         headers=_occupancy_headers(cache=False),
     )
+
+
+def _platzwart_headers(req: func.HttpRequest) -> dict[str, str]:
+    origin = str(req.headers.get("Origin") or "").strip()
+    allowed = {
+        item.strip()
+        for item in os.environ.get("SSV53_PLATZWART_ALLOWED_ORIGINS", "").split(",")
+        if item.strip()
+    }
+    headers = {
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Authorization, Content-Type",
+        "Cache-Control": "no-store",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Vary": "Origin",
+    }
+    if origin and origin in allowed:
+        headers["Access-Control-Allow-Origin"] = origin
+    return headers
+
+
+def _platzwart_response(
+    req: func.HttpRequest,
+    payload: dict,
+    status_code: int = 200,
+) -> func.HttpResponse:
+    return func.HttpResponse(
+        json.dumps(payload, ensure_ascii=False, sort_keys=True),
+        status_code=status_code,
+        mimetype="application/json",
+        charset="utf-8",
+        headers=_platzwart_headers(req),
+    )
+
+
+def _platzwart_token(req: func.HttpRequest) -> str:
+    authorization = str(req.headers.get("Authorization") or "").strip()
+    if not authorization.lower().startswith("bearer "):
+        raise PlatzwartError(
+            "SESSION_MISSING",
+            "Bitte mit der Platzwart-PIN anmelden.",
+            401,
+        )
+    return authorization[7:].strip()
+
+
+@app.route(
+    route="platzwart/enroll",
+    methods=["POST", "OPTIONS"],
+    auth_level=func.AuthLevel.ANONYMOUS,
+)
+def ssv53_platzwart_enroll(req: func.HttpRequest) -> func.HttpResponse:
+    if req.method.upper() == "OPTIONS":
+        return func.HttpResponse(status_code=204, headers=_platzwart_headers(req))
+    try:
+        body = req.get_json()
+        if not isinstance(body, dict):
+            raise ValueError
+        result = platzwart_enroll(
+            str(body.get("activationCode") or ""),
+            os.environ,
+            datetime.now(timezone.utc),
+        )
+        return _platzwart_response(req, result)
+    except ValueError:
+        return _platzwart_response(
+            req,
+            {"code": "REQUEST_INVALID", "error": "Der Aktivierungscode fehlt."},
+            400,
+        )
+    except PlatzwartError as exc:
+        return _platzwart_response(req, {"code": exc.code, "error": str(exc)}, exc.status_code)
+    except Exception:
+        LOGGER.exception("SSV53_PLATZWART_ENROLL_ERROR")
+        return _platzwart_response(
+            req,
+            {"code": "ENROLL_ERROR", "error": "Das Gerät konnte nicht aktiviert werden."},
+            503,
+        )
+
+
+@app.route(
+    route="platzwart/login",
+    methods=["POST", "OPTIONS"],
+    auth_level=func.AuthLevel.ANONYMOUS,
+)
+def ssv53_platzwart_login(req: func.HttpRequest) -> func.HttpResponse:
+    if req.method.upper() == "OPTIONS":
+        return func.HttpResponse(status_code=204, headers=_platzwart_headers(req))
+    now = datetime.now(timezone.utc)
+    try:
+        body = req.get_json()
+        if not isinstance(body, dict):
+            raise ValueError
+        result = platzwart_login(
+            str(body.get("pin") or ""),
+            str(body.get("deviceId") or ""),
+            str(body.get("deviceToken") or ""),
+            str(req.headers.get("X-Forwarded-For") or "unknown"),
+            os.environ,
+            now,
+        )
+        return _platzwart_response(req, result)
+    except ValueError:
+        return _platzwart_response(
+            req,
+            {"code": "REQUEST_INVALID", "error": "Bitte vier Ziffern eingeben."},
+            400,
+        )
+    except PlatzwartError as exc:
+        return _platzwart_response(req, {"code": exc.code, "error": str(exc)}, exc.status_code)
+    except Exception:
+        LOGGER.exception("SSV53_PLATZWART_LOGIN_ERROR")
+        return _platzwart_response(
+            req,
+            {"code": "LOGIN_ERROR", "error": "Die Anmeldung ist gerade nicht möglich."},
+            503,
+        )
+
+
+@app.route(
+    route="platzwart/status",
+    methods=["GET", "OPTIONS"],
+    auth_level=func.AuthLevel.ANONYMOUS,
+)
+def ssv53_platzwart_status(req: func.HttpRequest) -> func.HttpResponse:
+    if req.method.upper() == "OPTIONS":
+        return func.HttpResponse(status_code=204, headers=_platzwart_headers(req))
+    now = datetime.now(timezone.utc)
+    try:
+        require_platzwart_session(_platzwart_token(req), os.environ, now)
+        return _platzwart_response(req, platzwart_live_status(os.environ, now))
+    except PlatzwartError as exc:
+        return _platzwart_response(req, {"code": exc.code, "error": str(exc)}, exc.status_code)
+    except Exception:
+        LOGGER.exception("SSV53_PLATZWART_STATUS_ERROR")
+        return _platzwart_response(
+            req,
+            {"code": "STATUS_ERROR", "error": "Live-Daten sind gerade nicht sicher verfügbar."},
+            503,
+        )
+
+
+@app.route(
+    route="platzwart/action",
+    methods=["POST", "OPTIONS"],
+    auth_level=func.AuthLevel.ANONYMOUS,
+)
+def ssv53_platzwart_action(req: func.HttpRequest) -> func.HttpResponse:
+    if req.method.upper() == "OPTIONS":
+        return func.HttpResponse(status_code=204, headers=_platzwart_headers(req))
+    now = datetime.now(timezone.utc)
+    try:
+        session = require_platzwart_session(_platzwart_token(req), os.environ, now)
+        body = req.get_json()
+        if not isinstance(body, dict):
+            raise ValueError
+        result = platzwart_request_action(
+            str(body.get("action") or ""),
+            str(body.get("requestId") or ""),
+            str(body.get("confirmation") or ""),
+            os.environ,
+            now,
+        )
+        LOGGER.warning(
+            "SSV53_PLATZWART_ACTION_ACCEPTED action=%s request_id=%s device=%s",
+            str(body.get("action") or "")[:48],
+            str(body.get("requestId") or "")[:64],
+            str(session.get("did") or "")[:24],
+        )
+        return _platzwart_response(req, result, 202)
+    except ValueError:
+        return _platzwart_response(
+            req,
+            {"code": "REQUEST_INVALID", "error": "Die Anfrage ist unvollständig."},
+            400,
+        )
+    except PlatzwartError as exc:
+        return _platzwart_response(req, {"code": exc.code, "error": str(exc)}, exc.status_code)
+    except Exception:
+        LOGGER.exception("SSV53_PLATZWART_ACTION_ERROR")
+        return _platzwart_response(
+            req,
+            {"code": "ACTION_ERROR", "error": "Die Bedienaktion konnte nicht sicher gespeichert werden."},
+            503,
+        )
 
 
 def _trainer_occupancy_conflicts(
