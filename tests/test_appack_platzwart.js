@@ -50,6 +50,12 @@ test("Platzwart-Seite ist syntaktisch gültig und enthält keine Zugangsdaten", 
   assert.match(html, /Empfohlen: mindestens 30 mm/);
   assert.match(html, /value<25/);
   assert.match(html, /dringend empfohlen/);
+  assert.doesNotMatch(html, /type="range"/);
+  assert.doesNotMatch(html, /cutting-height-range/);
+  assert.match(html, /state\.heightChoice\+=delta/);
+  assert.match(html, /changeHeight\(-1\)/);
+  assert.match(html, /changeHeight\(1\)/);
+  assert.match(html, /openAction\("SET_CUTTING_HEIGHT"/);
   assert.doesNotMatch(html, /mowe_forced/i);
   assert.doesNotMatch(html, /HUSQVARNA_CLIENT_SECRET|HYDRAWISE_API_KEY|SSV53_PLATZWART_PIN_HASH/);
 });
