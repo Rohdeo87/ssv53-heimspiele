@@ -395,15 +395,6 @@ def _iso_datetime(value: Any) -> datetime | None:
     return parsed.astimezone(timezone.utc)
 
 
-def _timestamp_ms_iso(value: Any) -> str | None:
-    if value is None:
-        return None
-    try:
-        return datetime.fromtimestamp(int(value) / 1000, tz=timezone.utc).isoformat()
-    except (OverflowError, TypeError, ValueError):
-        return None
-
-
 def _restart_battery_percent(environment: Mapping[str, str]) -> int:
     try:
         configured = int(environment.get("MOWER_RESTART_BATTERY_PERCENT", "90"))
@@ -620,7 +611,6 @@ def live_status(environment: Mapping[str, str], now_utc: datetime) -> dict[str, 
             "batteryPercent": mower.get("battery_percent"), "errorCode": mower.get("error_code"),
             "connected": mower.get("connected"),
             "statusTimestamp": mower.get("status_timestamp_ms"),
-            "nextStartAt": _timestamp_ms_iso(mower.get("next_start_timestamp_ms")),
             "restartBatteryPercent": _restart_battery_percent(environment),
             "restrictedReason": mower.get("restricted_reason"),
             "workArea": target.get("name"), "workAreaProgress": target.get("progress"),
@@ -638,6 +628,7 @@ def live_status(environment: Mapping[str, str], now_utc: datetime) -> dict[str, 
         "occupancy": {
             "current": current_plan.get("blocked_now"), "next": current_plan.get("next_block"),
             "parking": current_plan.get("parking_block"),
+            "safeWindows": current_plan.get("safe_mowing_windows") or [],
         },
         "automation": _state_payload(state),
         "clubhouse": _clubhouse_events(environment, now_utc),

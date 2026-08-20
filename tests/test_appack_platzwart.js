@@ -47,12 +47,14 @@ test("Platzwart-Seite ist syntaktisch gültig und enthält keine Zugangsdaten", 
   assert.match(html, />Alle Zonen starten</);
   assert.match(html, /class="btn water-start"/);
   assert.match(html, /id="mower-next-start"/);
+  assert.match(html, /class="next-start-fact hidden"/);
   assert.match(html, /Geschätzt:/);
   assert.match(html, /Nach Plan:/);
   assert.match(html, /Nach Beregnungsende \+ 120 Min\./);
   assert.match(html, /startButton\.classList\.toggle\("hidden"/);
   assert.match(html, /parkButton\.classList\.toggle\("hidden"/);
   assert.match(html, /function mowerActions\(s\)/);
+  assert.match(html, /function irrigationActions\(s\)/);
   assert.doesNotMatch(html, />Mäher sicher parken</);
   assert.doesNotMatch(html, />Sieben Zonen sicher starten</);
   assert.match(html, /Mäher nicht erreichbar/);
@@ -153,14 +155,45 @@ test("Mäheraktionen sind für Fahren, Laden, Sperren und manuelle Bedienung ein
 });
 
 test("nächster Mäherstart unterscheidet Plan, Beregnung und Ladeschätzung", () => {
-  const names = ["localDay(value)", "calendarTime(v,referenceValue)", "time(v)", "nextMowerStart(s)"];
+  const names = ["localDay(value)", "calendarTime(v,referenceValue)", "time(v)", "isSearching(m)", "nextMowerStart(s)"];
   const source = names.map((name) => html.split("\n").find((line) => line.includes(`function ${name}`))).join("\n");
   const nextStart = new Function(`var EVENT_TIME_ZONE="Europe/Berlin";\n${source}\nreturn nextMowerStart;`)();
-  const future = new Date(Date.now() + 60 * 60000).toISOString();
-  const later = new Date(Date.now() + 120 * 60000).toISOString();
+  const generatedAt = "2026-08-20T16:25:00Z";
+  const currentShortWindow = {
+    start: "2026-08-20T16:00:00Z",
+    command_deadline: "2026-08-20T16:50:00Z",
+    minimum_mowing_minutes: 30,
+  };
+  const afterTraining = {
+    start: "2026-08-20T19:00:00Z",
+    command_deadline: "2026-08-20T20:50:00Z",
+    minimum_mowing_minutes: 30,
+  };
+  const longCurrentWindow = {
+    start: "2026-08-20T16:00:00Z",
+    command_deadline: "2026-08-20T18:00:00Z",
+    minimum_mowing_minutes: 30,
+  };
 
-  assert.match(nextStart({ mower: { activity: "CHARGING", batteryPercent: 70, nextStartAt: future }, automation: { continuousMowingOwned: true }, occupancy: {} }), /^Geschätzt: /);
-  assert.match(nextStart({ mower: { activity: "PARKED_IN_CS" }, automation: {}, occupancy: { current: { end: later } } }), /^Nach Plan: /);
+  assert.equal(nextStart({ generatedAt, mower: { activity: "CHARGING", connected: true, errorCode: 0, batteryPercent: 99, restartBatteryPercent: 90 }, automation: { continuousMowingOwned: true }, occupancy: { safeWindows: [longCurrentWindow] } }), "Startet in Kürze");
+  assert.match(nextStart({ generatedAt, mower: { activity: "CHARGING", connected: true, errorCode: 0, batteryPercent: 99, restartBatteryPercent: 90 }, automation: { continuousMowingOwned: true }, occupancy: { safeWindows: [currentShortWindow, afterTraining] } }), /^Nach Plan: .*21:00 Uhr$/);
+  assert.match(nextStart({ generatedAt, mower: { activity: "CHARGING", connected: true, errorCode: 0, batteryPercent: 70, restartBatteryPercent: 90 }, automation: { continuousMowingOwned: true }, occupancy: { safeWindows: [longCurrentWindow] } }), /^Geschätzt: /);
   assert.equal(nextStart({ mower: { activity: "PARKED_IN_CS" }, automation: { irrigationPhase: "RUNNING" }, occupancy: {} }), "Nach Beregnungsende + 120 Min.");
-  assert.equal(nextStart({ mower: { activity: "MOWING" }, automation: {}, occupancy: {} }), "Bereits gestartet");
+  assert.equal(nextStart({ mower: { activity: "MOWING" }, automation: {}, occupancy: {} }), null);
+  assert.equal(nextStart({ mower: { activity: "LEAVING" }, automation: {}, occupancy: {} }), null);
+  assert.equal(nextStart({ mower: { activity: "GOING_HOME" }, automation: {}, occupancy: {} }), null);
+  assert.equal(nextStart({ mower: { activity: "CHARGING", connected: false }, automation: {}, occupancy: {} }), null);
+  assert.equal(nextStart({ overall: { code: "EXTERNAL_OVERRIDE" }, mower: { activity: "CHARGING", connected: true, errorCode: 0 }, automation: {}, occupancy: {} }), "Nach Einschalten der Automatik");
+  assert.equal(nextStart({ mower: { activity: "CHARGING", connected: true, errorCode: 0, batteryPercent: null }, automation: {}, occupancy: {} }), "Wartet auf aktuellen Akkustand");
+});
+
+test("Beregnungsaktionen erscheinen nur im passenden Zustand", () => {
+  const actionsFunction = html.split("\n").find((line) => line.includes("function irrigationActions(s)"));
+  assert.ok(actionsFunction);
+  const actions = new Function(`${actionsFunction}\nreturn irrigationActions;`)();
+  const safe = { available: true, fresh: true };
+  assert.deepEqual(actions({ automation: {}, irrigation: { safety: safe } }), { showStart: true, showStop: false });
+  assert.deepEqual(actions({ automation: { irrigationPhase: "RUNNING" }, irrigation: { safety: safe } }), { showStart: false, showStop: true });
+  assert.deepEqual(actions({ automation: { irrigationPhase: "COMPLETE_HOLD" }, irrigation: { safety: safe } }), { showStart: false, showStop: false });
+  assert.deepEqual(actions({ automation: {}, irrigation: { safety: { available: false, fresh: false } } }), { showStart: false, showStop: false });
 });

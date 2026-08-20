@@ -15,12 +15,47 @@ from mower.planner import (
     read_match_blocks,
 )
 from mower.decision import parking_block_for
+from mower.dry_run import _safe_mowing_windows
 
 
 TZ = ZoneInfo("Europe/Berlin")
 
 
 class MowerPlannerTests(unittest.TestCase):
+    def test_next_safe_window_skips_time_too_short_before_training(self) -> None:
+        config = {
+            "timezone": "Europe/Berlin",
+            "planning": {
+                "day_start": "06:00",
+                "day_end": "23:00",
+                "minimum_mowing_window_minutes": 30,
+            },
+            "training": {
+                "before_minutes": 30,
+                "after_minutes": 30,
+                "weekly": [
+                    {
+                        "weekday": "Donnerstag",
+                        "start": "19:30",
+                        "end": "20:30",
+                        "team": "Test",
+                    }
+                ],
+            },
+            "hydrawise": {},
+        }
+        now = datetime(2026, 8, 20, 18, 25, tzinfo=TZ)
+        plans, _ = create_plan(config, [], None, now.date(), 1)
+        windows = _safe_mowing_windows(
+            plans,
+            now,
+            park_lookahead_minutes=10,
+            minimum_mowing_minutes=30,
+        )
+        self.assertEqual(len(windows), 1)
+        self.assertEqual(windows[0]["start"], datetime(2026, 8, 20, 21, 0, tzinfo=TZ).isoformat())
+        self.assertEqual(windows[0]["command_deadline"], datetime(2026, 8, 20, 22, 50, tzinfo=TZ).isoformat())
+
     def test_training_gets_30_minute_buffer_and_adjacent_sessions_merge(self) -> None:
         config = {
             "before_minutes": 30,

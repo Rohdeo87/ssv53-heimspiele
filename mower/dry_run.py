@@ -84,6 +84,53 @@ def _window_to_dict(
     }
 
 
+def _safe_mowing_windows(
+    day_plans: list[Any],
+    now: datetime,
+    *,
+    park_lookahead_minutes: int,
+    minimum_mowing_minutes: int,
+) -> list[dict[str, Any]]:
+    windows = sorted(
+        (
+            window
+            for plan in day_plans
+            for window in plan.mowing_windows
+            if window.end > now
+        ),
+        key=lambda window: (window.start, window.end),
+    )
+    merged: list[Any] = []
+    for window in windows:
+        if merged and window.start <= merged[-1].end:
+            previous = merged[-1]
+            merged[-1] = type(previous)(
+                start=previous.start,
+                end=max(previous.end, window.end),
+            )
+        else:
+            merged.append(window)
+
+    safe: list[dict[str, Any]] = []
+    for window in merged:
+        available_start = max(window.start, now)
+        command_deadline = window.end - timedelta(minutes=park_lookahead_minutes)
+        available_minutes = int((command_deadline - available_start).total_seconds() // 60)
+        if available_minutes < minimum_mowing_minutes:
+            continue
+        safe.append(
+            {
+                "start": window.start.isoformat(),
+                "end": window.end.isoformat(),
+                "command_deadline": command_deadline.isoformat(),
+                "minimum_mowing_minutes": minimum_mowing_minutes,
+            }
+        )
+        if len(safe) >= 4:
+            break
+    return safe
+
+
 def _target_work_area(
     work_areas: tuple[dict[str, Any], ...],
 ) -> dict[str, Any] | None:
@@ -479,6 +526,12 @@ def run_read_only_cycle(
                 ),
                 "next_block": _block_to_dict(next_block),
                 "parking_block": _block_to_dict(parking_block),
+                "safe_mowing_windows": _safe_mowing_windows(
+                    plans,
+                    now_local,
+                    park_lookahead_minutes=settings.park_lookahead_minutes,
+                    minimum_mowing_minutes=minimum_remaining,
+                ),
                 "parking_lookahead_minutes": (
                     settings.park_lookahead_minutes
                 ),

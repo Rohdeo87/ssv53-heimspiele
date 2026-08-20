@@ -11,7 +11,6 @@ from platzwart_console import (
     _CLUBHOUSE_CACHE,
     _clubhouse_events,
     _restart_battery_percent,
-    _timestamp_ms_iso,
     PlatzwartError,
     create_activation_hash,
     create_pin_hash,
@@ -29,20 +28,21 @@ SESSION_ENV = {"SSV53_PLATZWART_SESSION_SECRET": "x" * 48}
 
 
 class PlatzwartAuthenticationTests(unittest.TestCase):
-    def test_husqvarna_next_start_timestamp_is_exposed_as_utc_iso(self) -> None:
-        self.assertEqual(
-            _timestamp_ms_iso(1787227200000),
-            "2026-08-20T12:00:00+00:00",
-        )
-        self.assertIsNone(_timestamp_ms_iso(None))
-        self.assertIsNone(_timestamp_ms_iso("invalid"))
+    def test_restart_battery_threshold_is_bounded(self) -> None:
         self.assertEqual(_restart_battery_percent({}), 90)
         self.assertEqual(_restart_battery_percent({"MOWER_RESTART_BATTERY_PERCENT": "invalid"}), 90)
         self.assertEqual(_restart_battery_percent({"MOWER_RESTART_BATTERY_PERCENT": "55"}), 60)
 
     def test_live_status_exposes_next_start_and_restart_threshold(self) -> None:
         live_cycle = result(activity="CHARGING", battery=70)
-        live_cycle.details["mower"]["next_start_timestamp_ms"] = 1787227200000
+        live_cycle.details["current_plan"]["safe_mowing_windows"] = [
+            {
+                "start": NOW.isoformat(),
+                "end": (NOW + timedelta(hours=2)).isoformat(),
+                "command_deadline": (NOW + timedelta(minutes=110)).isoformat(),
+                "minimum_mowing_minutes": 30,
+            }
+        ]
         store = InMemoryStateStore()
         environment = {**ENV, "MOWER_RESTART_BATTERY_PERCENT": "92"}
         with patch("platzwart_console.run_read_only_cycle", return_value=live_cycle), patch(
@@ -53,8 +53,8 @@ class PlatzwartAuthenticationTests(unittest.TestCase):
             return_value={"available": True, "events": [], "message": None},
         ):
             payload = live_status(environment, NOW)
-        self.assertEqual(payload["mower"]["nextStartAt"], "2026-08-20T12:00:00+00:00")
         self.assertEqual(payload["mower"]["restartBatteryPercent"], 92)
+        self.assertEqual(len(payload["occupancy"]["safeWindows"]), 1)
 
     def test_four_digit_pin_is_salted_and_verified(self) -> None:
         encoded = create_pin_hash("4072", salt=b"0123456789abcdef")
