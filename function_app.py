@@ -769,6 +769,46 @@ def _trainer_move_source(
             "Diese Belegung darf nur vom Ersteller oder App-Administrator verschoben werden.",
             status_code=403,
         )
+    existing_creator = {
+        "id": existing.creator_id,
+        "name": existing.creator_name,
+        "phone": existing.creator_phone,
+        "mobile": existing.creator_mobile,
+        "email": existing.creator_email,
+        "chatId": existing.creator_chat_id,
+        "image": existing.creator_image,
+        "instagram": existing.creator_instagram,
+        "website": existing.creator_website,
+        "facebook": existing.creator_facebook,
+        "role": existing.creator_role,
+        "infoHtml": existing.creator_info_html,
+    }
+    submitted_creator = (
+        body.get("creator") if isinstance(body.get("creator"), dict) else {}
+    )
+    # Ausschließlich der ursprüngliche Ersteller darf sein gespeichertes
+    # Profil vervollständigen. So wird z. B. ein alter Nachname-Fallback beim
+    # nächsten Verlegen zu Vor- und Nachname korrigiert, während ein Admin
+    # niemals versehentlich die ursprüngliche Person überschreibt.
+    if (
+        requester_id
+        and requester_id == existing.creator_id
+        and requester_id == str(submitted_creator.get("id") or "").strip()
+    ):
+        submitted_name = str(submitted_creator.get("name") or "").strip()
+        existing_name = str(existing_creator.get("name") or "").strip()
+        if submitted_name and (
+            not existing_name
+            or len(submitted_name.split()) > len(existing_name.split())
+        ):
+            existing_creator["name"] = submitted_name
+        for key in (
+            "phone", "mobile", "email", "chatId", "image", "instagram",
+            "website", "facebook", "role", "infoHtml",
+        ):
+            if not existing_creator.get(key) and submitted_creator.get(key):
+                existing_creator[key] = submitted_creator[key]
+
     event = {
         "id": existing.event_id,
         "title": existing.title,
@@ -778,20 +818,7 @@ def _trainer_move_source(
         "area": existing.area,
         "description": existing.description,
         "team": existing.team,
-        "creator": {
-            "id": existing.creator_id,
-            "name": existing.creator_name,
-            "phone": existing.creator_phone,
-            "mobile": existing.creator_mobile,
-            "email": existing.creator_email,
-            "chatId": existing.creator_chat_id,
-            "image": existing.creator_image,
-            "instagram": existing.creator_instagram,
-            "website": existing.creator_website,
-            "facebook": existing.creator_facebook,
-            "role": existing.creator_role,
-            "infoHtml": existing.creator_info_html,
-        },
+        "creator": existing_creator,
         "movedBy": (
             body.get("creator")
             if isinstance(body.get("creator"), dict) and body.get("creator")
@@ -965,25 +992,78 @@ def ssv53_trainer_occupancies(req: func.HttpRequest) -> func.HttpResponse:
                     "RESOURCE_INVALID",
                     "Der Zielplatz muss Rasen oder Kunstrasen sein.",
                 )
-            if target_resource == source_resource:
+            original_start = datetime.fromisoformat(
+                str(event["start"]).replace("Z", "+00:00")
+            )
+            original_end = datetime.fromisoformat(
+                str(event["end"]).replace("Z", "+00:00")
+            )
+            target_start_value = body.get("targetStart")
+            target_end_value = body.get("targetEnd")
+            if (target_start_value in (None, "")) != (target_end_value in (None, "")):
                 raise SpecialOccupancyError(
-                    "MOVE_TARGET_UNCHANGED",
-                    "Der Termin liegt bereits auf diesem Platz.",
+                    "MOVE_RANGE_INCOMPLETE",
+                    "Für eine zeitliche Verlegung müssen Beginn und Ende angegeben werden.",
                 )
-            start = datetime.fromisoformat(str(event["start"]).replace("Z", "+00:00"))
-            end = datetime.fromisoformat(str(event["end"]).replace("Z", "+00:00"))
-            if start.tzinfo is None or end.tzinfo is None or end <= start:
+            try:
+                start = datetime.fromisoformat(
+                    str(target_start_value or event["start"]).replace("Z", "+00:00")
+                )
+                end = datetime.fromisoformat(
+                    str(target_end_value or event["end"]).replace("Z", "+00:00")
+                )
+            except (TypeError, ValueError) as exc:
+                raise SpecialOccupancyError(
+                    "DATETIME_INVALID",
+                    "Der neue Terminzeitraum ist ungültig.",
+                ) from exc
+            if (
+                start.tzinfo is None or start.utcoffset() is None
+                or end.tzinfo is None or end.utcoffset() is None
+                or end <= start
+            ):
                 raise SpecialOccupancyError("DATETIME_INVALID", "Der Terminzeitraum ist ungültig.")
             now_local = now_utc.astimezone(ZoneInfo("Europe/Berlin"))
-            if end.astimezone(ZoneInfo("Europe/Berlin")) <= now_local:
+            start = start.astimezone(ZoneInfo("Europe/Berlin"))
+            end = end.astimezone(ZoneInfo("Europe/Berlin"))
+            original_start = original_start.astimezone(ZoneInfo("Europe/Berlin"))
+            original_end = original_end.astimezone(ZoneInfo("Europe/Berlin"))
+            if original_end <= now_local:
                 raise SpecialOccupancyError("EVENT_IN_PAST", "Ein beendeter Termin kann nicht verschoben werden.")
+            if target_start_value not in (None, ""):
+                if start < now_local - timedelta(minutes=5):
+                    raise SpecialOccupancyError(
+                        "START_IN_PAST",
+                        "Der neue Beginn darf nicht in der Vergangenheit liegen.",
+                    )
+                if start > now_local + timedelta(days=63):
+                    raise SpecialOccupancyError(
+                        "START_TOO_FAR_AHEAD",
+                        "Ein Training darf höchstens 63 Tage im Voraus verlegt werden.",
+                    )
+            if end - start > timedelta(days=14):
+                raise SpecialOccupancyError(
+                    "RANGE_TOO_LONG",
+                    "Ein Training darf höchstens 14 Tage dauern.",
+                )
+            if (
+                target_resource == source_resource
+                and start == original_start
+                and end == original_end
+            ):
+                raise SpecialOccupancyError(
+                    "MOVE_TARGET_UNCHANGED",
+                    "Platz und Zeitraum wurden nicht geändert.",
+                )
+            event["start"] = start.isoformat()
+            event["end"] = end.isoformat()
             event["resourceId"] = target_resource
             event["suppressTraining"] = bool(event.get("replacesTrainingEventId"))
             event["mowerBufferBeforeMinutes"] = 30
             event["mowerBufferAfterMinutes"] = 30
             conflicts = _trainer_occupancy_conflicts(
-                start=start.astimezone(ZoneInfo("Europe/Berlin")),
-                end=end.astimezone(ZoneInfo("Europe/Berlin")),
+                start=start,
+                end=end,
                 resource_id=target_resource,
                 store=store,
                 ignored_event_ids={

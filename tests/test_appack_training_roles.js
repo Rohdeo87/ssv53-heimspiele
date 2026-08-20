@@ -84,6 +84,18 @@ test("App-Administrator und Profildaten werden aus dem aktiven Appack-Profil gel
   });
 });
 
+test("strukturierter Vor- und Nachname gewinnt gegen Appacks Nachname-Fallback", () => {
+  const creator = api.getCurrentAppackCreator({
+    id: "69b6dcab7dc3e02afd7da29a",
+    name: "Hartwig",
+    firstName: "Marco",
+    lastName: "Hartwig",
+    email: "hartwig-marco@web.de"
+  });
+  assert.equal(creator.name, "Marco Hartwig");
+  assert.equal(creator.email, "hartwig-marco@web.de");
+});
+
 test("Belegungsplan nutzt Appacks profile_json und prüft auch den Handler", () => {
   assert.match(
     html,
@@ -184,6 +196,13 @@ test("nur Trainer können eine Appack-Belegung anlegen", () => {
   assert.match(mover, /confirmation: "TRAINER_BELEGUNG_VERSCHIEBEN"/);
   assert.match(mover, /overlapConfirmation = "UEBERSCHNEIDUNG_TROTZDEM_SPEICHERN"/);
   assert.match(mover, /targetResource === "rasen"/);
+  assert.match(mover, /targetStart: start\.toISOString\(\)/);
+  assert.match(mover, /targetEnd: end\.toISOString\(\)/);
+  const moveOpener = extractFunction("openTrainerOccupancyMoveDialog");
+  assert.match(moveOpener, /form\.elements\.belegungPlatz\.value/);
+  assert.match(moveOpener, /setTrainerOccupancyDateTime\(form, "belegungStart", event\.start\)/);
+  assert.match(moveOpener, /setTrainerOccupancyDateTime\(form, "belegungEnde", event\.end\)/);
+  assert.match(html, /elements\.trainerOccupancyMove\.addEventListener\("click", openTrainerOccupancyMoveDialog\)/);
   const deleteRenderer = extractFunction("renderTrainerOccupancyDeleteAction");
   const deleter = extractFunction("deleteTrainerOccupancy");
   const cancellationDetector = extractFunction("isTrainingCancellationEvent");
@@ -270,6 +289,9 @@ test("Trainerbelegung schreibt nur validierte strukturierte Felder", () => {
   assert.match(html, />\s*Termin anlegen\s*<\/button>/);
   assert.match(html, /id="calendar-today-button"[^>]*>Heute<\/button>/);
   assert.match(html, /elements\.todayButton\.addEventListener\("click"/);
+  const endSuggestion = extractFunction("suggestTrainerOccupancyEnd");
+  assert.match(endSuggestion, /state\.trainerOccupancyMoveEvent/);
+  assert.match(endSuggestion, /movedEvent\.end\.getTime\(\) - movedEvent\.start\.getTime\(\)/);
 });
 
 test("verlegte Trainings behalten Teamkontakte und zeigen die verschiebende Person separat", () => {

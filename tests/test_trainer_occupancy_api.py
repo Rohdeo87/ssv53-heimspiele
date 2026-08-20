@@ -205,6 +205,59 @@ class TrainerOccupancyApiTests(unittest.TestCase):
         self.assertEqual(moved_back.moved_by_name, "Andere Trainerin")
         self.assertIsNotNone(event_to_mower_block(moved_back, Block))
 
+    def test_recurring_training_can_move_in_time_on_same_pitch(self) -> None:
+        payload = {
+            "action": "move",
+            "commandId": "trainer-move:test-a-earlier",
+            "eventId": "training:sommer:som-ras-a-do:2026-08-20",
+            "targetResourceId": "rasen",
+            "targetStart": "2026-08-20T03:00:00+02:00",
+            "targetEnd": "2026-08-20T04:30:00+02:00",
+            "requesterId": "trainer-17",
+            "creator": {"id": "trainer-17", "name": "Trainer Beispiel"},
+            "confirmation": "TRAINER_BELEGUNG_VERSCHIEBEN",
+        }
+        response = function_app.ssv53_trainer_occupancies(request(payload))
+        self.assertEqual(response.status_code, 200, response.get_body())
+        event = next(iter(self.store.events.values()))
+        self.assertEqual(event.resource_id, "rasen")
+        self.assertEqual(event.start.isoformat(), "2026-08-20T03:00:00+02:00")
+        self.assertEqual(event.end.isoformat(), "2026-08-20T04:30:00+02:00")
+        self.assertEqual(
+            event.replaced_training_event_id,
+            "training:sommer:som-ras-a-do:2026-08-20",
+        )
+        self.assertTrue(event.suppress_training)
+        block = event_to_mower_block(event, Block)
+        self.assertEqual(block.start.isoformat(), "2026-08-20T02:30:00+02:00")
+        self.assertEqual(block.end.isoformat(), "2026-08-20T05:00:00+02:00")
+
+    def test_temporal_move_requires_complete_range_and_an_actual_change(self) -> None:
+        payload = {
+            "action": "move",
+            "commandId": "trainer-move:test-a-incomplete",
+            "eventId": "training:sommer:som-ras-a-do:2026-08-20",
+            "targetResourceId": "rasen",
+            "targetStart": "2026-08-20T03:00:00+02:00",
+            "requesterId": "trainer-17",
+            "creator": {"id": "trainer-17", "name": "Trainer Beispiel"},
+            "confirmation": "TRAINER_BELEGUNG_VERSCHIEBEN",
+        }
+        response = function_app.ssv53_trainer_occupancies(request(payload))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(json.loads(response.get_body())["code"], "MOVE_RANGE_INCOMPLETE")
+        self.assertEqual(self.store.events, {})
+
+        payload.update({
+            "commandId": "trainer-move:test-a-unchanged",
+            "targetStart": "2026-08-20T18:30:00+02:00",
+            "targetEnd": "2026-08-20T20:00:00+02:00",
+        })
+        response = function_app.ssv53_trainer_occupancies(request(payload))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(json.loads(response.get_body())["code"], "MOVE_TARGET_UNCHANGED")
+        self.assertEqual(self.store.events, {})
+
     def test_manual_entry_keeps_creator_and_records_mover_separately(self) -> None:
         self.assertEqual(
             function_app.ssv53_trainer_occupancies(request(self.payload())).status_code,
@@ -234,6 +287,36 @@ class TrainerOccupancyApiTests(unittest.TestCase):
         public_event = moved.to_public_event()
         self.assertEqual(public_event["creator"]["name"], "Juliane Beispiel")
         self.assertEqual(public_event["movedBy"]["name"], "App Administrator")
+
+    def test_manual_creator_can_enrich_own_incomplete_profile_name_on_move(self) -> None:
+        payload = self.payload()
+        payload["creator"] = {
+            "id": "appack-42",
+            "name": "Hartwig",
+            "email": "hartwig-marco@web.de",
+        }
+        self.assertEqual(
+            function_app.ssv53_trainer_occupancies(request(payload)).status_code,
+            200,
+        )
+        move = {
+            "action": "move",
+            "commandId": "trainer-move:own-profile-enrichment",
+            "eventId": "one-off:trainer-test-001",
+            "targetResourceId": "kunstrasen",
+            "requesterId": "appack-42",
+            "creator": {
+                "id": "appack-42",
+                "name": "Marco Hartwig",
+                "email": "hartwig-marco@web.de",
+            },
+            "confirmation": "TRAINER_BELEGUNG_VERSCHIEBEN",
+        }
+        response = function_app.ssv53_trainer_occupancies(request(move))
+        self.assertEqual(response.status_code, 200, response.get_body())
+        moved = self.store.events["trainer-test-001"]
+        self.assertEqual(moved.creator_name, "Marco Hartwig")
+        self.assertEqual(moved.creator_email, "hartwig-marco@web.de")
 
     def test_relocated_training_can_be_cancelled_after_multiple_moves(self) -> None:
         payload = {

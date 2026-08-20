@@ -1818,6 +1818,7 @@
         currentDateInfo: null,
         currentDialogEvent: null,
         currentDialogEventKey: "",
+        trainerOccupancyMoveEvent: null,
         canManageTrainingCancellations: hasActiveTrainerRole(profileJSON),
         canCreateTrainerOccupancies: hasActiveTrainerRole(profileJSON),
         canAdministerTrainerOccupancies: hasActiveAppAdministratorRole(profileJSON),
@@ -1862,6 +1863,7 @@
         trainerAddOccupancy: document.getElementById("trainer-add-occupancy"),
         trainerOccupancyDialogLayer: document.getElementById("trainer-occupancy-dialog-layer"),
         trainerOccupancyDialog: document.getElementById("trainer-occupancy-dialog"),
+        trainerOccupancyTitle: document.getElementById("trainer-occupancy-title"),
         trainerOccupancyForm: document.getElementById("trainer-occupancy-form"),
         trainerOccupancyClose: document.getElementById("trainer-occupancy-close"),
         trainerOccupancyCancel: document.getElementById("trainer-occupancy-cancel"),
@@ -3215,9 +3217,10 @@
       function getCurrentAppackCreator(profile) {
         const firstName = getAppackProfileValue(profile, ["firstName", "first_name", "givenName", "vorname"]);
         const lastName = getAppackProfileValue(profile, ["lastName", "last_name", "surname", "familyName", "nachname"]);
+        const structuredName = [firstName, lastName].filter(Boolean).join(" ").trim();
         return {
           id: getAppackProfileValue(profile, ["id", "userId", "userID", "profileId", "memberId", "uuid"]),
-          name: getAppackProfileValue(profile, ["displayName", "fullName", "name", "username"]) || [firstName, lastName].filter(Boolean).join(" "),
+          name: structuredName || getAppackProfileValue(profile, ["displayName", "fullName", "name", "username"]),
           phone: getAppackProfileValue(profile, ["phone", "telephone", "telefon"]),
           mobile: getAppackProfileValue(profile, ["mobile", "mobilePhone", "handy", "whatsapp"]),
           email: getAppackProfileValue(profile, ["email", "mail"]),
@@ -6274,9 +6277,7 @@
           state.currentCreator.id === String(creator.id || "");
         if (!recurringTraining && !relocatedTraining &&
           !(manualEntry && (ownEntry || state.canAdministerTrainerOccupancies))) return;
-        const currentResource = String(props.calendarId || "");
-        const targetLabel = currentResource === "rasen" ? "Kunstrasen" : "Rasen";
-        action.querySelector("span").textContent = "Auf " + targetLabel + " verlegen";
+        action.querySelector("span").textContent = "Termin verlegen";
         action.hidden = false;
       }
 
@@ -6290,22 +6291,61 @@
         }).join("\n");
       }
 
-      async function moveTrainerOccupancy() {
+      function openTrainerOccupancyMoveDialog() {
         const event = state.currentDialogEvent;
         if (!event || elements.trainerOccupancyMove.hidden) return;
         const props = event.extendedProps || {};
+        const form = elements.trainerOccupancyForm;
+        state.trainerOccupancyMoveEvent = event;
+        form.reset();
+        form.elements.belegungTitel.value = event.title || "Training";
+        form.elements.belegungTitel.readOnly = true;
+        form.elements.belegungPlatz.value = String(props.calendarId || "rasen");
+        setTrainerOccupancyDateTime(form, "belegungStart", event.start);
+        setTrainerOccupancyDateTime(form, "belegungEnde", event.end);
+        Array.from(form.querySelectorAll("[data-trainer-create-only]")).forEach(function (item) {
+          item.hidden = true;
+        });
+        elements.trainerOccupancyTitle.textContent = "Termin verlegen";
+        elements.trainerOccupancySubmit.textContent = "Termin verlegen";
+        elements.trainerOccupancyStatus.hidden = true;
+        elements.trainerOccupancyStatus.removeAttribute("data-error");
+        closeEventDetails();
+        elements.trainerOccupancyDialogLayer.hidden = false;
+        document.body.classList.add("dialog-open");
+        window.requestAnimationFrame(function () {
+          form.elements.belegungStartDatum.focus();
+        });
+      }
+
+      async function moveTrainerOccupancy(start, end, targetResource) {
+        const event = state.trainerOccupancyMoveEvent;
+        if (!event) return;
+        const props = event.extendedProps || {};
         const currentResource = String(props.calendarId || "");
-        const targetResource = currentResource === "rasen" ? "kunstrasen" : "rasen";
+        const resourceChanged = currentResource !== targetResource;
+        const timeChanged = event.start.getTime() !== start.getTime() ||
+          event.end.getTime() !== end.getTime();
+        if (!resourceChanged && !timeChanged) {
+          elements.trainerOccupancyStatus.textContent =
+            "Bitte Platz, Beginn oder Ende ändern.";
+          elements.trainerOccupancyStatus.dataset.error = "true";
+          elements.trainerOccupancyStatus.hidden = false;
+          return;
+        }
         const targetLabel = targetResource === "rasen" ? "Rasenplatz" : "Kunstrasenplatz";
         const mowerNote = targetResource === "rasen"
-          ? " Der Rasen wird dadurch unmittelbar in der Mäherplanung gesperrt."
-          : " Der bisherige Rasenschutz wird erst nach erfolgreicher Azure-Speicherung aufgehoben.";
+          ? " Auf dem Rasen wird der Mäher 30 Minuten vorher geparkt und frühestens 30 Minuten nach Ende wieder freigegeben."
+          : " Die bisherige Rasensperre wird erst aufgehoben, nachdem Azure die Verlegung vollständig gespeichert hat.";
         if (!(await requestActionConfirmation(
-          "Diesen Termin auf den " + targetLabel + " verlegen?" + mowerNote,
+          "Diesen Termin auf " + targetLabel + " und den gewählten Zeitraum verlegen?" + mowerNote,
           "Termin verlegen",
           false
         ))) return;
-        elements.trainerOccupancyMove.disabled = true;
+        elements.trainerOccupancySubmit.disabled = true;
+        elements.trainerOccupancyStatus.textContent = "Termin wird verlegt …";
+        elements.trainerOccupancyStatus.removeAttribute("data-error");
+        elements.trainerOccupancyStatus.hidden = false;
         try {
           await loadTrainerContacts(false).catch(function () {});
           const creator = mergeCreatorContact(
@@ -6319,6 +6359,8 @@
             commandId: "trainer-move:" + randomPart,
             eventId: props.occurrenceId,
             targetResourceId: targetResource,
+            targetStart: start.toISOString(),
+            targetEnd: end.toISOString(),
             requesterId: state.currentCreator.id,
             isAppAdministrator: state.canAdministerTrainerOccupancies,
             creator: creator,
@@ -6339,7 +6381,11 @@
               "Trotzdem verlegen",
               false
             ))) {
-              elements.trainerOccupancyMove.disabled = false;
+              elements.trainerOccupancySubmit.disabled = false;
+              elements.trainerOccupancyStatus.textContent =
+                "Der Termin wurde wegen der Überschneidung nicht verlegt.";
+              elements.trainerOccupancyStatus.dataset.error = "true";
+              elements.trainerOccupancyStatus.hidden = false;
               return;
             }
             requestBody.overlapConfirmation = "UEBERSCHNEIDUNG_TROTZDEM_SPEICHERN";
@@ -6349,13 +6395,14 @@
           if (!response.ok || !payload.ok) {
             throw new Error(payload.error || "Der Termin konnte nicht verlegt werden.");
           }
-          closeEventDetails();
+          closeTrainerOccupancyDialog();
           window.setTimeout(function () { loadCurrentRange(true); }, 600);
         } catch (error) {
-          elements.trainerOccupancyMove.disabled = false;
-          elements.trainingCancellationStatus.textContent = error && error.message
+          elements.trainerOccupancySubmit.disabled = false;
+          elements.trainerOccupancyStatus.textContent = error && error.message
             ? error.message : "Die Verlegung ist fehlgeschlagen. Die bisherige Belegung bleibt bestehen.";
-          elements.trainingCancellationStatus.hidden = false;
+          elements.trainerOccupancyStatus.dataset.error = "true";
+          elements.trainerOccupancyStatus.hidden = false;
         }
       }
 
@@ -6599,7 +6646,15 @@
         const form = elements.trainerOccupancyForm;
         const start = readTrainerOccupancyDateTime(form, "belegungStart");
         if (Number.isNaN(start.getTime())) return;
-        setTrainerOccupancyDateTime(form, "belegungEnde", new Date(start.getTime() + 60 * 60 * 1000));
+        const movedEvent = state.trainerOccupancyMoveEvent;
+        const duration = movedEvent && movedEvent.start && movedEvent.end
+          ? movedEvent.end.getTime() - movedEvent.start.getTime()
+          : 60 * 60 * 1000;
+        setTrainerOccupancyDateTime(
+          form,
+          "belegungEnde",
+          new Date(start.getTime() + Math.max(duration, 5 * 60 * 1000))
+        );
       }
 
       function openTrainerOccupancyDialog() {
@@ -6607,7 +6662,14 @@
           !state.canCreateTrainerOccupancies
         ) return;
         const form = elements.trainerOccupancyForm;
+        state.trainerOccupancyMoveEvent = null;
         form.reset();
+        form.elements.belegungTitel.readOnly = false;
+        Array.from(form.querySelectorAll("[data-trainer-create-only]")).forEach(function (item) {
+          item.hidden = false;
+        });
+        elements.trainerOccupancyTitle.textContent = "Belegung hinzufügen";
+        elements.trainerOccupancySubmit.textContent = "Termin anlegen";
         const start = new Date();
         start.setMinutes(Math.ceil(start.getMinutes() / 30) * 30, 0, 0);
         const end = new Date(start.getTime() + 60 * 60 * 1000);
@@ -6627,6 +6689,7 @@
         elements.trainerOccupancyDialogLayer.hidden = true;
         document.body.classList.remove("dialog-open");
         elements.trainerOccupancySubmit.disabled = false;
+        state.trainerOccupancyMoveEvent = null;
         elements.trainerAddOccupancy.focus();
       }
 
@@ -6656,6 +6719,10 @@
             "Bitte einen gültigen Zeitraum von höchstens 14 Tagen wählen.";
           elements.trainerOccupancyStatus.dataset.error = "true";
           elements.trainerOccupancyStatus.hidden = false;
+          return;
+        }
+        if (state.trainerOccupancyMoveEvent) {
+          await moveTrainerOccupancy(start, end, resourceId);
           return;
         }
         if (resourceId === "rasen" && !(await requestActionConfirmation(
@@ -6818,7 +6885,7 @@
           );
         });
         elements.trainerOccupancyDelete.addEventListener("click", deleteTrainerOccupancy);
-        elements.trainerOccupancyMove.addEventListener("click", moveTrainerOccupancy);
+        elements.trainerOccupancyMove.addEventListener("click", openTrainerOccupancyMoveDialog);
         document.addEventListener("keydown", function (event) {
           if (
             event.key === "Escape" &&
@@ -7164,7 +7231,7 @@
           <label>Tag <input name="belegungEndeDatum" type="date" required /></label>
           <label>Uhrzeit <input name="belegungEndeZeit" type="time" step="300" required /></label>
         </fieldset>
-        <label>
+        <label data-trainer-create-only>
           Bereich
           <select name="belegungBereich">
             <option value="vorne &amp; hinten">Gesamter Platz</option>
@@ -7172,7 +7239,7 @@
             <option value="hinten">Hinten</option>
           </select>
         </label>
-        <label>
+        <label data-trainer-create-only>
           Hinweis (optional)
           <textarea name="belegungBeschreibung" maxlength="500"></textarea>
         </label>
