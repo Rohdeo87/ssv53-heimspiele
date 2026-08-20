@@ -230,6 +230,7 @@ class FullFailsafeTests(unittest.TestCase):
             start_sender=senders.get("start", lambda *_: {"accepted": True}),
             suspend_zone_sender=senders.get("suspend", lambda *_: {"message_type": "info"}),
             start_zone_sender=senders.get("zone", lambda *_: {"message_type": "info"}),
+            stop_zone_sender=senders.get("stop_zone", lambda *_: {"message_type": "info"}),
         )
         return output, store
 
@@ -1148,6 +1149,58 @@ class FullFailsafeTests(unittest.TestCase):
         second = run(NOW + timedelta(minutes=1))
         self.assertEqual(second.decision_code, "IRRIGATION_ZONE_START_SENT")
         self.assertEqual(len(zone_calls), 1)
+
+    def test_direct_stop_targets_running_zone_and_starts_hold_only_after_confirmation(self) -> None:
+        initial = irrigation_state(phase="RUNNING", current=RELAYS[0])
+        initial = AutomationState.from_mapping(
+            {
+                **initial.to_dict(),
+                "operator_request_id": "stop-now-1",
+                "operator_request_action": "STOP_IRRIGATION_NOW",
+                "operator_requested_utc": (NOW - timedelta(seconds=10)).isoformat(),
+                "operator_request_expires_utc": (NOW + timedelta(minutes=10)).isoformat(),
+                "operator_request_status": "PENDING",
+            }
+        )
+        store = InMemoryStateStore(initial)
+        stop_calls = []
+
+        def run(at: datetime, *, active: bool):
+            return run_full_failsafe_cycle(
+                now_utc=at,
+                settings=settings(),
+                environment=ENV,
+                past_due=False,
+                source="test",
+                read_only_runner=lambda **_: result(
+                    block_source="irrigation",
+                    active_ids=[RELAYS[0]] if active else [],
+                    clear=not active,
+                ),
+                state_store_factory=lambda _env: store,
+                stop_zone_sender=lambda _key, relay, controller: stop_calls.append(
+                    (relay, controller)
+                ) or {"message_type": "info"},
+            )
+
+        sent = run(NOW, active=True)
+        self.assertEqual(sent.decision_code, "IRRIGATION_ZONE_STOP_SENT")
+        self.assertTrue(sent.command_sent)
+        self.assertEqual(stop_calls, [(RELAYS[0], "controller")])
+        self.assertEqual(store.load().irrigation_phase, "STOPPING")
+
+        first_clear = run(NOW + timedelta(minutes=1), active=False)
+        self.assertEqual(first_clear.decision_code, "IRRIGATION_CONFIRM_DIRECT_STOP")
+        self.assertEqual(store.load().irrigation_phase, "STOPPING")
+        self.assertEqual(stop_calls, [(RELAYS[0], "controller")])
+
+        confirmed = run(NOW + timedelta(minutes=3), active=False)
+        saved = store.load()
+        self.assertEqual(confirmed.decision_code, "IRRIGATION_OPERATOR_STOPPED_NOW")
+        self.assertEqual(saved.irrigation_phase, "COMPLETE_HOLD")
+        self.assertEqual(saved.operator_request_status, "COMPLETED")
+        self.assertEqual(saved.hydrawise_clear_since_utc, (NOW + timedelta(minutes=3)).isoformat())
+        self.assertEqual(stop_calls, [(RELAYS[0], "controller")])
 
     def test_next_irrigation_plan_replaces_stale_complete_hold_at_capture_lead(self) -> None:
         state = irrigation_state(phase="COMPLETE_HOLD")

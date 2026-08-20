@@ -21,7 +21,7 @@ from mower.hydrawise import (
     evaluate_continuous_clear_confirmation,
     parse_relay_id_allowlist,
 )
-from mower.hydrawise_actions import start_zone_for, suspend_zone_until
+from mower.hydrawise_actions import start_zone_for, stop_zone_now, suspend_zone_until
 from mower.runtime import ControlMode, CycleResult, RuntimeSettings
 from mower.safety import CommandIntent, evaluate_command_gate
 from mower.state import AutomationState
@@ -34,6 +34,7 @@ ParkSender = Callable[[str, str, str], dict[str, Any]]
 StartSender = Callable[[str, str, str, int, int], dict[str, Any]]
 SuspendZoneSender = Callable[[str, int, int, str | int | None], dict[str, Any]]
 StartZoneSender = Callable[[str, int, int, str | int | None], dict[str, Any]]
+StopZoneSender = Callable[[str, int, str | int | None], dict[str, Any]]
 
 PARKABLE_ACTIVITIES = frozenset({"MOWING", "LEAVING"})
 PARK_COMMAND_ACTIVITIES = frozenset(
@@ -48,7 +49,7 @@ SAFE_PARK_SOURCES = frozenset(
     {"training", "match", "special", "irrigation", "hydrawise_unconfirmed", "continuous"}
 )
 ACTIVE_IRRIGATION_PHASES = frozenset(
-    {"PLANNED", "SUSPENDING", "READY", "START_RESERVED", "RUNNING"}
+    {"PLANNED", "SUSPENDING", "READY", "START_RESERVED", "RUNNING", "STOPPING"}
 )
 PARK_GUARD_BLOCK_SOURCES = frozenset({"training", "match", "special", "irrigation"})
 
@@ -866,6 +867,7 @@ def run_full_failsafe_cycle(
     start_sender: StartSender = start_in_work_area,
     suspend_zone_sender: SuspendZoneSender = suspend_zone_until,
     start_zone_sender: StartZoneSender = start_zone_for,
+    stop_zone_sender: StopZoneSender = stop_zone_now,
 ) -> CycleResult:
     """Fail-closed Gesamtsteuerung für Mäher, Belegung und sieben Zonen."""
 
@@ -1501,7 +1503,7 @@ def run_full_failsafe_cycle(
             )
 
         if (
-            operator_action == "STOP_IRRIGATION_AFTER_ZONE"
+            operator_action in {"STOP_IRRIGATION_AFTER_ZONE", "STOP_IRRIGATION_NOW"}
             and state.irrigation_phase in {"PLANNED", "SUSPENDING"}
             and not active_ids
         ):
@@ -1990,7 +1992,7 @@ def run_full_failsafe_cycle(
                 )
 
         if state.irrigation_phase == "READY":
-            if operator_action == "STOP_IRRIGATION_AFTER_ZONE":
+            if operator_action in {"STOP_IRRIGATION_AFTER_ZONE", "STOP_IRRIGATION_NOW"}:
                 stopped = replace(
                     _finish_operator_request(
                         state,
@@ -2288,6 +2290,211 @@ def run_full_failsafe_cycle(
                     persisted=True,
                     command_sent=True,
                 ),
+            )
+
+        if (
+            operator_action == "STOP_IRRIGATION_NOW"
+            and state.irrigation_phase in {"START_RESERVED", "RUNNING"}
+        ):
+            if current_id is None:
+                failed = _finish_operator_request(
+                    _failed_irrigation(
+                        state,
+                        "Die laufende Hydrawise-Zone konnte nicht eindeutig bestimmt werden.",
+                    ),
+                    "Direktes Beenden abgelehnt: Die laufende Zone ist nicht eindeutig.",
+                    status="REJECTED",
+                )
+                return _persist_result(
+                    store=store,
+                    original=original,
+                    state=failed,
+                    result=result,
+                    details=details,
+                    settings=settings,
+                    decision_code="IRRIGATION_OPERATOR_STOP_TARGET_UNCLEAR",
+                    message="Die Beregnung bleibt sicher gesperrt; die laufende Zone ist nicht eindeutig.",
+                )
+            if active_ids and active_ids != {int(current_id)}:
+                failed = _finish_operator_request(
+                    _failed_irrigation(
+                        state,
+                        "Der Live-Status passt nicht zur gespeicherten laufenden Zone.",
+                    ),
+                    "Direktes Beenden abgelehnt: Der Live-Status ist nicht eindeutig.",
+                    status="REJECTED",
+                )
+                return _persist_result(
+                    store=store,
+                    original=original,
+                    state=failed,
+                    result=result,
+                    details=details,
+                    settings=settings,
+                    decision_code="IRRIGATION_OPERATOR_STOP_TARGET_MISMATCH",
+                    message="Die Beregnung bleibt sicher gesperrt; der Zonenstatus ist widersprüchlich.",
+                )
+            stopping = replace(
+                state,
+                revision=state.revision + 1,
+                irrigation_phase="STOPPING",
+                irrigation_zone_clear_since_utc=None,
+            )
+            try:
+                store.save(stopping, expected_revision=original.revision)
+            except Exception as exc:
+                return replace(
+                    result,
+                    decision_code="IRRIGATION_STOP_RESERVATION_FAILED",
+                    message="Der direkte Zonenstopp wurde ohne persistente Reservierung nicht gesendet.",
+                    command_sent=False,
+                    details=_decorate(
+                        details,
+                        state=state,
+                        settings=settings,
+                        persisted=False,
+                        command_sent=False,
+                        error=f"{type(exc).__name__}: {exc}",
+                    ),
+                )
+            api_key = str(environment.get("HYDRAWISE_API_KEY", "")).strip()
+            controller_id = str(environment.get("HYDRAWISE_CONTROLLER_ID", "")).strip() or None
+            try:
+                response = stop_zone_sender(api_key, int(current_id), controller_id)
+            except Exception as exc:
+                failed = _finish_operator_request(
+                    _failed_irrigation(
+                        stopping,
+                        f"Hydrawise-Zonenstopp fehlgeschlagen: {type(exc).__name__}: {exc}",
+                    ),
+                    "Der direkte Hydrawise-Stopp ist fehlgeschlagen; die Anlage bleibt sicher gesperrt.",
+                    status="REJECTED",
+                )
+                try:
+                    store.save(failed, expected_revision=stopping.revision)
+                    persisted = True
+                    error = None
+                except Exception as save_exc:
+                    persisted = False
+                    error = f"{type(save_exc).__name__}: {save_exc}"
+                return replace(
+                    result,
+                    decision_code="IRRIGATION_ZONE_STOP_FAILED",
+                    message="Hydrawise hat den direkten Zonenstopp nicht bestätigt; der Mäher bleibt gesperrt.",
+                    command_sent=False,
+                    details=_decorate(
+                        details,
+                        state=failed,
+                        settings=settings,
+                        persisted=persisted,
+                        command_sent=False,
+                        error=error or f"{type(exc).__name__}: {exc}",
+                    ),
+                )
+            details["irrigation_action"] = {
+                "type": "StopZone",
+                "relay_id": int(current_id),
+                "response": response,
+            }
+            return replace(
+                result,
+                decision_code="IRRIGATION_ZONE_STOP_SENT",
+                message="Der direkte Hydrawise-Zonenstopp wurde gesendet; die Live-Bestätigung läuft.",
+                command_sent=True,
+                details=_decorate(
+                    details,
+                    state=stopping,
+                    settings=settings,
+                    persisted=True,
+                    command_sent=True,
+                ),
+            )
+
+        if state.irrigation_phase == "STOPPING":
+            if current_id is not None and active_ids == {int(current_id)}:
+                return _persist_result(
+                    store=store,
+                    original=original,
+                    state=state,
+                    result=result,
+                    details=details,
+                    settings=settings,
+                    decision_code="IRRIGATION_WAIT_FOR_DIRECT_STOP",
+                    message="Hydrawise meldet die Zone noch aktiv; der Mäher bleibt geparkt.",
+                )
+            if active_ids or not hydra_safety.get("clear_now"):
+                failed = _failed_irrigation(
+                    state,
+                    "Das Ende der direkt gestoppten Zone ist nicht eindeutig.",
+                )
+                return _persist_result(
+                    store=store,
+                    original=original,
+                    state=failed,
+                    result=result,
+                    details=details,
+                    settings=settings,
+                    decision_code="IRRIGATION_DIRECT_STOP_END_UNCLEAR",
+                    message="Der direkte Zonenstopp ist nicht sicher bestätigt; der Mäher bleibt gesperrt.",
+                )
+            clear_since = _parse_time(state.irrigation_zone_clear_since_utc)
+            if clear_since is None:
+                confirming = replace(
+                    state,
+                    revision=state.revision + 1,
+                    irrigation_zone_clear_since_utc=now.isoformat(),
+                )
+                return _persist_result(
+                    store=store,
+                    original=original,
+                    state=confirming,
+                    result=result,
+                    details=details,
+                    settings=settings,
+                    decision_code="IRRIGATION_CONFIRM_DIRECT_STOP",
+                    message="Hydrawise meldet die Zone erstmals beendet; die Bestätigung läuft.",
+                )
+            end_confirmation = _env_int(
+                environment,
+                "IRRIGATION_ZONE_END_CONFIRMATION_MINUTES",
+                2,
+                minimum=1,
+                maximum=10,
+            )
+            if now - clear_since < timedelta(minutes=end_confirmation):
+                return _persist_result(
+                    store=store,
+                    original=original,
+                    state=state,
+                    result=result,
+                    details=details,
+                    settings=settings,
+                    decision_code="IRRIGATION_CONFIRM_DIRECT_STOP",
+                    message="Das direkte Zonenende wird fortlaufend bestätigt.",
+                )
+            stopped = replace(
+                _finish_operator_request(
+                    state,
+                    "Die Zone ist sicher beendet; keine weitere Zone startet.",
+                ),
+                revision=state.revision + 2,
+                irrigation_phase="COMPLETE_HOLD",
+                irrigation_current_relay_id=None,
+                irrigation_zone_start_reserved_utc=None,
+                irrigation_zone_started_utc=None,
+                irrigation_zone_clear_since_utc=None,
+                irrigation_completed_utc=now.isoformat(),
+                hydrawise_clear_since_utc=now.isoformat(),
+            )
+            return _persist_result(
+                store=store,
+                original=original,
+                state=stopped,
+                result=result,
+                details=details,
+                settings=settings,
+                decision_code="IRRIGATION_OPERATOR_STOPPED_NOW",
+                message="Hydrawise hat das Ende bestätigt; der 120-Minuten-Sicherheitsnachlauf beginnt.",
             )
 
         if state.irrigation_phase == "START_RESERVED":

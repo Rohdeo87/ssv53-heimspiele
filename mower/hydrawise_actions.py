@@ -73,3 +73,29 @@ def start_zone_for(
         **_controller_parameters(controller_id),
     }
     return _get_json("setzone.php", parameters, timeout=timeout)
+
+
+def stop_zone_now(
+    api_key: str,
+    relay_id: int,
+    controller_id: str | int | None = None,
+    *,
+    timeout: int = 20,
+) -> dict[str, Any]:
+    """Stoppt genau die aktuell laufende Hydrawise-Zone.
+
+    Die Steuerung darf daraus noch keine Mäherfreigabe ableiten. Erst der
+    anschließend fortlaufend bestätigte Live-Status startet den separaten
+    Beregnungsnachlauf.
+    """
+
+    key = _required_text(api_key, "HYDRAWISE_API_KEY")
+    if int(relay_id) <= 0:
+        raise HydrawiseError("relay_id muss positiv sein.")
+    parameters: dict[str, str | int] = {
+        "api_key": key,
+        "action": "stop",
+        "relay_id": int(relay_id),
+        **_controller_parameters(controller_id),
+    }
+    return _get_json("setzone.php", parameters, timeout=timeout)

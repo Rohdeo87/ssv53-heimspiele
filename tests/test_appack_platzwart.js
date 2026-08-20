@@ -21,6 +21,7 @@ test("Platzwart-Seite ist syntaktisch gültig und enthält keine Zugangsdaten", 
   });
   assert.match(html, /platzwart/i);
   assert.match(html, /STOP_IRRIGATION_AFTER_ZONE/);
+  assert.match(html, /STOP_IRRIGATION_NOW/);
   assert.match(html, /START_IRRIGATION_ZONE/);
   assert.match(html, /Automatik einschalten/);
   assert.match(html, /refresh-spinner/);
@@ -28,6 +29,9 @@ test("Platzwart-Seite ist syntaktisch gültig und enthält keine Zugangsdaten", 
   assert.match(html, /Wird ausgeführt/);
   assert.match(html, /waitForAction/);
   assert.match(html, /Gebucht von:/);
+  assert.match(html, /weekday:"long",day:"2-digit",month:"long",year:"numeric"/);
+  assert.match(html, /function submitPin\(\)/);
+  assert.doesNotMatch(html, /id="login-button"/);
   assert.match(html, /continuousMowingOwned/);
   assert.match(html, /Automatik aktiv/);
   assert.match(html, /Mäher nicht erreichbar/);

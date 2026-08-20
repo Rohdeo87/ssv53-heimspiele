@@ -30,6 +30,7 @@ ALLOWED_ACTIONS = frozenset(
     {
         "PARK_MOWER", "START_MOWING", "START_IRRIGATION",
         "START_IRRIGATION_ZONE", "STOP_IRRIGATION_AFTER_ZONE",
+        "STOP_IRRIGATION_NOW",
     }
 )
 
@@ -593,9 +594,9 @@ def request_action(
             409,
         )
     if (
-        normalized == "STOP_IRRIGATION_AFTER_ZONE"
+        normalized in {"STOP_IRRIGATION_AFTER_ZONE", "STOP_IRRIGATION_NOW"}
         and original.irrigation_phase
-        not in {"PLANNED", "SUSPENDING", "READY", "START_RESERVED", "RUNNING"}
+        not in {"PLANNED", "SUSPENDING", "READY", "START_RESERVED", "RUNNING", "STOPPING"}
     ):
         raise PlatzwartError(
             "IRRIGATION_NOT_ACTIVE",
