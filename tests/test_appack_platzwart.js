@@ -42,6 +42,19 @@ test("Platzwart-Seite ist syntaktisch gültig und enthält keine Zugangsdaten", 
   assert.doesNotMatch(html, />Failed to fetch</);
   assert.match(html, /continuousMowingOwned/);
   assert.match(html, /Automatik aktiv/);
+  assert.match(html, /Automatik ausgeschaltet/);
+  assert.match(html, />Mäher parken</);
+  assert.match(html, />Alle Zonen starten</);
+  assert.match(html, /class="btn water-start"/);
+  assert.match(html, /id="mower-next-start"/);
+  assert.match(html, /Geschätzt:/);
+  assert.match(html, /Nach Plan:/);
+  assert.match(html, /Nach Beregnungsende \+ 120 Min\./);
+  assert.match(html, /startButton\.classList\.toggle\("hidden"/);
+  assert.match(html, /parkButton\.classList\.toggle\("hidden"/);
+  assert.match(html, /function mowerActions\(s\)/);
+  assert.doesNotMatch(html, />Mäher sicher parken</);
+  assert.doesNotMatch(html, />Sieben Zonen sicher starten</);
   assert.match(html, /Mäher nicht erreichbar/);
   assert.match(html, /Mäher sucht Verbindung/);
   assert.match(html, /mower-connection/);
@@ -88,4 +101,53 @@ test("Vereinsheimtermine werden kompakt in Berliner Zeit dargestellt", () => {
     format("2026-09-05T05:00:00Z", "2026-09-05T22:00:00Z"),
     /^Sa\., 05\.09\.26 · 07:00–24:00 Uhr$/
   );
+});
+
+test("heutige Platzbelegung wird als Heute mit Uhrzeit dargestellt", () => {
+  const localDayFunction = html.split("\n").find((line) => line.includes("function localDay(value)"));
+  const calendarFunction = html.split("\n").find((line) => line.includes("function calendarTime(v,referenceValue)"));
+  assert.ok(localDayFunction);
+  assert.ok(calendarFunction);
+  const format = new Function(
+    `var EVENT_TIME_ZONE="Europe/Berlin";\n${localDayFunction}\n${calendarFunction}\nreturn calendarTime;`
+  )();
+  assert.equal(
+    format("2026-08-20T17:30:00Z", "2026-08-20T08:00:00Z"),
+    "Heute, 19:30 Uhr"
+  );
+  assert.match(
+    format("2026-08-21T17:30:00Z", "2026-08-20T08:00:00Z"),
+    /^Fr\., 19:30 Uhr$/
+  );
+});
+
+test("Mäheraktionen sind für Fahren, Laden, Sperren und manuelle Bedienung eindeutig", () => {
+  const searchingFunction = html.split("\n").find((line) => line.includes("function isSearching(m)"));
+  const actionsFunction = html.split("\n").find((line) => line.includes("function mowerActions(s)"));
+  assert.ok(searchingFunction);
+  assert.ok(actionsFunction);
+  const actions = new Function(`${searchingFunction}\n${actionsFunction}\nreturn mowerActions;`)();
+  const safe = { available: true, fresh: true, clear_now: true };
+
+  assert.deepEqual(
+    { ...actions({ mower: { activity: "MOWING", connected: true, errorCode: 0 }, irrigation: { safety: safe }, automation: { continuousMowingOwned: true }, occupancy: {} }), startQuestion: undefined },
+    { showPark: true, showStart: false, startLabel: "Mäher starten", startQuestion: undefined }
+  );
+  const charging = actions({ mower: { activity: "CHARGING", batteryPercent: 70, connected: true, errorCode: 0 }, irrigation: { safety: safe }, automation: { continuousMowingOwned: true }, occupancy: {} });
+  assert.equal(charging.showPark, false);
+  assert.equal(charging.showStart, true);
+  assert.equal(charging.startLabel, "Mäher starten");
+  assert.match(charging.startQuestion, /lädt noch bei 70 %/);
+
+  const blocked = actions({ mower: { activity: "CHARGING", connected: true, errorCode: 0 }, irrigation: { safety: safe }, automation: {}, occupancy: { current: { title: "Training" } } });
+  assert.equal(blocked.showPark, false);
+  assert.equal(blocked.showStart, false);
+
+  const manual = actions({ overall: { code: "EXTERNAL_OVERRIDE" }, mower: { activity: "CHARGING", connected: true, errorCode: 0 }, irrigation: { safety: safe }, automation: {}, occupancy: { current: { title: "Training" } } });
+  assert.equal(manual.showStart, true);
+  assert.equal(manual.startLabel, "Automatik einschalten");
+
+  const disconnected = actions({ mower: { activity: "MOWING", connected: false, errorCode: 0 }, irrigation: { safety: safe }, automation: {}, occupancy: {} });
+  assert.equal(disconnected.showPark, false);
+  assert.equal(disconnected.showStart, false);
 });
