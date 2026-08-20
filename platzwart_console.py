@@ -534,6 +534,9 @@ def live_status(environment: Mapping[str, str], now_utc: datetime) -> dict[str, 
         "mower": {
             "activity": mower.get("activity"), "state": mower.get("state"),
             "batteryPercent": mower.get("battery_percent"), "errorCode": mower.get("error_code"),
+            "connected": mower.get("connected"),
+            "statusTimestamp": mower.get("status_timestamp_ms"),
+            "restrictedReason": mower.get("restricted_reason"),
             "workArea": target.get("name"), "workAreaProgress": target.get("progress"),
         },
         "irrigation": {

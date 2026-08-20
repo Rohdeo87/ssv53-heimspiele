@@ -25,6 +25,7 @@ def mower_item(
         "attributes": {
             "system": {"name": name, "model": model},
             "battery": {"batteryPercent": 97},
+            "metadata": {"connected": True, "statusTimestamp": 1785600000123},
             "mower": {
                 "activity": "PARKED_IN_CS",
                 "state": "RESTRICTED",
@@ -66,6 +67,8 @@ class HusqvarnaParsingTests(unittest.TestCase):
         self.assertEqual(snapshot.battery_percent, 97)
         self.assertEqual(snapshot.activity, "PARKED_IN_CS")
         self.assertEqual(snapshot.external_reason_id, 253053)
+        self.assertTrue(snapshot.connected)
+        self.assertEqual(snapshot.status_timestamp_ms, 1785600000123)
         self.assertEqual(snapshot.work_areas[0]["name"], "Rasenfläche")
         self.assertEqual(snapshot.work_areas[0]["type"], "SYSTEMATIC")
         self.assertEqual(snapshot.work_areas[0]["progress"], 65)

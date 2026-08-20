@@ -36,6 +36,8 @@ class MowerSnapshot:
     external_reason_id: int | None
     next_start_timestamp_ms: int | None
     work_areas: tuple[dict[str, Any], ...]
+    connected: bool | None = None
+    status_timestamp_ms: int | None = None
 
     def to_dict(self) -> dict[str, Any]:
         value = asdict(self)
@@ -256,6 +258,7 @@ def parse_snapshot(item: dict[str, Any]) -> MowerSnapshot:
     battery_data = as_dict(attributes.get("battery"))
     mower_data = as_dict(attributes.get("mower"))
     planner_data = as_dict(attributes.get("planner"))
+    metadata = as_dict(attributes.get("metadata"))
     override_data = as_dict(planner_data.get("override"))
 
     return MowerSnapshot(
@@ -280,4 +283,10 @@ def parse_snapshot(item: dict[str, Any]) -> MowerSnapshot:
             planner_data.get("nextStartTimestamp")
         ),
         work_areas=_parse_work_areas(attributes.get("workAreas")),
+        connected=(
+            bool(metadata.get("connected"))
+            if isinstance(metadata.get("connected"), bool)
+            else None
+        ),
+        status_timestamp_ms=_parse_timestamp(metadata.get("statusTimestamp")),
     )
