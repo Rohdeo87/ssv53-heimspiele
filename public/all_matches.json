@@ -198,7 +198,7 @@
     "team_name": "Schönwalder SV",
     "team_category": "A-Junioren | Landesklasse",
     "team_role": "home",
-    "kickoff": "2026-08-29T11:00+02:00",
+    "kickoff": "2026-08-29T12:00+02:00",
     "home_team": "Schönwalder SV",
     "away_team": "FC Schwedt 02 A-Junioren",
     "competition": "Sa, | A-Junioren | Landesklasse",
@@ -210,9 +210,9 @@
     "decision": "include",
     "calendar": "Rasen",
     "venue_rule": "Rasen Schönwalde",
-    "event_start": "2026-08-29T10:00+02:00",
-    "event_end": "2026-08-29T13:30+02:00",
-    "checksum": "10278cb1bd5d276a35762968bf570c840a8981807e4f301f1de70c110d0c69e5",
+    "event_start": "2026-08-29T11:00+02:00",
+    "event_end": "2026-08-29T14:30+02:00",
+    "checksum": "3495e2a087de55963c6e2bae8af83e8230988db392a5778fa4d9bafc39892a19",
     "warnings": []
   },
   {
