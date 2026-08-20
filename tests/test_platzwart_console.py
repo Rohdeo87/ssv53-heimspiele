@@ -62,7 +62,7 @@ class PlatzwartAuthenticationTests(unittest.TestCase):
             {"findBookingResources": [{"id": "resource-1", "name": "Vereinsheim"}]},
             {"findBookingCalendar": {"items": ["FULLY_BOOKED", "AVAILABLE"]}},
             {
-                "findResourcePlans": [
+                "day0": [
                     {
                         "slots": [
                             {
@@ -126,12 +126,12 @@ class PlatzwartAuthenticationTests(unittest.TestCase):
             }
 
         _CLUBHOUSE_CACHE.update({"expires": None, "events": [], "available": False})
-        statuses = ["AVAILABLE"] * 23 + ["FULLY_BOOKED"]
+        statuses = ["AVAILABLE"] * 23 + ["MOSTLY_BOOKED"]
         graphql_results = [
             {"findBookingResources": [{"id": "resource-1", "name": "Vereinsheim"}]},
             {"findBookingCalendar": {"items": statuses}},
             {
-                "findResourcePlans": [
+                "day0": [
                     {
                         "slots": [
                             slot(5, 6, "one-booking"),
@@ -162,6 +162,51 @@ class PlatzwartAuthenticationTests(unittest.TestCase):
         serialized = json.dumps(result)
         self.assertNotIn("one-booking", serialized)
         self.assertNotIn("other-booking", serialized)
+
+    def test_clubhouse_booking_after_more_than_eight_occupied_days_is_not_lost(self) -> None:
+        class Response:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                return None
+
+            def geturl(self):
+                return "https://application.appack.de/resource-management/de?component=component-1&jwt=" + "x" * 80
+
+        _CLUBHOUSE_CACHE.update({"expires": None, "events": [], "available": False})
+        plans = {f"day{index}": [] for index in range(9)}
+        plans["day8"] = [
+            {
+                "slots": [
+                    {
+                        "start": "2026-08-21T17:00:00Z",
+                        "end": "2026-08-21T18:00:00Z",
+                        "available": False,
+                        "bookingId": "ninth-day-booking",
+                        "booking": {"profileName": "Erika Musterfrau", "comment": "Kurze Buchung"},
+                    }
+                ]
+            }
+        ]
+        graphql_results = [
+            {"findBookingResources": [{"id": "resource-1", "name": "Vereinsheim"}]},
+            {"findBookingCalendar": {"items": ["MOSTLY_BOOKED"] * 9}},
+            plans,
+        ]
+        with patch("platzwart_console.urllib.request.urlopen", return_value=Response()), patch(
+            "platzwart_console._appack_graphql", side_effect=graphql_results
+        ) as graphql:
+            result = _clubhouse_events(
+                {"SSV53_CLUBHOUSE_RESERVATION_URL": "https://example.invalid/embed"},
+                NOW,
+            )
+
+        self.assertTrue(result["available"], msg=result)
+        self.assertEqual([item["title"] for item in result["events"]], ["Kurze Buchung"])
+        plans_query = graphql.call_args_list[2].args[1]
+        self.assertIn("day8:findResourcePlans", plans_query)
+        self.assertNotIn("ninth-day-booking", json.dumps(result))
 
 
 class PlatzwartSafetyIntegrationTests(unittest.TestCase):

@@ -29,7 +29,11 @@ test("Platzwart-Seite ist syntaktisch gültig und enthält keine Zugangsdaten", 
   assert.match(html, /Wird ausgeführt/);
   assert.match(html, /waitForAction/);
   assert.match(html, /Gebucht von:/);
-  assert.match(html, /weekday:"long",day:"2-digit",month:"long",year:"numeric"/);
+  assert.match(html, /function eventDate\(value\)/);
+  assert.match(html, /weekday:"short",day:"2-digit",month:"2-digit",year:"2-digit"/);
+  assert.match(html, /EVENT_TIME_ZONE="Europe\/Berlin"/);
+  assert.match(html, /startTime\+"–"\+endTime/);
+  assert.doesNotMatch(html, /month:"long"/);
   assert.match(html, /function submitPin\(\)/);
   assert.doesNotMatch(html, /id="login-button"/);
   assert.match(html, /function clearActionError\(\)/);
@@ -49,4 +53,28 @@ test("nur aktive Rollen werden geprüft und requestedRoles bleiben unberücksich
   assert.match(html, /p\.roleKeys/);
   assert.match(html, /p\.roles/);
   assert.doesNotMatch(html, /requestedRoles/);
+});
+
+test("Vereinsheimtermine werden kompakt in Berliner Zeit dargestellt", () => {
+  process.env.TZ = "Europe/Berlin";
+  const dateFunction = html.split("\n").find((line) => line.includes("function eventDate(value)"));
+  const clockFunction = html.split("\n").find((line) => line.includes("function eventClock(value)"));
+  const dayFunction = html.split("\n").find((line) => line.includes("function eventDay(value)"));
+  const timeFunction = html.split("\n").find((line) => line.includes("function eventTime(startValue,endValue)"));
+  assert.ok(dateFunction);
+  assert.ok(clockFunction);
+  assert.ok(dayFunction);
+  assert.ok(timeFunction);
+  const format = new Function(
+    `var EVENT_TIME_ZONE="Europe/Berlin";\n${dateFunction}\n${clockFunction}\n${dayFunction}\n${timeFunction}\nreturn eventTime;`
+  )();
+
+  assert.match(
+    format("2026-08-23T16:00:00Z", "2026-08-23T20:00:00Z"),
+    /^So\., 23\.08\.26 · 18:00–22:00 Uhr$/
+  );
+  assert.match(
+    format("2026-09-05T05:00:00Z", "2026-09-05T22:00:00Z"),
+    /^Sa\., 05\.09\.26 · 07:00–24:00 Uhr$/
+  );
 });

@@ -443,37 +443,56 @@ def _clubhouse_events(environment: Mapping[str, str], now_utc: datetime) -> dict
         booked_days = [
             today + timedelta(days=index)
             for index, status in enumerate(statuses)
-            if str(status).upper() == "FULLY_BOOKED"
-        ][:8]
+            if str(status or "").strip().upper() not in {"", "AVAILABLE"}
+        ]
         slots_by_key: dict[tuple[str, str, str], dict[str, Any]] = {}
-        for day in booked_days:
+        for batch_start in range(0, len(booked_days), 31):
+            day_batch = booked_days[batch_start : batch_start + 31]
+            definitions = ["$resourceId:ID!", "$includeBooked:Boolean"] + [
+                f"$day{index}:String" for index in range(len(day_batch))
+            ]
+            selections = [
+                f"day{index}:findResourcePlans(resourceId:$resourceId,day:$day{index},includeBooked:$includeBooked)"
+                "{slots{start end available blocked bookingId booking{profileName comment}}}"
+                for index in range(len(day_batch))
+            ]
+            variables: dict[str, Any] = {
+                "resourceId": str(clubhouse["id"]),
+                "includeBooked": True,
+            }
+            variables.update(
+                {f"day{index}": day.isoformat() for index, day in enumerate(day_batch)}
+            )
             plans_data = _appack_graphql(
                 token,
-                "query FindPlans($resourceId:ID!,$day:String,$includeBooked:Boolean){findResourcePlans(resourceId:$resourceId,day:$day,includeBooked:$includeBooked){slots{start end available blocked bookingId booking{profileName comment}}}}",
-                {"resourceId": str(clubhouse["id"]), "day": day.isoformat(), "includeBooked": True},
+                "query FindPlans(" + ",".join(definitions) + "){"
+                + "".join(selections)
+                + "}",
+                variables,
             )
-            for plan in plans_data.get("findResourcePlans") or []:
-                for slot in (plan.get("slots") or []) if isinstance(plan, dict) else []:
-                    if not isinstance(slot, dict) or slot.get("available") is not False:
-                        continue
-                    if not slot.get("bookingId") or not slot.get("start") or not slot.get("end"):
-                        continue
-                    start = _iso_datetime(slot["start"])
-                    end = _iso_datetime(slot["end"])
-                    if start is None or end is None or end <= now or start.astimezone(berlin).date() != day:
-                        continue
-                    booking_id = str(slot["bookingId"])
-                    key = (booking_id, start.isoformat(), end.isoformat())
-                    booking = slot.get("booking") if isinstance(slot.get("booking"), dict) else {}
-                    booked_by = " ".join(str(booking.get("profileName") or "").split())[:100]
-                    content = " ".join(str(booking.get("comment") or "").split())[:200]
-                    slots_by_key[key] = {
-                        "bookingId": booking_id,
-                        "title": content or "Vereinsheim belegt",
-                        "bookedBy": booked_by or "Nicht angegeben",
-                        "start": start,
-                        "end": end,
-                    }
+            for index, day in enumerate(day_batch):
+                for plan in plans_data.get(f"day{index}") or []:
+                    for slot in (plan.get("slots") or []) if isinstance(plan, dict) else []:
+                        if not isinstance(slot, dict) or slot.get("available") is not False:
+                            continue
+                        if not slot.get("bookingId") or not slot.get("start") or not slot.get("end"):
+                            continue
+                        start = _iso_datetime(slot["start"])
+                        end = _iso_datetime(slot["end"])
+                        if start is None or end is None or end <= now or start.astimezone(berlin).date() != day:
+                            continue
+                        booking_id = str(slot["bookingId"])
+                        key = (booking_id, start.isoformat(), end.isoformat())
+                        booking = slot.get("booking") if isinstance(slot.get("booking"), dict) else {}
+                        booked_by = " ".join(str(booking.get("profileName") or "").split())[:100]
+                        content = " ".join(str(booking.get("comment") or "").split())[:200]
+                        slots_by_key[key] = {
+                            "bookingId": booking_id,
+                            "title": content or "Vereinsheim belegt",
+                            "bookedBy": booked_by or "Nicht angegeben",
+                            "start": start,
+                            "end": end,
+                        }
         merged_by_booking: list[dict[str, Any]] = []
         for item in sorted(
             slots_by_key.values(),
