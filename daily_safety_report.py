@@ -31,6 +31,7 @@ from order_mail import (
 REPORT_PARTITION = "ssv53-daily-safety-report-v1"
 REPORT_TIME_ZONE = ZoneInfo("Europe/Berlin")
 MOWING_ACTIVITIES = frozenset({"MOWING", "LEAVING"})
+PARKED_ACTIVITIES = frozenset({"PARKED_IN_CS", "CHARGING"})
 QUERY_SCOPE = "https://api.applicationinsights.io/.default"
 MAX_QUERY_ROWS = 20_000
 
@@ -71,6 +72,8 @@ class DailyReportSummary:
     command_count_24h: int
     mowing_minutes_7d: int
     average_daily_mowing_minutes_7d: int
+    mowing_minutes_today: int
+    average_return_minutes_7d: int | None
     completed_area_cycles_7d: int
     current_work_area_progress: int
     last_completed_area_utc: datetime | None
@@ -363,10 +366,66 @@ def summarize_report(
             item.work_area_last_completed, timezone.utc
         ) >= period_start_utc - timedelta(hours=3)
     }
-    completed_cycles = len(completion_values)
-    last_completed_area_utc = (
-        datetime.fromtimestamp(max(completion_values), timezone.utc)
-        if completion_values
+    completion_times = sorted(
+        datetime.fromtimestamp(value, timezone.utc) for value in completion_values
+    )
+    # The 580 EPOS currently leaves lastTimeCompleted at 0. Its systematic-area
+    # progress is integer telemetry and can therefore move 99 -> 0 between two
+    # minute samples even though the app briefly shows 100 %. Treat only a
+    # stable 99 % plateau followed immediately by the reset as a completion.
+    high_progress_samples = 0
+    last_high_progress_at: datetime | None = None
+    for item in relevant:
+        is_high_mowing_sample = (
+            item.work_area_type == "SYSTEMATIC"
+            and item.activity in MOWING_ACTIVITIES
+            and item.work_area_progress >= 99
+        )
+        if is_high_mowing_sample:
+            if (
+                last_high_progress_at is not None
+                and item.timestamp_utc - last_high_progress_at <= timedelta(seconds=90)
+            ):
+                high_progress_samples += 1
+            else:
+                high_progress_samples = 1
+            last_high_progress_at = item.timestamp_utc
+            continue
+        inferred_completion = (
+            high_progress_samples >= 2
+            and last_high_progress_at is not None
+            and item.timestamp_utc - last_high_progress_at <= timedelta(seconds=90)
+            and item.work_area_progress <= 1
+        )
+        if inferred_completion and not any(
+            abs((item.timestamp_utc - confirmed).total_seconds()) <= 10 * 60
+            for confirmed in completion_times
+        ):
+            completion_times.append(item.timestamp_utc)
+        high_progress_samples = 0
+        last_high_progress_at = None
+    completion_times.sort()
+    completed_cycles = len(completion_times)
+    last_completed_area_utc = completion_times[-1] if completion_times else None
+    return_minutes: list[float] = []
+    going_home_started_at: datetime | None = None
+    previous_activity: str | None = None
+    for item in relevant:
+        if item.activity == "GOING_HOME":
+            if previous_activity != "GOING_HOME":
+                going_home_started_at = item.timestamp_utc
+        elif going_home_started_at is not None:
+            if item.activity in PARKED_ACTIVITIES:
+                duration_minutes = (
+                    item.timestamp_utc - going_home_started_at
+                ).total_seconds() / 60
+                if 0 < duration_minutes <= 60:
+                    return_minutes.append(duration_minutes)
+            going_home_started_at = None
+        previous_activity = item.activity
+    average_return_minutes = (
+        round(sum(return_minutes) / len(return_minutes))
+        if return_minutes
         else None
     )
     gaps = 0
@@ -404,6 +463,8 @@ def summarize_report(
         command_count_24h=sum(1 for item in last_24h if item.command_sent),
         mowing_minutes_7d=mowing_minutes,
         average_daily_mowing_minutes_7d=round(mowing_minutes / 7),
+        mowing_minutes_today=days[-1][1],
+        average_return_minutes_7d=average_return_minutes,
         completed_area_cycles_7d=completed_cycles,
         current_work_area_progress=latest.work_area_progress if latest else 0,
         last_completed_area_utc=last_completed_area_utc,
@@ -449,6 +510,8 @@ def dashboard_statistics(
         "available": True,
         "mowingMinutes7d": summary.mowing_minutes_7d,
         "averageDailyMowingMinutes7d": summary.average_daily_mowing_minutes_7d,
+        "mowingMinutesToday": summary.mowing_minutes_today,
+        "averageReturnMinutes7d": summary.average_return_minutes_7d,
         "completedAreaCycles7d": summary.completed_area_cycles_7d,
         "lastCompletedAreaUtc": (
             summary.last_completed_area_utc.isoformat()
@@ -491,6 +554,13 @@ def build_message(
         ("Befehle 24 h", str(summary.command_count_24h)),
         ("Mähzeit 7 Tage", _minutes(summary.mowing_minutes_7d)),
         ("Ø Mähzeit pro Tag", _minutes(summary.average_daily_mowing_minutes_7d)),
+        ("Mähzeit heute", _minutes(summary.mowing_minutes_today)),
+        (
+            "Ø Heimfahrdauer 7 Tage",
+            _minutes(summary.average_return_minutes_7d)
+            if summary.average_return_minutes_7d is not None
+            else "noch kein Messwert",
+        ),
         ("Aktueller Flächenfortschritt", f"{summary.current_work_area_progress} %"),
         ("Bestätigte Abschlüsse (7 Tage)", f"{summary.completed_area_cycles_7d}"),
         ("Letzter bestätigter Abschluss", _local_time(summary.last_completed_area_utc)),

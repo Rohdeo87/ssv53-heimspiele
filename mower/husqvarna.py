@@ -36,6 +36,7 @@ class MowerSnapshot:
     external_reason_id: int | None
     next_start_timestamp_ms: int | None
     work_areas: tuple[dict[str, Any], ...]
+    inactive_reason: str = "NONE"
     connected: bool | None = None
     status_timestamp_ms: int | None = None
     global_cutting_height_percent: int | None = None
@@ -313,6 +314,9 @@ def parse_snapshot(item: dict[str, Any]) -> MowerSnapshot:
             planner_data.get("nextStartTimestamp")
         ),
         work_areas=_parse_work_areas(attributes.get("workAreas")),
+        inactive_reason=str(
+            mower_data.get("inactiveReason") or "NONE"
+        ).upper(),
         connected=(
             bool(metadata.get("connected"))
             if isinstance(metadata.get("connected"), bool)

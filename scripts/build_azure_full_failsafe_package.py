@@ -91,9 +91,17 @@ def collect_files(repository_root: Path) -> list[tuple[str, bytes]]:
     if mower_action_files != [
         "mower/husqvarna_actions.py",
         "mower/husqvarna_start_actions.py",
-        "mower/husqvarna_statistics_actions.py",
     ]:
         raise ValueError("Husqvarna-Schreiblogik liegt nicht ausschließlich in den geprüften Modulen.")
+    statistics_reset_files = sorted(
+        name
+        for name, content in files
+        if b"/statistics/resetCuttingBladeUsageTime" in content
+    )
+    if statistics_reset_files != ["mower/husqvarna_statistics_actions.py"]:
+        raise ValueError(
+            "Husqvarna-Statistik-Rücksetzung liegt nicht ausschließlich im geprüften Modul."
+        )
     height_write_files = sorted(
         name
         for name, content in files

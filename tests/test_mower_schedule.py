@@ -15,13 +15,31 @@ from mower.planner import (
     read_match_blocks,
 )
 from mower.decision import parking_block_for
-from mower.dry_run import _safe_mowing_windows
+from mower.dry_run import _block_to_dict, _safe_mowing_windows
 
 
 TZ = ZoneInfo("Europe/Berlin")
 
 
 class MowerPlannerTests(unittest.TestCase):
+    def test_dashboard_block_keeps_merged_appointment_details(self) -> None:
+        block = Block(
+            start=datetime(2026, 8, 21, 16, 20, tzinfo=TZ),
+            end=datetime(2026, 8, 21, 22, 30, tzinfo=TZ),
+            source="match+training",
+            title="Training C; Spiel Ü40",
+            details={"items": [{"source": "training"}, {"source": "match"}]},
+        )
+
+        payload = _block_to_dict(block)
+
+        self.assertIsNotNone(payload)
+        self.assertEqual(payload["source"], "match+training")
+        self.assertEqual(
+            payload["details"]["items"],
+            [{"source": "training"}, {"source": "match"}],
+        )
+
     def test_next_safe_window_skips_time_too_short_before_training(self) -> None:
         config = {
             "timezone": "Europe/Berlin",
@@ -70,6 +88,9 @@ class MowerPlannerTests(unittest.TestCase):
         self.assertEqual(len(merged), 1)
         self.assertEqual(merged[0].start, datetime(2026, 8, 25, 16, 30, tzinfo=TZ))
         self.assertEqual(merged[0].end, datetime(2026, 8, 25, 20, 30, tzinfo=TZ))
+        first = merged[0].details["items"][0]["details"]
+        self.assertEqual(first["nominal_start"], datetime(2026, 8, 25, 17, 0, tzinfo=TZ).isoformat())
+        self.assertEqual(first["nominal_end"], datetime(2026, 8, 25, 18, 30, tzinfo=TZ).isoformat())
 
     def test_training_park_command_is_forty_minutes_before_training(self) -> None:
         blocks = build_training_blocks(

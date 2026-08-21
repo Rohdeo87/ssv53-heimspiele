@@ -36,6 +36,7 @@ from platzwart_console import (
     PlatzwartError,
     enroll as platzwart_enroll,
     live_status as platzwart_live_status,
+    unavailable_live_status as platzwart_unavailable_live_status,
     login as platzwart_login,
     request_action as platzwart_request_action,
     require_session as require_platzwart_session,
@@ -595,11 +596,9 @@ def ssv53_platzwart_status(req: func.HttpRequest) -> func.HttpResponse:
         return _platzwart_response(req, {"code": exc.code, "error": str(exc)}, exc.status_code)
     except Exception:
         LOGGER.exception("SSV53_PLATZWART_STATUS_ERROR")
-        return _platzwart_response(
-            req,
-            {"code": "STATUS_ERROR", "error": "Live-Daten sind gerade nicht sicher verfügbar."},
-            503,
-        )
+        # Die Seite bleibt auch bei einem unerwarteten Lesefehler nutzbar. Die
+        # Ersatzantwort enthält bewusst keine freigegebene Bedienaktion.
+        return _platzwart_response(req, platzwart_unavailable_live_status(now))
 
 
 @app.route(

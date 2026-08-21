@@ -340,6 +340,25 @@ class FullFailsafeTests(unittest.TestCase):
         self.assertEqual(output.decision_code, "PARK_COMMAND_SENT")
         self.assertEqual(store.load().operator_request_status, "PENDING")
 
+    def test_blade_usage_reset_runs_during_occupancy_when_already_parked(self) -> None:
+        calls = []
+        initial = AutomationState(
+            operator_request_id="blade-parked",
+            operator_request_action="RESET_BLADE_USAGE",
+            operator_requested_utc=(NOW - timedelta(seconds=10)).isoformat(),
+            operator_request_expires_utc=(NOW + timedelta(minutes=10)).isoformat(),
+            operator_request_status="PENDING",
+        )
+        output, store = self._run(
+            initial,
+            result(activity="PARKED_IN_CS", block_source="training"),
+            blade_reset=lambda *args: calls.append(args) or {"accepted": True},
+            park=lambda *_: self.fail("Bereits geparkter Mäher darf keinen Parkbefehl erhalten"),
+        )
+        self.assertEqual(calls, [("client", "secret", "mower-1")])
+        self.assertEqual(output.decision_code, "BLADE_USAGE_RESET")
+        self.assertEqual(store.load().operator_request_status, "COMPLETED")
+
     def test_external_station_park_is_not_taken_over_for_training_or_match(self) -> None:
         for source in ("training", "match", "training+match"):
             for activity in ("PARKED_IN_CS", "CHARGING"):
@@ -1377,6 +1396,62 @@ class FullFailsafeTests(unittest.TestCase):
         )
         self.assertEqual(output.decision_code, "HYDRAWISE_CLEAR_CONFIRMATION_HOLD")
         self.assertEqual(calls, [])
+
+    def test_harmless_data_gap_uses_two_minute_confirmation_not_irrigation_hold(self) -> None:
+        base = AutomationState(
+            parked_by_automation=True,
+            automation_park_source="training",
+            automation_restart_allowed=True,
+            park_command_sent_utc=(NOW - timedelta(hours=2)).isoformat(),
+            park_confirmed_utc=(NOW - timedelta(hours=2)).isoformat(),
+            hydrawise_clear_since_utc=(NOW - timedelta(minutes=1)).isoformat(),
+            hydrawise_clear_origin="DATA_GAP",
+            last_hydrawise_success_utc=(NOW - timedelta(minutes=1)).isoformat(),
+            last_hydrawise_active_count=0,
+        )
+        calls = []
+        held, _ = self._run(
+            base,
+            result(),
+            start=lambda *args: calls.append(args) or {},
+        )
+        self.assertEqual(held.decision_code, "HYDRAWISE_CLEAR_CONFIRMATION_HOLD")
+        self.assertEqual(
+            held.details["hydrawise_release_gate"]["required_clear_minutes"],
+            2,
+        )
+        self.assertEqual(calls, [])
+
+        confirmed = AutomationState.from_mapping(
+            {
+                **base.to_dict(),
+                "hydrawise_clear_since_utc": (NOW - timedelta(minutes=2)).isoformat(),
+            }
+        )
+        started, _ = self._run(
+            confirmed,
+            result(),
+            start=lambda *args: calls.append(args) or {"accepted": True},
+        )
+        self.assertEqual(started.decision_code, "CONTINUOUS_MOWING_START_SENT")
+        self.assertEqual(len(calls), 1)
+
+    def test_possible_irrigation_during_gap_keeps_full_hold(self) -> None:
+        state = AutomationState(
+            parked_by_automation=True,
+            automation_park_source="irrigation_outage",
+            automation_restart_allowed=True,
+            hydrawise_clear_since_utc=(NOW - timedelta(minutes=10)).isoformat(),
+            hydrawise_clear_origin="POSSIBLE_IRRIGATION_DURING_GAP",
+            last_hydrawise_success_utc=(NOW - timedelta(minutes=1)).isoformat(),
+            last_hydrawise_active_count=0,
+        )
+        output, _ = self._run(state, result())
+        self.assertEqual(output.decision_code, "HYDRAWISE_CLEAR_CONFIRMATION_HOLD")
+        self.assertEqual(
+            output.details["hydrawise_release_gate"]["required_clear_minutes"],
+            120,
+        )
 
     def test_owned_irrigation_park_can_restart_in_cancelled_training_window(self) -> None:
         state = irrigation_state(phase="COMPLETE_HOLD")

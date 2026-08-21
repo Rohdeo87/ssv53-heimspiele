@@ -251,6 +251,16 @@ def build_training_blocks(
                 continue
             start = datetime.combine(day, parse_clock(session["start"]), tzinfo=tz) - before
             end = datetime.combine(day, parse_clock(session["end"]), tzinfo=tz) + after
+            nominal_start = datetime.combine(
+                day,
+                parse_clock(session["start"]),
+                tzinfo=tz,
+            )
+            nominal_end = datetime.combine(
+                day,
+                parse_clock(session["end"]),
+                tzinfo=tz,
+            )
             team = str(session.get("team", "Training"))
             blocks.append(
                 Block(
@@ -258,7 +268,12 @@ def build_training_blocks(
                     end=end,
                     source="training",
                     title=f"Training {team}",
-                    details={"team": team, "schedule_id": schedule_id},
+                    details={
+                        "team": team,
+                        "schedule_id": schedule_id,
+                        "nominal_start": nominal_start.isoformat(),
+                        "nominal_end": nominal_end.isoformat(),
+                    },
                 )
             )
     return blocks

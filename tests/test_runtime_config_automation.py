@@ -52,6 +52,11 @@ class RuntimeConfigAutomationTests(unittest.TestCase):
         self.assertIn('MAX_SOURCE_AGE_MINUTES: "720"', self.rollout)
         self.assertNotIn("2026-08-12", self.rollout)
 
+    def test_rollout_executes_the_complete_pytest_suite(self) -> None:
+        self.assertIn("requirements.txt pytest", self.rollout)
+        self.assertIn("python -m pytest -q", self.rollout)
+        self.assertNotIn("python -m unittest discover", self.rollout)
+
     def test_rollout_keeps_atomic_fallback_and_failure_notification(self) -> None:
         self.assertIn("previous/manifest.json", self.rollout)
         self.assertIn("current/manifest.json", self.rollout)

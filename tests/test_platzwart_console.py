@@ -10,6 +10,7 @@ from mower.state_store import InMemoryStateStore
 from platzwart_console import (
     _CLUBHOUSE_CACHE,
     _clubhouse_events,
+    _enrich_display_block,
     _STATISTICS_CACHE,
     _restart_battery_percent,
     PlatzwartError,
@@ -17,6 +18,7 @@ from platzwart_console import (
     create_pin_hash,
     issue_session,
     live_status,
+    unavailable_live_status,
     request_action,
     require_session,
     verify_pin,
@@ -29,6 +31,110 @@ SESSION_ENV = {"SSV53_PLATZWART_SESSION_SECRET": "x" * 48}
 
 
 class PlatzwartAuthenticationTests(unittest.TestCase):
+    def test_stale_runtime_config_keeps_live_display_but_locks_all_controls(self) -> None:
+        live_cycle = result(activity="MOWING", battery=71)
+        store = InMemoryStateStore(AutomationState(continuous_mowing_owned=True))
+        stale_error = RuntimeError(
+            "Keine frische, validierte Laufzeitkonfiguration verfügbar; fail-closed. "
+            "current/manifest.json: Konfigurationsstand ist älter als das zulässige Maximalalter."
+        )
+        environment = {**ENV, "SSV53_DYNAMIC_CONFIG_ENABLED": "true"}
+        with patch(
+            "platzwart_console.run_read_only_cycle",
+            side_effect=[stale_error, live_cycle],
+        ) as read_cycle, patch(
+            "platzwart_console.AzureTableStateStore.from_environment",
+            return_value=store,
+        ), patch(
+            "platzwart_console._clubhouse_events",
+            return_value={"available": True, "events": [], "message": None},
+        ), patch(
+            "platzwart_console._dashboard_statistics",
+            return_value={"available": True},
+        ):
+            payload = live_status(environment, NOW)
+
+        self.assertFalse(payload["controlsAvailable"])
+        self.assertEqual(payload["dataQuality"]["code"], "CONFIG_STALE")
+        self.assertTrue(payload["dataQuality"]["displayOnly"])
+        self.assertEqual(payload["mower"]["activity"], "MOWING")
+        self.assertEqual(payload["mower"]["batteryPercent"], 71)
+        self.assertEqual(read_cycle.call_count, 2)
+        fallback_call = read_cycle.call_args_list[1]
+        self.assertEqual(
+            fallback_call.kwargs["environment"]["SSV53_DYNAMIC_CONFIG_ENABLED"],
+            "false",
+        )
+        self.assertEqual(fallback_call.kwargs["source"], "platzwart-status-display-only")
+
+    def test_unrelated_read_error_is_not_hidden_by_display_fallback(self) -> None:
+        with patch(
+            "platzwart_console.run_read_only_cycle",
+            side_effect=RuntimeError("Husqvarna response malformed"),
+        ):
+            with self.assertRaisesRegex(RuntimeError, "Husqvarna response malformed"):
+                live_status(ENV, NOW)
+
+    def test_unavailable_payload_is_always_displayable_and_never_controllable(self) -> None:
+        payload = unavailable_live_status(NOW)
+
+        self.assertFalse(payload["controlsAvailable"])
+        self.assertEqual(payload["dataQuality"]["code"], "DISPLAY_UNAVAILABLE")
+        self.assertFalse(payload["irrigation"]["safety"]["available"])
+        self.assertEqual(payload["occupancy"]["upcoming"], [])
+
+    def test_match_in_merged_block_gets_nominal_display_times(self) -> None:
+        block = {
+            "source": "match+training",
+            "title": "Training C; Spiel Ü40",
+            "details": {
+                "items": [
+                    {
+                        "source": "training",
+                        "title": "Training C",
+                        "details": {
+                            "nominal_start": "2026-08-21T17:00:00+02:00",
+                            "nominal_end": "2026-08-21T18:30:00+02:00",
+                        },
+                    },
+                    {
+                        "source": "match",
+                        "title": "Spiel Ü40",
+                        "details": {
+                            "uid": "dfb-031C84AB5K000000VS5489BUVUR5FS5A@ssv53.de"
+                        },
+                    },
+                ]
+            },
+        }
+        matches = {
+            "dfb:031C84AB5K000000VS5489BUVUR5FS5A": {
+                "kickoff": "2026-08-21T19:00:00+02:00",
+                "end": "2026-08-21T20:45:00+02:00",
+                "team": "Schönwalder SV (Ü40)",
+                "teamCategory": "Ü40",
+                "matchType": "PO",
+            }
+        }
+
+        enriched = _enrich_display_block(block, matches)
+
+        self.assertIsNotNone(enriched)
+        items = enriched["details"]["items"]
+        self.assertEqual(len(items), 2)
+        self.assertEqual(
+            items[0]["details"]["nominal_start"],
+            "2026-08-21T17:00:00+02:00",
+        )
+        self.assertEqual(
+            items[1]["details"]["kickoff"],
+            "2026-08-21T19:00:00+02:00",
+        )
+        self.assertEqual(
+            items[1]["details"]["match_end"],
+            "2026-08-21T20:45:00+02:00",
+        )
+
     def test_restart_battery_threshold_is_bounded(self) -> None:
         self.assertEqual(_restart_battery_percent({}), 90)
         self.assertEqual(_restart_battery_percent({"MOWER_RESTART_BATTERY_PERCENT": "invalid"}), 90)
@@ -36,12 +142,22 @@ class PlatzwartAuthenticationTests(unittest.TestCase):
 
     def test_live_status_exposes_next_start_and_restart_threshold(self) -> None:
         live_cycle = result(activity="CHARGING", battery=70)
+        live_cycle.details["mower"]["target_work_area"]["progress"] = 40
         live_cycle.details["current_plan"]["safe_mowing_windows"] = [
             {
                 "start": NOW.isoformat(),
                 "end": (NOW + timedelta(hours=2)).isoformat(),
                 "command_deadline": (NOW + timedelta(minutes=110)).isoformat(),
                 "minimum_mowing_minutes": 30,
+            }
+        ]
+        live_cycle.details["current_plan"]["upcoming_blocks"] = [
+            {
+                "start": (NOW + timedelta(hours=1)).isoformat(),
+                "end": (NOW + timedelta(hours=2)).isoformat(),
+                "source": "training",
+                "title": "Training A",
+                "details": {},
             }
         ]
         store = InMemoryStateStore()
@@ -58,8 +174,65 @@ class PlatzwartAuthenticationTests(unittest.TestCase):
         ):
             payload = live_status(environment, NOW)
         self.assertEqual(payload["mower"]["restartBatteryPercent"], 92)
+        self.assertEqual(payload["mower"]["model"], "Husqvarna Automower 580 EPOS")
         self.assertEqual(len(payload["occupancy"]["safeWindows"]), 1)
+        self.assertEqual(payload["occupancy"]["upcoming"][0]["title"], "Training A")
         self.assertEqual(payload["statistics"]["completedAreaCycles7d"], 3)
+        self.assertEqual(payload["statistics"]["mownAreaEquivalents7d"], 3.4)
+        self.assertNotIn("totalCuttingSeconds", payload["statistics"])
+        self.assertNotIn("chargingCycles", payload["statistics"])
+
+    def test_epos_home_search_is_exposed_as_satellite_search(self) -> None:
+        live_cycle = result(activity="NOT_APPLICABLE")
+        live_cycle.details["mower"].update(
+            {
+                "state": "IN_OPERATION",
+                "mode": "HOME",
+                "override_action": "FORCE_PARK",
+            }
+        )
+        store = InMemoryStateStore(
+            AutomationState(
+                parked_by_automation=True,
+                automation_park_source="hydrawise_unconfirmed",
+                automation_restart_allowed=True,
+            )
+        )
+        with patch("platzwart_console.run_read_only_cycle", return_value=live_cycle), patch(
+            "platzwart_console.AzureTableStateStore.from_environment",
+            return_value=store,
+        ), patch(
+            "platzwart_console._clubhouse_events",
+            return_value={"available": True, "events": [], "message": None},
+        ), patch(
+            "platzwart_console._dashboard_statistics",
+            return_value={"available": True},
+        ):
+            payload = live_status(ENV, NOW)
+        self.assertEqual(
+            payload["mower"]["displayActivity"],
+            "SEARCHING_FOR_POSITION",
+        )
+        self.assertTrue(payload["mower"]["connected"])
+
+    def test_epos_inactive_reason_overrides_coarse_mowing_activity(self) -> None:
+        live_cycle = result(activity="MOWING")
+        live_cycle.details["mower"]["inactive_reason"] = "SEARCHING_FOR_SATELLITES"
+        store = InMemoryStateStore(AutomationState(continuous_mowing_owned=True))
+        with patch("platzwart_console.run_read_only_cycle", return_value=live_cycle), patch(
+            "platzwart_console.AzureTableStateStore.from_environment",
+            return_value=store,
+        ), patch(
+            "platzwart_console._clubhouse_events",
+            return_value={"available": True, "events": [], "message": None},
+        ), patch(
+            "platzwart_console._dashboard_statistics",
+            return_value={"available": True},
+        ):
+            payload = live_status(ENV, NOW)
+        self.assertEqual(payload["mower"]["activity"], "MOWING")
+        self.assertEqual(payload["mower"]["inactiveReason"], "SEARCHING_FOR_SATELLITES")
+        self.assertEqual(payload["mower"]["displayActivity"], "SEARCHING_FOR_POSITION")
 
     def test_four_digit_pin_is_salted_and_verified(self) -> None:
         encoded = create_pin_hash("4072", salt=b"0123456789abcdef")

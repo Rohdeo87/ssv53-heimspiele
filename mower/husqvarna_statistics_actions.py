@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -23,13 +22,9 @@ def reset_cutting_blade_usage_time(
     if not client_id or not client_secret or not mower_id:
         raise HusqvarnaError("Client-ID, Client-Secret und mower_id werden benötigt.")
     token = get_access_token(client_id, client_secret, timeout=timeout)
-    payload = json.dumps(
-        {"data": {"type": "ResetCuttingBladeUsageTime"}},
-        separators=(",", ":"),
-    ).encode("utf-8")
     request = Request(
-        f"{MOWERS_URL}{mower_id}/actions",
-        data=payload,
+        f"{MOWERS_URL}{mower_id}/statistics/resetCuttingBladeUsageTime",
+        data=None,
         method="POST",
         headers={
             "Accept": "application/vnd.api+json",
@@ -56,8 +51,4 @@ def reset_cutting_blade_usage_time(
         ) from exc
     if not body:
         return {"status_code": status, "accepted": True}
-    try:
-        parsed = json.loads(body)
-    except json.JSONDecodeError:
-        return {"status_code": status, "accepted": True, "body": body[:500]}
-    return parsed if isinstance(parsed, dict) else {"status_code": status, "accepted": True}
+    return {"status_code": status, "accepted": True, "body": body[:500]}

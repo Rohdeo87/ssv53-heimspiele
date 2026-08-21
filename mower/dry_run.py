@@ -66,6 +66,7 @@ def _block_to_dict(block: Any | None) -> dict[str, Any] | None:
         "end": block.end.isoformat(),
         "title": block.title,
         "source": block.source,
+        "details": block.details,
     }
 
 
@@ -348,7 +349,7 @@ def run_read_only_cycle(
 
     match_blocks = read_match_blocks(matches_path, tz)
     match_blocks.extend(special_blocks)
-    plans, _merged = create_plan(
+    plans, merged_blocks = create_plan(
         config,
         match_blocks,
         hydrawise_status,
@@ -526,6 +527,11 @@ def run_read_only_cycle(
                 ),
                 "next_block": _block_to_dict(next_block),
                 "parking_block": _block_to_dict(parking_block),
+                "upcoming_blocks": [
+                    _block_to_dict(block)
+                    for block in merged_blocks
+                    if block.end > now_local
+                ][:6],
                 "safe_mowing_windows": _safe_mowing_windows(
                     plans,
                     now_local,

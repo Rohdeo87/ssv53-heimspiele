@@ -8,6 +8,7 @@ import secrets
 import threading
 import urllib.parse
 import urllib.request
+from pathlib import Path
 from zoneinfo import ZoneInfo
 from dataclasses import replace
 from datetime import datetime, timedelta, timezone
@@ -49,6 +50,8 @@ _CLUBHOUSE_CACHE_LOCK = threading.Lock()
 _CLUBHOUSE_CACHE: dict[str, Any] = {"expires": None, "events": [], "available": False}
 _STATISTICS_CACHE_LOCK = threading.Lock()
 _STATISTICS_CACHE: dict[str, Any] = {"expires": None, "available": False}
+_MATCH_DISPLAY_CACHE_LOCK = threading.Lock()
+_MATCH_DISPLAY_CACHE: dict[str, Any] = {"path": None, "mtime_ns": None, "matches": {}}
 
 
 def _dashboard_statistics(environment: Mapping[str, str], now_utc: datetime) -> dict[str, Any]:
@@ -69,6 +72,93 @@ def _dashboard_statistics(environment: Mapping[str, str], now_utc: datetime) -> 
         _STATISTICS_CACHE.update(payload)
         _STATISTICS_CACHE["expires"] = now_utc + timedelta(minutes=5)
     return payload
+
+
+def _display_match_index(environment: Mapping[str, str]) -> dict[str, dict[str, Any]]:
+    path = Path(
+        str(environment.get("OCCUPANCY_MATCHES_PATH") or "public/matches.json")
+    )
+    try:
+        mtime_ns = path.stat().st_mtime_ns
+    except OSError:
+        return {}
+    with _MATCH_DISPLAY_CACHE_LOCK:
+        if (
+            _MATCH_DISPLAY_CACHE.get("path") == str(path)
+            and _MATCH_DISPLAY_CACHE.get("mtime_ns") == mtime_ns
+        ):
+            return dict(_MATCH_DISPLAY_CACHE.get("matches") or {})
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        matches = payload.get("matches") if isinstance(payload, dict) else None
+        if not isinstance(matches, list) or len(matches) > 5000:
+            return {}
+        index = {
+            str(item.get("id") or ""): item
+            for item in matches
+            if isinstance(item, dict) and str(item.get("id") or "")
+        }
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        return {}
+    with _MATCH_DISPLAY_CACHE_LOCK:
+        _MATCH_DISPLAY_CACHE.update(
+            {"path": str(path), "mtime_ns": mtime_ns, "matches": index}
+        )
+    return dict(index)
+
+
+def _match_id_from_uid(value: Any) -> str:
+    uid = str(value or "").strip().split("@", 1)[0]
+    if uid.startswith("dfb-"):
+        return "dfb:" + uid[4:]
+    return uid
+
+
+def _enrich_display_block(
+    value: Any,
+    matches: Mapping[str, Mapping[str, Any]],
+) -> dict[str, Any] | None:
+    if not isinstance(value, dict):
+        return None
+    block = dict(value)
+    details = dict(block.get("details") or {})
+    items = details.get("items")
+    if isinstance(items, list):
+        details["items"] = [
+            enriched
+            for item in items
+            if (enriched := _enrich_display_block(item, matches)) is not None
+        ]
+    if str(block.get("source") or "").lower() == "match":
+        match = matches.get(_match_id_from_uid(details.get("uid")))
+        if isinstance(match, Mapping):
+            details.update(
+                {
+                    "kickoff": match.get("kickoff") or match.get("start"),
+                    "match_end": match.get("end"),
+                    "team": match.get("team"),
+                    "teamCategory": match.get("teamCategory"),
+                    "matchType": match.get("matchType"),
+                }
+            )
+    block["details"] = details
+    return block
+
+
+def _display_current_plan(
+    current_plan: Mapping[str, Any],
+    environment: Mapping[str, str],
+) -> dict[str, Any]:
+    display = dict(current_plan)
+    matches = _display_match_index(environment)
+    for name in ("blocked_now", "next_block", "parking_block"):
+        display[name] = _enrich_display_block(current_plan.get(name), matches)
+    display["upcoming_blocks"] = [
+        enriched
+        for block in current_plan.get("upcoming_blocks") or []
+        if (enriched := _enrich_display_block(block, matches)) is not None
+    ]
+    return display
 
 
 class PlatzwartError(RuntimeError):
@@ -384,10 +474,43 @@ def _state_payload(state: AutomationState) -> dict[str, Any]:
         "irrigationPhase": state.irrigation_phase,
         "irrigationCompletedAt": state.irrigation_completed_utc,
         "hydrawiseClearSince": state.hydrawise_clear_since_utc,
+        "hydrawiseClearOrigin": state.hydrawise_clear_origin,
         "pendingAction": state.operator_request_action if state.operator_request_status == "PENDING" else None,
         "pendingRequestedAt": state.operator_requested_utc if state.operator_request_status == "PENDING" else None,
+        "lastOperatorAction": state.operator_request_action,
+        "lastOperatorStatus": state.operator_request_status,
+        "lastOperatorRequestedAt": state.operator_requested_utc,
         "lastOperatorResult": state.operator_request_result,
     }
+
+
+def _mower_display_activity(
+    mower: Mapping[str, Any],
+    _state: AutomationState,
+) -> str:
+    """Verdichtet gerätespezifische Husqvarna-Kombinationen für die UI.
+
+    Der 580 EPOS meldet beim Suchen nach dem Satellitensignal zeitweise
+    ``NOT_APPLICABLE`` + ``IN_OPERATION`` statt einer eigenen
+    SEARCHING-Aktivität. ``mode`` beschreibt dabei den Zielbereich und darf
+    nicht als Suche nach der Ladestation interpretiert werden.
+    """
+
+    activity = str(mower.get("activity") or "UNKNOWN").upper()
+    inactive_reason = str(
+        mower.get("inactive_reason") or mower.get("inactiveReason") or "NONE"
+    ).upper()
+    mower_state = str(mower.get("state") or "UNKNOWN").upper()
+    mode = str(mower.get("mode") or "UNKNOWN").upper()
+    if inactive_reason == "SEARCHING_FOR_SATELLITES":
+        return "SEARCHING_FOR_POSITION"
+    if inactive_reason == "PLANNING":
+        return "PLANNING"
+    if activity != "NOT_APPLICABLE" or mower_state != "IN_OPERATION":
+        return activity
+    if mode in {"HOME", "MAIN_AREA", "SECONDARY_AREA", "POI"}:
+        return "SEARCHING_FOR_POSITION"
+    return activity
 
 
 def _appack_graphql(token: str, query: str, variables: Mapping[str, Any]) -> dict[str, Any]:
@@ -569,19 +692,67 @@ def _clubhouse_events(environment: Mapping[str, str], now_utc: datetime) -> dict
 
 
 def live_status(environment: Mapping[str, str], now_utc: datetime) -> dict[str, Any]:
-    settings = RuntimeSettings.from_mapping(environment)
-    result = run_read_only_cycle(
-        now_utc=now_utc,
-        settings=settings,
-        environment=environment,
-        past_due=False,
-        source="platzwart-status",
-    )
-    state = AzureTableStateStore.from_environment(environment).load()
+    controls_available = True
+    data_quality = {
+        "code": "LIVE",
+        "displayOnly": False,
+        "message": None,
+    }
+    try:
+        settings = RuntimeSettings.from_mapping(environment)
+        result = run_read_only_cycle(
+            now_utc=now_utc,
+            settings=settings,
+            environment=environment,
+            past_due=False,
+            source="platzwart-status",
+        )
+    except RuntimeError as exc:
+        # Die Steuerung muss bei einer abgelaufenen dynamischen Konfiguration
+        # weiterhin fail-closed bleiben. Für die ausschließlich lesende Anzeige
+        # dürfen wir dagegen die paketierte Konfiguration verwenden: Dieser
+        # Pfad ruft nur Live-Zustände ab und kann niemals Befehle senden.
+        if "Keine frische, validierte Laufzeitkonfiguration verfügbar" not in str(exc):
+            raise
+        display_environment = dict(environment)
+        display_environment["SSV53_DYNAMIC_CONFIG_ENABLED"] = "false"
+        settings = RuntimeSettings.from_mapping(display_environment)
+        result = run_read_only_cycle(
+            now_utc=now_utc,
+            settings=settings,
+            environment=display_environment,
+            past_due=False,
+            source="platzwart-status-display-only",
+        )
+        controls_available = False
+        data_quality = {
+            "code": "CONFIG_STALE",
+            "displayOnly": True,
+            "message": (
+                "Der geprüfte Sicherheitsplan ist veraltet. Live-Daten werden "
+                "weiter angezeigt; Mäher und Beregnung bleiben sicher gesperrt."
+            ),
+        }
+    try:
+        state = AzureTableStateStore.from_environment(environment).load()
+    except Exception:
+        state = AutomationState()
+        controls_available = False
+        data_quality = {
+            "code": "STATE_UNAVAILABLE",
+            "displayOnly": True,
+            "message": (
+                "Der Automatikzustand ist gerade nicht erreichbar. Live-Daten "
+                "werden weiter angezeigt; alle Bedienaktionen bleiben gesperrt."
+            ),
+        }
     details = result.details
     mower = dict(details.get("mower") or {})
     hydrawise = dict(details.get("hydrawise") or {})
-    current_plan = dict(details.get("current_plan") or {})
+    current_plan = _display_current_plan(
+        dict(details.get("current_plan") or {}),
+        environment,
+    )
     mower.pop("mower_id", None)
     target = dict(mower.get("target_work_area") or {})
     cutting_height_percent = (
@@ -632,15 +803,31 @@ def live_status(environment: Mapping[str, str], now_utc: datetime) -> dict[str, 
         **_dashboard_statistics(environment, now_utc),
         "currentAreaProgress": target.get("progress"),
         "bladeUsageSeconds": device_statistics.get("cutting_blade_usage_seconds"),
-        "totalCuttingSeconds": device_statistics.get("total_cutting_seconds"),
-        "chargingCycles": device_statistics.get("charging_cycles"),
         "totalRunningSeconds": device_statistics.get("total_running_seconds"),
     }
+    completed_cycles = statistics.get("completedAreaCycles7d")
+    current_progress = statistics.get("currentAreaProgress")
+    if completed_cycles is not None and current_progress is not None:
+        statistics["mownAreaEquivalents7d"] = round(
+            float(completed_cycles) + max(0.0, min(100.0, float(current_progress))) / 100,
+            2,
+        )
+    else:
+        statistics["mownAreaEquivalents7d"] = None
     return {
         "generatedAt": now_utc.astimezone(timezone.utc).isoformat(),
-        "overall": {"code": state.last_decision_code, "message": result.message},
+        "controlsAvailable": controls_available,
+        "dataQuality": data_quality,
+        "overall": {
+            "code": state.last_decision_code if controls_available else data_quality["code"],
+            "message": result.message if controls_available else data_quality["message"],
+        },
         "mower": {
             "activity": mower.get("activity"), "state": mower.get("state"),
+            "model": mower.get("model"),
+            "displayActivity": _mower_display_activity(mower, state),
+            "inactiveReason": mower.get("inactive_reason") or mower.get("inactiveReason"),
+            "mode": mower.get("mode"),
             "batteryPercent": mower.get("battery_percent"), "errorCode": mower.get("error_code"),
             "connected": mower.get("connected"),
             "statusTimestamp": mower.get("status_timestamp_ms"),
@@ -661,11 +848,58 @@ def live_status(environment: Mapping[str, str], now_utc: datetime) -> dict[str, 
         "occupancy": {
             "current": current_plan.get("blocked_now"), "next": current_plan.get("next_block"),
             "parking": current_plan.get("parking_block"),
+            "upcoming": current_plan.get("upcoming_blocks") or [],
             "safeWindows": current_plan.get("safe_mowing_windows") or [],
         },
         "automation": _state_payload(state),
         "statistics": statistics,
         "clubhouse": _clubhouse_events(environment, now_utc),
+    }
+
+
+def unavailable_live_status(now_utc: datetime) -> dict[str, Any]:
+    """Immer darstellbare, strikt bedienungslose Antwort bei unerwarteten Lesefehlern."""
+
+    message = (
+        "Die Live-Daten konnten gerade nicht vollständig geladen werden. "
+        "Alle Bedienaktionen bleiben sicher gesperrt; die Anzeige versucht es automatisch erneut."
+    )
+    return {
+        "generatedAt": now_utc.astimezone(timezone.utc).isoformat(),
+        "controlsAvailable": False,
+        "dataQuality": {
+            "code": "DISPLAY_UNAVAILABLE",
+            "displayOnly": True,
+            "message": message,
+        },
+        "overall": {"code": "DISPLAY_UNAVAILABLE", "message": message},
+        "mower": {
+            "activity": None,
+            "state": None,
+            "displayActivity": None,
+            "batteryPercent": None,
+            "errorCode": None,
+            "connected": None,
+            "workAreaProgress": None,
+            "cuttingHeightMm": None,
+            "cuttingHeightSupported": False,
+        },
+        "irrigation": {
+            "status": "Daten nicht verfügbar",
+            "safety": {"available": False, "fresh": False, "clear_now": False},
+            "zones": [],
+            "releaseConfirmation": None,
+        },
+        "occupancy": {
+            "current": None,
+            "next": None,
+            "parking": None,
+            "upcoming": [],
+            "safeWindows": [],
+        },
+        "automation": {},
+        "statistics": {"available": False, "message": "Statistiken sind gerade nicht erreichbar."},
+        "clubhouse": {"available": False, "events": [], "message": "Vereinsheim-Daten sind gerade nicht erreichbar."},
     }
 
 

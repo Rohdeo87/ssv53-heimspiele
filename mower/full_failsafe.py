@@ -703,7 +703,9 @@ def _cycle_state(
         hydrawise_success_utc=now_utc if fresh else None,
         hydrawise_observed_utc=observed,
         hydrawise_clear=clear,
-        hydrawise_active_count=int(safety.get("active_zone_count") or 0),
+        hydrawise_active_count=(
+            int(safety.get("active_zone_count") or 0) if fresh else None
+        ),
         next_irrigation_start_utc=next_irrigation,
     )
 
@@ -743,6 +745,7 @@ def _state_details(state: AutomationState, *, persisted: bool, error: str | None
             state.irrigation_cancelled_without_run_utc
         ),
         "hydrawise_clear_since_utc": state.hydrawise_clear_since_utc,
+        "hydrawise_clear_origin": state.hydrawise_clear_origin,
     }
 
 
@@ -1034,7 +1037,14 @@ def run_full_failsafe_cycle(
         and hydra_safety_for_height.get("fresh") is True
         and hydra_safety_for_height.get("clear_now") is True
     )
-    if operator_action == "RESET_BLADE_USAGE" and height_cycle_is_clear:
+    blade_reset_cycle_is_clear = (
+        state.irrigation_phase is None
+        and (
+            height_cycle_is_clear
+            or activity in PARKED_ACTIVITIES
+        )
+    )
+    if operator_action == "RESET_BLADE_USAGE" and blade_reset_cycle_is_clear:
         safe_to_reset = (
             settings.full_failsafe_write_gate_enabled
             and mower.get("connected") is True
@@ -3012,10 +3022,24 @@ def run_full_failsafe_cycle(
         )
 
     hydra_safety = _as_dict(_as_dict(details.get("hydrawise")).get("safety"))
+    full_release_origins = {
+        "IRRIGATION_ACTIVE",
+        "IRRIGATION_END",
+        "POSSIBLE_IRRIGATION_DURING_GAP",
+    }
+    release_origin = state.hydrawise_clear_origin or (
+        "IRRIGATION_END"
+        if state.irrigation_phase == "COMPLETE_HOLD"
+        else "DATA_GAP"
+    )
     release_minutes = _env_int(
         environment,
-        "HYDRAWISE_CLEAR_CONFIRMATION_MINUTES",
-        120,
+        (
+            "HYDRAWISE_CLEAR_CONFIRMATION_MINUTES"
+            if release_origin in full_release_origins
+            else "HYDRAWISE_DATA_GAP_CONFIRMATION_MINUTES"
+        ),
+        120 if release_origin in full_release_origins else 2,
         minimum=1,
         maximum=1440,
     )
@@ -3040,6 +3064,8 @@ def run_full_failsafe_cycle(
     )
     details["hydrawise_release_gate"] = {
         **release.to_dict(),
+        "origin": release_origin,
+        "full_post_irrigation_hold": release_origin in full_release_origins,
         "cancelled_without_run_release": cancelled_without_run_release,
         "effective_allowed": release.allowed or cancelled_without_run_release,
     }

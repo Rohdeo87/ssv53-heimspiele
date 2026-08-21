@@ -39,6 +39,7 @@ def mower_item(
             },
             "mower": {
                 "activity": "PARKED_IN_CS",
+                "inactiveReason": "NONE",
                 "state": "RESTRICTED",
                 "mode": "MAIN_AREA",
                 "errorCode": 0,
@@ -79,6 +80,7 @@ class HusqvarnaParsingTests(unittest.TestCase):
         self.assertEqual(snapshot.mower_id, "abc")
         self.assertEqual(snapshot.battery_percent, 97)
         self.assertEqual(snapshot.activity, "PARKED_IN_CS")
+        self.assertEqual(snapshot.inactive_reason, "NONE")
         self.assertEqual(snapshot.external_reason_id, 253053)
         self.assertTrue(snapshot.connected)
         self.assertEqual(snapshot.status_timestamp_ms, 1785600000123)
@@ -92,6 +94,14 @@ class HusqvarnaParsingTests(unittest.TestCase):
         self.assertEqual(snapshot.statistics["cutting_blade_usage_seconds"], 7200)
         self.assertEqual(snapshot.statistics["charging_cycles"], 41)
         self.assertEqual(snapshot.statistics["total_cutting_seconds"], 360000)
+
+    def test_epos_satellite_search_reason_is_preserved(self) -> None:
+        item = mower_item("abc", name="Schaf", model="AUTOMOWER 580 EPOS")
+        item["attributes"]["mower"]["activity"] = "MOWING"
+        item["attributes"]["mower"]["inactiveReason"] = "SEARCHING_FOR_SATELLITES"
+        snapshot = parse_snapshot(item)
+        self.assertEqual(snapshot.activity, "MOWING")
+        self.assertEqual(snapshot.inactive_reason, "SEARCHING_FOR_SATELLITES")
 
     def test_named_mower_is_selected(self) -> None:
         selected = select_mower(

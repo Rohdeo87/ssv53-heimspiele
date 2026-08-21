@@ -67,6 +67,7 @@ class AutomationStateTests(unittest.TestCase):
             hydrawise_active_count=0,
         )
         self.assertEqual(state.hydrawise_clear_since_utc, NOW.isoformat())
+        self.assertEqual(state.hydrawise_clear_origin, "DATA_GAP")
 
         interrupted = state.record_cycle(
             started_utc=NOW + timedelta(minutes=1),
@@ -76,6 +77,18 @@ class AutomationStateTests(unittest.TestCase):
             hydrawise_active_count=1,
         )
         self.assertIsNone(interrupted.hydrawise_clear_since_utc)
+        self.assertEqual(interrupted.hydrawise_clear_origin, "IRRIGATION_ACTIVE")
+
+        after_irrigation = interrupted.record_cycle(
+            started_utc=NOW + timedelta(minutes=2),
+            success=True,
+            decision_code="HYDRAWISE_CLEAR",
+            hydrawise_success_utc=NOW + timedelta(minutes=2),
+            hydrawise_observed_utc=NOW + timedelta(minutes=2),
+            hydrawise_clear=True,
+            hydrawise_active_count=0,
+        )
+        self.assertEqual(after_irrigation.hydrawise_clear_origin, "IRRIGATION_END")
 
     def test_hydrawise_clear_chain_restarts_after_cycle_gap(self) -> None:
         first = AutomationState().record_cycle(
@@ -99,6 +112,27 @@ class AutomationStateTests(unittest.TestCase):
         self.assertEqual(
             after_gap.hydrawise_clear_since_utc,
             (NOW + timedelta(minutes=4)).isoformat(),
+        )
+        self.assertEqual(after_gap.hydrawise_clear_origin, "DATA_GAP")
+
+    def test_gap_crossing_known_irrigation_start_is_not_treated_as_harmless(self) -> None:
+        first = AutomationState(
+            last_hydrawise_success_utc=NOW.isoformat(),
+            next_irrigation_start_utc=(NOW + timedelta(minutes=2)).isoformat(),
+            last_hydrawise_active_count=0,
+        )
+        recovered = first.record_cycle(
+            started_utc=NOW + timedelta(minutes=4),
+            success=True,
+            decision_code="HYDRAWISE_CLEAR",
+            hydrawise_success_utc=NOW + timedelta(minutes=4),
+            hydrawise_observed_utc=NOW + timedelta(minutes=4),
+            hydrawise_clear=True,
+            hydrawise_active_count=0,
+        )
+        self.assertEqual(
+            recovered.hydrawise_clear_origin,
+            "POSSIBLE_IRRIGATION_DURING_GAP",
         )
 
 

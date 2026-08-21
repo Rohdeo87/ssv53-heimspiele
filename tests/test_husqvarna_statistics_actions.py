@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from unittest.mock import patch
 
 from mower.husqvarna_statistics_actions import reset_cutting_blade_usage_time
@@ -24,7 +23,7 @@ def test_reset_blade_usage_uses_only_the_dedicated_husqvarna_action():
     def fake_urlopen(request, timeout):
         captured["url"] = request.full_url
         captured["method"] = request.method
-        captured["body"] = json.loads(request.data.decode("utf-8"))
+        captured["body"] = request.data
         return Response()
 
     with patch(
@@ -37,8 +36,8 @@ def test_reset_blade_usage_uses_only_the_dedicated_husqvarna_action():
         result = reset_cutting_blade_usage_time("client", "secret", "mower-1")
 
     assert captured == {
-        "url": "https://api.amc.husqvarna.dev/v1/mowers/mower-1/actions",
+        "url": "https://api.amc.husqvarna.dev/v1/mowers/mower-1/statistics/resetCuttingBladeUsageTime",
         "method": "POST",
-        "body": {"data": {"type": "ResetCuttingBladeUsageTime"}},
+        "body": None,
     }
     assert result["accepted"] is True

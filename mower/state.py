@@ -44,6 +44,7 @@ class AutomationState:
     last_hydrawise_success_utc: str | None = None
     last_hydrawise_observed_utc: str | None = None
     hydrawise_clear_since_utc: str | None = None
+    hydrawise_clear_origin: str | None = None
     last_hydrawise_active_count: int | None = None
     next_irrigation_start_utc: str | None = None
     parked_by_automation: bool = False
@@ -95,6 +96,14 @@ class AutomationState:
             raise ValueError("Unerwarteter Zustands-Schlüssel.")
         if self.revision < 0:
             raise ValueError("revision darf nicht negativ sein.")
+        if self.hydrawise_clear_origin not in {
+            None,
+            "DATA_GAP",
+            "IRRIGATION_ACTIVE",
+            "IRRIGATION_END",
+            "POSSIBLE_IRRIGATION_DURING_GAP",
+        }:
+            raise ValueError("hydrawise_clear_origin ist ungültig.")
         for field_name in (
             "last_cycle_started_utc",
             "last_success_utc",
@@ -165,6 +174,9 @@ class AutomationState:
                     values.get("hydrawise_clear_since_utc")
                 ),
                 "hydrawise_clear_since_utc",
+            ),
+            hydrawise_clear_origin=_normalize_optional_text(
+                values.get("hydrawise_clear_origin")
             ),
             last_hydrawise_active_count=_normalize_optional_int(
                 values.get("last_hydrawise_active_count")
@@ -365,6 +377,14 @@ class AutomationState:
                 "hydrawise_continuity_max_gap_seconds muss zwischen 60 und 900 liegen."
             )
 
+        hydrawise_fresh = hydrawise is not None or hydrawise_active_count is not None
+        previous_next_irrigation = (
+            datetime.fromisoformat(
+                self.next_irrigation_start_utc.replace("Z", "+00:00")
+            ).astimezone(timezone.utc)
+            if self.next_irrigation_start_utc
+            else None
+        )
         if hydrawise_clear is True:
             # Die Bestätigung beginnt mit dem tatsächlichen Abrufzyklus und
             # niemals rückdatiert mit dem Zeitstempel des API-Payloads. Eine
@@ -388,9 +408,35 @@ class AutomationState:
                 if continuity_preserved
                 else started.isoformat()
             )
+            if continuity_preserved and self.hydrawise_clear_origin:
+                clear_origin = self.hydrawise_clear_origin
+            elif (
+                self.hydrawise_clear_origin == "IRRIGATION_ACTIVE"
+                or int(self.last_hydrawise_active_count or 0) > 0
+                or self.irrigation_phase == "COMPLETE_HOLD"
+            ):
+                clear_origin = "IRRIGATION_END"
+            elif (
+                previous_success is not None
+                and previous_next_irrigation is not None
+                and previous_success < previous_next_irrigation <= started
+            ):
+                clear_origin = "POSSIBLE_IRRIGATION_DURING_GAP"
+            else:
+                clear_origin = "DATA_GAP"
         else:
             # Auch ein fehlender Abruf unterbricht die Bestätigungskette.
             clear_since = None
+            if hydrawise_fresh and int(hydrawise_active_count or 0) > 0:
+                clear_origin = "IRRIGATION_ACTIVE"
+            elif self.hydrawise_clear_origin in {
+                "IRRIGATION_ACTIVE",
+                "IRRIGATION_END",
+                "POSSIBLE_IRRIGATION_DURING_GAP",
+            }:
+                clear_origin = self.hydrawise_clear_origin
+            else:
+                clear_origin = "DATA_GAP"
 
         parked_activity = str(mower_activity or "").strip().upper()
         park_confirmed = self.park_confirmed_utc
@@ -422,7 +468,12 @@ class AutomationState:
                 else self.last_hydrawise_observed_utc
             ),
             hydrawise_clear_since_utc=clear_since,
-            last_hydrawise_active_count=hydrawise_active_count,
+            hydrawise_clear_origin=clear_origin,
+            last_hydrawise_active_count=(
+                hydrawise_active_count
+                if hydrawise_fresh
+                else self.last_hydrawise_active_count
+            ),
             next_irrigation_start_utc=(
                 next_irrigation.isoformat()
                 if next_irrigation is not None

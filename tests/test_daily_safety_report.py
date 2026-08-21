@@ -94,7 +94,88 @@ def test_dashboard_statistics_reuses_confirmed_seven_day_metrics():
     assert value["available"] is True
     assert value["completedAreaCycles7d"] == 1
     assert value["mowingMinutes7d"] == 2
+    assert value["mowingMinutesToday"] == 2
+    assert value["averageReturnMinutes7d"] is None
     assert value["lastCompletedAreaUtc"] is not None
+
+
+def test_summary_infers_epos_completion_from_stable_99_to_zero_transition():
+    observations = parse_cycle_rows(
+        [
+            row("2026-08-20T16:00:01Z", progress=98),
+            row("2026-08-20T16:01:01Z", progress=99),
+            row("2026-08-20T16:02:01Z", progress=99),
+            row("2026-08-20T16:03:01Z", progress=99, decision="PARK_COMMAND_SENT", sent=True),
+            row("2026-08-20T16:04:01Z", progress=0, activity="GOING_HOME"),
+            row("2026-08-20T16:05:01Z", progress=0, activity="GOING_HOME"),
+        ]
+    )
+    summary = summarize_report(
+        observations,
+        now_utc=datetime(2026, 8, 20, 17, 0, tzinfo=timezone.utc),
+        exception_count_24h=0,
+    )
+    assert summary.completed_area_cycles_7d == 1
+    assert summary.last_completed_area_utc == datetime(
+        2026, 8, 20, 16, 4, 1, tzinfo=timezone.utc
+    )
+    assert summary.current_work_area_progress == 0
+
+
+def test_summary_does_not_infer_completion_from_98_or_single_99_sample():
+    observations = parse_cycle_rows(
+        [
+            row("2026-08-20T15:58:01Z", progress=98),
+            row("2026-08-20T15:59:01Z", progress=0, activity="GOING_HOME"),
+            row("2026-08-20T16:01:01Z", progress=99),
+            row("2026-08-20T16:02:01Z", progress=0, activity="GOING_HOME"),
+        ]
+    )
+    summary = summarize_report(
+        observations,
+        now_utc=datetime(2026, 8, 20, 17, 0, tzinfo=timezone.utc),
+        exception_count_24h=0,
+    )
+    assert summary.completed_area_cycles_7d == 0
+    assert summary.last_completed_area_utc is None
+
+
+def test_inferred_and_device_confirmed_completion_are_not_counted_twice():
+    completed = int(datetime(2026, 8, 20, 16, 4, tzinfo=timezone.utc).timestamp())
+    observations = parse_cycle_rows(
+        [
+            row("2026-08-20T16:01:01Z", progress=99),
+            row("2026-08-20T16:02:01Z", progress=99),
+            row("2026-08-20T16:03:01Z", progress=0, activity="GOING_HOME", completed=completed),
+            row("2026-08-20T16:04:01Z", progress=0, activity="GOING_HOME", completed=completed),
+        ]
+    )
+    summary = summarize_report(
+        observations,
+        now_utc=datetime(2026, 8, 20, 17, 0, tzinfo=timezone.utc),
+        exception_count_24h=0,
+    )
+    assert summary.completed_area_cycles_7d == 1
+
+
+def test_summary_calculates_today_mowing_and_average_return_duration():
+    observations = parse_cycle_rows(
+        [
+            row("2026-08-20T08:00:01Z", activity="MOWING"),
+            row("2026-08-20T08:01:01Z", activity="MOWING"),
+            row("2026-08-20T08:02:01Z", activity="GOING_HOME"),
+            row("2026-08-20T08:05:01Z", activity="PARKED_IN_CS"),
+            row("2026-08-20T10:00:01Z", activity="GOING_HOME"),
+            row("2026-08-20T10:05:01Z", activity="CHARGING"),
+        ]
+    )
+    summary = summarize_report(
+        observations,
+        now_utc=datetime(2026, 8, 20, 12, 0, tzinfo=timezone.utc),
+        exception_count_24h=0,
+    )
+    assert summary.mowing_minutes_today == 2
+    assert summary.average_return_minutes_7d == 4
 
 
 def test_recipient_is_required_and_validated():
