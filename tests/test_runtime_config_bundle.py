@@ -145,6 +145,29 @@ class RuntimeConfigBundleTests(unittest.TestCase):
             self.assertIn("DTEND;TZID=Europe/Berlin:20260821T224500", ics)
             self.assertNotIn("match-e-kr", ics)
 
+            structured = json.loads(
+                (
+                    directory
+                    / "bundle"
+                    / "versions"
+                    / "20260811T163000Z-test"
+                    / "public"
+                    / "matches.json"
+                ).read_text(encoding="utf-8")
+            )
+            self.assertEqual(structured["schemaVersion"], 2)
+            self.assertEqual(len(structured["matches"]), 4)
+            self.assertEqual(
+                {item["calendar"] for item in structured["matches"]},
+                {"Rasen", "Kunstrasen"},
+            )
+            c_match = next(
+                item for item in structured["matches"] if item["id"] == "dfb:match-c"
+            )
+            self.assertEqual(c_match["kickoff"], "2026-08-19T18:00+02:00")
+            self.assertEqual(c_match["occupancyStart"], "2026-08-19T17:00+02:00")
+            self.assertEqual(c_match["occupancyEnd"], "2026-08-19T20:25+02:00")
+
     def test_uses_active_range_for_publication_day_without_fixed_date(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             summary = self._build(Path(tmp))
@@ -170,6 +193,11 @@ class RuntimeConfigBundleTests(unittest.TestCase):
             )
             self.assertEqual(manifest["config_sha256"], summary["config_sha256"])
             self.assertEqual(manifest["matches_sha256"], summary["matches_sha256"])
+            self.assertEqual(
+                manifest["occupancy_matches_sha256"],
+                summary["occupancy_matches_sha256"],
+            )
+            self.assertTrue(manifest["occupancy_matches_blob"].endswith("/matches.json"))
 
     def test_rejects_source_before_runtime_manifest_can_hide_staleness(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -132,6 +132,7 @@ jobs:
           import tempfile
 
           from mower.config_source import resolve_runtime_inputs
+          from occupancy.runtime_source import resolve_occupancy_match_source
 
           bundle = Path(os.environ["BUNDLE_DIR"])
           manifest = json.loads(
@@ -141,6 +142,9 @@ jobs:
               "current/manifest.json": (bundle / "current" / "manifest.json").read_bytes(),
               manifest["config_blob"]: (bundle / manifest["config_blob"]).read_bytes(),
               manifest["matches_blob"]: (bundle / manifest["matches_blob"]).read_bytes(),
+              manifest["occupancy_matches_blob"]: (
+                  bundle / manifest["occupancy_matches_blob"]
+              ).read_bytes(),
           }
 
           class Download:
@@ -179,6 +183,21 @@ jobs:
               assert result.source_kind == "azure_blob"
               assert result.manifest_path == "current/manifest.json"
               assert not result.fallback_used
+              occupancy_result = resolve_occupancy_match_source(
+                  {
+                      "SSV53_DYNAMIC_CONFIG_ENABLED": "true",
+                      "SSV53_CONFIG_STORAGE_ACCOUNT_URL": "https://example.blob.core.windows.net",
+                      "SSV53_CONFIG_CONTAINER": "runtime-config",
+                      "SSV53_CONFIG_MANAGED_IDENTITY_CLIENT_ID": "candidate-test-client",
+                      "SSV53_OCCUPANCY_CACHE_DIR": cache + "/occupancy",
+                      "SSV53_OCCUPANCY_MAX_AGE_MINUTES": "1440",
+                  },
+                  now_utc=published,
+                  service_client_factory=lambda **_: Service(),
+                  credential_factory=lambda **_: object(),
+              )
+              assert occupancy_result.source_kind == "azure_blob"
+              assert not occupancy_result.fallback_used
           print("Erzeugtes Bundle wurde vom Produktionsmodul vollständig akzeptiert.")
           PY
 
@@ -206,6 +225,7 @@ jobs:
             echo "- 60-Minuten-Spielsperren: **bestätigt**"
             echo "- Trainings- und Beregnungspuffer: **bestätigt**"
             echo "- Alle Rasenspiele übernommen: **bestätigt**"
+            echo "- App-Feed für Rasen und Kunstrasen: **bestätigt**"
             echo "- Manifest und SHA256: **bestätigt**"
             echo "- Gerätebefehle: **keine**"
             echo
@@ -267,8 +287,10 @@ jobs:
           VERSION="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["version"])' "$MANIFEST")"
           CONFIG_BLOB="versions/$VERSION/mower/config.json"
           MATCHES_BLOB="versions/$VERSION/public/rasen.ics"
+          OCCUPANCY_MATCHES_BLOB="versions/$VERSION/public/matches.json"
           CONFIG_FILE="$BUNDLE_DIR/$CONFIG_BLOB"
           MATCHES_FILE="$BUNDLE_DIR/$MATCHES_BLOB"
+          OCCUPANCY_MATCHES_FILE="$BUNDLE_DIR/$OCCUPANCY_MATCHES_BLOB"
           PREVIOUS_MANIFEST="$RUNNER_TEMP/previous-manifest.json"
           CURRENT_SWITCHED=false
 
@@ -290,6 +312,7 @@ jobs:
           test -s "$MANIFEST"
           test -s "$CONFIG_FILE"
           test -s "$MATCHES_FILE"
+          test -s "$OCCUPANCY_MATCHES_FILE"
 
           az storage blob download \
             --account-name "$STORAGE_ACCOUNT" \
@@ -330,6 +353,15 @@ jobs:
           az storage blob upload \
             --account-name "$STORAGE_ACCOUNT" \
             --container-name "$RUNTIME_CONTAINER" \
+            --name "$OCCUPANCY_MATCHES_BLOB" \
+            --file "$OCCUPANCY_MATCHES_FILE" \
+            --auth-mode login \
+            --overwrite false \
+            --only-show-errors
+
+          az storage blob upload \
+            --account-name "$STORAGE_ACCOUNT" \
+            --container-name "$RUNTIME_CONTAINER" \
             --name current/manifest.json \
             --file "$MANIFEST" \
             --auth-mode login \
@@ -342,6 +374,7 @@ jobs:
           az storage blob download --account-name "$STORAGE_ACCOUNT" --container-name "$RUNTIME_CONTAINER" --name current/manifest.json --file "$VERIFY_DIR/manifest.json" --auth-mode login --overwrite true --only-show-errors
           az storage blob download --account-name "$STORAGE_ACCOUNT" --container-name "$RUNTIME_CONTAINER" --name "$CONFIG_BLOB" --file "$VERIFY_DIR/config.json" --auth-mode login --overwrite true --only-show-errors
           az storage blob download --account-name "$STORAGE_ACCOUNT" --container-name "$RUNTIME_CONTAINER" --name "$MATCHES_BLOB" --file "$VERIFY_DIR/rasen.ics" --auth-mode login --overwrite true --only-show-errors
+          az storage blob download --account-name "$STORAGE_ACCOUNT" --container-name "$RUNTIME_CONTAINER" --name "$OCCUPANCY_MATCHES_BLOB" --file "$VERIFY_DIR/matches.json" --auth-mode login --overwrite true --only-show-errors
 
           export MANIFEST VERIFY_DIR
           python - <<'PY'
@@ -356,7 +389,8 @@ jobs:
           assert remote == source, "Remote-Manifest weicht vom Kandidaten ab."
           assert sha256((verify / "config.json").read_bytes()).hexdigest() == source["config_sha256"]
           assert sha256((verify / "rasen.ics").read_bytes()).hexdigest() == source["matches_sha256"]
-          print("Remote Manifest und beide SHA256-Prüfungen erfolgreich.")
+          assert sha256((verify / "matches.json").read_bytes()).hexdigest() == source["occupancy_matches_sha256"]
+          print("Remote Manifest und alle drei SHA256-Prüfungen erfolgreich.")
           PY
 
           CURRENT_SWITCHED=false

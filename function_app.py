@@ -17,6 +17,10 @@ from mower.irrigation_recovery import (
     reset_failed_irrigation,
 )
 from occupancy.service import build_occupancy_payload, build_training_occurrences
+from occupancy.runtime_source import (
+    OccupancyMatchSource,
+    resolve_occupancy_match_source,
+)
 from occupancy_notifications import (
     process_collision_notifications,
     send_collision_test_mail,
@@ -134,17 +138,27 @@ def ssv53_daily_safety_report_timer(timer: func.TimerRequest) -> None:
         # Keine Zugangsdaten oder Empfängeradressen protokollieren.
         LOGGER.exception("SSV53_DAILY_REPORT_ERROR")
 
-def _occupancy_matches_path() -> tuple[str, str]:
+def _occupancy_match_source(
+    *,
+    now_utc: datetime | None = None,
+    environment: dict[str, str] | None = None,
+) -> OccupancyMatchSource:
     """Öffentliche Belegung aus dem gemeinsamen strukturierten Matchmodell.
 
-    Die dynamische Mäherkonfiguration bleibt davon getrennt und verwendet
-    weiterhin ausschließlich den fail-closed geprüften Rasen-ICS-Feed.
+    Der App-Feed und die Mäher-ICS werden über dasselbe atomare Manifest
+    veröffentlicht, bleiben aber fachlich getrennte und einzeln gehashte
+    Dateien. Dadurch erreichen offizielle Spielverlegungen beide Verbraucher.
     """
-    configured = os.environ.get(
-        "OCCUPANCY_MATCHES_PATH",
-        "public/matches.json",
-    ).strip()
-    return configured or "public/matches.json", "structured_matches"
+    return resolve_occupancy_match_source(
+        environment if environment is not None else os.environ,
+        now_utc=now_utc or datetime.now(timezone.utc),
+    )
+
+
+def _occupancy_matches_path() -> tuple[str, str]:
+    """Compatibility helper for internal callers and focused tests."""
+    source = _occupancy_match_source()
+    return source.matches_path, source.source_kind
 
 
 def _occupancy_headers(*, cache: bool) -> dict[str, str]:
@@ -268,7 +282,8 @@ def ssv53_occupancy(req: func.HttpRequest) -> func.HttpResponse:
     season = req.params.get("season") or "Sommer"
 
     try:
-        matches_path, match_source = _occupancy_matches_path()
+        match_source = _occupancy_match_source(now_utc=now_utc)
+        matches_path = match_source.matches_path
         config_path = os.environ.get(
             "OCCUPANCY_CONFIG_PATH",
             "occupancy/config.json",
@@ -337,7 +352,11 @@ def ssv53_occupancy(req: func.HttpRequest) -> func.HttpResponse:
             "error": special_error,
         }
         payload["data_source"] = "azure"
-        payload["match_source"] = match_source
+        payload["match_source"] = match_source.source_kind
+        payload["match_source_generated_at_utc"] = (
+            match_source.source_generated_at_utc
+        )
+        payload["match_source_fallback"] = match_source.fallback_used
         return func.HttpResponse(
             json.dumps(
                 payload,
@@ -673,7 +692,9 @@ def _trainer_occupancy_conflicts(
 ) -> list[dict]:
     """Prüft denselben physischen Platz gegen Plan, Spiele und Sondertermine."""
     config_path = os.environ.get("OCCUPANCY_CONFIG_PATH", "occupancy/config.json")
-    matches_path, _ = _occupancy_matches_path()
+    matches_path = _occupancy_match_source(
+        now_utc=datetime.now(timezone.utc),
+    ).matches_path
     candidates: dict[str, dict] = {}
     ignored = {
         str(value or "").strip().lower()

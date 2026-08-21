@@ -524,6 +524,7 @@ jobs:
                   "order_mail.py",
                   "training_cancellations.py",
                   "occupancy/config.json",
+                  "occupancy/runtime_source.py",
                   "occupancy/service.py",
                   "mower/full_failsafe.py",
                   "mower/full_mower.py",

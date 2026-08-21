@@ -39,6 +39,7 @@ from mower.irrigation_schedule import (
     validate_schedule_request,
 )
 from daily_safety_report import dashboard_irrigation_statistics, dashboard_statistics
+from occupancy.runtime_source import resolve_occupancy_match_source
 
 
 PIN_ITERATIONS_MINIMUM = 200_000
@@ -112,13 +113,19 @@ def _dashboard_irrigation_statistics(
     return payload
 
 
-def _display_match_index(environment: Mapping[str, str]) -> dict[str, dict[str, Any]]:
-    path = Path(
-        str(environment.get("OCCUPANCY_MATCHES_PATH") or "public/matches.json")
-    )
+def _display_match_index(
+    environment: Mapping[str, str],
+    now_utc: datetime,
+) -> dict[str, dict[str, Any]]:
     try:
+        path = Path(
+            resolve_occupancy_match_source(
+                environment,
+                now_utc=now_utc,
+            ).matches_path
+        )
         mtime_ns = path.stat().st_mtime_ns
-    except OSError:
+    except (OSError, RuntimeError, ValueError):
         return {}
     with _MATCH_DISPLAY_CACHE_LOCK:
         if (
@@ -186,9 +193,10 @@ def _enrich_display_block(
 def _display_current_plan(
     current_plan: Mapping[str, Any],
     environment: Mapping[str, str],
+    now_utc: datetime,
 ) -> dict[str, Any]:
     display = dict(current_plan)
-    matches = _display_match_index(environment)
+    matches = _display_match_index(environment, now_utc)
     for name in ("blocked_now", "next_block", "parking_block"):
         display[name] = _enrich_display_block(current_plan.get(name), matches)
     display["upcoming_blocks"] = [
@@ -876,6 +884,7 @@ def live_status(environment: Mapping[str, str], now_utc: datetime) -> dict[str, 
     current_plan = _display_current_plan(
         dict(details.get("current_plan") or {}),
         environment,
+        now_utc,
     )
     mower.pop("mower_id", None)
     target = dict(mower.get("target_work_area") or {})

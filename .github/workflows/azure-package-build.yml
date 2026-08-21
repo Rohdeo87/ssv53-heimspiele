@@ -97,6 +97,7 @@ jobs:
                   "mower/controller.py",
                   "mower/husqvarna.py",
                   "occupancy/match_model.py",
+                  "occupancy/runtime_source.py",
                   "occupancy/service.py",
                   "public/rasen.ics",
                   "public/kunstrasen.ics",

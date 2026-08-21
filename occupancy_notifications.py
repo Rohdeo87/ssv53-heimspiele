@@ -14,6 +14,7 @@ from azure.data.tables import TableClient, UpdateMode
 from azure.identity import ManagedIdentityCredential
 
 from occupancy.service import build_occupancy_payload
+from occupancy.runtime_source import resolve_occupancy_match_source
 from order_mail import (
     APP_BORDER,
     APP_GOLD,
@@ -297,7 +298,10 @@ def _current_payload(now_utc: datetime, values: Mapping[str, str]) -> dict[str, 
     season = "Winter" if local.month in {11, 12, 1, 2} else "Sommer"
     kwargs = {
         "config_path": str(values.get("OCCUPANCY_CONFIG_PATH") or "occupancy/config.json"),
-        "matches_path": str(values.get("OCCUPANCY_MATCHES_PATH") or "public/matches.json"),
+        "matches_path": resolve_occupancy_match_source(
+            values,
+            now_utc=now_utc,
+        ).matches_path,
         "start": local.date().isoformat(),
         "end": end_day.isoformat(),
         "season": season,

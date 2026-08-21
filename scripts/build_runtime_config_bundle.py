@@ -19,7 +19,11 @@ if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from mower.planner import build_training_blocks, load_json, read_match_blocks
-from occupancy.match_model import detect_age_class
+from occupancy.match_model import (
+    detect_age_class,
+    normalize_match_description,
+    normalize_match_title,
+)
 from poc_scraper import Match, recalculate_event_times, write_ics
 
 
@@ -256,8 +260,9 @@ def _as_match(item: dict[str, Any]) -> Match:
 def _retime_matches(
     included: list[dict[str, Any]],
     timing_config: dict[str, Any],
-) -> tuple[list[Match], dict[str, int], dict[str, int]]:
-    matches: list[Match] = []
+) -> tuple[list[Match], list[Match], dict[str, int], dict[str, int]]:
+    all_matches: list[Match] = []
+    rasen_matches: list[Match] = []
     by_age_class: dict[str, int] = {}
     by_duration_rule: dict[str, int] = {}
     for item in included:
@@ -283,11 +288,81 @@ def _retime_matches(
         age_class = detect_age_class(match.team_category, match.team_name) or "FALLBACK"
         by_age_class[age_class] = by_age_class.get(age_class, 0) + 1
         by_duration_rule[match.duration_rule] = by_duration_rule.get(match.duration_rule, 0) + 1
+        all_matches.append(match)
         if match.calendar == "Rasen":
-            matches.append(match)
-    if not matches:
+            rasen_matches.append(match)
+    if not rasen_matches:
         raise RuntimeBundleError("Der freigegebene Spielbestand enthält keine Rasenspiele.")
-    return matches, by_age_class, by_duration_rule
+    return all_matches, rasen_matches, by_age_class, by_duration_rule
+
+
+def _structured_matches_payload(
+    matches: list[Match],
+    *,
+    generated_at: datetime,
+) -> dict[str, Any]:
+    """Build the Appack feed from the same retimed matches as the mower feed."""
+
+    result: list[dict[str, Any]] = []
+    for match in matches:
+        calendar = str(match.calendar or "").strip()
+        if calendar not in {"Rasen", "Kunstrasen"}:
+            raise RuntimeBundleError(
+                f"Spiel {match.external_id} besitzt keine gültige Platzzuordnung."
+            )
+        if not all(
+            (
+                match.external_id,
+                match.kickoff,
+                match.match_end,
+                match.event_start,
+                match.event_end,
+                match.duration_rule,
+                match.competition_format,
+            )
+        ):
+            raise RuntimeBundleError(
+                f"Spiel {match.external_id} ist für den strukturierten Feed unvollständig."
+            )
+        result.append(
+            {
+                "id": "dfb:" + match.external_id,
+                "title": normalize_match_title(match.home_team, match.away_team),
+                "start": match.kickoff,
+                "end": match.match_end,
+                "occupancyStart": match.event_start,
+                "occupancyEnd": match.event_end,
+                "kickoff": match.kickoff,
+                "matchDurationMinutes": match.match_duration_minutes,
+                "durationRule": match.duration_rule,
+                "competitionFormat": match.competition_format,
+                "matchType": match.match_type,
+                "place": "rasen" if calendar == "Rasen" else "kunstrasen",
+                "calendar": calendar,
+                "team": match.team_name,
+                "teamCategory": match.team_category,
+                "teamRole": match.team_role,
+                "homeTeam": match.home_team,
+                "awayTeam": match.away_team,
+                "competition": match.competition,
+                "description": normalize_match_description(
+                    match.team_category,
+                    match.competition,
+                ),
+                "status": match.status,
+                "detailLink": match.detail_url,
+                "location": match.venue_raw,
+                "source": "fussball.de",
+                "checksum": match.checksum,
+            }
+        )
+    result.sort(key=lambda value: (str(value["start"]), str(value["id"])))
+    return {
+        "schemaVersion": 2,
+        "generatedAt": generated_at.astimezone(UTC).isoformat(),
+        "status": "ok",
+        "matches": result,
+    }
 
 
 def build_runtime_bundle(
@@ -330,10 +405,12 @@ def build_runtime_bundle(
         planning_start=published_at.astimezone(LOCAL_TZ).date(),
     )
     timing_config = load_json(timing_config_path)
-    rasen_matches, by_age_class, by_duration_rule = _retime_matches(
+    all_matches, rasen_matches, by_age_class, by_duration_rule = _retime_matches(
         included,
         timing_config,
     )
+    if len(all_matches) != len(included):
+        raise RuntimeBundleError("Bei der Neuberechnung gingen Spiele verloren.")
     expected_rasen = int((source_summary.get("by_calendar") or {}).get("Rasen", -1))
     if len(rasen_matches) != expected_rasen:
         raise RuntimeBundleError("Bei der Neuberechnung gingen Rasenspiele verloren.")
@@ -341,10 +418,23 @@ def build_runtime_bundle(
     version_dir = output_dir / "versions" / version
     version_config = version_dir / "mower" / "config.json"
     version_matches = version_dir / "public" / "rasen.ics"
+    version_occupancy_matches = version_dir / "public" / "matches.json"
     version_config.parent.mkdir(parents=True, exist_ok=True)
     version_matches.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(mower_config_path, version_config)
     write_ics(version_matches, rasen_matches, "SSV53 Rasen – Spiele")
+    version_occupancy_matches.write_text(
+        json.dumps(
+            _structured_matches_payload(
+                all_matches,
+                generated_at=source_generated_at,
+            ),
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
 
     parsed_blocks = read_match_blocks(version_matches, LOCAL_TZ)
     if len(parsed_blocks) != len(rasen_matches):
@@ -354,6 +444,7 @@ def build_runtime_bundle(
 
     config_bytes = version_config.read_bytes()
     matches_bytes = version_matches.read_bytes()
+    occupancy_matches_bytes = version_occupancy_matches.read_bytes()
     manifest = {
         "schema_version": 1,
         "version": version,
@@ -362,6 +453,8 @@ def build_runtime_bundle(
         "matches_blob": f"versions/{version}/public/rasen.ics",
         "config_sha256": sha256(config_bytes).hexdigest(),
         "matches_sha256": sha256(matches_bytes).hexdigest(),
+        "occupancy_matches_blob": f"versions/{version}/public/matches.json",
+        "occupancy_matches_sha256": sha256(occupancy_matches_bytes).hexdigest(),
         "source_commit": source_commit,
         "source_generated_at_utc": source_generated_at.isoformat(),
     }
@@ -387,6 +480,7 @@ def build_runtime_bundle(
         "by_duration_rule": dict(sorted(by_duration_rule.items())),
         "config_sha256": manifest["config_sha256"],
         "matches_sha256": manifest["matches_sha256"],
+        "occupancy_matches_sha256": manifest["occupancy_matches_sha256"],
         "safety": safety_summary,
     }
     (output_dir / "validation-summary.json").write_text(

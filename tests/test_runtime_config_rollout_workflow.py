@@ -35,6 +35,9 @@ class RuntimeConfigRolloutWorkflowTests(unittest.TestCase):
         self.assertIn('assert remote == source', self.content)
         self.assertIn('source["config_sha256"]', self.content)
         self.assertIn('source["matches_sha256"]', self.content)
+        self.assertIn('source["occupancy_matches_sha256"]', self.content)
+        self.assertIn('OCCUPANCY_MATCHES_BLOB="versions/$VERSION/public/matches.json"', self.content)
+        self.assertIn("resolve_occupancy_match_source", self.content)
 
 
 if __name__ == "__main__":

@@ -19,6 +19,7 @@ REQUIRED_FILES = (
     "occupancy/__init__.py",
     "occupancy/config.json",
     "occupancy/match_model.py",
+    "occupancy/runtime_source.py",
     "occupancy/service.py",
     "requirements.txt",
     "training_cancellations.py",
