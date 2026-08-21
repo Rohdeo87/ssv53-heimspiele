@@ -30,7 +30,7 @@ from mower.cutting_height import (
 from mower.runtime import RuntimeSettings
 from mower.state import AutomationState
 from mower.state_store import AzureTableStateStore, StateConflictError
-from daily_safety_report import dashboard_statistics
+from daily_safety_report import dashboard_irrigation_statistics, dashboard_statistics
 
 
 PIN_ITERATIONS_MINIMUM = 200_000
@@ -50,6 +50,8 @@ _CLUBHOUSE_CACHE_LOCK = threading.Lock()
 _CLUBHOUSE_CACHE: dict[str, Any] = {"expires": None, "events": [], "available": False}
 _STATISTICS_CACHE_LOCK = threading.Lock()
 _STATISTICS_CACHE: dict[str, Any] = {"expires": None, "available": False}
+_IRRIGATION_STATISTICS_CACHE_LOCK = threading.Lock()
+_IRRIGATION_STATISTICS_CACHE: dict[str, Any] = {"expires": None, "available": False}
 _MATCH_DISPLAY_CACHE_LOCK = threading.Lock()
 _MATCH_DISPLAY_CACHE: dict[str, Any] = {"path": None, "mtime_ns": None, "matches": {}}
 
@@ -71,6 +73,33 @@ def _dashboard_statistics(environment: Mapping[str, str], now_utc: datetime) -> 
         _STATISTICS_CACHE.clear()
         _STATISTICS_CACHE.update(payload)
         _STATISTICS_CACHE["expires"] = now_utc + timedelta(minutes=5)
+    return payload
+
+
+def _dashboard_irrigation_statistics(
+    environment: Mapping[str, str],
+    now_utc: datetime,
+) -> dict[str, Any]:
+    with _IRRIGATION_STATISTICS_CACHE_LOCK:
+        expires = _IRRIGATION_STATISTICS_CACHE.get("expires")
+        if isinstance(expires, datetime) and now_utc < expires:
+            return {
+                key: value
+                for key, value in _IRRIGATION_STATISTICS_CACHE.items()
+                if key != "expires"
+            }
+    try:
+        payload = dashboard_irrigation_statistics(now_utc, environment)
+        payload["message"] = None
+    except Exception:
+        payload = {
+            "available": False,
+            "message": "Die Beregnungsstatistik ist gerade nicht erreichbar.",
+        }
+    with _IRRIGATION_STATISTICS_CACHE_LOCK:
+        _IRRIGATION_STATISTICS_CACHE.clear()
+        _IRRIGATION_STATISTICS_CACHE.update(payload)
+        _IRRIGATION_STATISTICS_CACHE["expires"] = now_utc + timedelta(minutes=5)
     return payload
 
 
@@ -814,6 +843,25 @@ def live_status(environment: Mapping[str, str], now_utc: datetime) -> dict[str, 
         )
     else:
         statistics["mownAreaEquivalents7d"] = None
+    irrigation_statistics = _dashboard_irrigation_statistics(environment, now_utc)
+    zone_names = {
+        int(zone["relay_id"]): str(zone.get("name") or f"Zone {zone.get('zone')}")
+        for zone in hydrawise.get("zones", [])
+        if isinstance(zone, dict) and zone.get("relay_id") is not None
+    }
+    measured_zone_minutes = {
+        int(item.get("relayId") or 0): int(item.get("minutes") or 0)
+        for item in irrigation_statistics.get("zoneMinutes7d") or []
+        if isinstance(item, dict) and item.get("relayId") is not None
+    }
+    irrigation_statistics["zoneMinutes7d"] = [
+        {
+            "relayId": relay_id,
+            "name": name,
+            "minutes": measured_zone_minutes.get(relay_id, 0),
+        }
+        for relay_id, name in zone_names.items()
+    ]
     return {
         "generatedAt": now_utc.astimezone(timezone.utc).isoformat(),
         "controlsAvailable": controls_available,
@@ -853,6 +901,7 @@ def live_status(environment: Mapping[str, str], now_utc: datetime) -> dict[str, 
         },
         "automation": _state_payload(state),
         "statistics": statistics,
+        "irrigationStatistics": irrigation_statistics,
         "clubhouse": _clubhouse_events(environment, now_utc),
     }
 
@@ -899,6 +948,7 @@ def unavailable_live_status(now_utc: datetime) -> dict[str, Any]:
         },
         "automation": {},
         "statistics": {"available": False, "message": "Statistiken sind gerade nicht erreichbar."},
+        "irrigationStatistics": {"available": False, "message": "Beregnungsstatistiken sind gerade nicht erreichbar."},
         "clubhouse": {"available": False, "events": [], "message": "Vereinsheim-Daten sind gerade nicht erreichbar."},
     }
 

@@ -84,6 +84,16 @@ test("Platzwart-Seite ist syntaktisch gültig und enthält keine Zugangsdaten", 
   assert.match(html, /Gemähte Rasenflächen · 7 Tage/);
   assert.match(html, /Mähzeit heute/);
   assert.match(html, /Ø Heimfahrdauer · 7 Tage/);
+  assert.match(html, /id="water-stats-open"/);
+  assert.match(html, /Beregnungsstatistiken/);
+  assert.match(html, /Beregnungszeit · 7 Tage/);
+  assert.match(html, /Vollständige Durchläufe · 7 Tage/);
+  assert.match(html, /Zuletzt vollständig beregnet/);
+  assert.match(html, /Letzte Beregnungsdauer/);
+  assert.match(html, /Beregnungszeit je Zone · 7 Tage/);
+  assert.match(html, /Planänderungen · 7 Tage/);
+  assert.match(html, /function renderIrrigationStatistics\(stats\)/);
+  assert.match(html, /tatsächlich bestätigten Minutenzyklen und Zonenläufe/);
   assert.match(html, /function areaEquivalent\(value\)/);
   assert.doesNotMatch(html, /Gesamte Schneidezeit/);
   assert.doesNotMatch(html, /Ladezyklen/);

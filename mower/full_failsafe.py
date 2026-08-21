@@ -744,6 +744,12 @@ def _state_details(state: AutomationState, *, persisted: bool, error: str | None
         "irrigation_cancelled_without_run_utc": (
             state.irrigation_cancelled_without_run_utc
         ),
+        # Die Bedienmetadaten sind ausschließlich Telemetrie. Sie erlauben
+        # dem Dashboard, manuell angestoßene Beregnungen zu zählen, ohne
+        # personenbezogene Daten oder Zugangsdaten zu protokollieren.
+        "operator_request_id": state.operator_request_id,
+        "operator_request_action": state.operator_request_action,
+        "operator_request_status": state.operator_request_status,
         "hydrawise_clear_since_utc": state.hydrawise_clear_since_utc,
         "hydrawise_clear_origin": state.hydrawise_clear_origin,
     }

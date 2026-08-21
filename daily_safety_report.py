@@ -521,6 +521,166 @@ def dashboard_statistics(
     }
 
 
+def _irrigation_cycle_query(
+    period_start_utc: datetime,
+    period_end_utc: datetime,
+) -> str:
+    start = period_start_utc.isoformat().replace("+00:00", "Z")
+    end = period_end_utc.isoformat().replace("+00:00", "Z")
+    return f"""
+traces
+| where timestamp between (datetime({start}) .. datetime({end}))
+| where message startswith "SSV53_CONTROL_CYCLE "
+| extend p=parse_json(replace_string(message, "SSV53_CONTROL_CYCLE ", ""))
+| project timestamp,
+    decision_code=tostring(p.decision_code),
+    active_relay_ids=tostring(p.details.hydrawise.safety.active_relay_ids),
+    irrigation_plan_id=tostring(p.details.automation_state.irrigation_plan_id),
+    irrigation_completed_utc=tostring(p.details.automation_state.irrigation_completed_utc),
+    completed_relay_ids=tostring(p.details.automation_state.irrigation_completed_relay_ids),
+    operator_request_id=tostring(p.details.automation_state.operator_request_id),
+    operator_request_action=tostring(p.details.automation_state.operator_request_action),
+    operator_request_status=tostring(p.details.automation_state.operator_request_status)
+| order by timestamp asc
+""".strip()
+
+
+def _json_int_list(value: Any) -> tuple[int, ...]:
+    if isinstance(value, list):
+        raw = value
+    else:
+        try:
+            raw = json.loads(str(value or "[]"))
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return ()
+    if not isinstance(raw, list):
+        return ()
+    values: list[int] = []
+    for item in raw:
+        try:
+            values.append(int(item))
+        except (TypeError, ValueError):
+            continue
+    return tuple(sorted(set(values)))
+
+
+def summarize_irrigation_statistics(
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    expected_zone_count: int = 7,
+) -> dict[str, Any]:
+    """Verdichtet reale Minutenbeobachtungen statt Soll-Laufzeiten.
+
+    Application Insights kann durch parallele Function-Instanzen doppelte
+    Zeilen für dieselbe Minute enthalten. Je Minute gewinnt deshalb die
+    zeitlich letzte Beobachtung. Vollständige Läufe werden nur gezählt, wenn
+    alle erwarteten Relais im persistenten Abschlussnachweis enthalten sind.
+    """
+
+    by_minute: dict[datetime, dict[str, Any]] = {}
+    for row in rows:
+        timestamp = _parse_utc(row.get("timestamp"))
+        if timestamp is None:
+            continue
+        by_minute[timestamp.replace(second=0, microsecond=0)] = {
+            "timestamp": timestamp,
+            "decision": str(row.get("decision_code") or "").upper(),
+            "active": _json_int_list(row.get("active_relay_ids")),
+            "plan": str(row.get("irrigation_plan_id") or "").strip(),
+            "completed_at": _parse_utc(row.get("irrigation_completed_utc")),
+            "completed": _json_int_list(row.get("completed_relay_ids")),
+            "request_id": str(row.get("operator_request_id") or "").strip(),
+            "request_action": str(row.get("operator_request_action") or "").upper(),
+            "request_status": str(row.get("operator_request_status") or "").upper(),
+        }
+    observations = [by_minute[key] for key in sorted(by_minute)]
+    zone_minutes: dict[int, int] = defaultdict(int)
+    plan_active_minutes: dict[str, int] = defaultdict(int)
+    for item in observations:
+        active = item["active"]
+        if active:
+            for relay_id in active:
+                zone_minutes[relay_id] += 1
+            if item["plan"]:
+                # Parallelbetrieb ist verboten; dennoch zählt die Dauer des
+                # Laufs nur einmal je beobachteter Minute.
+                plan_active_minutes[item["plan"]] += 1
+
+    completed_runs: dict[tuple[str, datetime], dict[str, Any]] = {}
+    for item in observations:
+        completed_at = item["completed_at"]
+        if (
+            completed_at is not None
+            and item["plan"]
+            and len(item["completed"]) >= expected_zone_count
+        ):
+            completed_runs[(item["plan"], completed_at)] = item
+    ordered_completed = sorted(
+        completed_runs,
+        key=lambda value: value[1],
+    )
+    last_key = ordered_completed[-1] if ordered_completed else None
+
+    updated_codes = {
+        "IRRIGATION_PLAN_UPDATED",
+        "IRRIGATION_REMAINING_DURATIONS_UPDATED",
+    }
+    cancelled_codes = {
+        "IRRIGATION_PLAN_CANCELLED_OR_DEFERRED",
+        "IRRIGATION_OPERATOR_CANCELLED_BEFORE_RUN",
+        "IRRIGATION_OPERATOR_STOPPED_BETWEEN_ZONES",
+        "IRRIGATION_OPERATOR_STOPPED_AFTER_ZONE",
+        "IRRIGATION_OPERATOR_STOPPED_NOW",
+    }
+    updated = sum(1 for item in observations if item["decision"] in updated_codes)
+    cancelled = sum(1 for item in observations if item["decision"] in cancelled_codes)
+    manual_request_ids = {
+        item["request_id"]
+        for item in observations
+        if item["request_id"]
+        and item["request_action"] in {"START_IRRIGATION", "START_IRRIGATION_ZONE"}
+        and item["request_status"] == "SUCCESS"
+    }
+    manual_started = len(manual_request_ids)
+    return {
+        "available": True,
+        "wateringMinutes7d": sum(1 for item in observations if item["active"]),
+        "completedRuns7d": len(ordered_completed),
+        "lastCompletedAt": last_key[1].isoformat() if last_key else None,
+        "lastCompletedDurationMinutes": (
+            plan_active_minutes.get(last_key[0], 0) if last_key else None
+        ),
+        "zoneMinutes7d": [
+            {"relayId": relay_id, "minutes": minutes}
+            for relay_id, minutes in sorted(zone_minutes.items())
+        ],
+        "planChanges7d": updated + cancelled + manual_started,
+        "planChangeBreakdown": {
+            "updated": updated,
+            "cancelled": cancelled,
+            "manualStarted": manual_started,
+        },
+    }
+
+
+def dashboard_irrigation_statistics(
+    now_utc: datetime,
+    values: Mapping[str, str],
+    *,
+    query_client: ApplicationInsightsQueryClient | Any | None = None,
+) -> dict[str, Any]:
+    local_now = now_utc.astimezone(REPORT_TIME_ZONE)
+    period_start_local = datetime.combine(
+        local_now.date() - timedelta(days=6), time.min, REPORT_TIME_ZONE
+    )
+    client = query_client or ApplicationInsightsQueryClient.from_environment(values)
+    rows = client.execute(
+        _irrigation_cycle_query(period_start_local.astimezone(timezone.utc), now_utc),
+        timespan="P8D",
+    )
+    return summarize_irrigation_statistics(rows)
+
+
 def _minutes(value: int) -> str:
     hours, minutes = divmod(max(0, int(value)), 60)
     return f"{hours} Std. {minutes:02d} Min."

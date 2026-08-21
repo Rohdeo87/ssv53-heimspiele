@@ -4,12 +4,14 @@ import pytest
 
 from daily_safety_report import (
     DailyReportError,
+    dashboard_irrigation_statistics,
     dashboard_statistics,
     parse_cycle_rows,
     process_daily_report,
     report_recipient,
     should_attempt_delivery,
     summarize_report,
+    summarize_irrigation_statistics,
 )
 
 
@@ -97,6 +99,49 @@ def test_dashboard_statistics_reuses_confirmed_seven_day_metrics():
     assert value["mowingMinutesToday"] == 2
     assert value["averageReturnMinutes7d"] is None
     assert value["lastCompletedAreaUtc"] is not None
+
+
+def test_irrigation_statistics_use_actual_zones_and_confirmed_full_runs():
+    rows = [
+        {"timestamp": "2026-08-20T04:00:01Z", "decision_code": "IRRIGATION_ZONE_RUNNING", "active_relay_ids": "[101]", "irrigation_plan_id": "plan-a", "irrigation_completed_utc": "", "completed_relay_ids": "[]"},
+        {"timestamp": "2026-08-20T04:00:40Z", "decision_code": "IRRIGATION_ZONE_RUNNING", "active_relay_ids": "[101]", "irrigation_plan_id": "plan-a", "irrigation_completed_utc": "", "completed_relay_ids": "[]"},
+        {"timestamp": "2026-08-20T04:01:01Z", "decision_code": "IRRIGATION_ZONE_RUNNING", "active_relay_ids": "[102]", "irrigation_plan_id": "plan-a", "irrigation_completed_utc": "", "completed_relay_ids": "[101]"},
+        {"timestamp": "2026-08-20T04:02:01Z", "decision_code": "IRRIGATION_ALL_ZONES_CONFIRMED_COMPLETE", "active_relay_ids": "[]", "irrigation_plan_id": "plan-a", "irrigation_completed_utc": "2026-08-20T04:02:00Z", "completed_relay_ids": "[101,102,103,104,105,106,107]"},
+        {"timestamp": "2026-08-20T05:00:01Z", "decision_code": "IRRIGATION_PLAN_UPDATED", "active_relay_ids": "[]", "irrigation_plan_id": "plan-b", "irrigation_completed_utc": "", "completed_relay_ids": "[]", "operator_request_id": "manual-1", "operator_request_action": "START_IRRIGATION", "operator_request_status": "SUCCESS"},
+        {"timestamp": "2026-08-20T05:01:01Z", "decision_code": "IRRIGATION_PLAN_CANCELLED_OR_DEFERRED", "active_relay_ids": "[]", "irrigation_plan_id": "plan-b", "irrigation_completed_utc": "", "completed_relay_ids": "[]", "operator_request_id": "manual-1", "operator_request_action": "START_IRRIGATION", "operator_request_status": "SUCCESS"},
+    ]
+    value = summarize_irrigation_statistics(rows)
+    assert value["wateringMinutes7d"] == 2
+    assert value["completedRuns7d"] == 1
+    assert value["lastCompletedDurationMinutes"] == 2
+    assert value["zoneMinutes7d"] == [
+        {"relayId": 101, "minutes": 1},
+        {"relayId": 102, "minutes": 1},
+    ]
+    assert value["planChanges7d"] == 3
+    assert value["planChangeBreakdown"] == {
+        "updated": 1,
+        "cancelled": 1,
+        "manualStarted": 1,
+    }
+
+
+def test_dashboard_irrigation_statistics_queries_eight_day_window():
+    class DashboardQueries:
+        def execute(self, query, *, timespan):
+            assert "active_relay_ids" in query
+            assert "irrigation_completed_utc" in query
+            assert timespan == "P8D"
+            return []
+
+    value = dashboard_irrigation_statistics(
+        datetime(2026, 8, 20, 5, 0, tzinfo=timezone.utc),
+        {},
+        query_client=DashboardQueries(),
+    )
+    assert value["available"] is True
+    assert value["completedRuns7d"] == 0
+    assert value["wateringMinutes7d"] == 0
 
 
 def test_summary_infers_epos_completion_from_stable_99_to_zero_transition():

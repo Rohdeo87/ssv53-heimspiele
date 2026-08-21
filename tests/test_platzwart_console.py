@@ -182,6 +182,37 @@ class PlatzwartAuthenticationTests(unittest.TestCase):
         self.assertNotIn("totalCuttingSeconds", payload["statistics"])
         self.assertNotIn("chargingCycles", payload["statistics"])
 
+    def test_live_status_exposes_all_seven_irrigation_zone_statistics(self) -> None:
+        live_cycle = result(activity="PARKED_IN_CS", battery=100)
+        store = InMemoryStateStore()
+        with patch("platzwart_console.run_read_only_cycle", return_value=live_cycle), patch(
+            "platzwart_console.AzureTableStateStore.from_environment",
+            return_value=store,
+        ), patch(
+            "platzwart_console._clubhouse_events",
+            return_value={"available": True, "events": [], "message": None},
+        ), patch(
+            "platzwart_console._dashboard_statistics",
+            return_value={"available": True},
+        ), patch(
+            "platzwart_console._dashboard_irrigation_statistics",
+            return_value={
+                "available": True,
+                "wateringMinutes7d": 12,
+                "zoneMinutes7d": [
+                    {"relayId": RELAYS[0], "minutes": 12},
+                ],
+            },
+        ):
+            payload = live_status(ENV, NOW)
+
+        statistics = payload["irrigationStatistics"]
+        self.assertEqual(statistics["wateringMinutes7d"], 12)
+        self.assertEqual(len(statistics["zoneMinutes7d"]), 7)
+        self.assertEqual(statistics["zoneMinutes7d"][0]["minutes"], 12)
+        self.assertEqual(statistics["zoneMinutes7d"][1]["minutes"], 0)
+        self.assertTrue(all(item["name"] for item in statistics["zoneMinutes7d"]))
+
     def test_epos_home_search_is_exposed_as_satellite_search(self) -> None:
         live_cycle = result(activity="NOT_APPLICABLE")
         live_cycle.details["mower"].update(
