@@ -50,7 +50,7 @@ test("Platzwart-Seite ist syntaktisch gültig und enthält keine Zugangsdaten", 
   assert.match(html, /id="mow-start" class="btn mower-action"/);
   assert.match(html, /id="irrigation-stop" class="btn stop hidden"/);
   assert.match(html, /\.btn\.water-start,\.btn\.stop,\.btn\.goldbtn\{background:var\(--blue\)/);
-  assert.match(html, /\.btn\.mower-action\{background:var\(--red\);color:#fff/);
+  assert.match(html, /\.btn\.mower-action,\.btn\.danger\{background:var\(--red\);color:#fff/);
   assert.doesNotMatch(html, /\.btn[^\{]*\{[^}]*background:var\(--gold\)/);
   assert.match(html, /\.btn:disabled\{background:#eef1f5!important;color:#929cab!important/);
   assert.match(html, /id="mower-next-start"/);
@@ -107,6 +107,19 @@ test("Platzwart-Seite ist syntaktisch gültig und enthält keine Zugangsdaten", 
   assert.match(html, /Mindestens eine Zone muss aktiviert bleiben/);
   assert.match(html, /Jede Änderung wird erst nach vollständiger Hydrawise-Prüfung wirksam/);
   assert.match(html, /function renderIrrigationSchedule\(schedule,automation,controlsAvailable\)/);
+  assert.match(html, /id="plan-home"/);
+  assert.match(html, /id="plan-pause-step" class="plan-step hidden"/);
+  assert.match(html, /id="plan-zones-wrap" class="plan-zone-wrap hidden"/);
+  assert.match(html, /id="plan-history-wrap" class="plan-history-wrap hidden"/);
+  assert.match(html, /id="plan-skip" class="plan-choice danger"/);
+  assert.match(html, /id="plan-pause-open" class="plan-choice"/);
+  assert.match(html, /id="plan-custom-open" class="plan-choice"/);
+  assert.match(html, /function showPlanView\(view\)/);
+  assert.match(html, /function resetPlanDialog\(\)/);
+  assert.match(html, /plan-zones-toggle/);
+  assert.match(html, /plan-history-toggle/);
+  assert.match(html, /critical=\["PARK_MOWER","START_MOWING","SKIP_NEXT_IRRIGATION","PAUSE_IRRIGATION_UNTIL"/);
+  assert.doesNotMatch(html, /class="plan-section"/);
   assert.match(html, /tatsächlich bestätigten Minutenzyklen und Zonenläufe/);
   assert.match(html, /function areaEquivalent\(value\)/);
   assert.doesNotMatch(html, /Gesamte Schneidezeit/);
