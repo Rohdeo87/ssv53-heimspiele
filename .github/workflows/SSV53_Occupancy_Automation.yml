@@ -654,59 +654,75 @@ jobs:
         run: |
           set -euo pipefail
 
-          HOST="$(
-            az functionapp show \
-              --resource-group "$RESOURCE_GROUP" \
-              --name "$FUNCTION_APP" \
-              --query defaultHostName \
-              --output tsv
-          )"
-
-          [ -n "$HOST" ]
-
           TODAY="$(date -u +%F)"
           TOMORROW="$(date -u -d '+1 day' +%F)"
 
           success=false
 
-          for attempt in 1 2 3 4 5; do
-            if curl \
+          # Direkt nach einem ZIP-Deployment kann Azure den App-Datensatz
+          # bereits liefern, während defaultHostName oder der Python-Worker
+          # noch kurz im Übergang sind. Deshalb wird immer die vollständige
+          # Kette erneut geprüft: Hostname, HTTP-Antwort und JSON-Schema.
+          for attempt in $(seq 1 18); do
+            HOST="$(
+              az functionapp show \
+                --resource-group "$RESOURCE_GROUP" \
+                --name "$FUNCTION_APP" \
+                --query defaultHostName \
+                --output tsv \
+                2>/dev/null \
+                || true
+            )"
+
+            if [ -n "$HOST" ] && curl \
               --fail \
               --silent \
               --show-error \
               "https://${HOST}/api/occupancy?start=${TODAY}&end=${TOMORROW}&season=Sommer" \
               > /tmp/occupancy-live.json
             then
-              success=true
-              break
+              if python - <<'PY'
+          import json
+
+          try:
+              payload = json.load(
+                  open(
+                      "/tmp/occupancy-live.json",
+                      encoding="utf-8",
+                  )
+              )
+          except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+              print(f"Live-Prüfung noch nicht bereit: {exc}")
+              raise SystemExit(1)
+
+          valid = (
+              payload.get("schema_version") == 1
+              and payload.get("data_source") == "azure"
+              and isinstance(payload.get("events"), list)
+          )
+
+          if not valid:
+              print(
+                  "Live-Prüfung noch nicht bereit: "
+                  "Belegungs-Schema unvollständig."
+              )
+              raise SystemExit(1)
+          PY
+              then
+                success=true
+                break
+              fi
             fi
 
             sleep 5
           done
 
-          [ "$success" = "true" ]
+          if [ "$success" != "true" ]; then
+            echo "Belegungs-Endpunkt war nach 90 Sekunden nicht vollständig bereit." >&2
+            exit 1
+          fi
 
-          python - <<'PY'
-          import json
-
-          payload = json.load(
-              open(
-                  "/tmp/occupancy-live.json",
-                  encoding="utf-8",
-              )
-          )
-
-          assert payload.get("schema_version") == 1
-          assert payload.get("data_source") == "azure"
-          assert isinstance(
-              payload.get("events"),
-              list,
-          )
-
-          print(
-              "Belegungs-Endpunkt ist live erreichbar."
-          )
-          PY
+          echo "Belegungs-Endpunkt ist live erreichbar."
 
       - name: Auftrag bei Erfolg abschließen
         if: success() && inputs.request_issue != ''
