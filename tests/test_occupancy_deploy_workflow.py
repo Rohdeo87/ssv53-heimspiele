@@ -27,6 +27,8 @@ class OccupancyDeployWorkflowTests(unittest.TestCase):
         self.assertIn('isinstance(payload.get("events"), list)', self.workflow)
 
     def test_transient_hostname_lookup_cannot_abort_the_first_attempt(self) -> None:
+        self.assertIn("--query properties.defaultHostName", self.workflow)
+        self.assertNotIn("--query defaultHostName", self.workflow)
         self.assertIn("2>/dev/null \\", self.workflow)
         self.assertIn("|| true", self.workflow)
         self.assertIn('if [ "$success" != "true" ]; then', self.workflow)

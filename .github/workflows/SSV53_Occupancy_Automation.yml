@@ -668,7 +668,7 @@ jobs:
               az functionapp show \
                 --resource-group "$RESOURCE_GROUP" \
                 --name "$FUNCTION_APP" \
-                --query defaultHostName \
+                --query properties.defaultHostName \
                 --output tsv \
                 2>/dev/null \
                 || true
