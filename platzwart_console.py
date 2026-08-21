@@ -958,6 +958,16 @@ def live_status(environment: Mapping[str, str], now_utc: datetime) -> dict[str, 
         for item in irrigation_statistics.get("zoneMinutes7d") or []
         if isinstance(item, dict) and item.get("relayId") is not None
     }
+    attention = irrigation_statistics.get("attention")
+    if isinstance(attention, dict):
+        for affected in attention.get("affectedRuns") or []:
+            if not isinstance(affected, dict):
+                continue
+            affected["confirmedZoneNames"] = [
+                zone_names[relay_id]
+                for relay_id in affected.get("confirmedRelayIds") or []
+                if relay_id in zone_names
+            ]
     irrigation_statistics["zoneMinutes7d"] = [
         {
             "relayId": relay_id,

@@ -12,6 +12,7 @@ import azure.functions as func
 from daily_safety_report import process_daily_report
 
 from mower.controller import run_control_cycle
+from mower.irrigation_journal import record_irrigation_observation
 from mower.irrigation_recovery import (
     IrrigationRecoveryError,
     reset_failed_irrigation,
@@ -83,6 +84,14 @@ def ssv53_mower_timer(
         else 0
     )
 
+    try:
+        # Revisionssicheres Faktenjournal für die Anzeige. Ein Storage-Fehler
+        # darf den sicherheitskritischen Steuerzyklus niemals zurückrollen
+        # oder erneut Gerätebefehle auslösen.
+        record_irrigation_observation(result, os.environ)
+    except Exception:
+        LOGGER.exception("SSV53_IRRIGATION_JOURNAL_WRITE_ERROR")
+
     serialized = json.dumps(
         payload,
         ensure_ascii=False,
@@ -153,7 +162,6 @@ def _occupancy_match_source(
         environment if environment is not None else os.environ,
         now_utc=now_utc or datetime.now(timezone.utc),
     )
-
 
 def _occupancy_matches_path() -> tuple[str, str]:
     """Compatibility helper for internal callers and focused tests."""

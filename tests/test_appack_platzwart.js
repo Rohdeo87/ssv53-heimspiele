@@ -93,6 +93,10 @@ test("Platzwart-Seite ist syntaktisch gültig und enthält keine Zugangsdaten", 
   assert.match(html, /Beregnungszeit je Zone · 7 Tage/);
   assert.match(html, /Planänderungen · 7 Tage/);
   assert.match(html, /function renderIrrigationStatistics\(stats\)/);
+  assert.match(html, /id="water-attention-open"/);
+  assert.match(html, /id="water-attention-dialog"/);
+  assert.match(html, /function renderIrrigationAttention\(stats\)/);
+  assert.match(html, /Fehlende Messwerte werden nicht als erfolgte Beregnung gewertet/);
   assert.match(html, /id="water-plan-open"/);
   assert.match(html, /Beregnungsplan anpassen/);
   assert.match(html, /Nächste Beregnung aussetzen/);

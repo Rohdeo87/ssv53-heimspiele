@@ -124,6 +124,22 @@ def test_irrigation_statistics_use_actual_zones_and_confirmed_full_runs():
         "cancelled": 1,
         "manualStarted": 1,
     }
+    assert value["attention"] is None
+
+
+def test_irrigation_statistics_separates_partial_run_and_related_gap():
+    rows = [
+        {"timestamp": "2026-08-21T02:40:01Z", "decision_code": "IRRIGATION_ZONE_RUNNING", "active_relay_ids": "[101]", "irrigation_plan_id": "plan-gap", "irrigation_phase": "RUNNING", "irrigation_completed_utc": "", "completed_relay_ids": "[100]"},
+        {"timestamp": "2026-08-21T02:41:01Z", "decision_code": "IRRIGATION_ZONE_RUNNING", "active_relay_ids": "[101]", "irrigation_plan_id": "plan-gap", "irrigation_phase": "RUNNING", "irrigation_completed_utc": "", "completed_relay_ids": "[100]"},
+        {"timestamp": "2026-08-21T07:40:01Z", "decision_code": "IRRIGATION_FAILED_HOLD", "active_relay_ids": "[]", "irrigation_plan_id": "plan-gap", "irrigation_phase": "FAILED", "irrigation_completed_utc": "", "completed_relay_ids": "[100,101]"},
+    ]
+
+    value = summarize_irrigation_statistics(rows)
+
+    assert value["completedRuns7d"] == 0
+    assert value["attention"]["summary"] == "2 von 7 Zonen bestätigt."
+    assert value["attention"]["affectedRuns"][0]["confirmedRelayIds"] == [100, 101]
+    assert value["attention"]["dataGaps"][0]["missingMinutes"] == 298
 
 
 def test_dashboard_irrigation_statistics_queries_eight_day_window():
@@ -142,6 +158,44 @@ def test_dashboard_irrigation_statistics_queries_eight_day_window():
     assert value["available"] is True
     assert value["completedRuns7d"] == 0
     assert value["wateringMinutes7d"] == 0
+
+
+def test_dashboard_irrigation_statistics_survives_insights_outage_with_journal():
+    class BrokenInsights:
+        def execute(self, query, *, timespan):
+            raise RuntimeError("insights unavailable")
+
+    def journal(values, start, end):
+        return [
+            {"timestamp": "2026-08-20T04:02:01Z", "decision_code": "IRRIGATION_ALL_ZONES_CONFIRMED_COMPLETE", "active_relay_ids": "[]", "irrigation_plan_id": "plan-journal", "irrigation_phase": "COMPLETE_HOLD", "irrigation_completed_utc": "2026-08-20T04:02:00Z", "completed_relay_ids": "[1,2,3,4,5,6,7]"},
+        ]
+
+    value = dashboard_irrigation_statistics(
+        datetime(2026, 8, 20, 5, 0, tzinfo=timezone.utc),
+        {},
+        query_client=BrokenInsights(),
+        journal_reader=journal,
+    )
+    assert value["completedRuns7d"] == 1
+    assert value["attention"] is None
+
+
+def test_dashboard_irrigation_statistics_marks_unavailable_journal_separately():
+    class Insights:
+        def execute(self, query, *, timespan):
+            return []
+
+    def broken_journal(values, start, end):
+        raise RuntimeError("table unavailable")
+
+    value = dashboard_irrigation_statistics(
+        datetime(2026, 8, 20, 5, 0, tzinfo=timezone.utc),
+        {},
+        query_client=Insights(),
+        journal_reader=broken_journal,
+    )
+    assert value["available"] is True
+    assert "sourceIssue" in value["attention"]
 
 
 def test_summary_infers_epos_completion_from_stable_99_to_zero_transition():

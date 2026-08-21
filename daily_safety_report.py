@@ -26,6 +26,7 @@ from order_mail import (
     OrderMailSettings,
     _open_authenticated_smtp,
 )
+from mower.irrigation_journal import read_irrigation_observations
 
 
 REPORT_PARTITION = "ssv53-daily-safety-report-v1"
@@ -536,6 +537,7 @@ traces
     decision_code=tostring(p.decision_code),
     active_relay_ids=tostring(p.details.hydrawise.safety.active_relay_ids),
     irrigation_plan_id=tostring(p.details.automation_state.irrigation_plan_id),
+    irrigation_phase=tostring(p.details.automation_state.irrigation_phase),
     irrigation_completed_utc=tostring(p.details.automation_state.irrigation_completed_utc),
     completed_relay_ids=tostring(p.details.automation_state.irrigation_completed_relay_ids),
     operator_request_id=tostring(p.details.automation_state.operator_request_id),
@@ -587,6 +589,7 @@ def summarize_irrigation_statistics(
             "decision": str(row.get("decision_code") or "").upper(),
             "active": _json_int_list(row.get("active_relay_ids")),
             "plan": str(row.get("irrigation_plan_id") or "").strip(),
+            "phase": str(row.get("irrigation_phase") or "").strip().upper(),
             "completed_at": _parse_utc(row.get("irrigation_completed_utc")),
             "completed": _json_int_list(row.get("completed_relay_ids")),
             "request_id": str(row.get("operator_request_id") or "").strip(),
@@ -620,6 +623,96 @@ def summarize_irrigation_statistics(
         key=lambda value: value[1],
     )
     last_key = ordered_completed[-1] if ordered_completed else None
+
+    # Unsichere oder nur teilweise ausgeführte Läufe werden nicht in die
+    # normalen Statistik-Kacheln gemischt. Sie werden separat für ein
+    # kontextbezogenes Hinweissymbol an der Beregnungskarte bereitgestellt.
+    plan_evidence: dict[str, dict[str, Any]] = {}
+    for item in observations:
+        plan = item["plan"]
+        if not plan:
+            continue
+        evidence = plan_evidence.setdefault(
+            plan,
+            {
+                "confirmed": set(),
+                "active": set(),
+                "first": item["timestamp"],
+                "last": item["timestamp"],
+                "failed": False,
+                "complete": False,
+            },
+        )
+        evidence["confirmed"].update(item["completed"])
+        evidence["active"].update(item["active"])
+        evidence["last"] = item["timestamp"]
+        evidence["failed"] = evidence["failed"] or item["phase"] == "FAILED" or item[
+            "decision"
+        ] in {
+            "IRRIGATION_FAILED_HOLD",
+            "IRRIGATION_ZONE_END_UNCLEAR",
+            "IRRIGATION_RUN_CANCELLED_EARLY",
+        }
+        evidence["complete"] = evidence["complete"] or (
+            item["completed_at"] is not None
+            and len(item["completed"]) >= expected_zone_count
+        )
+
+    gaps: list[dict[str, Any]] = []
+    for previous, current in zip(observations, observations[1:]):
+        missing_minutes = int(
+            (current["timestamp"] - previous["timestamp"]).total_seconds() // 60
+        ) - 1
+        if missing_minutes < 3:
+            continue
+        plan = previous["plan"] if previous["plan"] == current["plan"] else ""
+        evidence = plan_evidence.get(plan) if plan else None
+        if not evidence or evidence["complete"]:
+            continue
+        if not (evidence["confirmed"] or evidence["active"] or evidence["failed"]):
+            continue
+        gaps.append(
+            {
+                "planId": plan,
+                "start": previous["timestamp"].isoformat(),
+                "end": current["timestamp"].isoformat(),
+                "missingMinutes": missing_minutes,
+            }
+        )
+
+    affected_runs: list[dict[str, Any]] = []
+    for plan, evidence in plan_evidence.items():
+        confirmed = sorted(evidence["confirmed"])
+        if evidence["complete"] or not evidence["failed"]:
+            continue
+        affected_runs.append(
+            {
+                "planId": plan,
+                "observedAt": evidence["last"].isoformat(),
+                "confirmedZoneCount": len(confirmed),
+                "expectedZoneCount": expected_zone_count,
+                "confirmedRelayIds": confirmed,
+                "status": "incomplete",
+            }
+        )
+    affected_runs.sort(key=lambda item: item["observedAt"], reverse=True)
+    attention = None
+    if affected_runs or gaps:
+        latest = affected_runs[0] if affected_runs else None
+        attention = {
+            "severity": "warning",
+            "title": "Beregnung nicht vollständig bestätigt"
+            if latest
+            else "Beregnungsdaten waren zeitweise unvollständig",
+            "summary": (
+                f"{latest['confirmedZoneCount']} von "
+                f"{latest['expectedZoneCount']} Zonen bestätigt."
+                if latest
+                else "Für einen Beregnungszeitraum liegt eine Datenlücke vor."
+            ),
+            "affectedRuns": affected_runs[:3],
+            "dataGaps": gaps[-3:],
+        }
 
     updated_codes = {
         "IRRIGATION_PLAN_UPDATED",
@@ -660,6 +753,7 @@ def summarize_irrigation_statistics(
             "cancelled": cancelled,
             "manualStarted": manual_started,
         },
+        "attention": attention,
     }
 
 
@@ -668,17 +762,63 @@ def dashboard_irrigation_statistics(
     values: Mapping[str, str],
     *,
     query_client: ApplicationInsightsQueryClient | Any | None = None,
+    journal_reader: Callable[..., Sequence[Mapping[str, Any]]] | None = None,
 ) -> dict[str, Any]:
     local_now = now_utc.astimezone(REPORT_TIME_ZONE)
     period_start_local = datetime.combine(
         local_now.date() - timedelta(days=6), time.min, REPORT_TIME_ZONE
     )
-    client = query_client or ApplicationInsightsQueryClient.from_environment(values)
-    rows = client.execute(
-        _irrigation_cycle_query(period_start_local.astimezone(timezone.utc), now_utc),
-        timespan="P8D",
-    )
-    return summarize_irrigation_statistics(rows)
+    rows: list[Mapping[str, Any]] = []
+    insights_failed = False
+    try:
+        client = query_client or ApplicationInsightsQueryClient.from_environment(values)
+        rows.extend(
+            client.execute(
+                _irrigation_cycle_query(
+                    period_start_local.astimezone(timezone.utc), now_utc
+                ),
+                timespan="P8D",
+            )
+        )
+    except Exception:
+        insights_failed = True
+    # Das Azure-Table-Journal ist die dauerhafte Quelle. Application Insights
+    # bleibt als Rückwärtskompatibilität und zur Erkennung älterer Lücken
+    # erhalten. Journalzeilen gewinnen bei identischer Minute.
+    reader = journal_reader
+    if reader is None and query_client is None:
+        reader = read_irrigation_observations
+    journal_failed = False
+    if reader is not None:
+        try:
+            rows.extend(
+                reader(
+                    values,
+                    period_start_local.astimezone(timezone.utc),
+                    now_utc,
+                )
+            )
+        except Exception:
+            # Eine vorübergehende Journal-Lesestörung darf die vorhandene
+            # bestätigte Auswertung nicht vollständig ausblenden.
+            journal_failed = True
+    if not rows and insights_failed and (reader is None or journal_failed):
+        raise RuntimeError("Beregnungsnachweise sind derzeit nicht erreichbar.")
+    result = summarize_irrigation_statistics(rows)
+    if journal_failed:
+        attention = result.get("attention") or {
+            "severity": "warning",
+            "title": "Beregnungsnachweis vorübergehend eingeschränkt",
+            "summary": "Das dauerhafte Beregnungsjournal konnte nicht gelesen werden.",
+            "affectedRuns": [],
+            "dataGaps": [],
+        }
+        attention["sourceIssue"] = (
+            "Das dauerhafte Beregnungsjournal ist momentan nicht erreichbar. "
+            "Vorhandene bestätigte Minutenwerte bleiben sichtbar."
+        )
+        result["attention"] = attention
+    return result
 
 
 def _minutes(value: int) -> str:

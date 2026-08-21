@@ -167,10 +167,13 @@ class OccupancyNotificationTests(unittest.TestCase):
         timer = Mock(past_due=False)
         context = Mock(invocation_id="invocation", retry_context=None)
         with patch.object(function_app, "run_control_cycle", return_value=result), patch.object(
+            function_app, "record_irrigation_observation"
+        ) as journal, patch.object(
             function_app, "process_collision_notifications",
             side_effect=RuntimeError("mail unavailable"),
         ) as notification:
             self.assertIsNone(function_app.ssv53_mower_timer(timer, context))
+            journal.assert_called_once_with(result, function_app.os.environ)
             notification.assert_not_called()
             self.assertIsNone(function_app.ssv53_occupancy_notification_timer(timer))
 

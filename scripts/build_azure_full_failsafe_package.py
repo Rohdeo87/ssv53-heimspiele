@@ -39,6 +39,7 @@ REQUIRED_FILES = (
     "mower/cutting_height.py",
     "mower/hydrawise.py",
     "mower/irrigation_recovery.py",
+    "mower/irrigation_journal.py",
     "mower/hydrawise_actions.py",
     "mower/irrigation_schedule.py",
     "mower/park_only.py",
