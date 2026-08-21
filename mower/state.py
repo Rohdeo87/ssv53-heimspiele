@@ -86,8 +86,11 @@ class AutomationState:
     operator_request_run_seconds: int | None = None
     operator_request_cutting_height_mm: int | None = None
     operator_request_occupancy_override_key: str | None = None
+    operator_request_irrigation_schedule_json: str | None = None
     operator_occupancy_override_key: str | None = None
     operator_occupancy_override_until_utc: str | None = None
+    irrigation_schedule_override_json: str | None = None
+    irrigation_schedule_history_json: str | None = None
 
     def __post_init__(self) -> None:
         if self.schema_version != 1:
@@ -324,6 +327,9 @@ class AutomationState:
             operator_request_occupancy_override_key=_normalize_optional_text(
                 values.get("operator_request_occupancy_override_key")
             ),
+            operator_request_irrigation_schedule_json=_normalize_optional_text(
+                values.get("operator_request_irrigation_schedule_json")
+            ),
             operator_occupancy_override_key=_normalize_optional_text(
                 values.get("operator_occupancy_override_key")
             ),
@@ -332,6 +338,12 @@ class AutomationState:
                     values.get("operator_occupancy_override_until_utc")
                 ),
                 "operator_occupancy_override_until_utc",
+            ),
+            irrigation_schedule_override_json=_normalize_optional_text(
+                values.get("irrigation_schedule_override_json")
+            ),
+            irrigation_schedule_history_json=_normalize_optional_text(
+                values.get("irrigation_schedule_history_json")
             ),
         )
 

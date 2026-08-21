@@ -477,6 +477,68 @@ class PlatzwartSafetyIntegrationTests(unittest.TestCase):
             **values,
         )
 
+    def test_schedule_request_is_validated_and_persisted_without_direct_command(self) -> None:
+        store = InMemoryStateStore()
+
+        class AuditStore:
+            def audit(self, *_args, **_kwargs):
+                return None
+
+        payload = {
+            "pauseUntil": (NOW + timedelta(days=3)).isoformat(),
+        }
+        with patch(
+            "platzwart_console.AzureTableStateStore.from_environment",
+            return_value=store,
+        ), patch(
+            "platzwart_console.ConsoleTableStore.from_environment",
+            return_value=AuditStore(),
+        ), patch(
+            "platzwart_console.RuntimeSettings.from_mapping",
+            return_value=settings(),
+        ):
+            accepted = request_action(
+                "PAUSE_IRRIGATION_UNTIL",
+                "pause-1",
+                "PAUSE_IRRIGATION_UNTIL",
+                ENV,
+                NOW,
+                irrigation_schedule=payload,
+            )
+        self.assertEqual(accepted["status"], "PENDING")
+        saved = store.load()
+        self.assertEqual(saved.operator_request_action, "PAUSE_IRRIGATION_UNTIL")
+        self.assertEqual(
+            json.loads(saved.operator_request_irrigation_schedule_json or "{}"),
+            payload,
+        )
+
+    def test_schedule_change_is_rejected_during_irrigation_sequence(self) -> None:
+        store = InMemoryStateStore(AutomationState(irrigation_phase="RUNNING"))
+
+        class AuditStore:
+            def audit(self, *_args, **_kwargs):
+                return None
+
+        with patch(
+            "platzwart_console.AzureTableStateStore.from_environment",
+            return_value=store,
+        ), patch(
+            "platzwart_console.ConsoleTableStore.from_environment",
+            return_value=AuditStore(),
+        ), patch(
+            "platzwart_console.RuntimeSettings.from_mapping",
+            return_value=settings(),
+        ), self.assertRaises(PlatzwartError) as context:
+            request_action(
+                "SKIP_NEXT_IRRIGATION",
+                "skip-active",
+                "SKIP_NEXT_IRRIGATION",
+                ENV,
+                NOW,
+            )
+        self.assertEqual(context.exception.code, "IRRIGATION_SEQUENCE_ACTIVE")
+
     def test_cutting_height_request_is_validated_and_persisted_in_mm(self) -> None:
         for invalid in (19, 61):
             with self.subTest(invalid=invalid), self.assertRaises(PlatzwartError) as context:

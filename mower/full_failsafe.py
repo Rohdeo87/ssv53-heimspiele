@@ -28,6 +28,13 @@ from mower.hydrawise import (
     parse_relay_id_allowlist,
 )
 from mower.hydrawise_actions import start_zone_for, stop_zone_now, suspend_zone_until
+from mower.irrigation_schedule import (
+    SCHEDULE_ACTIONS,
+    append_history as append_irrigation_schedule_history,
+    dump_object as dump_irrigation_schedule_object,
+    load_object as load_irrigation_schedule_object,
+    parse_utc as parse_irrigation_schedule_utc,
+)
 from mower.runtime import ControlMode, CycleResult, RuntimeSettings
 from mower.safety import CommandIntent, evaluate_command_gate
 from mower.state import AutomationState
@@ -178,6 +185,213 @@ def _plan_from_state(state: AutomationState) -> list[dict[str, Any]]:
     if not isinstance(parsed, list) or not all(isinstance(item, dict) for item in parsed):
         raise RuntimeError("Gespeicherter Beregnungsplan hat ein falsches Format.")
     return [dict(item) for item in parsed]
+
+
+def _schedule_override(state: AutomationState) -> dict[str, Any] | None:
+    return load_irrigation_schedule_object(
+        state.irrigation_schedule_override_json,
+        "Beregnungsplan-Anpassung",
+    )
+
+
+def _schedule_request(state: AutomationState) -> dict[str, Any]:
+    return load_irrigation_schedule_object(
+        state.operator_request_irrigation_schedule_json,
+        "Beregnungsplan-Anfrage",
+    ) or {}
+
+
+def _customized_schedule_plan(
+    zones: list[dict[str, Any]],
+    request: dict[str, Any],
+) -> list[dict[str, Any]]:
+    desired = parse_irrigation_schedule_utc(
+        request.get("desiredStart"), "Gewünschter Beregnungsstart"
+    )
+    requested = {
+        int(item["zone"]): item
+        for item in request.get("zones", [])
+        if isinstance(item, dict)
+    }
+    if len(requested) != len(zones):
+        raise RuntimeError("Die angepasste Zonenliste ist nicht vollständig.")
+    result: list[dict[str, Any]] = []
+    cursor = desired
+    for original in sorted(zones, key=lambda item: int(item["zone"])):
+        zone_number = int(original["zone"])
+        item = requested.get(zone_number)
+        if item is None:
+            raise RuntimeError(f"Zone {zone_number} fehlt in der Anpassung.")
+        seconds = int(item["runSeconds"])
+        selected = item.get("selected") is not False
+        if not 60 <= seconds <= 7200:
+            raise RuntimeError("Eine angepasste Laufzeit liegt außerhalb der Grenzen.")
+        end = cursor + timedelta(seconds=seconds)
+        result.append(
+            {
+                **original,
+                "run_seconds": seconds,
+                "selected": selected,
+                "scheduled_start_utc": cursor.isoformat(),
+                "scheduled_end_utc": end.isoformat(),
+                "operator_schedule_override": True,
+            }
+        )
+        cursor = end
+    if not any(zone.get("selected") is not False for zone in result):
+        raise RuntimeError("Mindestens eine Zone muss aktiviert bleiben.")
+    return result
+
+
+def _schedule_override_summary(override: dict[str, Any]) -> str:
+    kind = str(override.get("kind") or "")
+    if kind == "PAUSE":
+        return f"Beregnung pausiert bis {override.get('suspend_until_utc', '')}."
+    if kind == "SKIP_NEXT":
+        return "Nächster Beregnungslauf wurde ausgesetzt."
+    if kind == "CUSTOM_NEXT":
+        selected = sum(
+            1 for zone in override.get("zones", []) if zone.get("selected") is not False
+        )
+        return (
+            f"Nächster Lauf angepasst: {selected} Zonen ab "
+            f"{override.get('desired_start_utc', '')}."
+        )
+    if kind == "RESUME":
+        return "Automatischer Hydrawise-Plan wird wieder freigegeben."
+    return "Beregnungsplan wurde angepasst."
+
+
+def _schedule_possible_irrigation_start(
+    override: dict[str, Any] | None,
+) -> datetime | None:
+    if not override:
+        return None
+    kind = str(override.get("kind") or "")
+    status = str(override.get("status") or "")
+    if kind == "CUSTOM_NEXT" and status in {
+        "VERIFYING",
+        "APPLYING",
+        "CONFIRMING",
+        "ACTIVE",
+        "EXECUTING",
+    }:
+        return _parse_time(override.get("desired_start_utc"))
+    if kind in {"PAUSE", "SKIP_NEXT", "RESUME"}:
+        return _parse_time(override.get("suspend_until_utc"))
+    return None
+
+
+def _new_schedule_override(
+    *,
+    action: str,
+    request: dict[str, Any],
+    current: dict[str, Any] | None,
+    details: dict[str, Any],
+    state: AutomationState,
+    now_utc: datetime,
+    expected_zone_count: int,
+    expected_relay_ids: frozenset[int],
+) -> dict[str, Any] | None:
+    base = {
+        "version": 1,
+        "request_id": state.operator_request_id,
+        "created_utc": now_utc.isoformat(),
+        "commanded_relay_ids": [],
+        "confirm_since_utc": None,
+    }
+    if action == "RESUME_IRRIGATION_SCHEDULE":
+        if current is None:
+            return None
+        return {
+            **base,
+            "kind": "RESUME",
+            "status": "PARKING",
+            # Ein kurzer Endzeitpunkt in der Zukunft wird von Hydrawise als
+            # endliche Suspendierung verarbeitet. Danach gilt wieder der
+            # unveränderte, in Hydrawise gepflegte Wochenplan.
+            "suspend_until_utc": (now_utc + timedelta(minutes=1)).isoformat(),
+            "replaces_kind": current.get("kind"),
+        }
+    if current is not None and (
+        str(current.get("status") or "") not in {"COMPLETED", "REJECTED"}
+        or bool(current.get("commanded_relay_ids"))
+    ):
+        raise RuntimeError(
+            "Es besteht bereits eine Beregnungsplan-Anpassung. Diese muss zuerst beendet werden."
+        )
+    if action == "PAUSE_IRRIGATION_UNTIL":
+        until = parse_irrigation_schedule_utc(
+            request.get("pauseUntil"), "Ende der Beregnungspause"
+        )
+        return {
+            **base,
+            "kind": "PAUSE",
+            "status": "APPLYING",
+            "suspend_until_utc": until.isoformat(),
+        }
+
+    plan_id, original_zones = _validated_upcoming_plan(
+        details,
+        now_utc=now_utc,
+        expected_zone_count=expected_zone_count,
+        expected_relay_ids=expected_relay_ids,
+        max_lead_minutes=14 * 24 * 60,
+    )
+    original_start = min(
+        _parse_time(zone["scheduled_start_utc"]) for zone in original_zones
+    )
+    original_end = max(
+        _parse_time(zone["scheduled_end_utc"]) for zone in original_zones
+    )
+    if original_start is None or original_end is None:
+        raise RuntimeError("Der nächste Hydrawise-Lauf besitzt keine sicheren Zeiten.")
+    if original_start - now_utc < timedelta(minutes=12):
+        raise RuntimeError(
+            "Der nächste Lauf beginnt zu früh für Prüfung, sieben Zonenbefehle und Bestätigung."
+        )
+    if action == "SKIP_NEXT_IRRIGATION":
+        return {
+            **base,
+            "kind": "SKIP_NEXT",
+            "status": "VERIFYING",
+            "verify_since_utc": now_utc.isoformat(),
+            "source_plan_id": plan_id,
+            "source_start_utc": original_start.isoformat(),
+            "source_end_utc": original_end.isoformat(),
+            # 45 Minuten nach dem ausgelassenen Lauf bleibt der Plan noch
+            # suspendiert. Mit 40 Minuten Ausfallvorlauf kann der Mäher so den
+            # gesamten freigewordenen Lauf nutzen und ist trotzdem fünf
+            # Minuten vor der möglichen Hydrawise-Rückkehr im Dock.
+            "suspend_until_utc": (original_end + timedelta(minutes=45)).isoformat(),
+            "source_zones": original_zones,
+        }
+    if action == "CUSTOMIZE_NEXT_IRRIGATION":
+        customized = _customized_schedule_plan(original_zones, request)
+        desired_start = min(
+            _parse_time(zone["scheduled_start_utc"]) for zone in customized
+        )
+        desired_end = max(
+            _parse_time(zone["scheduled_end_utc"]) for zone in customized
+        )
+        if desired_start is None or desired_end is None:
+            raise RuntimeError("Der angepasste Lauf besitzt keine sicheren Zeiten.")
+        suspension_end = max(original_end, desired_end) + timedelta(minutes=180)
+        return {
+            **base,
+            "kind": "CUSTOM_NEXT",
+            "status": "VERIFYING",
+            "verify_since_utc": now_utc.isoformat(),
+            "source_plan_id": plan_id,
+            "source_start_utc": original_start.isoformat(),
+            "source_end_utc": original_end.isoformat(),
+            "desired_start_utc": desired_start.isoformat(),
+            "desired_end_utc": desired_end.isoformat(),
+            "suspend_until_utc": suspension_end.isoformat(),
+            "source_zones": original_zones,
+            "zones": customized,
+        }
+    raise RuntimeError("Unbekannte Beregnungsplan-Anpassung.")
 
 
 def _validated_upcoming_plan(
@@ -436,7 +650,11 @@ def _reconcile_prestart_plan(
 ) -> tuple[str, list[dict[str, Any]] | None, str]:
     """Ordnet bestätigbare Hydrawise-Änderungen vor dem ersten Wasserstart ein."""
 
-    if plan and all(zone.get("operator_manual") is True for zone in plan):
+    if plan and all(
+        zone.get("operator_manual") is True
+        or zone.get("operator_schedule_override") is True
+        for zone in plan
+    ):
         return "UNCHANGED", plan, "Vom Platzwart bestätigter Sieben-Zonen-Lauf."
 
     live_by_relay = _live_zone_by_relay(details)
@@ -711,6 +929,7 @@ def _cycle_state(
 
 
 def _state_details(state: AutomationState, *, persisted: bool, error: str | None = None) -> dict[str, Any]:
+    schedule_override = _schedule_override(state)
     return {
         "revision": state.revision,
         "persisted": persisted,
@@ -750,6 +969,12 @@ def _state_details(state: AutomationState, *, persisted: bool, error: str | None
         "operator_request_id": state.operator_request_id,
         "operator_request_action": state.operator_request_action,
         "operator_request_status": state.operator_request_status,
+        "irrigation_schedule_override_kind": (
+            schedule_override.get("kind") if schedule_override else None
+        ),
+        "irrigation_schedule_override_status": (
+            schedule_override.get("status") if schedule_override else None
+        ),
         "hydrawise_clear_since_utc": state.hydrawise_clear_since_utc,
         "hydrawise_clear_origin": state.hydrawise_clear_origin,
     }
@@ -989,14 +1214,7 @@ def run_full_failsafe_cycle(
         "expected_relay_ids": sorted(expected_relay_ids),
         "observed_relay_ids": sorted(observed_relay_ids),
     }
-    irrigation_failsafe_lead_minutes = _env_int(
-        environment,
-        "IRRIGATION_FAILSAFE_DOCK_LEAD_MINUTES",
-        40,
-        minimum=30,
-        maximum=120,
-    )
-    next_irrigation_start = _next_scheduled_irrigation_start(
+    raw_next_irrigation_start = _next_scheduled_irrigation_start(
         details,
         now_utc=now,
     )
@@ -1007,7 +1225,589 @@ def run_full_failsafe_cycle(
         minimum=30,
         maximum=120,
     )
+    schedule_override = _schedule_override(state)
+    irrigation_failsafe_lead_minutes = _env_int(
+        environment,
+        "IRRIGATION_FAILSAFE_DOCK_LEAD_MINUTES",
+        40,
+        minimum=30,
+        maximum=120,
+    )
+    schedule_possible_start = _schedule_possible_irrigation_start(schedule_override)
+    schedule_override_parking_due = (
+        schedule_possible_start is not None
+        and schedule_possible_start - now
+        <= timedelta(minutes=irrigation_failsafe_lead_minutes)
+    )
+    schedule_gate_ready = (
+        settings.full_failsafe_write_gate_enabled
+        and hydra_safety.get("available") is True
+        and hydra_safety.get("fresh") is True
+        and relay_allowlist_valid
+        and int(hydra_safety.get("selected_zone_count") or 0) == expected_zones
+        and not _active_relay_ids(details)
+    )
+    mower_park_precedence = (
+        activity in PARKABLE_ACTIVITIES
+        and (
+            str(decision.get("hypothetical_command") or "").upper() == "PARK"
+            or bool(parking_block)
+            or bool(_active_relay_ids(details))
+            or result.decision_code.startswith("HYDRAWISE_")
+            or schedule_override_parking_due
+        )
+    )
+
+    if operator_action in SCHEDULE_ACTIONS and not mower_park_precedence:
+        if not schedule_gate_ready:
+            rejected = _finish_operator_request(
+                state,
+                "Die Planänderung wurde nicht ausgeführt, weil Hydrawise nicht frisch, vollständig und frei bestätigt ist.",
+                status="REJECTED",
+            )
+            return _persist_result(
+                store=store,
+                original=original,
+                state=rejected,
+                result=result,
+                details=details,
+                settings=settings,
+                decision_code="IRRIGATION_SCHEDULE_REQUEST_REJECTED",
+                message="Der Beregnungsplan blieb unverändert.",
+            )
+        try:
+            new_override = _new_schedule_override(
+                action=operator_action,
+                request=_schedule_request(state),
+                current=schedule_override,
+                details=details,
+                state=state,
+                now_utc=now,
+                expected_zone_count=expected_zones,
+                expected_relay_ids=expected_relay_ids,
+            )
+        except Exception as exc:
+            rejected = _finish_operator_request(
+                state,
+                f"Beregnungsplan-Anpassung abgelehnt: {exc}",
+                status="REJECTED",
+            )
+            return _persist_result(
+                store=store,
+                original=original,
+                state=rejected,
+                result=result,
+                details=details,
+                settings=settings,
+                decision_code="IRRIGATION_SCHEDULE_REQUEST_REJECTED",
+                message="Der Beregnungsplan blieb unverändert.",
+            )
+        summary = (
+            "Der Hydrawise-Plan ist bereits unverändert aktiv."
+            if new_override is None
+            else _schedule_override_summary(new_override)
+        )
+        accepted = replace(
+            _finish_operator_request(state, summary),
+            revision=state.revision + 2,
+            irrigation_schedule_override_json=dump_irrigation_schedule_object(
+                new_override
+            ),
+            irrigation_schedule_history_json=append_irrigation_schedule_history(
+                state.irrigation_schedule_history_json,
+                now_utc=now,
+                action=operator_action,
+                status="REQUESTED" if new_override is not None else "NO_CHANGE",
+                summary=summary,
+            ),
+        )
+        return _persist_result(
+            store=store,
+            original=original,
+            state=accepted,
+            result=result,
+            details=details,
+            settings=settings,
+            decision_code="IRRIGATION_SCHEDULE_REQUEST_ACCEPTED",
+            message=summary,
+        )
+
+    # Eine Plananpassung wird in demselben Minutenzyklus-Zustandsautomaten wie
+    # Mäher und Beregnung verarbeitet. Pro Zyklus wird höchstens ein
+    # Hydrawise-Schreibbefehl gesendet; erst zwei frische Bestätigungszyklen
+    # machen die Anpassung wirksam.
+    if schedule_override is not None and not mower_park_precedence:
+        override_kind = str(schedule_override.get("kind") or "")
+        override_status = str(schedule_override.get("status") or "")
+        suspend_until = _parse_time(schedule_override.get("suspend_until_utc"))
+        details["irrigation_schedule_override"] = dict(schedule_override)
+
+        if override_status == "VERIFYING":
+            if not schedule_gate_ready:
+                return _persist_result(
+                    store=store, original=original, state=state, result=result,
+                    details=details, settings=settings,
+                    decision_code="IRRIGATION_SCHEDULE_VERIFY_WAIT",
+                    message="Die Plananpassung wartet auf einen frischen vollständigen Hydrawise-Status.",
+                )
+            try:
+                live_plan_id, _live_zones = _validated_upcoming_plan(
+                    details,
+                    now_utc=now,
+                    expected_zone_count=expected_zones,
+                    expected_relay_ids=expected_relay_ids,
+                    max_lead_minutes=14 * 24 * 60,
+                )
+            except Exception as exc:
+                failed_override = {
+                    **schedule_override,
+                    "status": "REJECTED",
+                    "error": f"Der nächste Lauf ist nicht mehr eindeutig: {exc}",
+                }
+                failed_state = replace(
+                    state,
+                    revision=state.revision + 1,
+                    irrigation_schedule_override_json=dump_irrigation_schedule_object(
+                        failed_override
+                    ),
+                    irrigation_schedule_history_json=append_irrigation_schedule_history(
+                        state.irrigation_schedule_history_json,
+                        now_utc=now,
+                        action=override_kind,
+                        status="REJECTED",
+                        summary=str(failed_override["error"]),
+                    ),
+                )
+                return _persist_result(
+                    store=store, original=original, state=failed_state, result=result,
+                    details=details, settings=settings,
+                    decision_code="IRRIGATION_SCHEDULE_TARGET_CHANGED",
+                    message="Die Anpassung wurde ohne Hydrawise-Befehl verworfen.",
+                )
+            if live_plan_id != str(schedule_override.get("source_plan_id") or ""):
+                failed_override = {
+                    **schedule_override,
+                    "status": "REJECTED",
+                    "error": "Der nächste Hydrawise-Lauf hat sich seit der Bestätigung geändert.",
+                }
+                failed_state = replace(
+                    state,
+                    revision=state.revision + 1,
+                    irrigation_schedule_override_json=dump_irrigation_schedule_object(
+                        failed_override
+                    ),
+                    irrigation_schedule_history_json=append_irrigation_schedule_history(
+                        state.irrigation_schedule_history_json,
+                        now_utc=now,
+                        action=override_kind,
+                        status="REJECTED",
+                        summary=str(failed_override["error"]),
+                    ),
+                )
+                return _persist_result(
+                    store=store, original=original, state=failed_state, result=result,
+                    details=details, settings=settings,
+                    decision_code="IRRIGATION_SCHEDULE_TARGET_CHANGED",
+                    message="Die Anpassung wurde ohne Hydrawise-Befehl verworfen.",
+                )
+            verify_since = _parse_time(schedule_override.get("verify_since_utc"))
+            if verify_since is None or now - verify_since < timedelta(minutes=2):
+                return _persist_result(
+                    store=store, original=original, state=state, result=result,
+                    details=details, settings=settings,
+                    decision_code="IRRIGATION_SCHEDULE_VERIFYING",
+                    message="Der unveränderte nächste Lauf wird über zwei Minutenzyklen bestätigt.",
+                )
+            schedule_override = {**schedule_override, "status": "APPLYING"}
+            state = replace(
+                state,
+                revision=state.revision + 1,
+                irrigation_schedule_override_json=dump_irrigation_schedule_object(
+                    schedule_override
+                ),
+            )
+            override_status = "APPLYING"
+
+        if override_kind == "RESUME" and override_status == "PARKING":
+            park_confirmed = _parse_time(state.park_confirmed_utc)
+            if (
+                state.parked_by_automation
+                and activity in PARKED_ACTIVITIES
+                and park_confirmed is not None
+                and now - park_confirmed >= timedelta(minutes=1)
+            ):
+                schedule_override = {**schedule_override, "status": "APPLYING"}
+                state = replace(
+                    state,
+                    revision=state.revision + 1,
+                    irrigation_schedule_override_json=dump_irrigation_schedule_object(
+                        schedule_override
+                    ),
+                )
+                override_status = "APPLYING"
+            elif activity in PARKED_ACTIVITIES:
+                return _persist_result(
+                    store=store,
+                    original=original,
+                    state=state,
+                    result=result,
+                    details=details,
+                    settings=settings,
+                    decision_code="IRRIGATION_SCHEDULE_RESUME_PARK_CONFIRMING",
+                    message="Der Mäher bleibt geparkt, bis die Parkposition fortlaufend bestätigt ist.",
+                )
+
+        if override_status == "APPLYING":
+            if not schedule_gate_ready:
+                return _persist_result(
+                    store=store, original=original, state=state, result=result,
+                    details=details, settings=settings,
+                    decision_code="IRRIGATION_SCHEDULE_APPLY_WAIT",
+                    message="Die Plananpassung wartet auf einen frischen freien Hydrawise-Status.",
+                )
+            commanded = {
+                int(value) for value in schedule_override.get("commanded_relay_ids", [])
+            }
+            pending_relay = next(
+                (relay for relay in sorted(expected_relay_ids) if relay not in commanded),
+                None,
+            )
+            if pending_relay is not None:
+                command_until = suspend_until
+                if override_kind == "RESUME":
+                    command_until = now + timedelta(minutes=1)
+                if command_until is None:
+                    raise RuntimeError("Der Suspendierungszeitpunkt der Plananpassung fehlt.")
+                attempts = {
+                    str(key): int(value)
+                    for key, value in dict(schedule_override.get("attempts") or {}).items()
+                }
+                try:
+                    response = suspend_zone_sender(
+                        str(environment.get("HYDRAWISE_API_KEY", "")).strip(),
+                        pending_relay,
+                        int(command_until.timestamp()),
+                        str(environment.get("HYDRAWISE_CONTROLLER_ID", "")).strip() or None,
+                    )
+                except Exception as exc:
+                    key = str(pending_relay)
+                    attempts[key] = attempts.get(key, 0) + 1
+                    failed = attempts[key] >= 3
+                    updated_override = {
+                        **schedule_override,
+                        "status": "REJECTED" if failed else "APPLYING",
+                        "attempts": attempts,
+                        "error": f"Hydrawise-Befehl für eine Zone fehlgeschlagen: {exc}",
+                    }
+                    updated_state = replace(
+                        state,
+                        revision=state.revision + 1,
+                        irrigation_schedule_override_json=dump_irrigation_schedule_object(
+                            updated_override
+                        ),
+                    )
+                    return _persist_result(
+                        store=store, original=original, state=updated_state,
+                        result=result, details=details, settings=settings,
+                        decision_code=(
+                            "IRRIGATION_SCHEDULE_APPLY_FAILED"
+                            if failed else "IRRIGATION_SCHEDULE_APPLY_RETRY"
+                        ),
+                        message=(
+                            "Die Plananpassung wurde nach drei Fehlern sicher angehalten."
+                            if failed else "Der Hydrawise-Befehl wird im nächsten Zyklus erneut geprüft."
+                        ),
+                    )
+                commanded.add(pending_relay)
+                updated_override = {
+                    **schedule_override,
+                    "commanded_relay_ids": sorted(commanded),
+                    "attempts": attempts,
+                    "error": None,
+                }
+                if override_kind == "RESUME":
+                    updated_override["suspend_until_utc"] = command_until.isoformat()
+                if commanded == set(expected_relay_ids):
+                    updated_override.update(
+                        {
+                            "status": "CONFIRMING",
+                            "confirm_since_utc": None,
+                            "confirm_last_seen_utc": None,
+                        }
+                    )
+                updated_state = replace(
+                    state,
+                    revision=state.revision + 1,
+                    irrigation_schedule_override_json=dump_irrigation_schedule_object(
+                        updated_override
+                    ),
+                )
+                details["irrigation_schedule_action"] = {
+                    "relay_id": pending_relay,
+                    "until_utc": command_until.isoformat(),
+                    "response": response,
+                }
+                return _persist_result(
+                    store=store, original=original, state=updated_state,
+                    result=result, details=details, settings=settings,
+                    decision_code="IRRIGATION_SCHEDULE_ZONE_UPDATED",
+                    message="Eine weitere der sieben Zonen wurde sicher aktualisiert.",
+                    command_sent=True,
+                )
+
+        if override_status == "CONFIRMING" or str(schedule_override.get("status")) == "CONFIRMING":
+            if not schedule_gate_ready:
+                return _persist_result(
+                    store=store, original=original, state=state, result=result,
+                    details=details, settings=settings,
+                    decision_code="IRRIGATION_SCHEDULE_CONFIRM_WAIT",
+                    message="Die Plananpassung wartet auf frische Hydrawise-Bestätigungen.",
+                )
+            now_suspend_until = _parse_time(schedule_override.get("suspend_until_utc"))
+            observations = _zone_observation_by_relay(details)
+            blocked_relays: list[int] = []
+            if override_kind != "RESUME" and now_suspend_until is not None:
+                for relay_id, observation in observations.items():
+                    start = _parse_time(observation.get("scheduled_start_utc"))
+                    if start is not None and start <= now_suspend_until:
+                        blocked_relays.append(relay_id)
+            if blocked_relays:
+                commanded = {
+                    int(value)
+                    for value in schedule_override.get("commanded_relay_ids", [])
+                    if int(value) not in set(blocked_relays)
+                }
+                retry_override = {
+                    **schedule_override,
+                    "status": "APPLYING",
+                    "commanded_relay_ids": sorted(commanded),
+                    "confirm_since_utc": None,
+                    "confirm_last_seen_utc": None,
+                }
+                retry_state = replace(
+                    state,
+                    revision=state.revision + 1,
+                    irrigation_schedule_override_json=dump_irrigation_schedule_object(
+                        retry_override
+                    ),
+                )
+                return _persist_result(
+                    store=store, original=original, state=retry_state, result=result,
+                    details=details, settings=settings,
+                    decision_code="IRRIGATION_SCHEDULE_CONFIRM_RETRY",
+                    message="Mindestens eine Zone hat die Anpassung noch nicht bestätigt und wird erneut aktualisiert.",
+                )
+            confirm_since = _parse_time(schedule_override.get("confirm_since_utc"))
+            confirm_last = _parse_time(schedule_override.get("confirm_last_seen_utc"))
+            continuity = confirm_last is not None and now - confirm_last <= timedelta(minutes=3)
+            if confirm_since is None or not continuity:
+                confirming = {
+                    **schedule_override,
+                    "confirm_since_utc": now.isoformat(),
+                    "confirm_last_seen_utc": now.isoformat(),
+                }
+                confirming_state = replace(
+                    state,
+                    revision=state.revision + 1,
+                    irrigation_schedule_override_json=dump_irrigation_schedule_object(
+                        confirming
+                    ),
+                )
+                return _persist_result(
+                    store=store, original=original, state=confirming_state,
+                    result=result, details=details, settings=settings,
+                    decision_code="IRRIGATION_SCHEDULE_CONFIRMING",
+                    message="Hydrawise bestätigt die Plananpassung fortlaufend.",
+                )
+            if now - confirm_since < timedelta(minutes=2):
+                confirming = {
+                    **schedule_override,
+                    "confirm_last_seen_utc": now.isoformat(),
+                }
+                confirming_state = replace(
+                    state,
+                    revision=state.revision + 1,
+                    irrigation_schedule_override_json=dump_irrigation_schedule_object(
+                        confirming
+                    ),
+                )
+                return _persist_result(
+                    store=store, original=original, state=confirming_state,
+                    result=result, details=details, settings=settings,
+                    decision_code="IRRIGATION_SCHEDULE_CONFIRMING",
+                    message="Die zweite Hydrawise-Bestätigung steht noch aus.",
+                )
+            if override_kind == "RESUME":
+                completed_state = replace(
+                    state,
+                    revision=state.revision + 1,
+                    irrigation_schedule_override_json=None,
+                    irrigation_schedule_history_json=append_irrigation_schedule_history(
+                        state.irrigation_schedule_history_json,
+                        now_utc=now,
+                        action="RESUME_IRRIGATION_SCHEDULE",
+                        status="COMPLETED",
+                        summary="Der unveränderte Hydrawise-Plan ist wieder freigegeben.",
+                    ),
+                )
+                state = completed_state
+                schedule_override = None
+            else:
+                schedule_override = {
+                    **schedule_override,
+                    "status": "ACTIVE",
+                    "confirmed_utc": now.isoformat(),
+                    "confirm_last_seen_utc": now.isoformat(),
+                }
+                state = replace(
+                    state,
+                    revision=state.revision + 1,
+                    irrigation_schedule_override_json=dump_irrigation_schedule_object(
+                        schedule_override
+                    ),
+                    irrigation_schedule_history_json=append_irrigation_schedule_history(
+                        state.irrigation_schedule_history_json,
+                        now_utc=now,
+                        action=override_kind,
+                        status="ACTIVE",
+                        summary=_schedule_override_summary(schedule_override),
+                    ),
+                )
+
+        if schedule_override is not None and str(schedule_override.get("status")) == "ACTIVE":
+            override_kind = str(schedule_override.get("kind") or "")
+            suspend_until = _parse_time(schedule_override.get("suspend_until_utc"))
+            if override_kind == "CUSTOM_NEXT":
+                desired_start = _parse_time(schedule_override.get("desired_start_utc"))
+                if desired_start is None:
+                    raise RuntimeError("Der angepasste Beregnungsstart fehlt.")
+                if now > desired_start + timedelta(minutes=10):
+                    failed_override = {
+                        **schedule_override,
+                        "status": "REJECTED",
+                        "error": "Der sichere Startzeitpunkt wurde wegen einer Laufzeitlücke verpasst.",
+                    }
+                    state = replace(
+                        state,
+                        revision=state.revision + 1,
+                        irrigation_schedule_override_json=dump_irrigation_schedule_object(
+                            failed_override
+                        ),
+                    )
+                    schedule_override = failed_override
+                elif desired_start - now <= timedelta(
+                    minutes=irrigation_capture_max_lead_minutes
+                ):
+                    custom_zones = [
+                        dict(zone) for zone in schedule_override.get("zones", [])
+                        if isinstance(zone, dict)
+                    ]
+                    if len(custom_zones) != expected_zones:
+                        raise RuntimeError("Der bestätigte angepasste Zonenplan ist unvollständig.")
+                    canonical = json.dumps(
+                        custom_zones,
+                        ensure_ascii=False,
+                        sort_keys=True,
+                        separators=(",", ":"),
+                    )
+                    executing_override = {
+                        **schedule_override,
+                        "status": "EXECUTING",
+                        "execution_started_utc": now.isoformat(),
+                    }
+                    state = replace(
+                        state,
+                        revision=state.revision + 1,
+                        irrigation_phase="READY",
+                        irrigation_plan_id=hashlib.sha256(
+                            canonical.encode("utf-8")
+                        ).hexdigest(),
+                        irrigation_plan_json=canonical,
+                        irrigation_suspended_relay_ids_json=json.dumps(
+                            sorted(expected_relay_ids)
+                        ),
+                        irrigation_suspension_until_utc=schedule_override.get(
+                            "suspend_until_utc"
+                        ),
+                        irrigation_suspension_completed_utc=now.isoformat(),
+                        irrigation_completed_relay_ids_json="[]",
+                        irrigation_current_relay_id=None,
+                        irrigation_zone_start_reserved_utc=None,
+                        irrigation_zone_started_utc=None,
+                        irrigation_zone_clear_since_utc=None,
+                        irrigation_completed_utc=None,
+                        irrigation_failed_reason=None,
+                        irrigation_schedule_override_json=dump_irrigation_schedule_object(
+                            executing_override
+                        ),
+                    )
+                    schedule_override = executing_override
+
+        if schedule_override is not None and str(schedule_override.get("status")) == "EXECUTING":
+            if state.irrigation_phase == "COMPLETE_HOLD":
+                schedule_override = {
+                    **schedule_override,
+                    "status": "POST_RUN",
+                    "completed_utc": state.irrigation_completed_utc or now.isoformat(),
+                }
+                state = replace(
+                    state,
+                    revision=state.revision + 1,
+                    irrigation_schedule_override_json=dump_irrigation_schedule_object(
+                        schedule_override
+                    ),
+                )
+            elif state.irrigation_phase == "FAILED":
+                schedule_override = {
+                    **schedule_override,
+                    "status": "REJECTED",
+                    "error": state.irrigation_failed_reason or "Der angepasste Lauf wurde sicher angehalten.",
+                }
+                state = replace(
+                    state,
+                    revision=state.revision + 1,
+                    irrigation_schedule_override_json=dump_irrigation_schedule_object(
+                        schedule_override
+                    ),
+                )
+
+        if schedule_override is not None:
+            final_status = str(schedule_override.get("status") or "")
+            final_kind = str(schedule_override.get("kind") or "")
+            final_until = _parse_time(schedule_override.get("suspend_until_utc"))
+            may_expire = (
+                final_status == "ACTIVE" and final_kind in {"PAUSE", "SKIP_NEXT"}
+            ) or final_status == "POST_RUN"
+            if may_expire and final_until is not None and now >= final_until:
+                summary = (
+                    "Die zeitweise Beregnungspause ist beendet."
+                    if final_kind == "PAUSE"
+                    else "Die einmalige Beregnungsplan-Anpassung ist beendet."
+                )
+                state = replace(
+                    state,
+                    revision=state.revision + 1,
+                    irrigation_schedule_override_json=None,
+                    irrigation_schedule_history_json=append_irrigation_schedule_history(
+                        state.irrigation_schedule_history_json,
+                        now_utc=now,
+                        action=final_kind,
+                        status="COMPLETED",
+                        summary=summary,
+                    ),
+                )
+                schedule_override = None
+
+    next_irrigation_start = raw_next_irrigation_start
+    if schedule_override is not None:
+        possible_start = _schedule_possible_irrigation_start(schedule_override)
+        if possible_start is not None and possible_start > now:
+            next_irrigation_start = min(
+                [value for value in (next_irrigation_start, possible_start) if value is not None]
+            )
     irrigation_capture_due = (
+        schedule_override is None
+        and
         next_irrigation_start is not None
         and timedelta(0)
         <= next_irrigation_start - now
@@ -1471,6 +2271,14 @@ def run_full_failsafe_cycle(
     )
     if operator_action == "PARK_MOWER":
         wants_park = True
+    schedule_resume_parking = (
+        schedule_override is not None
+        and str(schedule_override.get("kind") or "") == "RESUME"
+        and str(schedule_override.get("status") or "") == "PARKING"
+        and activity not in PARKED_ACTIVITIES
+    )
+    if schedule_resume_parking:
+        wants_park = True
     if (
         state.irrigation_phase in ACTIVE_IRRIGATION_PHASES
         and not state.parked_by_automation
@@ -1561,6 +2369,7 @@ def run_full_failsafe_cycle(
             or (
                 "irrigation"
                 if irrigation_outage_park_due
+                or schedule_resume_parking
                 or state.irrigation_phase in ACTIVE_IRRIGATION_PHASES
                 else ""
             )
@@ -1742,6 +2551,9 @@ def run_full_failsafe_cycle(
         single_zone_plan = (
             len(execution_zones) == 1
             and bool(execution_zones[0].get("operator_single_zone"))
+        )
+        schedule_override_plan = bool(zones) and all(
+            zone.get("operator_schedule_override") is True for zone in zones
         )
         execution_zone_count = len(execution_zones)
         active_ids = _active_relay_ids(details)
@@ -2094,7 +2906,7 @@ def run_full_failsafe_cycle(
                 message=failed.irrigation_failed_reason or "Unerwartete Zone.",
             )
 
-        if not single_zone_plan and state.irrigation_phase in {"READY", "RUNNING"} and (
+        if not single_zone_plan and not schedule_override_plan and state.irrigation_phase in {"READY", "RUNNING"} and (
             completed or current_id is not None
         ):
             duration_kind, duration_plan, duration_reason = (
@@ -2283,10 +3095,33 @@ def run_full_failsafe_cycle(
                         "Sicherheitsnachlauf beginnt."
                     ),
                 )
+            scheduled_override_start = min(
+                (_parse_time(zone.get("scheduled_start_utc")) for zone in zones),
+                default=None,
+            )
+            if (
+                schedule_override_plan
+                and not completed
+                and current_id is None
+                and scheduled_override_start is not None
+                and now < scheduled_override_start
+            ):
+                return _persist_result(
+                    store=store,
+                    original=original,
+                    state=state,
+                    result=result,
+                    details=details,
+                    settings=settings,
+                    decision_code="IRRIGATION_CUSTOM_START_WAIT",
+                    message="Der Mäher ist sicher geparkt; der angepasste Beregnungsstart wird abgewartet.",
+                )
             if not completed and current_id is None:
-                if single_zone_plan:
+                if single_zone_plan or schedule_override_plan:
                     change_kind, reconciled_plan, change_reason = (
-                        "UNCHANGED", zones, "Manuell gewählte Einzelzone bleibt unverändert."
+                        "UNCHANGED",
+                        zones,
+                        "Vom Platzwart bestätigter Zonenplan bleibt unverändert.",
                     )
                 else:
                     change_kind, reconciled_plan, change_reason = _reconcile_prestart_plan(
@@ -2385,6 +3220,9 @@ def run_full_failsafe_cycle(
                 None,
             )
             if next_zone is None:
+                partial_schedule_override = (
+                    schedule_override_plan and execution_zone_count < expected_zones
+                )
                 complete = replace(
                     state,
                     revision=state.revision + 1,
@@ -2399,10 +3237,16 @@ def run_full_failsafe_cycle(
                     result=result,
                     details=details,
                     settings=settings,
-                    decision_code="IRRIGATION_ALL_ZONES_CONFIRMED_COMPLETE",
+                    decision_code=(
+                        "IRRIGATION_SELECTED_ZONES_CONFIRMED_COMPLETE"
+                        if partial_schedule_override
+                        else "IRRIGATION_ALL_ZONES_CONFIRMED_COMPLETE"
+                    ),
                     message=(
                         "Die gewählte Zone ist bestätigt beendet; der konfigurierte Sicherheitsnachlauf beginnt."
                         if single_zone_plan
+                        else "Alle ausgewählten Zonen sind bestätigt beendet; der konfigurierte Sicherheitsnachlauf beginnt."
+                        if partial_schedule_override
                         else "Alle sieben Zonen sind bestätigt beendet; der konfigurierte Sicherheitsnachlauf beginnt."
                     ),
                 )
@@ -2420,7 +3264,7 @@ def run_full_failsafe_cycle(
                 first_planned_start = min(
                     _parse_time(zone["scheduled_start_utc"]) for zone in zones
                 )
-                suspension_proof_valid = (
+                ordinary_suspension_proof_valid = (
                     set(suspended) == expected_relay_ids
                     and suspension_completed is not None
                     and timedelta(0)
@@ -2428,6 +3272,30 @@ def run_full_failsafe_cycle(
                     <= timedelta(minutes=plan_lease_minutes)
                     and first_planned_start is not None
                     and now < first_planned_start
+                )
+                stored_suspend_until = _parse_time(
+                    state.irrigation_suspension_until_utc
+                )
+                observations = _zone_observation_by_relay(details)
+                schedule_override_suspension_proof_valid = (
+                    schedule_override_plan
+                    and set(suspended) == expected_relay_ids
+                    and stored_suspend_until is not None
+                    and stored_suspend_until > now
+                    and set(observations) == expected_relay_ids
+                    and not active_ids
+                    and all(
+                        (
+                            (start := _parse_time(observation.get("scheduled_start_utc")))
+                            is None
+                            or start > stored_suspend_until
+                        )
+                        for observation in observations.values()
+                    )
+                )
+                suspension_proof_valid = (
+                    ordinary_suspension_proof_valid
+                    or schedule_override_suspension_proof_valid
                 )
                 if not suspension_proof_valid:
                     failed = _failed_irrigation(

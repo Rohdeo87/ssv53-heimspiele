@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 import unittest
+from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 
 from mower.full_failsafe import run_full_failsafe_cycle
@@ -184,6 +186,30 @@ def result(
     )
 
 
+def suspended_result(*, activity: str = "PARKED_IN_CS") -> CycleResult:
+    cycle = deepcopy(result(activity=activity))
+    hydrawise = cycle.details["hydrawise"]
+    observations = []
+    for zone in zones(start_utc=NOW + timedelta(hours=13)):
+        observations.append(
+            {
+                **zone,
+                "valid": True,
+                "scheduled": False,
+                "running": False,
+                "seconds_until": 0,
+                "scheduled_start_utc": None,
+                "scheduled_end_utc": None,
+            }
+        )
+    hydrawise["zones"] = []
+    hydrawise["zone_observations"] = observations
+    hydrawise["safety"]["clear_now"] = True
+    hydrawise["safety"]["active_zone_count"] = 0
+    hydrawise["safety"]["active_relay_ids"] = []
+    return cycle
+
+
 def irrigation_state(*, phase: str, current: int | None = None) -> AutomationState:
     plan = zones()
     return AutomationState(
@@ -235,6 +261,27 @@ class FullFailsafeTests(unittest.TestCase):
             stop_zone_sender=senders.get("stop_zone", lambda *_: {"message_type": "info"}),
             cutting_height_sender=senders.get("height", lambda *_: {"accepted": True}),
             blade_usage_reset_sender=senders.get("blade_reset", lambda *_: {"accepted": True}),
+        )
+        return output, store
+
+    def _continue(self, store, cycle: CycleResult, *, now: datetime, **senders):
+        output = run_full_failsafe_cycle(
+            now_utc=now,
+            settings=settings(),
+            environment=ENV,
+            past_due=False,
+            source="test",
+            read_only_runner=lambda **_: cycle,
+            state_store_factory=lambda _env: store,
+            park_sender=senders.get("park", lambda *_: {"accepted": True}),
+            start_sender=senders.get("start", lambda *_: {"accepted": True}),
+            suspend_zone_sender=senders.get(
+                "suspend", lambda *_: {"message_type": "info"}
+            ),
+            start_zone_sender=senders.get("zone", lambda *_: {"message_type": "info"}),
+            stop_zone_sender=senders.get(
+                "stop_zone", lambda *_: {"message_type": "info"}
+            ),
         )
         return output, store
 
@@ -1755,6 +1802,377 @@ class FullFailsafeTests(unittest.TestCase):
                 )
                 self.assertIn(output.decision_code, {"PARK_COMMAND_SENT", "IRRIGATION_FAILED_HOLD"})
                 self.assertEqual(start_calls, [])
+
+    def test_pause_is_sent_once_per_zone_and_only_active_after_two_fresh_confirmations(self) -> None:
+        initial = AutomationState(
+            operator_request_id="pause-1",
+            operator_request_action="PAUSE_IRRIGATION_UNTIL",
+            operator_requested_utc=(NOW - timedelta(seconds=10)).isoformat(),
+            operator_request_expires_utc=(NOW + timedelta(minutes=10)).isoformat(),
+            operator_request_status="PENDING",
+            operator_request_irrigation_schedule_json=json.dumps(
+                {"pauseUntil": (NOW + timedelta(days=3)).isoformat()}
+            ),
+        )
+        accepted, store = self._run(initial, result())
+        self.assertEqual(accepted.decision_code, "IRRIGATION_SCHEDULE_REQUEST_ACCEPTED")
+        self.assertEqual(
+            json.loads(store.load().irrigation_schedule_override_json or "{}")["status"],
+            "APPLYING",
+        )
+        calls = []
+        for minute in range(1, 8):
+            self._continue(
+                store,
+                result(),
+                now=NOW + timedelta(minutes=minute),
+                suspend=lambda *args: calls.append(args) or {"message_type": "info"},
+            )
+        self.assertEqual([call[1] for call in calls], sorted(RELAYS))
+        self.assertEqual(len(calls), 7)
+        self.assertEqual(
+            json.loads(store.load().irrigation_schedule_override_json or "{}")["status"],
+            "CONFIRMING",
+        )
+        for minute in (8, 9):
+            self._continue(
+                store,
+                suspended_result(),
+                now=NOW + timedelta(minutes=minute),
+                suspend=lambda *_: self.fail("Nach allen sieben Befehlen kein weiterer Schreibzugriff"),
+            )
+            self.assertNotEqual(
+                json.loads(store.load().irrigation_schedule_override_json or "{}")["status"],
+                "ACTIVE",
+            )
+        self._continue(
+            store,
+            suspended_result(),
+            now=NOW + timedelta(minutes=10),
+            suspend=lambda *_: self.fail("Bestätigung darf keinen Befehl senden"),
+        )
+        self.assertEqual(
+            json.loads(store.load().irrigation_schedule_override_json or "{}")["status"],
+            "ACTIVE",
+        )
+
+    def test_changed_target_is_rejected_before_any_suspend_command(self) -> None:
+        original_zones = zones(start_utc=NOW + timedelta(hours=13))
+        import hashlib
+
+        source_id = hashlib.sha256(
+            json.dumps(
+                original_zones,
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode("utf-8")
+        ).hexdigest()
+        override = {
+            "version": 1,
+            "kind": "SKIP_NEXT",
+            "status": "VERIFYING",
+            "verify_since_utc": NOW.isoformat(),
+            "source_plan_id": source_id,
+            "source_start_utc": (NOW + timedelta(hours=13)).isoformat(),
+            "source_end_utc": (NOW + timedelta(hours=15)).isoformat(),
+            "suspend_until_utc": (NOW + timedelta(hours=16)).isoformat(),
+            "source_zones": original_zones,
+            "commanded_relay_ids": [],
+        }
+        calls = []
+        output, store = self._run(
+            AutomationState(irrigation_schedule_override_json=json.dumps(override)),
+            result(irrigation_start=NOW + timedelta(hours=14)),
+            now=NOW + timedelta(minutes=2),
+            suspend=lambda *args: calls.append(args),
+        )
+        self.assertEqual(output.decision_code, "IRRIGATION_SCHEDULE_TARGET_CHANGED")
+        self.assertEqual(calls, [])
+        self.assertEqual(
+            json.loads(store.load().irrigation_schedule_override_json or "{}")["status"],
+            "REJECTED",
+        )
+
+    def test_three_write_failures_stop_without_false_activation(self) -> None:
+        override = {
+            "version": 1,
+            "kind": "PAUSE",
+            "status": "APPLYING",
+            "suspend_until_utc": (NOW + timedelta(days=2)).isoformat(),
+            "commanded_relay_ids": [],
+        }
+        store = InMemoryStateStore(
+            AutomationState(irrigation_schedule_override_json=json.dumps(override))
+        )
+        calls = []
+
+        def fail(*args):
+            calls.append(args)
+            raise RuntimeError("offline")
+
+        outputs = []
+        for minute in range(3):
+            output, _ = self._continue(
+                store,
+                result(),
+                now=NOW + timedelta(minutes=minute),
+                suspend=fail,
+            )
+            outputs.append(output.decision_code)
+        self.assertEqual(len(calls), 3)
+        self.assertEqual(outputs[-1], "IRRIGATION_SCHEDULE_APPLY_FAILED")
+        saved_override = json.loads(store.load().irrigation_schedule_override_json or "{}")
+        self.assertEqual(saved_override["status"], "REJECTED")
+        self.assertEqual(saved_override["commanded_relay_ids"], [])
+
+    def test_training_park_always_precedes_schedule_write(self) -> None:
+        override = {
+            "version": 1,
+            "kind": "PAUSE",
+            "status": "APPLYING",
+            "suspend_until_utc": (NOW + timedelta(days=2)).isoformat(),
+            "commanded_relay_ids": [],
+        }
+        suspend_calls = []
+        park_calls = []
+        output, _store = self._run(
+            AutomationState(irrigation_schedule_override_json=json.dumps(override)),
+            result(activity="MOWING", block_source="training", command="PARK"),
+            suspend=lambda *args: suspend_calls.append(args) or {"ok": True},
+            park=lambda *args: park_calls.append(args) or {"ok": True},
+        )
+        self.assertEqual(output.decision_code, "PARK_COMMAND_SENT")
+        self.assertEqual(len(park_calls), 1)
+        self.assertEqual(suspend_calls, [])
+
+    def test_early_resume_parks_mower_before_lifting_suspension(self) -> None:
+        active_pause = {
+            "version": 1,
+            "kind": "PAUSE",
+            "status": "ACTIVE",
+            "suspend_until_utc": (NOW + timedelta(days=3)).isoformat(),
+            "commanded_relay_ids": RELAYS,
+        }
+        initial = AutomationState(
+            operator_request_id="resume-1",
+            operator_request_action="RESUME_IRRIGATION_SCHEDULE",
+            operator_requested_utc=(NOW - timedelta(seconds=10)).isoformat(),
+            operator_request_expires_utc=(NOW + timedelta(minutes=10)).isoformat(),
+            operator_request_status="PENDING",
+            operator_request_irrigation_schedule_json="{}",
+            irrigation_schedule_override_json=json.dumps(active_pause),
+        )
+        suspend_calls = []
+        park_calls = []
+        _accepted, store = self._run(
+            initial,
+            suspended_result(activity="MOWING"),
+            suspend=lambda *args: suspend_calls.append(args),
+            park=lambda *args: park_calls.append(args) or {"accepted": True},
+        )
+        self.assertEqual(suspend_calls, [])
+        self._continue(
+            store,
+            suspended_result(activity="MOWING"),
+            now=NOW + timedelta(minutes=1),
+            suspend=lambda *args: suspend_calls.append(args),
+            park=lambda *args: park_calls.append(args) or {"accepted": True},
+        )
+        self.assertEqual(len(park_calls), 1)
+        self.assertEqual(suspend_calls, [])
+        self._continue(
+            store,
+            suspended_result(activity="PARKED_IN_CS"),
+            now=NOW + timedelta(minutes=2),
+            suspend=lambda *args: suspend_calls.append(args),
+        )
+        self.assertEqual(suspend_calls, [])
+        self._continue(
+            store,
+            suspended_result(activity="PARKED_IN_CS"),
+            now=NOW + timedelta(minutes=3),
+            suspend=lambda *args: suspend_calls.append(args) or {"message_type": "info"},
+        )
+        self.assertEqual(len(suspend_calls), 1)
+
+    def test_custom_next_run_parks_early_waits_for_selected_time_and_keeps_zone_choices(self) -> None:
+        requested_zones = [
+            {
+                "zone": zone,
+                "runSeconds": 600 + zone * 60,
+                "selected": zone != 2,
+            }
+            for zone in range(1, 8)
+        ]
+        initial = AutomationState(
+            operator_request_id="custom-1",
+            operator_request_action="CUSTOMIZE_NEXT_IRRIGATION",
+            operator_requested_utc=(NOW - timedelta(seconds=10)).isoformat(),
+            operator_request_expires_utc=(NOW + timedelta(minutes=10)).isoformat(),
+            operator_request_status="PENDING",
+            operator_request_irrigation_schedule_json=json.dumps(
+                {
+                    "desiredStart": (NOW + timedelta(minutes=60)).isoformat(),
+                    "zones": requested_zones,
+                }
+            ),
+        )
+        _accepted, store = self._run(initial, result())
+        suspend_calls = []
+        for minute in range(1, 9):
+            self._continue(
+                store,
+                result(),
+                now=NOW + timedelta(minutes=minute),
+                suspend=lambda *args: suspend_calls.append(args) or {"ok": True},
+            )
+        self.assertEqual(len(suspend_calls), 7)
+        for minute in (9, 10, 11):
+            self._continue(
+                store,
+                suspended_result(activity="MOWING"),
+                now=NOW + timedelta(minutes=minute),
+                suspend=lambda *_: self.fail("Bestätigung darf keine Zone erneut ändern"),
+            )
+        active_override = json.loads(
+            store.load().irrigation_schedule_override_json or "{}"
+        )
+        self.assertEqual(active_override["status"], "ACTIVE")
+        self.assertFalse(active_override["zones"][1]["selected"])
+
+        park_calls = []
+        zone_calls = []
+        parked, _ = self._continue(
+            store,
+            suspended_result(activity="MOWING"),
+            now=NOW + timedelta(minutes=15),
+            park=lambda *args: park_calls.append(args) or {"ok": True},
+            zone=lambda *args: zone_calls.append(args) or {"ok": True},
+        )
+        self.assertEqual(parked.decision_code, "PARK_COMMAND_SENT")
+        self.assertEqual(len(park_calls), 1)
+        self.assertEqual(zone_calls, [])
+        confirming_park, _ = self._continue(
+            store,
+            suspended_result(activity="PARKED_IN_CS"),
+            now=NOW + timedelta(minutes=16),
+            zone=lambda *args: zone_calls.append(args) or {"ok": True},
+        )
+        self.assertEqual(confirming_park.decision_code, "IRRIGATION_WAIT_FOR_CONFIRMED_PARK")
+        waiting, _ = self._continue(
+            store,
+            suspended_result(activity="PARKED_IN_CS"),
+            now=NOW + timedelta(minutes=17),
+            zone=lambda *args: zone_calls.append(args) or {"ok": True},
+        )
+        self.assertEqual(waiting.decision_code, "IRRIGATION_CUSTOM_START_WAIT")
+        self.assertEqual(zone_calls, [])
+
+        reserved, _ = self._continue(
+            store,
+            suspended_result(activity="PARKED_IN_CS"),
+            now=NOW + timedelta(minutes=60),
+            zone=lambda *args: zone_calls.append(args) or {"ok": True},
+        )
+        if reserved.decision_code == "IRRIGATION_ZONE_START_RESERVED":
+            started, _ = self._continue(
+                store,
+                suspended_result(activity="PARKED_IN_CS"),
+                now=NOW + timedelta(minutes=61),
+                zone=lambda *args: zone_calls.append(args) or {"ok": True},
+            )
+            self.assertEqual(started.decision_code, "IRRIGATION_ZONE_START_SENT")
+        else:
+            self.assertEqual(reserved.decision_code, "IRRIGATION_ZONE_START_SENT")
+        self.assertEqual(len(zone_calls), 1)
+        self.assertEqual(zone_calls[0][1], RELAYS[0])
+        self.assertEqual(zone_calls[0][2], 660)
+
+    def test_short_pause_parks_before_any_schedule_write(self) -> None:
+        override = {
+            "version": 1,
+            "kind": "PAUSE",
+            "status": "APPLYING",
+            "suspend_until_utc": (NOW + timedelta(minutes=30)).isoformat(),
+            "commanded_relay_ids": [],
+        }
+        suspend_calls = []
+        park_calls = []
+        output, _store = self._run(
+            AutomationState(irrigation_schedule_override_json=json.dumps(override)),
+            result(activity="MOWING"),
+            suspend=lambda *args: suspend_calls.append(args) or {"ok": True},
+            park=lambda *args: park_calls.append(args) or {"ok": True},
+        )
+        self.assertEqual(output.decision_code, "PARK_COMMAND_SENT")
+        self.assertEqual(len(park_calls), 1)
+        self.assertEqual(suspend_calls, [])
+
+    def test_active_irrigation_parks_before_any_schedule_write(self) -> None:
+        override = {
+            "version": 1,
+            "kind": "PAUSE",
+            "status": "APPLYING",
+            "suspend_until_utc": (NOW + timedelta(days=2)).isoformat(),
+            "commanded_relay_ids": [],
+        }
+        active = result(activity="MOWING")
+        active.details["hydrawise"]["active_relay_ids"] = [RELAYS[0]]
+        active.details["hydrawise"]["safety"]["active_relay_ids"] = [RELAYS[0]]
+        active.details["hydrawise"]["safety"]["clear_now"] = False
+        suspend_calls = []
+        park_calls = []
+        output, _store = self._run(
+            AutomationState(irrigation_schedule_override_json=json.dumps(override)),
+            active,
+            suspend=lambda *args: suspend_calls.append(args) or {"ok": True},
+            park=lambda *args: park_calls.append(args) or {"ok": True},
+        )
+        self.assertEqual(
+            output.decision_code,
+            "PARK_COMMAND_SENT_FOR_HYDRAWISE_HOLD",
+        )
+        self.assertEqual(len(park_calls), 1)
+        self.assertEqual(suspend_calls, [])
+
+    def test_confirmation_gap_restarts_proof_without_false_activation(self) -> None:
+        override = {
+            "version": 1,
+            "kind": "PAUSE",
+            "status": "CONFIRMING",
+            "suspend_until_utc": (NOW + timedelta(days=2)).isoformat(),
+            "commanded_relay_ids": RELAYS,
+            "confirm_since_utc": (NOW - timedelta(minutes=20)).isoformat(),
+            "confirm_last_seen_utc": (NOW - timedelta(minutes=10)).isoformat(),
+        }
+        output, store = self._run(
+            AutomationState(irrigation_schedule_override_json=json.dumps(override)),
+            suspended_result(),
+        )
+        saved = json.loads(store.load().irrigation_schedule_override_json or "{}")
+        self.assertEqual(output.decision_code, "IRRIGATION_SCHEDULE_CONFIRMING")
+        self.assertEqual(saved["status"], "CONFIRMING")
+        self.assertEqual(saved["confirm_since_utc"], NOW.isoformat())
+
+    def test_skip_is_rejected_when_next_run_is_too_close_for_safe_application(self) -> None:
+        initial = AutomationState(
+            operator_request_id="skip-close",
+            operator_request_action="SKIP_NEXT_IRRIGATION",
+            operator_requested_utc=(NOW - timedelta(seconds=10)).isoformat(),
+            operator_request_expires_utc=(NOW + timedelta(minutes=10)).isoformat(),
+            operator_request_status="PENDING",
+            operator_request_irrigation_schedule_json="{}",
+        )
+        calls = []
+        output, store = self._run(
+            initial,
+            result(irrigation_start=NOW + timedelta(minutes=11)),
+            suspend=lambda *args: calls.append(args),
+        )
+        self.assertEqual(output.decision_code, "IRRIGATION_SCHEDULE_REQUEST_REJECTED")
+        self.assertEqual(store.load().operator_request_status, "REJECTED")
+        self.assertEqual(calls, [])
 
 
 if __name__ == "__main__":

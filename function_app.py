@@ -633,6 +633,11 @@ def ssv53_platzwart_action(req: func.HttpRequest) -> func.HttpResponse:
                 else None
             ),
             occupancy_override_key=str(body.get("occupancyOverrideKey") or ""),
+            irrigation_schedule=(
+                body.get("schedule")
+                if isinstance(body.get("schedule"), dict)
+                else None
+            ),
         )
         LOGGER.warning(
             "SSV53_PLATZWART_ACTION_ACCEPTED action=%s request_id=%s device=%s",

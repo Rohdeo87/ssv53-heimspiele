@@ -30,6 +30,14 @@ from mower.cutting_height import (
 from mower.runtime import RuntimeSettings
 from mower.state import AutomationState
 from mower.state_store import AzureTableStateStore, StateConflictError
+from mower.irrigation_schedule import (
+    IrrigationScheduleValidationError,
+    SCHEDULE_ACTIONS,
+    dump_object as dump_irrigation_schedule_object,
+    load_history as load_irrigation_schedule_history,
+    load_object as load_irrigation_schedule_object,
+    validate_schedule_request,
+)
 from daily_safety_report import dashboard_irrigation_statistics, dashboard_statistics
 
 
@@ -43,6 +51,7 @@ ALLOWED_ACTIONS = frozenset(
         "STOP_IRRIGATION_NOW",
         "SET_CUTTING_HEIGHT",
         "RESET_BLADE_USAGE",
+        *SCHEDULE_ACTIONS,
     }
 )
 
@@ -513,6 +522,92 @@ def _state_payload(state: AutomationState) -> dict[str, Any]:
     }
 
 
+def _irrigation_schedule_payload(
+    state: AutomationState,
+    hydrawise_zones: list[dict[str, Any]],
+) -> dict[str, Any]:
+    try:
+        override = load_irrigation_schedule_object(
+            state.irrigation_schedule_override_json,
+            "Beregnungsplan-Anpassung",
+        )
+    except RuntimeError as exc:
+        return {
+            "available": False,
+            "message": str(exc),
+            "override": None,
+            "nextRun": None,
+            "history": [],
+        }
+    try:
+        history = load_irrigation_schedule_history(
+            state.irrigation_schedule_history_json
+        )
+    except RuntimeError:
+        history = []
+
+    def public_zone(zone: Mapping[str, Any]) -> dict[str, Any]:
+        return {
+            "zone": int(zone.get("zone") or 0),
+            "name": str(zone.get("name") or f"Zone {zone.get('zone') or '?'}"),
+            "runSeconds": int(
+                zone.get("run_seconds")
+                or zone.get("runSeconds")
+                or 0
+            ),
+            "selected": zone.get("selected") is not False,
+            "start": zone.get("scheduled_start_utc"),
+            "end": zone.get("scheduled_end_utc"),
+        }
+
+    source = [dict(zone) for zone in hydrawise_zones if isinstance(zone, dict)]
+    if override and isinstance(override.get("zones"), list):
+        source = [dict(zone) for zone in override["zones"] if isinstance(zone, dict)]
+    elif override and isinstance(override.get("source_zones"), list):
+        source = [
+            dict(zone) for zone in override["source_zones"] if isinstance(zone, dict)
+        ]
+    public_zones = sorted(
+        (public_zone(zone) for zone in source), key=lambda item: item["zone"]
+    )
+    starts = [str(zone.get("start") or "") for zone in public_zones if zone.get("start")]
+    ends = [str(zone.get("end") or "") for zone in public_zones if zone.get("end")]
+    next_run = (
+        {
+            "start": min(starts),
+            "end": max(ends),
+            "zones": public_zones,
+            "selectedZoneCount": sum(1 for zone in public_zones if zone["selected"]),
+        }
+        if starts and ends and public_zones
+        else None
+    )
+    public_override = None
+    if override:
+        public_override = {
+            "kind": override.get("kind"),
+            "status": override.get("status"),
+            "createdAt": override.get("created_utc"),
+            "suspendUntil": override.get("suspend_until_utc"),
+            "sourceStart": override.get("source_start_utc"),
+            "sourceEnd": override.get("source_end_utc"),
+            "desiredStart": override.get("desired_start_utc"),
+            "desiredEnd": override.get("desired_end_utc"),
+            "confirmedAt": override.get("confirmed_utc"),
+            "processedZones": len(override.get("commanded_relay_ids") or []),
+            "totalZones": 7,
+            "error": override.get("error"),
+            "zones": public_zones,
+        }
+    return {
+        "available": True,
+        "message": None,
+        "override": public_override,
+        "nextRun": next_run,
+        "history": history[:6],
+    }
+
+
 def _mower_display_activity(
     mower: Mapping[str, Any],
     _state: AutomationState,
@@ -902,6 +997,10 @@ def live_status(environment: Mapping[str, str], now_utc: datetime) -> dict[str, 
         "automation": _state_payload(state),
         "statistics": statistics,
         "irrigationStatistics": irrigation_statistics,
+        "irrigationSchedule": _irrigation_schedule_payload(
+            state,
+            [zone for zone in hydrawise.get("zones", []) if isinstance(zone, dict)],
+        ),
         "clubhouse": _clubhouse_events(environment, now_utc),
     }
 
@@ -949,6 +1048,7 @@ def unavailable_live_status(now_utc: datetime) -> dict[str, Any]:
         "automation": {},
         "statistics": {"available": False, "message": "Statistiken sind gerade nicht erreichbar."},
         "irrigationStatistics": {"available": False, "message": "Beregnungsstatistiken sind gerade nicht erreichbar."},
+        "irrigationSchedule": {"available": False, "override": None, "nextRun": None, "history": []},
         "clubhouse": {"available": False, "events": [], "message": "Vereinsheim-Daten sind gerade nicht erreichbar."},
     }
 
@@ -964,6 +1064,7 @@ def request_action(
     run_seconds: int | None = None,
     cutting_height_mm: int | None = None,
     occupancy_override_key: str | None = None,
+    irrigation_schedule: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     normalized = action.strip().upper()
     if normalized not in ALLOWED_ACTIONS:
@@ -991,7 +1092,30 @@ def request_action(
             "OCCUPANCY_OVERRIDE_INVALID",
             "Die bestätigte Belegung ist ungültig.",
         )
-    if normalized == "START_IRRIGATION_ZONE":
+    schedule_json: str | None = None
+    if normalized in SCHEDULE_ACTIONS:
+        try:
+            expected_zones = int(
+                str(environment.get("HYDRAWISE_EXPECTED_ZONE_COUNT", "7")).strip()
+            )
+            schedule_payload = validate_schedule_request(
+                normalized,
+                irrigation_schedule,
+                now_utc=now_utc,
+                expected_zone_count=expected_zones,
+            )
+        except (TypeError, ValueError, IrrigationScheduleValidationError) as exc:
+            raise PlatzwartError("IRRIGATION_SCHEDULE_INVALID", str(exc)) from exc
+        schedule_json = dump_irrigation_schedule_object(schedule_payload)
+        zone = None
+        run_seconds = None
+        cutting_height_mm = None
+    elif irrigation_schedule:
+        raise PlatzwartError(
+            "IRRIGATION_SCHEDULE_INVALID",
+            "Beregnungsplan-Angaben sind bei dieser Aktion nicht erlaubt.",
+        )
+    elif normalized == "START_IRRIGATION_ZONE":
         if zone is None or not 1 <= int(zone) <= 99:
             raise PlatzwartError("ZONE_INVALID", "Bitte eine gültige Beregnungszone wählen.")
         if run_seconds is None or not 60 <= int(run_seconds) <= 7200:
@@ -1030,6 +1154,12 @@ def request_action(
             "Ein Beregnungsablauf oder Sicherheitsnachlauf ist bereits aktiv.",
             409,
         )
+    if normalized in SCHEDULE_ACTIONS and original.irrigation_phase is not None:
+        raise PlatzwartError(
+            "IRRIGATION_SEQUENCE_ACTIVE",
+            "Während eines laufenden Beregnungsablaufs kann der nächste Plan nicht geändert werden. Bitte den laufenden Ablauf zuerst beenden.",
+            409,
+        )
     if (
         normalized in {"STOP_IRRIGATION_AFTER_ZONE", "STOP_IRRIGATION_NOW"}
         and original.irrigation_phase
@@ -1055,6 +1185,7 @@ def request_action(
         operator_request_occupancy_override_key=(
             normalized_override_key or None
         ),
+        operator_request_irrigation_schedule_json=schedule_json,
     )
     try:
         store.save(updated, expected_revision=original.revision)
