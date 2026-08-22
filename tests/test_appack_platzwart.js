@@ -161,8 +161,40 @@ test("Platzwart-Seite ist syntaktisch gültig und enthält keine Zugangsdaten", 
   assert.match(html, /changeHeight\(-1\)/);
   assert.match(html, /changeHeight\(1\)/);
   assert.match(html, /openAction\("SET_CUTTING_HEIGHT"/);
+  assert.match(html, /html\.ssv-large-text \.card-head/);
+  assert.match(html, /html\.ssv-large-text \.stats-grid/);
+  assert.match(html, /html\.ssv-large-text \.zone-controls/);
+  assert.match(html, /html\.ssv-large-text \.dialog-actions/);
+  assert.match(html, /function ssvNeedsLargeTextLayout\(\)/);
+  assert.match(html, /MutationObserver/);
+  assert.match(html, /document\.fonts\.ready/);
+  assert.match(html, /orientationchange/);
   assert.doesNotMatch(html, /mowe_forced/i);
   assert.doesNotMatch(html, /HUSQVARNA_CLIENT_SECRET|HYDRAWISE_API_KEY|SSV53_PLATZWART_PIN_HASH/);
+});
+
+test("Großtextmodus reagiert nur auf echten Überlauf", () => {
+  const names = ["ssvElementVisible(element)", "ssvElementOverflows(element)", "ssvChildrenClipped(element)"];
+  const source = names.map((name) => html.split("\n").find((line) => line.includes(`function ${name}`))).join("\n");
+  const helpers = new Function(
+    `var window={getComputedStyle:function(){return {visibility:"visible"}}};\n${source}\nreturn {ssvElementOverflows,ssvChildrenClipped};`
+  )();
+  const element = {
+    isConnected: true,
+    clientWidth: 100,
+    clientHeight: 50,
+    scrollWidth: 100,
+    scrollHeight: 50,
+    children: [],
+    getBoundingClientRect() { return {left: 0, right: 100, bottom: 50, width: 100, height: 50}; }
+  };
+  assert.equal(helpers.ssvElementOverflows(element), false);
+  assert.equal(helpers.ssvElementOverflows({...element, scrollWidth: 104}), true);
+  const child = {
+    ...element,
+    getBoundingClientRect() { return {left: 0, right: 104, bottom: 45, width: 104, height: 45}; }
+  };
+  assert.equal(helpers.ssvChildrenClipped({...element, children: [child]}), true);
 });
 
 test("EPOS-Suchzustand bleibt verbunden und wird als Satellitensuche angezeigt", () => {

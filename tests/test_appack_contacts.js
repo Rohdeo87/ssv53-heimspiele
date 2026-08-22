@@ -10,17 +10,30 @@ const html = fs.readFileSync(
 );
 
 function extractFunction(name) {
-  const lines = html.split(/\r?\n/);
-  const start = lines.findIndex((line) =>
-    line.includes(`function ${name}(`)
-  );
+  const marker = `function ${name}(`;
+  const start = html.indexOf(marker);
   assert.notEqual(start, -1, `Funktion ${name} fehlt in der Appack-Datei`);
-
-  const end = lines.findIndex(
-    (line, index) => index > start && /^      }$/.test(line)
-  );
-  assert.notEqual(end, -1, `Funktionsende von ${name} wurde nicht gefunden`);
-  return lines.slice(start, end + 1).join("\n").trimStart();
+  const bodyStart = html.indexOf("{", start);
+  let depth = 0;
+  let quote = "";
+  let escaped = false;
+  for (let index = bodyStart; index < html.length; index += 1) {
+    const char = html[index];
+    if (quote) {
+      if (escaped) escaped = false;
+      else if (char === "\\") escaped = true;
+      else if (char === quote) quote = "";
+      continue;
+    }
+    if (char === "'" || char === '"' || char === "`") {
+      quote = char;
+      continue;
+    }
+    if (char === "{") depth += 1;
+    if (char === "}") depth -= 1;
+    if (depth === 0) return html.slice(start, index + 1);
+  }
+  assert.fail(`Funktionsende von ${name} wurde nicht gefunden`);
 }
 
 function createHarness(contacts) {

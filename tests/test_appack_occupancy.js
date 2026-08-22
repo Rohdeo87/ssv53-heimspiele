@@ -60,6 +60,33 @@ function harness() {
   return new Function(source)();
 }
 
+test("Bedienelemente wechseln nur bei echtem Überlauf in den Großtextmodus", () => {
+  assert.match(html, /html\.ssv-large-text #booking-controls/);
+  assert.match(html, /html\.ssv-large-text #calendar-navigation/);
+  assert.match(html, /html\.ssv-large-text \.dialog-footer/);
+  assert.match(html, /html\.ssv-large-text \.trainer-occupancy-datetime-group/);
+  assert.match(html, /MutationObserver/);
+  assert.match(html, /document\.fonts\.ready/);
+  assert.match(html, /orientationchange/);
+  const detector = extractFunction("ssvNeedsLargeTextLayout");
+  assert.doesNotMatch(detector, /fc-event|event-content|event-title/);
+
+  const source = [extractFunction("ssvElementVisible"), extractFunction("ssvElementOverflows")].join("\n");
+  const overflow = new Function(
+    `var window={getComputedStyle:function(){return {visibility:"visible"}}};\n${source}\nreturn ssvElementOverflows;`
+  )();
+  const element = {
+    isConnected: true,
+    clientWidth: 100,
+    clientHeight: 44,
+    scrollWidth: 100,
+    scrollHeight: 44,
+    getBoundingClientRect() { return {width: 100, height: 44}; }
+  };
+  assert.equal(overflow(element), false);
+  assert.equal(overflow({...element, scrollHeight: 48}), true);
+});
+
 test("Azure-Zeiten werden auf allen Geräten als Berliner Vereinszeit angezeigt", () => {
   const helper = extractFunction("toClubWallClockDate");
   const script = [
