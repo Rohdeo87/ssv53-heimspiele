@@ -1394,30 +1394,6 @@
     "warnings": []
   },
   {
-    "external_id": "031MGSR270000000VS5489BUVVKNMR0J",
-    "match_number": "610300044",
-    "team_id": "01S69BH0IK000000VS548985VUL18RL3",
-    "team_name": "Schönwalder SV",
-    "team_category": "D-Junioren | 1.Kreisklasse",
-    "team_role": "away",
-    "kickoff": "2026-11-28T10:00+01:00",
-    "home_team": "SV Falkensee-Finkenkrug IV",
-    "away_team": "Schönwalder SV",
-    "competition": "Sa, | D-Junioren | 1.Kreisklasse",
-    "match_type": "ME",
-    "status": "",
-    "venue_raw": "Kunstrasenplatz, Sportpark Rosenstraße, KR 1, Rosenstr., 14612 Falkensee",
-    "detail_url": "https://www.fussball.de/spiel/sv-falkensee-finkenkrug-iv-schoenwalder-sv/-/spiel/031MGSR270000000VS5489BUVVKNMR0J",
-    "source_url": "https://www.fussball.de/ajax.club.matchplan/-/id/00ES8GNBL0000049VV0AG08LVUPGND5I/mode/PAGE/show-filter/false/show-venues/true/mime-type/HTML/datum-von/2026-10-01/datum-bis/2026-12-31/max/50",
-    "decision": "exclude",
-    "calendar": "",
-    "venue_rule": "Auswärtige Spielstätte",
-    "event_start": "2026-11-28T09:00+01:00",
-    "event_end": "2026-11-28T12:30+01:00",
-    "checksum": "b47d81006dd528ade98be8bebb61abcf89567f7bc57e90e26e47b8b5dc2553c7",
-    "warnings": []
-  },
-  {
     "external_id": "031HB5BAJS000000VS5489BTVVG7L386",
     "match_number": "610142059",
     "team_id": "02T7TD5NLG000000VS5489BSVU9LEHLB",
@@ -1427,7 +1403,7 @@
     "kickoff": "2026-11-28T11:00+01:00",
     "home_team": "Schönwalder SV",
     "away_team": "MSV 1919 Neuruppin U19",
-    "competition": "A-Junioren | Landesklasse",
+    "competition": "Sa, | A-Junioren | Landesklasse",
     "match_type": "ME",
     "status": "",
     "venue_raw": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
@@ -2427,6 +2403,32 @@
     "event_start": "",
     "event_end": "",
     "checksum": "ea1b7de74d4f7640432c703ddc83388e3762033b3735a807e6d79cdf574a9714",
+    "warnings": [
+      "Datum oder Anstoßzeit nicht eindeutig lesbar"
+    ]
+  },
+  {
+    "external_id": "610300044",
+    "match_number": "610300044",
+    "team_id": "01S69BH0IK000000VS548985VUL18RL3",
+    "team_name": "Schönwalder SV",
+    "team_category": "D-Junioren | 1.Kreisklasse",
+    "team_role": "home",
+    "kickoff": "",
+    "home_team": "Schönwalder SV",
+    "away_team": "spielfrei",
+    "competition": "D-Junioren | 1.Kreisklasse",
+    "match_type": "ME",
+    "status": "",
+    "venue_raw": "",
+    "detail_url": "",
+    "source_url": "https://www.fussball.de/ajax.club.matchplan/-/id/00ES8GNBL0000049VV0AG08LVUPGND5I/mode/PAGE/show-filter/false/show-venues/true/mime-type/HTML/datum-von/2026-10-01/datum-bis/2026-12-31/max/50",
+    "decision": "exclude",
+    "calendar": "",
+    "venue_rule": "Spielfrei",
+    "event_start": "",
+    "event_end": "",
+    "checksum": "9c50b67da16ceb246e3181c81666d09951b2183e2a13c72fbb2b0e9db49d39e0",
     "warnings": [
       "Datum oder Anstoßzeit nicht eindeutig lesbar"
     ]
