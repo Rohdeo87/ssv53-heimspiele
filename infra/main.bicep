@@ -457,7 +457,11 @@ resource failureAlert 'Microsoft.Insights/scheduledQueryRules@2023-12-01' = {
     criteria: {
       allOf: [
         {
-          query: 'exceptions'
+          // Azure Flex Consumption beendet Python-Worker bei einem kontrollierten
+          // Scale-in mit SIGTERM (Exit 143). Nur dieses eindeutig erkennbare
+          // Plattformereignis ist kein Anwendungsfehler. Alle anderen Exceptions,
+          // Worker-Abstürze und Exitcodes bleiben alarmrelevant.
+          query: 'exceptions | where not(type == "System.Exception" and outerMessage == "python exited with code 143 (0x8F)" and tostring(customDimensions["Category"]) startswith "Worker.rpcWorkerProcess.python.")'
           timeAggregation: 'Count'
           operator: 'GreaterThan'
           threshold: 0

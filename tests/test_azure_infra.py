@@ -99,7 +99,13 @@ class AzureInfrastructureTests(unittest.TestCase):
         self.assertIn("Microsoft.Insights/actionGroups@2023-01-01", self.bicep)
         self.assertIn("Microsoft.Insights/scheduledQueryRules@2023-12-01", self.bicep)
         self.assertIn("SSV53_CONTROL_CYCLE", self.bicep)
-        self.assertIn("query: 'exceptions'", self.bicep)
+        self.assertIn("query: 'exceptions | where not(", self.bicep)
+        self.assertIn('outerMessage == "python exited with code 143 (0x8F)"', self.bicep)
+        self.assertIn(
+            'tostring(customDimensions["Category"]) startswith '
+            '"Worker.rpcWorkerProcess.python."',
+            self.bicep,
+        )
         self.assertIn("query: 'traces | where message startswith \"SSV53_CONTROL_CYCLE\"'", self.bicep)
         self.assertNotIn("AppTraces", self.bicep)
         self.assertNotIn("AppExceptions", self.bicep)
