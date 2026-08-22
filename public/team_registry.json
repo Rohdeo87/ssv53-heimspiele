@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-08-22T15:44:20+00:00",
+  "updated_at": "2026-08-22T19:46:33+00:00",
   "club_id": "00ES8GNBL0000049VV0AG08LVUPGND5I",
   "teams": [
     {
@@ -8,7 +8,7 @@
       "name": "Schönwalder SV",
       "category": "D-Junioren | 1.Kreisklasse",
       "first_seen_at": "2026-08-04T17:10:11+00:00",
-      "last_seen_at": "2026-08-22T15:44:20+00:00"
+      "last_seen_at": "2026-08-22T19:46:33+00:00"
     },
     {
       "key": "02T7TD5NLG000000VS5489BSVU9LEHLB",
@@ -16,7 +16,7 @@
       "name": "Schönwalder SV",
       "category": "A-Junioren | Landesklasse",
       "first_seen_at": "2026-08-08T11:52:05+00:00",
-      "last_seen_at": "2026-08-22T15:44:20+00:00"
+      "last_seen_at": "2026-08-22T19:46:33+00:00"
     },
     {
       "key": "031A57Q7PG000000VS5489BSVU0ORN69",
@@ -24,7 +24,7 @@
       "name": "Schönwalder SV (9er)",
       "category": "C-Junioren | 2.Kreisklasse",
       "first_seen_at": "2026-07-27T08:57:58+00:00",
-      "last_seen_at": "2026-08-22T15:44:20+00:00"
+      "last_seen_at": "2026-08-22T19:46:33+00:00"
     },
     {
       "key": "02PKVQDTEK000000VS5489B2VT4FEOV2",
@@ -32,7 +32,7 @@
       "name": "Schönwalder SV (Ü40)",
       "category": "Herren Ü40 | Kreisliga",
       "first_seen_at": "2026-07-25T08:38:22+00:00",
-      "last_seen_at": "2026-08-22T15:44:20+00:00"
+      "last_seen_at": "2026-08-22T19:46:33+00:00"
     },
     {
       "key": "02PKT2MAOC000000VS5489B2VT4FEOV2",
@@ -40,7 +40,7 @@
       "name": "SpG Perwenitz/​Schönwalde Ü50",
       "category": "Herren Ü50 | Kreisliga",
       "first_seen_at": "2026-07-25T08:38:22+00:00",
-      "last_seen_at": "2026-08-22T15:44:20+00:00"
+      "last_seen_at": "2026-08-22T19:46:33+00:00"
     },
     {
       "key": "011MIARJNS000000VTVG0001VTR8C1K7",
@@ -48,7 +48,7 @@
       "name": "Spielgemeinschaft Schönwalde-Perwenitz-Paaren",
       "category": "Herren | Kreisliga",
       "first_seen_at": "2026-07-25T08:38:22+00:00",
-      "last_seen_at": "2026-08-22T15:44:20+00:00"
+      "last_seen_at": "2026-08-22T19:46:33+00:00"
     }
   ],
   "changes": {
