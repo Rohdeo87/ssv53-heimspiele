@@ -1,9 +1,9 @@
 {
   "blocked_until": "",
-  "last_run_at": "2026-08-23T10:50:34.890968+00:00",
-  "last_status": "success",
-  "last_request_count": 5,
-  "last_http_status": 200,
+  "last_run_at": "2026-08-23T15:43:29.026748+00:00",
+  "last_status": "failed",
+  "last_request_count": 4,
+  "last_http_status": 503,
   "last_retry_after_seconds": null,
   "security_lock": false,
   "security_lock_reason": "",
