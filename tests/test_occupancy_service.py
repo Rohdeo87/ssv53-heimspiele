@@ -296,6 +296,41 @@ class OccupancyServiceTests(unittest.TestCase):
 
 
 class ProductionScheduleTests(unittest.TestCase):
+    def test_ue40_monday_uses_grass_only_in_summer(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as temporary:
+            empty_ics = Path(temporary) / "empty.ics"
+            empty_ics.write_text("BEGIN:VCALENDAR\nEND:VCALENDAR\n", encoding="utf-8")
+            summer = build_occupancy_payload(
+                config_path=root / "occupancy" / "config.json",
+                matches_path=empty_ics,
+                start="2026-08-24",
+                end="2026-08-25",
+                season="Sommer",
+            )
+            winter = build_occupancy_payload(
+                config_path=root / "occupancy" / "config.json",
+                matches_path=empty_ics,
+                start="2026-08-24",
+                end="2026-08-25",
+                season="Winter",
+            )
+
+        summer_ue40 = next(
+            event
+            for event in summer["events"]
+            if event["source"] == "training" and event["scheduleId"] == "som-kr-ue40-mo"
+        )
+        winter_ue40 = next(
+            event
+            for event in winter["events"]
+            if event["source"] == "training" and event["scheduleId"] == "win-kr-ue40-mo"
+        )
+        self.assertEqual(summer_ue40["resourceId"], "rasen")
+        self.assertEqual(summer_ue40["start"], "2026-08-24T19:30:00+02:00")
+        self.assertEqual(summer_ue40["end"], "2026-08-24T21:00:00+02:00")
+        self.assertEqual(winter_ue40["resourceId"], "kunstrasen")
+
     def test_11_august_contains_final_summer_training_plan(self) -> None:
         root = Path(__file__).resolve().parents[1]
         with tempfile.TemporaryDirectory() as temporary:

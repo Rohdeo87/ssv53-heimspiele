@@ -64,6 +64,13 @@
         "start": "17:00",
         "end": "18:30",
         "team": "C"
+      },
+      {
+        "id": "som-kr-ue40-mo",
+        "weekday": "Montag",
+        "start": "19:30",
+        "end": "21:00",
+        "team": "Ü40 / Freizeit"
       }
     ]
   },

@@ -18,7 +18,7 @@
         {"id": "som-ras-herren-do", "weekday": "Donnerstag", "start": "20:00", "end": "21:30", "team": "Herren", "resource_id": "rasen", "area": "vorne & hinten"},
         {"id": "som-ras-c-fr", "weekday": "Freitag", "start": "17:00", "end": "18:30", "team": "C", "resource_id": "rasen", "area": "vorne & hinten"},
         {"id": "som-kr-e2-mo", "weekday": "Montag", "start": "17:00", "end": "18:30", "team": "E2", "resource_id": "kunstrasen", "area": "vorne & hinten"},
-        {"id": "som-kr-ue40-mo", "weekday": "Montag", "start": "19:30", "end": "21:00", "team": "Ü40 / Freizeit", "resource_id": "kunstrasen", "area": "vorne & hinten"},
+        {"id": "som-kr-ue40-mo", "weekday": "Montag", "start": "19:30", "end": "21:00", "team": "Ü40 / Freizeit", "resource_id": "rasen", "area": "vorne & hinten"},
         {"id": "som-kr-g-di", "weekday": "Dienstag", "start": "16:30", "end": "17:30", "team": "G", "resource_id": "kunstrasen", "area": "vorne"},
         {"id": "som-kr-f-di", "weekday": "Dienstag", "start": "16:45", "end": "18:15", "team": "F", "resource_id": "kunstrasen", "area": "hinten"},
         {"id": "som-kr-minis-mi", "weekday": "Mittwoch", "start": "15:45", "end": "16:45", "team": "Minis", "resource_id": "kunstrasen", "area": "vorne & hinten"},

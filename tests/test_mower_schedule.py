@@ -11,6 +11,7 @@ from mower.planner import (
     build_hydrawise_blocks,
     build_training_blocks,
     create_plan,
+    load_json,
     merge_blocks,
     read_match_blocks,
 )
@@ -22,6 +23,27 @@ TZ = ZoneInfo("Europe/Berlin")
 
 
 class MowerPlannerTests(unittest.TestCase):
+    def test_production_ue40_monday_blocks_grass_with_training_buffers(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        config = load_json(root / "mower" / "config.json")
+
+        blocks = build_training_blocks(
+            config["training"],
+            date(2026, 8, 24),
+            1,
+            TZ,
+        )
+        ue40 = next(
+            block
+            for block in blocks
+            if block.details["schedule_id"] == "som-kr-ue40-mo"
+        )
+
+        self.assertEqual(ue40.start, datetime(2026, 8, 24, 19, 0, tzinfo=TZ))
+        self.assertEqual(ue40.end, datetime(2026, 8, 24, 21, 30, tzinfo=TZ))
+        self.assertEqual(ue40.details["nominal_start"], "2026-08-24T19:30:00+02:00")
+        self.assertEqual(ue40.details["nominal_end"], "2026-08-24T21:00:00+02:00")
+
     def test_dashboard_block_keeps_merged_appointment_details(self) -> None:
         block = Block(
             start=datetime(2026, 8, 21, 16, 20, tzinfo=TZ),
