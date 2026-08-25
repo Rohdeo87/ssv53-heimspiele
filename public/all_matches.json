@@ -228,7 +228,7 @@
     "competition": "So, | D-Junioren | Kreispokal",
     "match_type": "PO",
     "status": "",
-    "venue_raw": "Rasenplatz, Sportplatz Ruhlsdorf, Am Sportplatz, 14513 Teltow",
+    "venue_raw": "Kunstrasenplatz, Dittmar-Hartung-Sportplatz, Sputendorfer Str. 56, 14513 Teltow",
     "detail_url": "https://www.fussball.de/spiel/sv-ruhlsdorf-ii-schoenwalder-sv/-/spiel/031MR9VDJ4000000VS5489BUVT2M8LCU",
     "source_url": "https://www.fussball.de/ajax.club.matchplan/-/id/00ES8GNBL0000049VV0AG08LVUPGND5I/mode/PAGE/show-filter/false/show-venues/true/mime-type/HTML/datum-von/2026-07-01/datum-bis/2026-09-30/max/50",
     "decision": "exclude",
@@ -236,7 +236,7 @@
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2026-08-30T09:00+02:00",
     "event_end": "2026-08-30T12:30+02:00",
-    "checksum": "806353571a53c33f45a7b335dbba628d385cbfdb8d27849c686fff07c17cf254",
+    "checksum": "b61c293a81c664d58b018f01531f2564ef795eb19920a947d378e45d7958ecaa",
     "warnings": []
   },
   {
