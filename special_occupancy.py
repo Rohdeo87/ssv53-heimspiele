@@ -10,7 +10,12 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Mapping, Protocol
 from zoneinfo import ZoneInfo
 
-from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
+from azure.core import MatchConditions
+from azure.core.exceptions import (
+    ResourceExistsError,
+    ResourceModifiedError,
+    ResourceNotFoundError,
+)
 from azure.data.tables import TableClient, UpdateMode
 from azure.identity import ManagedIdentityCredential
 
@@ -23,6 +28,34 @@ VALID_AREAS = frozenset({"vorne", "hinten", "vorne & hinten"})
 EVENT_ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9._-]{2,100}$")
 COMMAND_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{5,140}$")
 TZ = ZoneInfo("Europe/Berlin")
+DEFAULT_EVENT_RETENTION_DAYS = 90
+DEFAULT_METADATA_RETENTION_DAYS = 180
+
+# Diese Felder werden nur noch eingelesen, damit alte Azure-Entities ohne
+# Migration weiterhin funktionieren. Neue Datensätze speichern sie nicht und
+# der öffentliche Feed gibt sie nie aus.
+LEGACY_SENSITIVE_IDENTITY_FIELDS = frozenset(
+    {
+        "CreatorPhone",
+        "CreatorMobile",
+        "CreatorEmail",
+        "CreatorChatId",
+        "CreatorImage",
+        "CreatorInstagram",
+        "CreatorWebsite",
+        "CreatorFacebook",
+        "CreatorInfoHtml",
+        "MovedByPhone",
+        "MovedByMobile",
+        "MovedByEmail",
+        "MovedByChatId",
+        "MovedByImage",
+        "MovedByInstagram",
+        "MovedByWebsite",
+        "MovedByFacebook",
+        "MovedByInfoHtml",
+    }
+)
 
 
 class SpecialOccupancyError(RuntimeError):
@@ -237,28 +270,30 @@ class SpecialOccupancyEvent:
             team=_bounded_text(raw.get("team"), field="team", maximum=120),
             creator_id=_bounded_text(creator.get("id"), field="creator.id", maximum=180),
             creator_name=_bounded_text(creator.get("name"), field="creator.name", maximum=120),
-            creator_phone=_bounded_text(creator.get("phone"), field="creator.phone", maximum=80),
-            creator_mobile=_bounded_text(creator.get("mobile"), field="creator.mobile", maximum=80),
-            creator_email=_bounded_text(creator.get("email"), field="creator.email", maximum=180),
-            creator_chat_id=_bounded_text(creator.get("chatId"), field="creator.chatId", maximum=180),
-            creator_image=_optional_image(creator.get("image")),
-            creator_instagram=_bounded_text(creator.get("instagram"), field="creator.instagram", maximum=500),
-            creator_website=_bounded_text(creator.get("website"), field="creator.website", maximum=500),
-            creator_facebook=_bounded_text(creator.get("facebook"), field="creator.facebook", maximum=500),
+            # Kontaktdaten werden bei der Anzeige anhand der stabilen Appack-ID
+            # frisch aus der autorisierten Ansprechpartnerquelle aufgelöst.
+            creator_phone="",
+            creator_mobile="",
+            creator_email="",
+            creator_chat_id="",
+            creator_image="",
+            creator_instagram="",
+            creator_website="",
+            creator_facebook="",
             creator_role=_bounded_text(creator.get("role"), field="creator.role", maximum=180),
-            creator_info_html=_bounded_text(creator.get("infoHtml"), field="creator.infoHtml", maximum=1000),
+            creator_info_html="",
             moved_by_id=_bounded_text(moved_by.get("id"), field="movedBy.id", maximum=180),
             moved_by_name=_bounded_text(moved_by.get("name"), field="movedBy.name", maximum=120),
-            moved_by_phone=_bounded_text(moved_by.get("phone"), field="movedBy.phone", maximum=80),
-            moved_by_mobile=_bounded_text(moved_by.get("mobile"), field="movedBy.mobile", maximum=80),
-            moved_by_email=_bounded_text(moved_by.get("email"), field="movedBy.email", maximum=180),
-            moved_by_chat_id=_bounded_text(moved_by.get("chatId"), field="movedBy.chatId", maximum=180),
-            moved_by_image=_optional_image(moved_by.get("image")),
-            moved_by_instagram=_bounded_text(moved_by.get("instagram"), field="movedBy.instagram", maximum=500),
-            moved_by_website=_bounded_text(moved_by.get("website"), field="movedBy.website", maximum=500),
-            moved_by_facebook=_bounded_text(moved_by.get("facebook"), field="movedBy.facebook", maximum=500),
+            moved_by_phone="",
+            moved_by_mobile="",
+            moved_by_email="",
+            moved_by_chat_id="",
+            moved_by_image="",
+            moved_by_instagram="",
+            moved_by_website="",
+            moved_by_facebook="",
             moved_by_role=_bounded_text(moved_by.get("role"), field="movedBy.role", maximum=180),
-            moved_by_info_html=_bounded_text(moved_by.get("infoHtml"), field="movedBy.infoHtml", maximum=1000),
+            moved_by_info_html="",
             replaced_training_event_id=replaced_training_event_id,
             suppress_training=suppress_training,
             mower_buffer_before_minutes=_buffer(
@@ -335,28 +370,10 @@ class SpecialOccupancyEvent:
             "Team": self.team,
             "CreatorId": self.creator_id,
             "CreatorName": self.creator_name,
-            "CreatorPhone": self.creator_phone,
-            "CreatorMobile": self.creator_mobile,
-            "CreatorEmail": self.creator_email,
-            "CreatorChatId": self.creator_chat_id,
-            "CreatorImage": self.creator_image,
-            "CreatorInstagram": self.creator_instagram,
-            "CreatorWebsite": self.creator_website,
-            "CreatorFacebook": self.creator_facebook,
             "CreatorRole": self.creator_role,
-            "CreatorInfoHtml": self.creator_info_html,
             "MovedById": self.moved_by_id,
             "MovedByName": self.moved_by_name,
-            "MovedByPhone": self.moved_by_phone,
-            "MovedByMobile": self.moved_by_mobile,
-            "MovedByEmail": self.moved_by_email,
-            "MovedByChatId": self.moved_by_chat_id,
-            "MovedByImage": self.moved_by_image,
-            "MovedByInstagram": self.moved_by_instagram,
-            "MovedByWebsite": self.moved_by_website,
-            "MovedByFacebook": self.moved_by_facebook,
             "MovedByRole": self.moved_by_role,
-            "MovedByInfoHtml": self.moved_by_info_html,
             "ReplacedTrainingEventId": self.replaced_training_event_id,
             "SuppressTraining": self.suppress_training,
             "MowerBufferBeforeMinutes": self.mower_buffer_before_minutes,
@@ -382,31 +399,17 @@ class SpecialOccupancyEvent:
             "creator": {
                 "id": self.creator_id,
                 "name": self.creator_name,
-                "phone": self.creator_phone,
-                "mobile": self.creator_mobile,
-                "email": self.creator_email,
-                "chatId": self.creator_chat_id,
-                "image": self.creator_image,
-                "instagram": self.creator_instagram,
-                "website": self.creator_website,
-                "facebook": self.creator_facebook,
                 "role": self.creator_role,
-                "infoHtml": self.creator_info_html,
+                "contactRef": self.creator_id,
             },
             "movedBy": {
                 # Alte Verlegungen speicherten die ausführende Person als Creator.
                 "id": self.moved_by_id or (self.creator_id if self.replaced_training_event_id else ""),
                 "name": self.moved_by_name or (self.creator_name if self.replaced_training_event_id else ""),
-                "phone": self.moved_by_phone or (self.creator_phone if self.replaced_training_event_id else ""),
-                "mobile": self.moved_by_mobile or (self.creator_mobile if self.replaced_training_event_id else ""),
-                "email": self.moved_by_email or (self.creator_email if self.replaced_training_event_id else ""),
-                "chatId": self.moved_by_chat_id or (self.creator_chat_id if self.replaced_training_event_id else ""),
-                "image": self.moved_by_image or (self.creator_image if self.replaced_training_event_id else ""),
-                "instagram": self.moved_by_instagram or (self.creator_instagram if self.replaced_training_event_id else ""),
-                "website": self.moved_by_website or (self.creator_website if self.replaced_training_event_id else ""),
-                "facebook": self.moved_by_facebook or (self.creator_facebook if self.replaced_training_event_id else ""),
                 "role": self.moved_by_role or (self.creator_role if self.replaced_training_event_id else ""),
-                "infoHtml": self.moved_by_info_html or (self.creator_info_html if self.replaced_training_event_id else ""),
+                "contactRef": self.moved_by_id or (
+                    self.creator_id if self.replaced_training_event_id else ""
+                ),
             },
         }
 
@@ -696,6 +699,127 @@ class AzureTableSpecialOccupancyStore:
                 return duplicate
             raise
         return _result(command_id, action, event, duplicate=False)
+
+    def cleanup_retention(
+        self,
+        *,
+        now_utc: datetime,
+        event_retention_days: int = DEFAULT_EVENT_RETENTION_DAYS,
+        metadata_retention_days: int = DEFAULT_METADATA_RETENTION_DAYS,
+    ) -> dict[str, int]:
+        """Entfernt abgelaufene Datensätze und bereinigt alte Kontaktkopien.
+
+        Fehlerhafte oder zeitlich nicht eindeutig einzuordnende Entities werden
+        bewusst übersprungen. So kann die Bereinigung niemals eine aktuelle
+        Platzsperre und damit indirekt eine Mäher-Sicherheitsfunktion löschen.
+        """
+
+        now = _utc(now_utc)
+        event_cutoff = now - timedelta(days=max(1, event_retention_days))
+        metadata_cutoff = now - timedelta(days=max(1, metadata_retention_days))
+        result = {"deleted": 0, "scrubbed": 0, "skipped": 0}
+        entities = self._table_client.query_entities(
+            query_filter="PartitionKey eq @partition",
+            parameters={"partition": PARTITION_KEY},
+        )
+        for raw_entity in entities:
+            entity = dict(raw_entity)
+            concurrency = _entity_concurrency(raw_entity)
+            row_key = str(entity.get("RowKey") or "")
+            kind = str(entity.get("Kind") or "").strip().lower()
+            try:
+                if kind == "event":
+                    sensitive_fields = LEGACY_SENSITIVE_IDENTITY_FIELDS.intersection(
+                        entity
+                    )
+                    if sensitive_fields:
+                        # Kontaktkopien lassen sich unabhängig von allen Termin-
+                        # und Sicherheitsfeldern entfernen. Auch ein beschädigter
+                        # Legacy-Termin darf deshalb keine personenbezogenen
+                        # Felder dauerhaft konservieren. Die zeitliche Löschung
+                        # wird nach dem ETag-geschützten Scrub auf den nächsten
+                        # täglichen Lauf verschoben.
+                        replacement = dict(entity)
+                        for key in sensitive_fields:
+                            replacement.pop(key, None)
+                        if concurrency is None:
+                            result["skipped"] += 1
+                            continue
+                        self._table_client.update_entity(
+                            entity=replacement,
+                            mode=UpdateMode.REPLACE,
+                            **concurrency,
+                        )
+                        result["scrubbed"] += 1
+                        continue
+
+                    event = SpecialOccupancyEvent.from_entity(entity)
+                    if bool(entity.get("Active")):
+                        delete = _utc(event.end) < event_cutoff
+                    else:
+                        retention_anchor = _entity_datetime(
+                            entity,
+                            "DeletedAtUtc",
+                            "UpdatedAtUtc",
+                        )
+                        delete = retention_anchor < event_cutoff
+
+                elif kind == "audit":
+                    delete = _entity_datetime(entity, "AtUtc") < metadata_cutoff
+                elif kind == "command":
+                    delete = _entity_datetime(entity, "AppliedAtUtc") < metadata_cutoff
+                else:
+                    result["skipped"] += 1
+                    continue
+
+                if delete:
+                    if concurrency is None:
+                        result["skipped"] += 1
+                        continue
+                    self._table_client.delete_entity(
+                        partition_key=PARTITION_KEY,
+                        row_key=row_key,
+                        **concurrency,
+                    )
+                    result["deleted"] += 1
+            except (
+                KeyError,
+                TypeError,
+                ValueError,
+                ResourceModifiedError,
+                ResourceNotFoundError,
+                SpecialOccupancyError,
+            ):
+                result["skipped"] += 1
+        return result
+
+
+def _entity_datetime(entity: Mapping[str, Any], *keys: str) -> datetime:
+    for key in keys:
+        value = entity.get(key)
+        if value in (None, ""):
+            continue
+        if isinstance(value, datetime):
+            parsed = value
+        else:
+            parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        if parsed.tzinfo is None or parsed.utcoffset() is None:
+            raise ValueError(f"{key} benötigt eine Zeitzone")
+        return parsed.astimezone(timezone.utc)
+    raise ValueError("Kein Aufbewahrungszeitpunkt vorhanden")
+
+
+def _entity_concurrency(entity: Mapping[str, Any]) -> dict[str, Any] | None:
+    metadata = getattr(entity, "metadata", {}) or {}
+    etag = str(
+        metadata.get("etag")
+        or entity.get("etag")
+        or entity.get("odata.etag")
+        or ""
+    ).strip()
+    if not etag:
+        return None
+    return {"etag": etag, "match_condition": MatchConditions.IfNotModified}
 
 
 def _validate_command_header(command: Mapping[str, Any]) -> tuple[str, str]:

@@ -23,6 +23,7 @@ from occupancy.runtime_source import (
     resolve_occupancy_match_source,
 )
 from occupancy_notifications import (
+    AzureOccupancyNotificationStore,
     process_collision_notifications,
     send_collision_test_mail,
     send_real_collision_test_mail,
@@ -36,8 +37,14 @@ from special_occupancy import (
     merge_public_special_events,
     parse_admin_request,
 )
-from order_mail import OrderMailError, check_smtp_connection, send_order_ready_mail
+from order_mail import (
+    OrderMailError,
+    OrderMailStore,
+    check_smtp_connection,
+    send_order_ready_mail,
+)
 from platzwart_console import (
+    ConsoleTableStore,
     PlatzwartError,
     enroll as platzwart_enroll,
     live_status as platzwart_live_status,
@@ -146,6 +153,134 @@ def ssv53_daily_safety_report_timer(timer: func.TimerRequest) -> None:
     except Exception:
         # Keine Zugangsdaten oder Empfängeradressen protokollieren.
         LOGGER.exception("SSV53_DAILY_REPORT_ERROR")
+
+
+def _retention_days(
+    name: str,
+    default: int,
+    environment=os.environ,
+    *,
+    maximum: int | None = None,
+) -> int:
+    upper_bound = default if maximum is None else maximum
+    try:
+        value = int(str(environment.get(name, default)).strip())
+    except (TypeError, ValueError):
+        LOGGER.warning("SSV53_PRIVACY_RETENTION_CONFIG_INVALID name=%s", name)
+        return default
+    if not 1 <= value <= upper_bound:
+        LOGGER.warning("SSV53_PRIVACY_RETENTION_CONFIG_INVALID name=%s", name)
+        return default
+    return value
+
+
+def run_privacy_retention(
+    now_utc: datetime,
+    environment=os.environ,
+) -> dict[str, dict[str, int | bool | str]]:
+    """Bereinigt personenbezogene Betriebsdaten ohne Steuerungszugriff.
+
+    Jeder Datenbereich ist isoliert: Ein nicht erreichbarer Store verhindert
+    weder die übrigen Bereinigungen noch einen Mäher-/Beregnungszyklus.
+    """
+
+    audit_days = _retention_days(
+        "SSV53_PRIVACY_AUDIT_RETENTION_DAYS", 180, environment
+    )
+    jobs = (
+        (
+            "specialOccupancy",
+            lambda: AzureTableSpecialOccupancyStore.from_environment(environment),
+            {
+                "event_retention_days": _retention_days(
+                    "SSV53_SPECIAL_EVENT_RETENTION_DAYS", 90, environment
+                ),
+                "metadata_retention_days": audit_days,
+            },
+        ),
+        (
+            "trainingCancellations",
+            lambda: AzureTableCancellationStore.from_environment(environment),
+            {
+                "cancellation_retention_days": _retention_days(
+                    "SSV53_TRAINING_CANCELLATION_RETENTION_DAYS", 90, environment
+                ),
+                "audit_retention_days": audit_days,
+            },
+        ),
+        (
+            "platzwartConsole",
+            lambda: ConsoleTableStore.from_environment(environment),
+            {
+                "login_retention_days": _retention_days(
+                    "SSV53_PLATZWART_LOGIN_RETENTION_DAYS", 7, environment
+                ),
+                "audit_retention_days": audit_days,
+            },
+        ),
+        (
+            "occupancyNotifications",
+            lambda: AzureOccupancyNotificationStore.from_environment(environment),
+            {
+                "retention_days": _retention_days(
+                    "SSV53_OCCUPANCY_COLLISION_RETENTION_DAYS", 180, environment
+                ),
+            },
+        ),
+        (
+            "orderMail",
+            lambda: OrderMailStore.from_environment(environment),
+            {
+                "retention_days": _retention_days(
+                    "SSV53_ORDER_MAIL_RETENTION_DAYS", 180, environment
+                ),
+            },
+        ),
+    )
+    results: dict[str, dict[str, int | bool | str]] = {}
+    for label, factory, options in jobs:
+        try:
+            result = factory().cleanup_retention(now_utc=now_utc, **options)
+            results[label] = {"available": True, **result}
+        except Exception as exc:
+            # Keine Entity-Inhalte, Identifikatoren, Empfänger oder Stacktraces
+            # in den allgemeinen Sev2-Exception-Alarm geben. Der Timer erzeugt
+            # pro Tag genau eine zusammengefasste, PII-freie Warnung.
+            results[label] = {
+                "available": False,
+                "errorType": type(exc).__name__,
+            }
+    return results
+
+
+@app.timer_trigger(
+    # Bewusst außerhalb des morgendlichen Beregnungsfensters. Der Job enthält
+    # keinerlei Gerätebefehle und konkurriert so auch zeitlich nicht mit den
+    # sicherheitskritischen Minutenzyklen.
+    schedule="0 23 11 * * *",
+    arg_name="timer",
+    run_on_startup=False,
+    use_monitor=True,
+)
+def ssv53_privacy_retention_timer(timer: func.TimerRequest) -> None:
+    """Tägliche Datenschutzbereinigung ohne Geräte- oder Mailbefehl."""
+
+    result = run_privacy_retention(datetime.now(timezone.utc), os.environ)
+    unavailable = sorted(
+        label
+        for label, item in result.items()
+        if not bool(item.get("available"))
+    )
+    if unavailable:
+        LOGGER.warning(
+            "SSV53_PRIVACY_RETENTION_PARTIAL unavailable=%s",
+            ",".join(unavailable),
+        )
+    else:
+        LOGGER.info(
+            "SSV53_PRIVACY_RETENTION %s",
+            json.dumps(result, ensure_ascii=False, sort_keys=True),
+        )
 
 def _occupancy_match_source(
     *,
@@ -346,7 +481,10 @@ def ssv53_occupancy(req: func.HttpRequest) -> func.HttpResponse:
                 special_count = len(special_events)
                 payload = merge_public_special_events(payload, special_events)
             except Exception as exc:
-                special_error = f"{type(exc).__name__}: {exc}"
+                # Die öffentliche API erhält nur einen stabilen Fehlercode. Details
+                # bleiben im serverseitigen Log, damit SDK-/Storage-Interna nicht
+                # unbeabsichtigt an anonyme Clients gelangen.
+                special_error = "SPECIAL_OCCUPANCY_UNAVAILABLE"
                 LOGGER.exception("SSV53_SPECIAL_OCCUPANCY_READ_ERROR")
                 payload = merge_public_special_events(
                     payload,

@@ -21,3 +21,13 @@ test("alle eingebetteten Appack-Skripte sind syntaktisch gültig", () => {
     );
   });
 });
+
+test("HTML und Kopierfassung des Belegungsplans sind byte-identisch", () => {
+  const html = fs.readFileSync(
+    path.join(__dirname, "..", "appack-platzbelegungsplan-azure.html")
+  );
+  const textCopy = fs.readFileSync(
+    path.join(__dirname, "..", "appack-platzbelegungsplan-azure.txt")
+  );
+  assert.equal(Buffer.compare(html, textCopy), 0);
+});

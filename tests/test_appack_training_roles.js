@@ -49,6 +49,21 @@ const api = new Function(
   ].join("\n\n")
 )({ console: { warn() {} } });
 
+function createContactResolutionApi(state) {
+  return new Function(
+    "state",
+    [
+      extractFunction("normalizeMatchText"),
+      extractFunction("mergeCreatorContact"),
+      extractFunction("normalizeOccupancyPerson"),
+      extractFunction("isSameCreator"),
+      extractFunction("findCreatorWorkbookContact"),
+      extractFunction("resolveProfileContact"),
+      "return { normalizeOccupancyPerson, isSameCreator, resolveProfileContact };"
+    ].join("\n\n")
+  )(state);
+}
+
 test("aktive technische Trainerrolle TR wird freigeschaltet", () => {
   assert.equal(api.hasActiveTrainerRole({ roleKeys: ["M", "TR"] }), true);
   assert.equal(
@@ -94,6 +109,97 @@ test("strukturierter Vor- und Nachname gewinnt gegen Appacks Nachname-Fallback",
   });
   assert.equal(creator.name, "Marco Hartwig");
   assert.equal(creator.email, "hartwig-marco@web.de");
+});
+
+test("fremde öffentliche Erstellerdaten liefern nur Identität und Workbook-Kontakt", () => {
+  const workbookContact = {
+    name: "Torsten Köhler",
+    role: "Trainer A",
+    email: "verein@example.de",
+    mobile: "+49 170 111111",
+    image: "https://cdn.appack.de/verein/torsten.jpg",
+    contactRefs: new Set(["opaque:torsten"])
+  };
+  const contactApi = createContactResolutionApi({
+    currentCreator: {
+      id: "current-user",
+      name: "Andere Person",
+      email: "current@example.de"
+    },
+    trainerContacts: [workbookContact]
+  });
+  const resolved = contactApi.resolveProfileContact({
+    id: "trainer-torsten",
+    name: "Torsten Köhler",
+    role: "Trainer",
+    contactRef: "opaque:torsten",
+    email: "private@example.de",
+    mobile: "+49 170 999999",
+    image: "data:image/jpeg;base64,private"
+  });
+
+  assert.equal(resolved.name, "Torsten Köhler");
+  assert.equal(resolved.role, "Trainer A");
+  assert.equal(resolved.email, "verein@example.de");
+  assert.equal(resolved.mobile, "+49 170 111111");
+  assert.equal(resolved.image, "https://cdn.appack.de/verein/torsten.jpg");
+  assert.notEqual(resolved.email, "private@example.de");
+  assert.notEqual(resolved.mobile, "+49 170 999999");
+  assert.notEqual(resolved.image, "data:image/jpeg;base64,private");
+});
+
+test("fremde Person ohne Workbook-Kontakt bleibt als sauberer Name ohne Kontaktdaten sichtbar", () => {
+  const contactApi = createContactResolutionApi({
+    currentCreator: {
+      id: "current-user",
+      name: "Marco Hartwig",
+      email: "marco@example.de",
+      mobile: "+49 170 123456"
+    },
+    trainerContacts: []
+  });
+  const resolved = contactApi.resolveProfileContact({
+    id: "foreign-user",
+    name: "Marco Hartwig",
+    role: "Trainer B",
+    email: "foreign-private@example.de",
+    mobile: "+49 170 999999"
+  });
+
+  assert.equal(resolved.name, "Marco Hartwig");
+  assert.equal(resolved.role, "Trainer B");
+  assert.equal(resolved.email, "");
+  assert.equal(resolved.mobile, "");
+  assert.equal(resolved.image, "");
+});
+
+test("nur die eindeutig eigene Person wird aus profile_json ergänzt", () => {
+  const contactApi = createContactResolutionApi({
+    currentCreator: {
+      id: "current-user",
+      name: "Marco Hartwig",
+      email: "marco@example.de",
+      mobile: "+49 170 123456",
+      image: "https://cdn.appack.de/profile/marco.jpg"
+    },
+    trainerContacts: []
+  });
+  const own = contactApi.resolveProfileContact({
+    id: "current-user",
+    name: "Marco Hartwig",
+    role: "Trainer A"
+  });
+
+  assert.equal(own.email, "marco@example.de");
+  assert.equal(own.mobile, "+49 170 123456");
+  assert.equal(own.image, "https://cdn.appack.de/profile/marco.jpg");
+  assert.equal(
+    contactApi.isSameCreator(
+      {id: "foreign-user", name: "Marco Hartwig"},
+      {id: "current-user", name: "Marco Hartwig"}
+    ),
+    false
+  );
 });
 
 test("Belegungsplan nutzt Appacks profile_json und prüft auch den Handler", () => {
@@ -299,7 +405,7 @@ test("verlegte Trainings behalten Teamkontakte und zeigen die verschiebende Pers
   const profile = extractFunction("getEventContactProfile");
   const renderer = extractFunction("renderTrainerContactsForEvent");
   assert.match(mapper, /team: String\(item\.team \|\| ""\)/);
-  assert.match(mapper, /movedBy: item\.movedBy/);
+  assert.match(mapper, /movedBy: normalizeOccupancyPerson\(item\.movedBy\)/);
   assert.match(profile, /const structuredTeam = String\(props\.team \|\| ""\)\.trim\(\)/);
   assert.match(renderer, /Boolean\(props\.replacesTrainingEventId\)/);
   assert.match(renderer, /const isMovedSpecial/);
@@ -334,6 +440,14 @@ test("Appack übermittelt keine Trainer-Kontakte für Kollisionsmails", () => {
   assert.doesNotMatch(html, /occupancy-contact-register/);
   assert.doesNotMatch(html, /registerOccupancyNotificationContacts/);
   assert.doesNotMatch(html, /APPACK_KONTAKTE_VERIFIZIEREN/);
+});
+
+test("Anlegen und Verlegen senden nur die minimierte Appack-Identität an Azure", () => {
+  const createSource = extractFunction("saveTrainerOccupancy");
+  const moveSource = extractFunction("moveTrainerOccupancy");
+  const minimizedCreator = /const creator = normalizeOccupancyPerson\(mergeCreatorContact\(\s*state\.currentCreator,\s*findCurrentCreatorWorkbookContact\(\)\s*\)\) \|\| \{\};/;
+  assert.match(createSource, minimizedCreator);
+  assert.match(moveSource, minimizedCreator);
 });
 
 test("Aktionsbestätigungen funktionieren ohne native WebView-Dialoge", async () => {

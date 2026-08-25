@@ -6,12 +6,15 @@ from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, Mapping, Protocol
 
+from azure.core import MatchConditions
 from azure.data.tables import TableClient, UpdateMode
 from azure.identity import ManagedIdentityCredential
-from azure.core.exceptions import ResourceNotFoundError
+from azure.core.exceptions import ResourceModifiedError, ResourceNotFoundError
 
 
 PARTITION_KEY = "training-cancellations"
+DEFAULT_CANCELLATION_RETENTION_DAYS = 90
+DEFAULT_AUDIT_RETENTION_DAYS = 180
 
 
 def _utc(value: datetime) -> datetime:
@@ -264,3 +267,80 @@ class AzureTableCancellationStore:
             ]
         )
         return True
+
+    def cleanup_retention(
+        self,
+        *,
+        now_utc: datetime,
+        cancellation_retention_days: int = DEFAULT_CANCELLATION_RETENTION_DAYS,
+        audit_retention_days: int = DEFAULT_AUDIT_RETENTION_DAYS,
+    ) -> dict[str, int]:
+        """Bereinigt nur eindeutig abgelaufene Absagen und Auditmetadaten."""
+
+        now = _utc(now_utc)
+        cancellation_cutoff = now.date() - timedelta(
+            days=max(1, cancellation_retention_days)
+        )
+        audit_cutoff = now - timedelta(days=max(1, audit_retention_days))
+        result = {"deleted": 0, "skipped": 0}
+        entities = self._table_client.query_entities(
+            query_filter="PartitionKey eq @partition",
+            parameters={"partition": PARTITION_KEY},
+        )
+        for raw_entity in entities:
+            entity = dict(raw_entity)
+            concurrency = _entity_concurrency(raw_entity)
+            row_key = str(entity.get("RowKey") or "")
+            kind = str(entity.get("Kind") or "").strip().lower()
+            try:
+                if kind == "current":
+                    delete = date.fromisoformat(str(entity["Day"])) < cancellation_cutoff
+                elif kind == "audit":
+                    delete = _entity_datetime(entity, "AtUtc") < audit_cutoff
+                else:
+                    result["skipped"] += 1
+                    continue
+                if delete:
+                    if concurrency is None:
+                        result["skipped"] += 1
+                        continue
+                    self._table_client.delete_entity(
+                        partition_key=PARTITION_KEY,
+                        row_key=row_key,
+                        **concurrency,
+                    )
+                    result["deleted"] += 1
+            except (
+                KeyError,
+                TypeError,
+                ValueError,
+                ResourceModifiedError,
+                ResourceNotFoundError,
+            ):
+                # Kein unsicheres Löschen bei beschädigten Legacy-Datensätzen.
+                result["skipped"] += 1
+        return result
+
+
+def _entity_datetime(entity: Mapping[str, Any], key: str) -> datetime:
+    value = entity.get(key)
+    if isinstance(value, datetime):
+        parsed = value
+    else:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise ValueError(f"{key} benötigt eine Zeitzone")
+    return parsed.astimezone(timezone.utc)
+
+
+def _entity_concurrency(entity: Mapping[str, Any]) -> dict[str, Any] | None:
+    metadata = getattr(entity, "metadata", {}) or {}
+    etag = str(
+        metadata.get("etag")
+        or entity.get("etag")
+        or entity.get("odata.etag")
+        or ""
+    ).strip()
+    if not etag:
+        return None
+    return {"etag": etag, "match_condition": MatchConditions.IfNotModified}

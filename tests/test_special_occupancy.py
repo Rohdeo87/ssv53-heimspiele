@@ -186,7 +186,12 @@ class SpecialOccupancyTests(unittest.TestCase):
         self.assertEqual(public_event["movedBy"]["name"], "Trainer Beispiel")
         restored = type(special).from_entity(special.to_entity())
         self.assertEqual(restored.team, "C-Junioren")
-        self.assertEqual(restored.moved_by_email, "trainer@example.de")
+        self.assertEqual(restored.moved_by_email, "")
+        self.assertEqual(
+            set(public_event["movedBy"]),
+            {"id", "name", "role", "contactRef"},
+        )
+        self.assertNotIn("MovedByEmail", special.to_entity())
         self.assertEqual(
             relocated_training_occurrence_keys([special]),
             {("som-ras-c-mi", "2026-08-19")},

@@ -3,13 +3,18 @@ from __future__ import annotations
 import hashlib
 import html
 import re
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
 from email.utils import formataddr
 from typing import Any, Callable, Mapping
 from zoneinfo import ZoneInfo
 
-from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
+from azure.core import MatchConditions
+from azure.core.exceptions import (
+    ResourceExistsError,
+    ResourceModifiedError,
+    ResourceNotFoundError,
+)
 from azure.data.tables import TableClient, UpdateMode
 from azure.identity import ManagedIdentityCredential
 
@@ -32,6 +37,7 @@ from training_cancellations import AzureTableCancellationStore
 # Benachrichtigungen unterdrücken können.
 DELIVERY_PARTITION = "ssv53-occupancy-collision-central-v1"
 MAX_RECIPIENTS = 5
+DEFAULT_DELIVERY_RETENTION_DAYS = 180
 
 
 def enabled(values: Mapping[str, str]) -> bool:
@@ -141,6 +147,80 @@ class AzureOccupancyNotificationStore:
             },
             mode=UpdateMode.MERGE,
         )
+
+    def cleanup_retention(
+        self,
+        *,
+        now_utc: datetime,
+        retention_days: int = DEFAULT_DELIVERY_RETENTION_DAYS,
+    ) -> dict[str, int]:
+        """Löscht ausschließlich eindeutig veraltete Zustell-Claims.
+
+        Der Kollisionslauf betrachtet höchstens 63 Tage im Voraus. Die
+        Standardfrist von 180 Tagen lässt aktuelle und kommende Warnungen daher
+        unangetastet. Nicht eindeutig datierbare oder gleichzeitig veränderte
+        Zeilen werden sicher übersprungen.
+        """
+
+        now = _aware_utc(now_utc)
+        cutoff = now - timedelta(days=max(1, retention_days))
+        result = {"deleted": 0, "skipped": 0}
+        entities = self._table.query_entities(
+            query_filter="PartitionKey eq @partition",
+            parameters={"partition": DELIVERY_PARTITION},
+        )
+        for raw_entity in entities:
+            entity = dict(raw_entity)
+            row_key = str(entity.get("RowKey") or "")
+            try:
+                updated = _aware_utc(
+                    datetime.fromisoformat(
+                        str(
+                            entity.get("UpdatedAtUtc")
+                            or entity.get("CreatedAtUtc")
+                            or ""
+                        ).replace("Z", "+00:00")
+                    )
+                )
+                if updated >= cutoff:
+                    continue
+                concurrency = _entity_concurrency(raw_entity)
+                if concurrency is None:
+                    result["skipped"] += 1
+                    continue
+                self._table.delete_entity(
+                    partition_key=DELIVERY_PARTITION,
+                    row_key=row_key,
+                    **concurrency,
+                )
+                result["deleted"] += 1
+            except (
+                TypeError,
+                ValueError,
+                ResourceModifiedError,
+                ResourceNotFoundError,
+            ):
+                result["skipped"] += 1
+        return result
+
+
+def _aware_utc(value: datetime) -> datetime:
+    if value.tzinfo is None or value.utcoffset() is None:
+        raise ValueError("Zeitpunkt benötigt eine Zeitzone")
+    return value.astimezone(timezone.utc)
+
+
+def _entity_concurrency(entity: Mapping[str, Any]) -> dict[str, Any] | None:
+    metadata = getattr(entity, "metadata", {}) or {}
+    etag = str(
+        metadata.get("etag")
+        or entity.get("etag")
+        or entity.get("odata.etag")
+        or ""
+    ).strip()
+    if not etag:
+        return None
+    return {"etag": etag, "match_condition": MatchConditions.IfNotModified}
 
 
 MailSender = Callable[[OrderMailSettings, EmailMessage], None]

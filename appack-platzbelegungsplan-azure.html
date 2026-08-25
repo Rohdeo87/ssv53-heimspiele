@@ -3301,9 +3301,26 @@ image: workbook.image || profile.image || "",
 instagram: workbook.instagram || "",
 website: workbook.website || "",
 facebook: workbook.facebook || "",
-role: workbook.role || "",
+role: workbook.role || profile.role || "",
+contactRef: profile.contactRef || "",
 infoHtml: workbook.infoHtml || ""
 };
+}
+
+function normalizeOccupancyPerson(value) {
+if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+const readText = function (key, maximumLength) {
+const raw = value[key];
+if (raw == null || typeof raw === "object") return "";
+return String(raw).trim().slice(0, maximumLength);
+};
+const person = {
+id: readText("id", 180),
+name: readText("name", 120),
+role: readText("role", 180),
+contactRef: readText("contactRef", 240)
+};
+return Object.values(person).some(Boolean) ? person : null;
 }
 
 function isSameCreator(leftValue, rightValue) {
@@ -3313,16 +3330,13 @@ const equal = function (first, second) {
 return Boolean(first && second) &&
 String(first).trim().toLowerCase() === String(second).trim().toLowerCase();
 };
-if (equal(left.id, right.id) || equal(left.email, right.email) ||
-equal(left.chatId, right.chatId)) return true;
+if (left.id && right.id) return equal(left.id, right.id);
+if (equal(left.contactRef, right.contactRef) ||
+equal(left.email, right.email) || equal(left.chatId, right.chatId)) return true;
 const leftName = normalizeMatchText(left.name);
 const rightName = normalizeMatchText(right.name);
 if (!leftName || !rightName) return false;
-if (leftName === rightName) return true;
-const leftParts = leftName.split(/\s+/);
-const rightParts = rightName.split(/\s+/);
-return (leftParts.length === 1 && rightParts[rightParts.length - 1] === leftName) ||
-(rightParts.length === 1 && leftParts[leftParts.length - 1] === rightName);
+return leftName === rightName;
 }
 function findCreatorWorkbookContact(creator) {
 const profile = creator || {};
@@ -3330,8 +3344,16 @@ const profileName = normalizeMatchText(profile.name);
 const profileEmail = String(profile.email || "").trim().toLowerCase();
 const profileChat = String(profile.chatId || "").trim().toLowerCase();
 const profileId = String(profile.id || "").trim().toLowerCase();
+const profileContactRef = String(profile.contactRef || "").trim().toLowerCase();
 const exact = state.trainerContacts.find(function (contact) {
-return (profileEmail && String(contact.email || "").trim().toLowerCase() === profileEmail) ||
+const contactRefs = contact.contactRefs instanceof Set
+? contact.contactRefs
+: new Set([contact.contactRef]);
+const normalizedContactRefs = Array.from(contactRefs).map(function (value) {
+return String(value || "").trim().toLowerCase();
+});
+return (profileContactRef && normalizedContactRefs.includes(profileContactRef)) ||
+(profileEmail && String(contact.email || "").trim().toLowerCase() === profileEmail) ||
 (profileChat && String(contact.chatId || "").trim().toLowerCase() === profileChat) ||
 (profileId && String(contact.chatId || "").trim().toLowerCase() === profileId) ||
 (profileName && normalizeMatchText(contact.name) === profileName);
@@ -3467,6 +3489,7 @@ if (!contact) {
 contact = {
 identity: identity,
 name: name,
+contactRefs: new Set([identity]),
 roles: new Set(),
 infoHtmlParts: new Set(),
 infoTextParts: new Set(),
@@ -3502,6 +3525,8 @@ contact.instagram = firstContactValue(contact.instagram, getFirstContactText(row
 contact.website = firstContactValue(contact.website, getFirstContactText(row.ansLink));
 contact.facebook = firstContactValue(contact.facebook, getFirstContactText(row.ansFace));
 contact.chatId = firstContactValue(contact.chatId, getFirstContactText(row.ansID));
+const rowContactRef = getFirstContactText(row.ansID);
+if (rowContactRef) contact.contactRefs.add(rowContactRef);
 
 const sortNumber = Number.parseInt(getFirstContactText(row.ansSortNumber), 10);
 if (Number.isFinite(sortNumber)) {
@@ -3518,6 +3543,7 @@ return Array.from(contactsByIdentity.values())
 return {
 identity: contact.identity,
 name: contact.name,
+contactRefs: contact.contactRefs,
 role: Array.from(contact.roles).join("; "),
 infoHtml: Array.from(contact.infoHtmlParts).join("<br>"),
 infoText: Array.from(contact.infoTextParts).join(" "),
@@ -3717,19 +3743,6 @@ state.trainerContactsLoadedAt = Date.now();
 state.trainerContactsVerifiedThisSession = true;
 state.trainerContactsPromise = null;
 
-
-if (window.console && typeof window.console.info === "function") {
-console.info(
-"[SSV53] Fußball-Ansprechpartner geladen:",
-result.contacts.map(function (contact) {
-return {
-name: contact.name,
-funktion: contact.role,
-teams: Array.from(contact.keys).sort()
-};
-})
-);
-}
 
 refreshOpenTrainerContacts();
 return state.trainerContacts;
@@ -3935,6 +3948,8 @@ return action;
 }
 
 function createTrainerContactCard(contact) {
+const safeContact = contact || {};
+const displayName = String(safeContact.name || "").trim() || "Person aus Appack";
 const card = document.createElement("div");
 const inner = document.createElement("div");
 const photoWrap = document.createElement("div");
@@ -3948,9 +3963,9 @@ card.className = "trainer-contact-card";
 inner.className = "trainer-contact-card-inner";
 photoWrap.className = "trainer-contact-photo-wrap";
 photo.className = "trainer-contact-photo";
-photo.src = contact.image ||
+photo.src = safeContact.image ||
 "https://cdn.appack.de/ssv53/images/Icon_Unbekannt.png";
-photo.alt = "Foto " + contact.name;
+photo.alt = "Foto " + displayName;
 photo.loading = "lazy";
 photo.addEventListener("error", function () {
 photo.src = "https://cdn.appack.de/ssv53/images/Icon_Unbekannt.png";
@@ -3958,12 +3973,12 @@ photo.src = "https://cdn.appack.de/ssv53/images/Icon_Unbekannt.png";
 
 main.className = "trainer-contact-main";
 name.className = "trainer-contact-name";
-name.textContent = contact.name;
+name.textContent = displayName;
 meta.className = "trainer-contact-meta";
 iconBar.className = "trainer-contact-iconbar";
 main.appendChild(name);
 
-String(contact.role || "")
+String(safeContact.role || "")
 .split(";")
 .map(function (roleText) { return roleText.trim(); })
 .filter(Boolean)
@@ -3974,10 +3989,10 @@ role.textContent = roleText;
 main.appendChild(role);
 });
 
-if (contact.infoHtml) {
+if (safeContact.infoHtml) {
 const description = document.createElement("div");
 description.className = "trainer-contact-description";
-description.innerHTML = contact.infoHtml;
+description.innerHTML = safeContact.infoHtml;
 main.appendChild(description);
 }
 
@@ -3988,67 +4003,67 @@ createTrainerContactIcon(iconClass, href, label)
 );
 }
 
-if (contact.phone && cleanPhone(contact.phone)) {
+if (safeContact.phone && cleanPhone(safeContact.phone)) {
 appendIcon(
-contact.phone,
+safeContact.phone,
 "fa-solid fa-phone",
-"tel:" + cleanPhone(contact.phone),
+"tel:" + cleanPhone(safeContact.phone),
 "Telefonnummer anrufen"
 );
 }
-if (contact.mobile && cleanPhone(contact.mobile)) {
+if (safeContact.mobile && cleanPhone(safeContact.mobile)) {
 appendIcon(
-contact.mobile,
+safeContact.mobile,
 "fa-solid fa-mobile-screen",
-"tel:" + cleanPhone(contact.mobile),
+"tel:" + cleanPhone(safeContact.mobile),
 "Handynummer anrufen"
 );
 }
-if (contact.mobile && cleanWhatsApp(contact.mobile)) {
+if (safeContact.mobile && cleanWhatsApp(safeContact.mobile)) {
 appendIcon(
-contact.mobile,
+safeContact.mobile,
 "fab fa-whatsapp",
-"ext://https://wa.me/" + cleanWhatsApp(contact.mobile),
+"ext://https://wa.me/" + cleanWhatsApp(safeContact.mobile),
 "WhatsApp öffnen"
 );
 }
-if (contact.email) {
+if (safeContact.email) {
 appendIcon(
-contact.email,
+safeContact.email,
 "fa-solid fa-envelope",
-"mailto:" + contact.email.trim(),
+"mailto:" + safeContact.email.trim(),
 "E-Mail schreiben"
 );
 }
-if (contact.website) {
+if (safeContact.website) {
 appendIcon(
-contact.website,
+safeContact.website,
 "fas fa-globe-europe",
-makeExternalContactUrl(contact.website),
+makeExternalContactUrl(safeContact.website),
 "Webseite öffnen"
 );
 }
-if (contact.instagram) {
+if (safeContact.instagram) {
 appendIcon(
-contact.instagram,
+safeContact.instagram,
 "fab fa-instagram",
-makeExternalContactUrl(contact.instagram),
+makeExternalContactUrl(safeContact.instagram),
 "Instagram öffnen"
 );
 }
-if (contact.facebook) {
+if (safeContact.facebook) {
 appendIcon(
-contact.facebook,
+safeContact.facebook,
 "fab fa-facebook-f",
-makeExternalContactUrl(contact.facebook),
+makeExternalContactUrl(safeContact.facebook),
 "Facebook öffnen"
 );
 }
-if (contact.chatId) {
+if (safeContact.chatId) {
 appendIcon(
-contact.chatId,
+safeContact.chatId,
 "far fa-comment-alt",
-"directchat://" + contact.chatId.trim(),
+"directchat://" + safeContact.chatId.trim(),
 "Chat öffnen"
 );
 }
@@ -4089,13 +4104,17 @@ elements.trainerContactList.appendChild(element);
 }
 
 function resolveProfileContact(profile) {
-const fallback = Object.assign({}, profile || {});
-if (isSameCreator(fallback, state.currentCreator)) {
-Object.keys(state.currentCreator).forEach(function (key) {
-if (state.currentCreator[key]) fallback[key] = state.currentCreator[key];
-});
-}
-return mergeCreatorContact(fallback, findCreatorWorkbookContact(fallback));
+const publicIdentity = normalizeOccupancyPerson(profile) || {};
+const ownProfile = isSameCreator(publicIdentity, state.currentCreator)
+? state.currentCreator
+: null;
+const safeFallback = ownProfile
+? Object.assign({}, publicIdentity, ownProfile)
+: publicIdentity;
+return mergeCreatorContact(
+safeFallback,
+findCreatorWorkbookContact(safeFallback)
+);
 }
 
 function setTrainerContactStatus(message, canRetry) {
@@ -4766,8 +4785,8 @@ durationRule: String(item.durationRule || ""),
 competitionFormat: String(item.competitionFormat || ""),
 matchType: String(item.matchType || ""),
 replacesTrainingEventId: String(item.replacesTrainingEventId || ""),
-creator: item.creator && typeof item.creator === "object" ? item.creator : null,
-movedBy: item.movedBy && typeof item.movedBy === "object" ? item.movedBy : null
+creator: normalizeOccupancyPerson(item.creator),
+movedBy: normalizeOccupancyPerson(item.movedBy)
 };
 
 return {
@@ -6324,10 +6343,10 @@ elements.trainerOccupancyStatus.removeAttribute("data-error");
 elements.trainerOccupancyStatus.hidden = false;
 try {
 await loadTrainerContacts(false).catch(function () {});
-const creator = mergeCreatorContact(
+const creator = normalizeOccupancyPerson(mergeCreatorContact(
 state.currentCreator,
 findCurrentCreatorWorkbookContact()
-);
+)) || {};
 const randomPart = window.crypto && typeof window.crypto.randomUUID === "function"
 ? window.crypto.randomUUID() : Date.now().toString(36);
 const requestBody = {
@@ -6712,10 +6731,10 @@ const randomPart = window.crypto && typeof window.crypto.randomUUID === "functio
 await loadTrainerContacts(false).catch(function () {
 
 });
-const creator = mergeCreatorContact(
+const creator = normalizeOccupancyPerson(mergeCreatorContact(
 state.currentCreator,
 findCurrentCreatorWorkbookContact()
-);
+)) || {};
 const requestBody = {
 action: "create",
 commandId: "trainer-create:" + randomPart,

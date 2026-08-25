@@ -46,6 +46,7 @@ function harness() {
     "function normalizeCssColor(value, fallback) { return value || fallback; }",
     "function getContrastColor() { return '#fff'; }",
     "function buildAzureEventDescription(item) { return item.description || ''; }",
+    extractFunction("normalizeOccupancyPerson"),
     extractFunction("toClubWallClockDate"),
     extractFunction("mapAzureOccupancyEvent"),
     extractFunction("enforceOccupancyGeometry"),
@@ -55,7 +56,7 @@ function harness() {
     extractFunction("formatTime"),
     extractFunction("formatTimeRange"),
     extractFunction("getPopupTimeText"),
-    "return { mapAzureOccupancyEvent, enforceOccupancyGeometry, getVisibleEventTimes, getCalendarEventTimeText, getPopupTimeText };"
+    "return { normalizeOccupancyPerson, mapAzureOccupancyEvent, enforceOccupancyGeometry, getVisibleEventTimes, getCalendarEventTimeText, getPopupTimeText };"
   ].join("\n\n");
   return new Function(source)();
 }
@@ -202,6 +203,61 @@ test("Training behält seine echte Kalendergeometrie", () => {
   });
   assert.equal(mapped.start.toISOString(), "2026-08-21T15:00:00.000Z");
   assert.equal(mapped.end.toISOString(), "2026-08-21T16:30:00.000Z");
+});
+
+test("öffentliche Erstellerdaten werden vor der Kalenderanzeige strikt minimiert", () => {
+  const api = harness();
+  const mapped = api.mapAzureOccupancyEvent({
+    id: "one-off:trainer-privacy",
+    resourceId: "rasen",
+    source: "special",
+    title: "Zusatztraining",
+    start: "2026-08-21T17:00:00+02:00",
+    end: "2026-08-21T18:00:00+02:00",
+    creator: {
+      id: "trainer-17",
+      name: "Marco Hartwig",
+      role: "Trainer A",
+      contactRef: "opaque:trainer-17",
+      email: "privat@example.de",
+      mobile: "+49 170 1234567",
+      image: "data:image/jpeg;base64,privat"
+    },
+    movedBy: {
+      id: "admin-1",
+      name: "App Administrator",
+      role: "App-Administrator",
+      phone: "03322 12345",
+      chatId: "private-chat"
+    }
+  });
+
+  assert.deepEqual(mapped.extendedProps.creator, {
+    id: "trainer-17",
+    name: "Marco Hartwig",
+    role: "Trainer A",
+    contactRef: "opaque:trainer-17"
+  });
+  assert.deepEqual(mapped.extendedProps.movedBy, {
+    id: "admin-1",
+    name: "App Administrator",
+    role: "App-Administrator",
+    contactRef: ""
+  });
+  assert.equal(Object.hasOwn(mapped.extendedProps.creator, "email"), false);
+  assert.equal(Object.hasOwn(mapped.extendedProps.creator, "mobile"), false);
+  assert.equal(Object.hasOwn(mapped.extendedProps.creator, "image"), false);
+  assert.equal(Object.hasOwn(mapped.extendedProps.movedBy, "phone"), false);
+  assert.equal(Object.hasOwn(mapped.extendedProps.movedBy, "chatId"), false);
+});
+
+test("minimierte Appack-IDs und Rollen behalten die Backend-Vertragslänge", () => {
+  const api = harness();
+  const id = "i".repeat(180);
+  const role = "r".repeat(180);
+  const normalized = api.normalizeOccupancyPerson({id, name: "Test", role});
+  assert.equal(normalized.id, id);
+  assert.equal(normalized.role, role);
 });
 
 test("abgesagtes Training bleibt grau mit Status und stabiler Termin-ID sichtbar", () => {

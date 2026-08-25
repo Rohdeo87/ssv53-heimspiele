@@ -1,18 +1,23 @@
 from __future__ import annotations
 
 import html
+import hashlib
 import logging
 import re
 import smtplib
 import ssl
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
 from email.utils import formataddr
 from typing import Any, Mapping
 
 from azure.core import MatchConditions
-from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
+from azure.core.exceptions import (
+    ResourceExistsError,
+    ResourceModifiedError,
+    ResourceNotFoundError,
+)
 from azure.data.tables import TableClient, UpdateMode
 from azure.identity import ManagedIdentityCredential
 
@@ -26,6 +31,7 @@ MAX_ORDER_ITEMS = 20
 MAX_ITEM_QTY = 50
 MAX_UNIT_PRICE_CENTS = 100_000
 MAX_ORDER_TOTAL_CENTS = 2_000_000
+DEFAULT_ORDER_MAIL_RETENTION_DAYS = 180
 
 APP_BLUE = "#285EA7"
 APP_DARK_BLUE = "#173B6D"
@@ -174,13 +180,46 @@ class OrderMailStore:
         )
         return cls(client)
 
+    @classmethod
+    def from_environment(
+        cls,
+        values: Mapping[str, str],
+        *,
+        credential_factory=ManagedIdentityCredential,
+        table_client_factory=TableClient,
+    ) -> "OrderMailStore":
+        """Öffnet nur den Statusspeicher, ohne SMTP-Geheimnisse zu laden."""
+
+        endpoint = str(values.get("SSV53_STORAGE_ACCOUNT_URL", "")).strip()
+        table_name = str(values.get("SSV53_STATE_TABLE_NAME", "")).strip()
+        client_id = str(
+            values.get("SSV53_STATE_MANAGED_IDENTITY_CLIENT_ID")
+            or values.get("AzureWebJobsStorage__clientId")
+            or ""
+        ).strip()
+        if not endpoint or not table_name or not client_id:
+            raise OrderMailError(
+                "MAIL_STORE_CONFIG_INCOMPLETE",
+                "Der Azure-Statusspeicher für den Mailversand ist unvollständig konfiguriert.",
+                status_code=503,
+            )
+        credential = credential_factory(client_id=client_id)
+        return cls(
+            table_client_factory(
+                endpoint=endpoint,
+                table_name=table_name,
+                credential=credential,
+            )
+        )
+
     def claim(self, *, order_id: str, recipient: str) -> str:
         now = datetime.now(timezone.utc).isoformat()
+        recipient_hash = _recipient_hash(recipient)
         entity = {
             "PartitionKey": PARTITION_KEY,
             "RowKey": order_id,
             "status": "sending",
-            "recipient": recipient.lower(),
+            "recipientHash": recipient_hash,
             "updatedAtUtc": now,
         }
         try:
@@ -202,8 +241,11 @@ class OrderMailStore:
                 return "busy"
 
         status = str(current.get("status") or "").strip().lower()
-        saved_recipient = str(current.get("recipient") or "").strip().lower()
-        if saved_recipient and saved_recipient != recipient.lower():
+        saved_recipient_hash = str(current.get("recipientHash") or "").strip().lower()
+        legacy_recipient = str(current.get("recipient") or "").strip().lower()
+        if not saved_recipient_hash and legacy_recipient:
+            saved_recipient_hash = _recipient_hash(legacy_recipient)
+        if saved_recipient_hash and saved_recipient_hash != recipient_hash:
             raise OrderMailError(
                 "ORDER_RECIPIENT_CONFLICT",
                 "Für diese Bestellnummer wurde bereits eine andere Empfängeradresse registriert.",
@@ -223,13 +265,13 @@ class OrderMailStore:
             "PartitionKey": PARTITION_KEY,
             "RowKey": order_id,
             "status": "sending",
-            "recipient": recipient.lower(),
+            "recipientHash": recipient_hash,
             "updatedAtUtc": now,
         }
         try:
             self._table_client.update_entity(
                 entity=retry_entity,
-                mode=UpdateMode.MERGE,
+                mode=UpdateMode.REPLACE,
                 etag=etag,
                 match_condition=MatchConditions.IfNotModified,
             )
@@ -244,11 +286,11 @@ class OrderMailStore:
                 "PartitionKey": PARTITION_KEY,
                 "RowKey": order_id,
                 "status": "sent",
-                "recipient": recipient.lower(),
+                "recipientHash": _recipient_hash(recipient),
                 "sentAtUtc": now,
                 "updatedAtUtc": now,
             },
-            mode=UpdateMode.MERGE,
+            mode=UpdateMode.REPLACE,
         )
 
     def mark_failed(self, *, order_id: str, recipient: str, error_code: str) -> None:
@@ -257,12 +299,100 @@ class OrderMailStore:
                 "PartitionKey": PARTITION_KEY,
                 "RowKey": order_id,
                 "status": "failed",
-                "recipient": recipient.lower(),
+                "recipientHash": _recipient_hash(recipient),
                 "lastErrorCode": error_code[:64],
                 "updatedAtUtc": datetime.now(timezone.utc).isoformat(),
             },
-            mode=UpdateMode.MERGE,
+            mode=UpdateMode.REPLACE,
         )
+
+    def cleanup_retention(
+        self,
+        *,
+        now_utc: datetime,
+        retention_days: int = DEFAULT_ORDER_MAIL_RETENTION_DAYS,
+    ) -> dict[str, int]:
+        """Löscht alte Versandclaims und pseudonymisiert Legacy-Empfänger."""
+
+        now = now_utc.astimezone(timezone.utc)
+        cutoff = now - timedelta(days=max(1, retention_days))
+        result = {"deleted": 0, "scrubbed": 0, "skipped": 0}
+        entities = self._table_client.query_entities(
+            query_filter="PartitionKey eq @partition",
+            parameters={"partition": PARTITION_KEY},
+        )
+        for raw_entity in entities:
+            entity = dict(raw_entity)
+            concurrency = _entity_concurrency(raw_entity)
+            row_key = str(entity.get("RowKey") or "")
+            try:
+                legacy_recipient = str(entity.pop("recipient", "") or "").strip()
+                if legacy_recipient:
+                    # Die Klartextadresse ist unabhängig von einer eventuell
+                    # beschädigten Legacy-Zeitangabe entfernbar. Eine spätere
+                    # Datensatzlöschung erfolgt nach dem Scrub im nächsten Lauf.
+                    if concurrency is None:
+                        result["skipped"] += 1
+                        continue
+                    entity["recipientHash"] = _recipient_hash(legacy_recipient)
+                    self._table_client.update_entity(
+                        entity=entity,
+                        mode=UpdateMode.REPLACE,
+                        **concurrency,
+                    )
+                    result["scrubbed"] += 1
+                    continue
+
+                updated = _entity_datetime(
+                    entity.get("updatedAtUtc") or entity.get("sentAtUtc")
+                )
+                if updated < cutoff:
+                    if concurrency is None:
+                        result["skipped"] += 1
+                        continue
+                    self._table_client.delete_entity(
+                        partition_key=PARTITION_KEY,
+                        row_key=row_key,
+                        **concurrency,
+                    )
+                    result["deleted"] += 1
+                    continue
+            except (
+                TypeError,
+                ValueError,
+                ResourceModifiedError,
+                ResourceNotFoundError,
+            ):
+                result["skipped"] += 1
+        return result
+
+
+def _recipient_hash(recipient: str) -> str:
+    normalized = str(recipient or "").strip().casefold()
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+
+
+def _entity_datetime(value: Any) -> datetime:
+    if isinstance(value, datetime):
+        parsed = value
+    else:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise ValueError("Aufbewahrungszeitpunkt benötigt eine Zeitzone")
+    return parsed.astimezone(timezone.utc)
+
+
+def _entity_concurrency(entity: Mapping[str, Any]) -> dict[str, Any] | None:
+    metadata = getattr(entity, "metadata", {}) or {}
+    etag = str(
+        metadata.get("etag")
+        or entity.get("etag")
+        or entity.get("odata.etag")
+        or ""
+    ).strip()
+    if not etag:
+        return None
+    return {"etag": etag, "match_condition": MatchConditions.IfNotModified}
 
 
 def _open_authenticated_smtp(

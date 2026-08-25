@@ -1,0 +1,540 @@
+<!doctype html>
+<!-- SSV53 Datenschutzerklärung · Version 2.0 · Stand 25.08.2026 -->
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <title>Datenschutzerklärung | SSV53</title>
+  <style>
+    :root{
+      --blue:#285ea7;--blue-dark:#17457f;--gold:#c7a238;--ink:#172033;
+      --muted:#657084;--line:#dfe4ec;--soft:#f4f6f9;--soft-blue:#eef5ff;
+      --green:#19723b;--shadow:0 5px 20px rgba(20,38,70,.08)
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth;background:#fff}
+    body{margin:0;background:#fff;color:var(--ink);font-family:Arial,Helvetica,sans-serif;font-size:17px;line-height:1.58}
+    a{color:var(--blue-dark);text-decoration-thickness:1.5px;text-underline-offset:3px}
+    a:hover{text-decoration-thickness:2.5px}
+    a:focus-visible,summary:focus-visible{outline:3px solid var(--gold);outline-offset:4px;border-radius:4px}
+    .skip{position:absolute;left:12px;top:-100px;z-index:20;padding:12px 16px;border-radius:0 0 10px 10px;background:var(--blue-dark);color:#fff;font-weight:700}
+    .skip:focus{top:0}
+    .shell{width:min(100%,980px);margin:auto;padding:calc(20px + env(safe-area-inset-top)) 18px calc(42px + env(safe-area-inset-bottom))}
+    .head{text-align:center;padding:4px 0 20px}
+    .logo{width:82px;height:82px;object-fit:contain}
+    h1{margin:9px 0 10px;font-size:clamp(30px,6vw,42px);line-height:1.15}
+    .gold{width:190px;height:3px;margin:0 auto 14px;border:0;background:var(--gold)}
+    .version{margin:0;color:var(--muted);font-size:15px}
+    h2{margin:0 0 12px;font-size:clamp(24px,4vw,31px);line-height:1.25}
+    h3{margin:0 0 8px;font-size:20px;line-height:1.3}
+    p{margin:10px 0}
+    .lead{font-size:19px;line-height:1.55}
+    .card,.section,.purpose-group{margin:16px 0;padding:22px;border:1px solid var(--line);border-radius:19px;background:#fff;box-shadow:var(--shadow)}
+    .summary{border-left:7px solid var(--gold);background:linear-gradient(135deg,#fff,#fbfcff)}
+    .eyebrow{display:block;margin-bottom:5px;color:var(--blue);font-size:14px;font-weight:800;letter-spacing:.055em;text-transform:uppercase}
+    .key-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:19px 0 0;padding:0;list-style:none}
+    .key-list li{min-width:0;padding:14px;border:1px solid #d9e3f1;border-radius:14px;background:var(--soft-blue)}
+    .key-list strong,.key-list span{display:block}
+    .key-list span{margin-top:3px;color:var(--muted);font-size:15px}
+    .toc{position:relative;margin:18px 0;padding:18px;border:1px solid var(--line);border-radius:17px;background:var(--soft)}
+    .toc strong{display:block;margin-bottom:9px}
+    .toc ul{display:flex;flex-wrap:wrap;gap:8px;margin:0;padding:0;list-style:none}
+    .toc a{display:block;padding:9px 12px;border:1px solid #d4dce7;border-radius:999px;background:#fff;text-decoration:none;font-size:15px;font-weight:700}
+    .contact{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .contact-box{min-width:0;padding:16px;border:1px solid var(--line);border-radius:14px;background:var(--soft)}
+    .contact-box strong,.contact-box span{display:block}
+    .contact-box span{margin-top:5px}
+    .principles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px;margin-top:15px}
+    .principle{padding:15px;border:1px solid var(--line);border-radius:14px;background:var(--soft)}
+    .principle strong{display:block;color:var(--blue-dark)}
+    .principle span{display:block;margin-top:4px;color:var(--muted);font-size:15px}
+    details.purpose-group{padding:0;overflow:hidden}
+    details.purpose-group>summary{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:76px;padding:19px 22px;cursor:pointer;list-style:none;font-size:21px;font-weight:800}
+    details.purpose-group>summary::-webkit-details-marker{display:none}
+    details.purpose-group>summary::after{content:"+";display:grid;place-items:center;width:36px;height:36px;flex:0 0 36px;border-radius:50%;background:var(--soft-blue);color:var(--blue);font-size:27px;line-height:1}
+    details.purpose-group[open]>summary::after{content:"−"}
+    details.purpose-group[open]>summary{border-bottom:1px solid var(--line)}
+    .purpose-inner{padding:18px 20px 22px}
+    .table-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:14px}
+    table{width:100%;min-width:1180px;border-collapse:collapse;background:#fff;font-size:14px;line-height:1.45}
+    caption{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+    th,td{padding:13px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+    th{position:sticky;top:0;background:var(--blue-dark);color:#fff;font-size:13px;letter-spacing:.02em}
+    tbody tr:last-child td{border-bottom:0}
+    tbody tr:nth-child(even){background:#fafbfd}
+    td:first-child{font-weight:700;color:var(--blue-dark)}
+    .legal-basis{font-weight:700}
+    .note{margin:15px 0 0;padding:13px 15px;border-left:5px solid var(--blue);border-radius:10px;background:var(--soft-blue)}
+    .warning{border-left-color:var(--gold);background:#fffbef}
+    .plain-list{margin:10px 0;padding-left:22px}
+    .plain-list li{margin:7px 0}
+    .service-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;margin:14px 0 0;padding:0;list-style:none}
+    .service-list li{min-width:0;padding:14px;border:1px solid var(--line);border-radius:13px;background:var(--soft)}
+    .service-list strong,.service-list span{display:block}
+    .service-list span{margin-top:4px;color:var(--muted);font-size:15px}
+    .rights{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}
+    .right{padding:14px;border:1px solid var(--line);border-radius:13px;background:var(--soft)}
+    .right strong{display:block}
+    .right span{display:block;margin-top:3px;color:var(--muted);font-size:15px}
+    .source-links{font-size:15px}
+    .source-links li{margin:8px 0}
+    footer{margin-top:22px;padding-top:20px;border-top:1px solid var(--line);text-align:center;color:var(--muted);font-size:14px}
+    @media(max-width:720px){
+      body{font-size:16px}.shell{padding-left:12px;padding-right:12px}.card,.section{padding:18px}.key-list,.principles,.contact,.service-list,.rights{grid-template-columns:1fr}
+      details.purpose-group>summary{padding:17px 18px}.purpose-inner{padding:14px}
+      .table-wrap{border:0;overflow:visible}
+      table{min-width:0;border-collapse:separate;border-spacing:0 12px;background:transparent}
+      thead{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0,0,0,0)}
+      tbody,tr,td{display:block;width:100%}
+      tr{overflow:hidden;border:1px solid var(--line);border-radius:14px;background:#fff!important;box-shadow:0 3px 12px rgba(20,38,70,.06)}
+      td{display:grid;grid-template-columns:minmax(105px,35%) minmax(0,1fr);gap:10px;padding:10px 12px;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
+      td::before{content:attr(data-label);color:var(--muted);font-size:12px;font-weight:800;letter-spacing:.035em;text-transform:uppercase}
+      td:last-child{border-bottom:0}
+    }
+    @media(max-width:380px){td{grid-template-columns:1fr;gap:4px}}
+    @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+    @media print{.skip,.toc{display:none}.shell{max-width:none}.card,.section,.purpose-group{box-shadow:none;break-inside:avoid}details.purpose-group{display:block}details.purpose-group>.purpose-inner{display:block!important}.table-wrap{overflow:visible}table{min-width:0;font-size:10px}}
+  </style>
+</head>
+<body>
+  <a class="skip" href="#inhalt">Direkt zum Inhalt</a>
+  <main id="inhalt" class="shell">
+    <header class="head">
+      <img class="logo" src="https://cdn.appack.de/ssv53/images/Icon_Verein.png" alt="Wappen des Schönwalder SV 1953 e.V." width="82" height="82">
+      <h1>Datenschutzerklärung</h1>
+      <hr class="gold">
+      <p class="version">Stand: 25. August 2026 · Version 2.0</p>
+    </header>
+
+    <section class="card summary" aria-labelledby="kurz-title">
+      <span class="eyebrow">Kurz erklärt</span>
+      <h2 id="kurz-title">Deine Daten in der SSV53-App</h2>
+      <p class="lead">Viele Inhalte der App kannst du ohne persönliches Profil ansehen. Personenbezogene Daten verarbeiten wir nur, wenn sie für eine von dir genutzte Funktion, die Vereinsorganisation, die Sicherheit unserer Anlagen oder eine gesetzliche Pflicht erforderlich sind.</p>
+      <ul class="key-list">
+        <li><strong>Du entscheidest</strong><span>Optionale Angaben, Fotos und freiwillige Mitteilungen kannst du grundsätzlich ändern oder widerrufen.</span></li>
+        <li><strong>Zugriff nach Funktion</strong><span>Verwaltungsbereiche sind eingeschränkt. Im Belegungsplan freigegebene Ansprechpartnerdaten sehen jedoch alle Personen, die diese App-Seite öffnen können.</span></li>
+        <li><strong>Keine Werbeprofile</strong><span>Wir erstellen keine personenbezogenen Werbe- oder Leistungsprofile und verkaufen keine Daten.</span></li>
+        <li><strong>Klare Anlaufstelle</strong><span>Fragen und Datenschutzrechte kannst du an <a href="mailto:info@ssv53.de">info@ssv53.de</a> richten.</span></li>
+      </ul>
+    </section>
+
+    <nav class="toc" aria-label="Inhalt der Datenschutzerklärung">
+      <strong>Direkt zu</strong>
+      <ul>
+        <li><a href="#verantwortlich">Verantwortlicher</a></li>
+        <li><a href="#verarbeitungen">Nutzungsfälle</a></li>
+        <li><a href="#speicher">Gerätespeicher</a></li>
+        <li><a href="#empfaenger">Dienstleister</a></li>
+        <li><a href="#minderjaehrige">Kinder &amp; Jugendliche</a></li>
+        <li><a href="#rechte">Deine Rechte</a></li>
+      </ul>
+    </nav>
+
+    <section id="verantwortlich" class="section" aria-labelledby="verantwortlich-title">
+      <span class="eyebrow">Wer entscheidet über die Verarbeitung?</span>
+      <h2 id="verantwortlich-title">Verantwortlicher und Kontakt</h2>
+      <div class="contact">
+        <div class="contact-box">
+          <strong>Schönwalder SV 1953 e.V.</strong>
+          <span>Kurmärkische Straße 2<br>14621 Schönwalde-Glien<br>Deutschland</span>
+        </div>
+        <div class="contact-box">
+          <strong>Datenschutzanfragen</strong>
+          <span><a href="mailto:info@ssv53.de">info@ssv53.de</a><br><a href="https://www.ssv53.de/kontakt/" rel="noopener noreferrer">www.ssv53.de/kontakt</a></span>
+        </div>
+      </div>
+      <p>Der Verein ist Verantwortlicher im Sinne der Datenschutz-Grundverordnung (DSGVO), soweit er Zwecke und Mittel der Datenverarbeitung in der SSV53-App festlegt. Für einzelne externe Angebote kann der jeweilige Anbieter selbst verantwortlich sein; darauf weisen wir an der betreffenden Stelle hin.</p>
+    </section>
+
+    <section class="section" aria-labelledby="grundsaetze-title">
+      <span class="eyebrow">Unser Maßstab</span>
+      <h2 id="grundsaetze-title">Grundsätze und Rechtsgrundlagen</h2>
+      <div class="principles">
+        <div class="principle"><strong>So wenig wie nötig</strong><span>Wir beschränken Datenfelder und Zugriffe auf den jeweiligen Zweck.</span></div>
+        <div class="principle"><strong>So kurz wie möglich</strong><span>Nach Zweckfortfall werden Daten gelöscht oder anonymisiert, soweit keine Pflicht entgegensteht.</span></div>
+        <div class="principle"><strong>So geschützt wie angemessen</strong><span>Rollen, Zugriffsschutz, Verschlüsselung und Protokollierung sichern sensible Funktionen.</span></div>
+      </div>
+      <p>Je nach Funktion stützen wir die Verarbeitung auf deine <strong>Einwilligung</strong> (Art. 6 Abs. 1 Buchst. a DSGVO), die <strong>Erfüllung der Mitgliedschaft oder eines Vertrags</strong> beziehungsweise vorvertragliche Maßnahmen (Art. 6 Abs. 1 Buchst. b DSGVO), eine <strong>rechtliche Verpflichtung</strong> (Art. 6 Abs. 1 Buchst. c DSGVO) oder unsere <strong>berechtigten Interessen</strong> (Art. 6 Abs. 1 Buchst. f DSGVO). Unsere berechtigten Interessen liegen insbesondere in einer verlässlichen Vereinsorganisation, der sicheren Nutzung und Pflege unserer Anlagen, der IT-Sicherheit sowie einer zweckmäßigen Kommunikation im Verein. Bei darauf gestützten Verarbeitungen berücksichtigen wir die Interessen und Rechte der betroffenen Personen.</p>
+      <p>Eine Einwilligung kannst du jederzeit mit Wirkung für die Zukunft widerrufen. Die Rechtmäßigkeit der Verarbeitung bis zum Widerruf bleibt unberührt.</p>
+    </section>
+
+    <section id="verarbeitungen" aria-labelledby="verarbeitungen-title">
+      <span class="eyebrow">Vollständiger Überblick</span>
+      <h2 id="verarbeitungen-title">Welche Daten wir wofür verarbeiten</h2>
+      <p>Die folgenden Tabellen beschreiben die derzeit vorgesehenen Funktionen. Eine Angabe ist nur dann erforderlich, wenn du die jeweilige Funktion nutzt oder eine entsprechende Vereinsrolle wahrnimmst.</p>
+
+      <details class="purpose-group" open>
+        <summary>1. App-Zugang, Profile und Kommunikation</summary>
+        <div class="purpose-inner">
+          <div class="table-wrap" role="region" aria-label="Datenschutzdetails zu App-Zugang, Profilen und Kommunikation" tabindex="0">
+            <table>
+              <caption>App-Zugang, Profile und Kommunikation</caption>
+              <thead><tr><th>Daten</th><th>Zweck</th><th>Rechtsgrundlage</th><th>Empfänger</th><th>Speicherdauer</th><th>Herkunft</th><th>Pflicht / freiwillig</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td data-label="Daten">Technische Zugriffsdaten, IP-Adresse, Zeit, App-/Geräteversion, Fehler- und Sicherheitsdaten</td>
+                  <td data-label="Zweck">Inhalte ausliefern, Störungen beheben, Missbrauch abwehren und Betrieb absichern</td>
+                  <td data-label="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 f DSGVO</span> – sicherer und zuverlässiger App-Betrieb</td>
+                  <td data-label="Empfänger">vmapit/Appack; bei vereinseigenen Funktionen Microsoft Azure; befugte Administration</td>
+                  <td data-label="Speicherdauer">Betriebsprotokolle grundsätzlich höchstens 30 Tage; sicherheitsrelevante Nachweise nur so lange wie zur Klärung erforderlich</td>
+                  <td data-label="Herkunft">Automatisch vom Endgerät und den beteiligten Systemen</td>
+                  <td data-label="Pflicht / freiwillig">Technisch erforderlich; ohne diese Daten ist die jeweilige Onlinefunktion nicht möglich</td>
+                </tr>
+                <tr>
+                  <td data-label="Daten">Profil-ID, Name, E-Mail, optional Telefon/Mobilnummer, Profilfoto sowie Gruppen und Rollen</td>
+                  <td data-label="Zweck">Anmeldung, persönliche Funktionen, Rollenprüfung, interne Zuordnung und Erreichbarkeit</td>
+                  <td data-label="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 b und f DSGVO</span>; zusätzliche freiwillige Angaben und Fotos <span class="legal-basis">Art. 6 Abs. 1 a DSGVO</span></td>
+                  <td data-label="Empfänger">vmapit/Appack; Vereinsadministration; je nach Seiteneinstellung Öffentlichkeit, alle App-Nutzer oder bestimmte Gruppen/Rollen</td>
+                  <td data-label="Speicherdauer">Bis zur Profillöschung oder zum Ende des Funktionsbezugs; freiwillige öffentliche/interne Angaben bis Widerruf; gesetzliche Nachweise bleiben vorbehalten</td>
+                  <td data-label="Herkunft">Von dir, Erziehungsberechtigten oder befugter Vereinsadministration</td>
+                  <td data-label="Pflicht / freiwillig">Profil nur für geschützte Funktionen nötig; Kontaktzusätze und Foto freiwillig, soweit nicht funktionsbedingt vereinbart</td>
+                </tr>
+                <tr>
+                  <td data-label="Daten">Funktionsbezeichnung, dienstliche oder freigegebene Kontaktwege, Foto, Chat-Kennung</td>
+                  <td data-label="Zweck">Ansprechpartnerinnen und Ansprechpartner auffindbar machen und Vereinsarbeit koordinieren</td>
+                  <td data-label="Rechtsgrundlage">Dokumentierte Freigabe regelmäßig <span class="legal-basis">Art. 6 Abs. 1 a DSGVO</span>; für eindeutig dienstliche Funktionskontakte im Einzelfall <span class="legal-basis">Art. 6 Abs. 1 f DSGVO</span>. Fotos, private Kanäle und Social-Links nur bei passender dokumentierter Freigabe</td>
+                  <td data-label="Empfänger">Im Belegungsplan alle Personen, die diese App-Seite öffnen können; auf anderen Seiten nach der dort eingestellten Sichtbarkeit; befugte Administration und vmapit/Appack</td>
+                  <td data-label="Speicherdauer">Für die Dauer der Funktion; freiwillige Angaben bis Änderung oder Widerruf; danach Entfernung aus aktiven Ansichten</td>
+                  <td data-label="Herkunft">Ansprechpartner-Datenbank und – falls dort nichts vorliegt – freigegebene Profildaten</td>
+                  <td data-label="Pflicht / freiwillig">Veröffentlichung privater Kanäle, Foto und Social-Links freiwillig und über info@ssv53.de für die Zukunft widerrufbar; ein dienstlicher Vereinskontakt kann funktionsbedingt erforderlich sein</td>
+                </tr>
+                <tr>
+                  <td data-label="Daten">Chatnachrichten, Anhänge, Absender, Empfänger, Zeit und Zustellstatus</td>
+                  <td data-label="Zweck">Direkte und gruppenbezogene Vereinskommunikation</td>
+                  <td data-label="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 b und f DSGVO</span></td>
+                  <td data-label="Empfänger">Kommunikationspartner, berechtigte Gruppen, vmapit/Appack; Administration nur im erforderlichen Support-/Missbrauchsfall</td>
+                  <td data-label="Speicherdauer">Bis zur nutzerseitigen Löschung oder dem Ende des Kommunikationszwecks; spätestens nach den im Chatmodul festgelegten Fristen</td>
+                  <td data-label="Herkunft">Von den Kommunikationsbeteiligten</td>
+                  <td data-label="Pflicht / freiwillig">Freiwillig; ohne Nachricht keine Chatkommunikation</td>
+                </tr>
+                <tr>
+                  <td data-label="Daten">Push-Token, Geräteplattform, gewählte Themen sowie Zustellinformationen</td>
+                  <td data-label="Zweck">Gewünschte Vereins-, Funktions- und Sicherheitsmitteilungen zustellen</td>
+                  <td data-label="Rechtsgrundlage">Optionale Push-Mitteilungen <span class="legal-basis">Art. 6 Abs. 1 a DSGVO</span>; funktionsbezogene Nachrichten zusätzlich <span class="legal-basis">Art. 6 Abs. 1 b oder f DSGVO</span></td>
+                  <td data-label="Empfänger">vmapit/Appack; Apple Push Notification Service oder Google Firebase Cloud Messaging</td>
+                  <td data-label="Speicherdauer">Bis Push deaktiviert, das Profil gelöscht oder der Token ungültig wird; Zustellprotokolle nur kurzfristig zur Fehleranalyse</td>
+                  <td data-label="Herkunft">Endgerät, Betriebssystem und deine Auswahl</td>
+                  <td data-label="Pflicht / freiwillig">Freiwillig; in den Geräte- oder App-Einstellungen abschaltbar</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </details>
+
+      <details class="purpose-group">
+        <summary>2. Vereinsinformationen, Inhalte und Mitwirkung</summary>
+        <div class="purpose-inner">
+          <div class="table-wrap" role="region" aria-label="Datenschutzdetails zu Vereinsinformationen und Mitwirkung" tabindex="0">
+            <table>
+              <caption>Vereinsinformationen, Inhalte und Mitwirkung</caption>
+              <thead><tr><th>Daten</th><th>Zweck</th><th>Rechtsgrundlage</th><th>Empfänger</th><th>Speicherdauer</th><th>Herkunft</th><th>Pflicht / freiwillig</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td data-label="Daten">Beiträge, Termine, Dateien, FAQ-Inhalte, Galerieaufnahmen und Veranstaltungsangaben</td>
+                  <td data-label="Zweck">Vereinsinformation, Dokumentenbereitstellung, Öffentlichkeitsarbeit und Veranstaltungsorganisation</td>
+                  <td data-label="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 f DSGVO</span>; bei erkennbaren Personen je nach Fall <span class="legal-basis">Art. 6 Abs. 1 a DSGVO</span> oder berechtigtes Interesse</td>
+                  <td data-label="Empfänger">Je nach Inhalt Öffentlichkeit, alle App-Nutzer oder nur berechtigte Rollen; vmapit/Appack</td>
+                  <td data-label="Speicherdauer">Solange der Inhalt aktuell und für den Vereinszweck erforderlich ist; Personenaufnahmen bis Zweckfortfall oder wirksamem Widerruf, sofern keine andere Grundlage greift</td>
+                  <td data-label="Herkunft">Verein, Veranstalter, Mitglieder oder mitwirkende Personen</td>
+                  <td data-label="Pflicht / freiwillig">Ansehen freiwillig; Mitwirkung und Personenaufnahmen nur nach den jeweiligen Voraussetzungen</td>
+                </tr>
+                <tr>
+                  <td data-label="Daten">Reservierungszeit, Ressource, Profilbezug, Name, Buchungsinhalt/Kommentar und Änderungsstatus</td>
+                  <td data-label="Zweck">Vereinsheim und weitere Ressourcen buchen, Doppelbelegungen vermeiden, verantwortliche Person erreichen</td>
+                  <td data-label="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 b und f DSGVO</span></td>
+                  <td data-label="Empfänger">Buchende Person, berechtigte Trainer/Mitarbeitende/Vorstand/Administration; vmapit/Appack; im Platzwart-Dashboard nur erforderliche nächste Vereinsheimbelegungen</td>
+                  <td data-label="Speicherdauer">Bis zur Durchführung und organisatorischen Abwicklung der Buchung; danach nur, solange eine offene Klärung oder gesetzliche Nachweis-, Aufbewahrungs- oder Verjährungsfrist dies erfordert, andernfalls Löschung</td>
+                  <td data-label="Herkunft">Buchende Person, Profil und befugte Administration</td>
+                  <td data-label="Pflicht / freiwillig">Für eine Reservierung erforderliche Angaben; Freitext freiwillig und auf notwendige Inhalte zu beschränken</td>
+                </tr>
+                <tr>
+                  <td data-label="Daten">Formularinhalt, Kategorie, Zeitpunkt, optional Profil-/Kontaktdaten und Bearbeitungsstatus</td>
+                  <td data-label="Zweck">Feedback, Bedarf, Funktionsvorschläge und sonstige Anliegen bearbeiten</td>
+                  <td data-label="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 b oder f DSGVO</span>; freiwillige Zusatzangaben <span class="legal-basis">Art. 6 Abs. 1 a DSGVO</span></td>
+                  <td data-label="Empfänger">Je nach Modul befugte Trainer, Vorstand, Administration oder Geschäftsstelle; vmapit/Appack</td>
+                  <td data-label="Speicherdauer">Bis Abschluss des gemeldeten Vorgangs; danach nur, solange eine sachliche Dokumentation, offene Klärung oder gesetzliche Nachweis- beziehungsweise Verjährungsfrist erforderlich ist, andernfalls Löschung</td>
+                  <td data-label="Herkunft">Von dir und – bei angemeldeter Nutzung – aus deinem Profil</td>
+                  <td data-label="Pflicht / freiwillig">Meldung freiwillig; Pflichtfelder sind für Bearbeitung und Rückmeldung nötig</td>
+                </tr>
+                <tr>
+                  <td data-label="Daten">Antwortauswahl, Freitext, Zeitpunkt und – nur wenn konfiguriert – Profilbezug</td>
+                  <td data-label="Zweck">Umfragen, Abstimmungen und Bedarfsplanung, einschließlich SSV53-Shirt-Umfragen</td>
+                  <td data-label="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 a DSGVO</span>; rein organisatorische Mitgliederabfragen gegebenenfalls <span class="legal-basis">Art. 6 Abs. 1 b oder f DSGVO</span></td>
+                  <td data-label="Empfänger">Befugte Auswertende im Verein; vmapit/Appack; Ergebnisse nur in der angekündigten Form</td>
+                  <td data-label="Speicherdauer">Personenbezug bis Abschluss und Auswertung und danach nach der in der Umfrage festgelegten Löschfrist; anonymisierte Gesamtergebnisse können ohne Personenbezug länger erhalten bleiben</td>
+                  <td data-label="Herkunft">Von teilnehmenden Personen</td>
+                  <td data-label="Pflicht / freiwillig">Freiwillig; Nichtteilnahme hat keine Nachteile, soweit nicht ausdrücklich anders begründet</td>
+                </tr>
+                <tr>
+                  <td data-label="Daten">Bei Kartenaufruf IP-/Gerätedaten und gegebenenfalls freigegebener Standort; bei Spenden die beim Zielanbieter eingegebenen Daten</td>
+                  <td data-label="Zweck">Anfahrt darstellen beziehungsweise freiwillige Spende ermöglichen</td>
+                  <td data-label="Rechtsgrundlage">Karten-/Standortfunktion und Spende auf deine Anforderung <span class="legal-basis">Art. 6 Abs. 1 a oder b DSGVO</span></td>
+                  <td data-label="Empfänger">Jeweils sichtbar benannter Karten-, Plattform- oder Spendenanbieter; der Verein erhält nur die dort ausgewiesenen Informationen</td>
+                  <td data-label="Speicherdauer">Nach den Hinweisen des externen Anbieters; Standortfreigabe kann im Betriebssystem widerrufen werden</td>
+                  <td data-label="Herkunft">Endgerät und deine Eingaben beim Zielanbieter</td>
+                  <td data-label="Pflicht / freiwillig">Freiwillig; externe Inhalte werden nur bei Nutzung der Funktion aufgerufen</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="note warning"><strong>Bitte keine sensiblen Daten in Freitextfelder schreiben.</strong> Gesundheitsdaten, Zugangsdaten oder private Angaben anderer Personen gehören nur dann in eine Meldung, wenn dies zwingend erforderlich und rechtlich zulässig ist.</p>
+        </div>
+      </details>
+
+      <details class="purpose-group">
+        <summary>3. Platzbelegung, Trainings und Spiele</summary>
+        <div class="purpose-inner">
+          <div class="table-wrap" role="region" aria-label="Datenschutzdetails zur Platzbelegung" tabindex="0">
+            <table>
+              <caption>Platzbelegung, Trainings und Spiele</caption>
+              <thead><tr><th>Daten</th><th>Zweck</th><th>Rechtsgrundlage</th><th>Empfänger</th><th>Speicherdauer</th><th>Herkunft</th><th>Pflicht / freiwillig</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td data-label="Daten">Mannschaft, Gegner, Wettbewerb, Spielstätte, Datum, Anstoß, Spielkennung und Status</td>
+                  <td data-label="Zweck">Heimspiele automatisch und aktuell in den Belegungsplan übernehmen</td>
+                  <td data-label="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 f DSGVO</span> – verlässliche Platz- und Vereinsorganisation</td>
+                  <td data-label="Empfänger">Nutzer des Belegungsplans; vereinseigene Azure-Verarbeitung; öffentliches FUSSBALL.DE-Angebot als Datenquelle</td>
+                  <td data-label="Speicherdauer">Aktuelle Saison und erforderlicher Änderungsverlauf; nach Saisonende grundsätzlich höchstens 12 Monate personenbezogen, sofern überhaupt Personenbezug besteht</td>
+                  <td data-label="Herkunft">Öffentlich abrufbarer DFB-/FUSSBALL.DE-Spielplan und vereinsinterne Zuordnung</td>
+                  <td data-label="Pflicht / freiwillig">Keine Eingabe durch App-Nutzer; es werden keine Spielerdaten für den Belegungsplan benötigt</td>
+                </tr>
+                <tr>
+                  <td data-label="Daten">Training/Event, Platz, Start/Ende, Mannschaft/Bereich, Erstellerprofil, Verlegungs- oder Absageinformation und handelnde Person</td>
+                  <td data-label="Zweck">Belegungen erstellen, verschieben oder absagen, Konflikte erkennen und Mähzeiten sicher anpassen</td>
+                  <td data-label="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 b und f DSGVO</span></td>
+                  <td data-label="Empfänger">Alle Personen, die den Belegungsplan in der App öffnen können; handelnde Trainer und App-Administration; Microsoft Azure. Kontaktkarten können freigegebene Ansprechpartnerdaten anzeigen</td>
+                  <td data-label="Speicherdauer">In Azure: abgelaufene aktive Termine bis 90 Tage nach Terminende, gelöschte Termine bis 90 Tage nach Lösch-/Änderungszeitpunkt und reduziertes Änderungs-/Metadatenprotokoll bis 180 Tage. Freigegebene Ansprechpartnerdaten gelten nach den oben beschriebenen funktions- und widerrufsbezogenen Fristen</td>
+                  <td data-label="Herkunft">Eingabe der handelnden Person, Appack-Profil, Ansprechpartner-Datenbank und Vereinsplan</td>
+                  <td data-label="Pflicht / freiwillig">Für die Buchungsaktion erforderliche Angaben; zusätzliche Beschreibung freiwillig. Aktionsschaltflächen werden anhand der Appack-Profilrolle in der Seite eingeblendet</td>
+                </tr>
+                <tr>
+                  <td data-label="Daten">Zeit, Platz, betroffene Buchung und Spiel sowie technische Vorgangskennung</td>
+                  <td data-label="Zweck">Automatische Warnung bei einer neuen Spielansetzung, die eine bestehende Buchung überschneidet</td>
+                  <td data-label="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 f DSGVO</span> – Konflikte rechtzeitig intern klären</td>
+                  <td data-label="Empfänger">Ausschließlich festgelegte zentrale Vereinsadressen; Microsoft Azure; Maildienst</td>
+                  <td data-label="Speicherdauer">Technische Versand- und Deduplizierungsdaten grundsätzlich höchstens 180 Tage; die E-Mail im Empfängerpostfach nach der dort festgelegten Löschregel oder länger bei offener Klärung</td>
+                  <td data-label="Herkunft">DFB-/FUSSBALL.DE-Spielplan, Belegungsplan und interne Kontaktzuordnung</td>
+                  <td data-label="Pflicht / freiwillig">Automatischer interner Organisationsvorgang; keine E-Mail an Trainerinnen oder Trainer</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="note"><strong>Sichtbarkeit im Belegungsplan:</strong> Diese App-Seite ist derzeit nicht auf eine bestimmte Rolle begrenzt. Dort bewusst freigegebene Ansprechpartnerkarten können Name, Funktion, Bild sowie freigegebene Telefon-, Mobil-, E-Mail-, Chat- und Social-Kanäle zeigen. Die Veröffentlichung muss dokumentiert freigegeben sein und kann für die Zukunft über <a href="mailto:info@ssv53.de">info@ssv53.de</a> geändert oder widerrufen werden.</p>
+          <p class="note warning"><strong>Schreibaktionen von Trainerinnen und Trainern:</strong> Die App bietet Aktionen anhand der Appack-Profilrolle an. Azure verarbeitet dafür nur eine reduzierte Identitätsangabe und prüft Feld-, Zeit- und Sicherheitsgrenzen der Änderung. Bitte keine sensiblen Angaben in Titel oder Beschreibung eintragen.</p>
+        </div>
+      </details>
+
+      <details class="purpose-group">
+        <summary>4. Shop, Bestellungen und Bestellverwaltung</summary>
+        <div class="purpose-inner">
+          <div class="table-wrap" role="region" aria-label="Datenschutzdetails zu Shop und Bestellungen" tabindex="0">
+            <table>
+              <caption>Shop, Bestellungen und Bestellverwaltung</caption>
+              <thead><tr><th>Daten</th><th>Zweck</th><th>Rechtsgrundlage</th><th>Empfänger</th><th>Speicherdauer</th><th>Herkunft</th><th>Pflicht / freiwillig</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td data-label="Daten">Bestellkennung, Name/Profilbezug, E-Mail, Artikel, Größe, Ausführung, Menge, Status und Zeitpunkte</td>
+                  <td data-label="Zweck">Bestellung erfassen, zuordnen, bearbeiten, zur Abholung bereitstellen und Status in „Meine Bestellungen“ anzeigen</td>
+                  <td data-label="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 b DSGVO</span>; Buchungs-/Nachweispflichten <span class="legal-basis">Art. 6 Abs. 1 c DSGVO</span></td>
+                  <td data-label="Empfänger">Befugte Bestellverwaltung, vmapit/Appack, Microsoft Azure für vereinseigene Abläufe sowie Maildienst zur Abholinformation</td>
+                  <td data-label="Speicherdauer">Operative Daten bis Abschluss; Buchungsbelege regelmäßig 8 Jahre, Bücher/Abschlüsse 10 Jahre und relevante Geschäftsbriefe 6 Jahre ab Ende des Kalenderjahres, soweit die jeweilige gesetzliche Kategorie greift</td>
+                  <td data-label="Herkunft">Von der bestellenden Person und aus dem App-Profil</td>
+                  <td data-label="Pflicht / freiwillig">Für eine Bestellung erforderliche Angaben; ohne diese ist Bearbeitung/Zuordnung nicht möglich</td>
+                </tr>
+                <tr>
+                  <td data-label="Daten">Empfängeradresse, Bestellkennung, Abholstatus und Versandzeit</td>
+                  <td data-label="Zweck">Hochwertige Abhol- und Statusmail versenden und Doppelversand verhindern</td>
+                  <td data-label="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 b und f DSGVO</span></td>
+                  <td data-label="Empfänger">Bestellende Person, vereinsintern berechtigte Verwaltung, tatsächlich eingesetzter OVH-Maildienst</td>
+                  <td data-label="Speicherdauer">Technischer Versand-/Deduplizierungsnachweis höchstens 180 Tage; die Bestellmail entsprechend der zutreffenden Geschäftsbrief-/Nachweisfrist, nicht benötigte Komfortdaten früher</td>
+                  <td data-label="Herkunft">Bestellung und App-Profil</td>
+                  <td data-label="Pflicht / freiwillig">E-Mail erforderlich, wenn die Abholinformation per Mail erfolgen soll</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="note warning">Zahlungsdaten werden nur dann in der App verarbeitet, wenn dies bei einem Bestellweg ausdrücklich angezeigt wird. Bei Weiterleitung zu einem externen Zahlungs- oder Shopanbieter gelten zusätzlich dessen Datenschutzinformationen.</p>
+        </div>
+      </details>
+
+      <details class="purpose-group">
+        <summary>5. Platzwart-Dashboard, Mäher und Beregnung</summary>
+        <div class="purpose-inner">
+          <div class="table-wrap" role="region" aria-label="Datenschutzdetails zu Platzpflege, Mäher und Beregnung" tabindex="0">
+            <table>
+              <caption>Platzwart-Dashboard, Mäher und Beregnung</caption>
+              <thead><tr><th>Daten</th><th>Zweck</th><th>Rechtsgrundlage</th><th>Empfänger</th><th>Speicherdauer</th><th>Herkunft</th><th>Pflicht / freiwillig</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td data-label="Daten">Pseudonyme Gerätekennung, Aktivierungsstatus, gehashter Gerätetoken, Anmeldezeit, fehlgeschlagene Anmeldungen, Sperrstatus und Sitzungstoken</td>
+                  <td data-label="Zweck">Nur freigegebene Platzwart-Geräte zulassen, PIN-Zugang schützen und Missbrauch verhindern</td>
+                  <td data-label="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 f DSGVO</span> – Anlagen- und IT-Sicherheit</td>
+                  <td data-label="Empfänger">Befugte Platzwarte/Administration; Microsoft Azure</td>
+                  <td data-label="Speicherdauer">Aktive Gerätefreigabe bis Widerruf oder Gerätewechsel; der pseudonyme Geräte-/Aktivierungsnachweis bleibt anschließend für Einmalverwendung und Widerrufsschutz, solange dieses Zugangssystem betrieben wird und der Nachweis erforderlich ist. Sitzung 30 Minuten; fehlgeschlagene Anmeldungen 7 Tage, temporäre Sperre 30 Minuten</td>
+                  <td data-label="Herkunft">Aktivierungsvorgang, Endgerät und Anmeldung</td>
+                  <td data-label="Pflicht / freiwillig">Für den geschützten Platzwart-Zugang erforderlich</td>
+                </tr>
+                <tr>
+                  <td data-label="Daten">Bedienaktion, Ergebnis, Zeitpunkt, Vorgangskennung und pseudonyme Gerätezuordnung</td>
+                  <td data-label="Zweck">Sicherheitskritische Befehle nachvollziehen, Fehlbedienung untersuchen und Anlagen schützen</td>
+                  <td data-label="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 f DSGVO</span></td>
+                  <td data-label="Empfänger">Eng begrenzte Vereinsadministration; Microsoft Azure; bei technischem Bedarf die jeweiligen Geräteplattformen</td>
+                  <td data-label="Speicherdauer">Reduziertes Bedien- und Sicherheitsaudit 180 Tage; ausführliche technische Diagnoseprotokolle grundsätzlich 30 Tage</td>
+                  <td data-label="Herkunft">Dashboard, sichere Automatik und Geräteschnittstellen</td>
+                  <td data-label="Pflicht / freiwillig">Für sichere Fernsteuerung erforderlich; Zugriff nur über ein freigeschaltetes Platzwart-Gerät mit PIN und zeitlich begrenzter Sitzung</td>
+                </tr>
+                <tr>
+                  <td data-label="Daten">Mäherstatus, Verbindung, Akku, Flächenfortschritt, Fehler, Schnitthöhe, Laufzeiten, Stations-/Start-/Parkzustand und Gerätekennung</td>
+                  <td data-label="Zweck">Rasen sicher pflegen, Belegungen berücksichtigen, Betrieb überwachen und Mäher steuern</td>
+                  <td data-label="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 f DSGVO</span> – sichere und effiziente Pflege der Vereinsanlage</td>
+                  <td data-label="Empfänger">Befugte Platzwarte/Administration, Microsoft Azure und Husqvarna Automower Connect</td>
+                  <td data-label="Speicherdauer">Livewerte nur für Anzeige/Steuerung; technische Protokolle grundsätzlich 30 Tage; verdichtete Betriebsstatistiken ohne Personenbezug können länger erhalten bleiben</td>
+                  <td data-label="Herkunft">Mäher, Husqvarna-Plattform, Belegungsplan und sichere Automatik</td>
+                  <td data-label="Pflicht / freiwillig">Für automatisierte Platzpflege erforderlich; kein personenbezogenes Leistungsprofil</td>
+                </tr>
+                <tr>
+                  <td data-label="Daten">Beregnungsplan, Zonen, Laufzeiten, Status, bestätigtes Ende, Pausen/Änderungen, Steuergerätekennung und Wetter-/Anlageninformationen</td>
+                  <td data-label="Zweck">Beregnung steuern, Mäher zuvor sicher parken, Nachlauf einhalten und tatsächliche Läufe dokumentieren</td>
+                  <td data-label="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 f DSGVO</span></td>
+                  <td data-label="Empfänger">Befugte Platzwarte/Administration, Microsoft Azure und Hunter Hydrawise</td>
+                  <td data-label="Speicherdauer">Live-/Planwerte für die Steuerung; technische Protokolle grundsätzlich 30 Tage; personenbezogen zuordenbarer Sicherheits-/Änderungsnachweis höchstens 180 Tage</td>
+                  <td data-label="Herkunft">Hydrawise, Steuergerät, Bedienhandlungen, sichere Automatik und Belegungsplan</td>
+                  <td data-label="Pflicht / freiwillig">Für automatisierte Beregnung und Mähersicherheit erforderlich</td>
+                </tr>
+                <tr>
+                  <td data-label="Daten">Tagesstatus, Mäh-/Beregnungszeiten, Fehler- und Sicherheitsereignisse sowie Empfängeradresse des Berichts</td>
+                  <td data-label="Zweck">Täglichen Sicherheitsbericht an eine festgelegte verantwortliche Stelle senden</td>
+                  <td data-label="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 f DSGVO</span></td>
+                  <td data-label="Empfänger">Festgelegte vereinsinterne Berichtsempfänger, Microsoft Azure und Maildienst</td>
+                  <td data-label="Speicherdauer">Ausgangsdaten wie oben; Berichtsmails nach der vereinsintern für das Empfängerpostfach festgelegten Löschregel, länger nur bei einem konkret zu klärenden Vorfall</td>
+                  <td data-label="Herkunft">Azure-Betriebsdaten, Mäher, Beregnung und Belegungsplan</td>
+                  <td data-label="Pflicht / freiwillig">Interner Sicherheitsprozess; keine allgemeine App-Nutzerfunktion</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="note">Die Mäh- und Beregnungsautomatik entscheidet über Geräteaktionen, nicht über Menschen. Sie erzeugt keine Entscheidung mit rechtlicher oder ähnlich erheblicher Wirkung gegenüber einer Person im Sinne von Art. 22 DSGVO.</p>
+        </div>
+      </details>
+    </section>
+
+    <section id="speicher" class="section" aria-labelledby="speicher-title">
+      <span class="eyebrow">Auf deinem Gerät</span>
+      <h2 id="speicher-title">Lokale Speicherung und App-Berechtigungen</h2>
+      <p>Die App und eingebundene Seiten verwenden technisch notwendige Gerätespeicher, um ausdrücklich gewünschte Funktionen bereitzustellen. Für solche unbedingt erforderlichen Speicherungen ist nach § 25 Abs. 2 Nr. 2 TDDDG keine gesonderte Einwilligung erforderlich. Nicht erforderliche Technologien würden wir nur mit vorheriger Einwilligung einsetzen.</p>
+      <ul class="service-list">
+        <li><strong>Kalender-Einstellungen</strong><span>Gewählte Ansicht, Saison, Platz und Darstellungsgröße werden lokal gespeichert. Diese Werte enthalten grundsätzlich keinen Namen und bleiben bis zum Löschen der App-/Browserdaten.</span></li>
+        <li><strong>Platzwart-Gerät</strong><span>Gerätekennung und Gerätetoken werden nach Aktivierung dauerhaft lokal gespeichert, bis App-/Browserdaten gelöscht oder das Gerät widerrufen wird.</span></li>
+        <li><strong>Platzwart-Sitzung</strong><span>Der Sitzungstoken liegt nur im Sitzungsspeicher und läuft serverseitig nach 30 Minuten ab.</span></li>
+        <li><strong>Betriebssystem-Rechte</strong><span>Push, Standort, Kamera oder Fotos werden nur genutzt, wenn die konkrete Funktion sie benötigt und du die jeweilige Berechtigung erteilst.</span></li>
+      </ul>
+      <p>Lokale App-/Browserdaten kannst du über die Einstellungen deines Geräts löschen. Bei einem aktivierten Platzwart-Gerät informiere bitte zusätzlich den Verein, damit die serverseitige Geräteregistrierung widerrufen wird.</p>
+    </section>
+
+    <section id="empfaenger" class="section" aria-labelledby="empfaenger-title">
+      <span class="eyebrow">Technische Zusammenarbeit</span>
+      <h2 id="empfaenger-title">Empfänger und Dienstleister</h2>
+      <p>Wir geben Daten nicht zu Werbezwecken weiter. Dienstleister dürfen nur die Daten erhalten, die sie für die vereinbarte Leistung benötigen. Soweit sie in unserem Auftrag verarbeiten, setzt ihr Einsatz einen Vertrag nach Art. 28 DSGVO und eine dokumentierte Prüfung voraus. Soweit ein externer Anbieter eigene Zwecke festlegt, informiert er in eigener Verantwortung.</p>
+      <ul class="service-list">
+        <li><strong>vmapit GmbH / Appack</strong><span>App-Plattform, Profile, Rollen, Chat, Reservierungen, Formulare, Inhalte und Push-Anbindung. Appack gibt an, Plattformserver in Deutschland zu betreiben.</span></li>
+        <li><strong>Microsoft Azure</strong><span>Vereinseigene Schnittstellen, Belegungs- und Platzpflegefunktionen, geschützte Speicherung, Monitoring und technische Protokolle.</span></li>
+        <li><strong>OVH-Maildienst</strong><span>Versand vereinsbezogener Bestell-, Kollisions- und Sicherheitsmails über das tatsächlich konfigurierte Mailkonto.</span></li>
+        <li><strong>Apple und Google</strong><span>App-Verteilung und – nach Aktivierung – Zustellung von Push-Mitteilungen über die jeweilige Geräteplattform.</span></li>
+        <li><strong>Husqvarna</strong><span>Automower-Status und -Steuerung über Automower Connect für die vereinseigene Rasenpflege.</span></li>
+        <li><strong>Hunter Industries / Hydrawise</strong><span>Beregnungsplan, Zonenstatus und -steuerung für die vereinseigene Anlage.</span></li>
+        <li><strong>DFB / FUSSBALL.DE</strong><span>Quelle öffentlich bereitgestellter Spielplandaten; der SSV53-Belegungsplan ruft nur erforderliche Spielinformationen ab.</span></li>
+        <li><strong>Interne Berechtigte</strong><span>Vorstand, Geschäftsstelle, Administration, Platzwart oder Trainer erhalten nur den für ihre Aufgabe vorgesehenen Zugriff.</span></li>
+      </ul>
+
+      <h3 style="margin-top:22px">Drittlandübermittlungen</h3>
+      <p>Wir bevorzugen Verarbeitung in Deutschland beziehungsweise im Europäischen Wirtschaftsraum. Bei international tätigen Anbietern – insbesondere Microsoft, Apple, Google, Husqvarna und Hunter Industries – können je nach Konto, Supportfall oder Unterauftragnehmer Zugriffe aus Staaten außerhalb des Europäischen Wirtschaftsraums nicht vollständig ausgeschlossen sein. Eine Übermittlung erfolgt nur, wenn die Voraussetzungen der Art. 44 ff. DSGVO erfüllt sind, etwa durch einen Angemessenheitsbeschluss, geeignete Garantien wie EU-Standardvertragsklauseln und erforderlichenfalls zusätzliche Schutzmaßnahmen.</p>
+      <p>Ein Angemessenheitsbeschluss für die USA gilt nur für Organisationen, die wirksam am EU-US Data Privacy Framework teilnehmen. Informationen zu den jeweils eingesetzten Garantien kannst du bei uns anfragen.</p>
+    </section>
+
+    <section id="minderjaehrige" class="section" aria-labelledby="minder-title">
+      <span class="eyebrow">Besonderer Schutz</span>
+      <h2 id="minder-title">Kinder und Jugendliche</h2>
+      <p>Der SSV53 ist ein Sportverein mit vielen minderjährigen Mitgliedern. Deshalb gelten für uns besonders strenge Maßstäbe:</p>
+      <ul class="plain-list">
+        <li>Wir benötigen für Kinderprofile nur die Angaben, die für Mitgliedschaft, Mannschaft und Vereinsorganisation erforderlich sind.</li>
+        <li>Private Kontaktdaten von Kindern werden nicht als allgemeine Ansprechpartnerdaten veröffentlicht.</li>
+        <li>Fotos, Videos, zusätzliche Profilangaben und optionale Veröffentlichungen verwenden wir nur mit einer passenden, dokumentierten Rechtsgrundlage; erforderlichenfalls holen wir die Zustimmung der Sorgeberechtigten ein.</li>
+        <li>Bei einwilligungsbasierten Onlinefunktionen prüfen wir Alter und Vertretungsberechtigung nach den gesetzlichen Vorgaben. Eine einmal erteilte Einwilligung kann für die Zukunft widerrufen werden.</li>
+        <li>Trainerinnen, Trainer und Administrierende sollen keine Gesundheitsdaten, familiären Umstände oder anderen besonders sensiblen Angaben in offene Texte, Kalender oder Chats eintragen, wenn dies nicht zwingend erforderlich und ausdrücklich abgesichert ist.</li>
+      </ul>
+      <p>Eltern und Sorgeberechtigte können sich jederzeit an <a href="mailto:info@ssv53.de">info@ssv53.de</a> wenden, um gespeicherte Angaben prüfen oder berichtigen zu lassen.</p>
+    </section>
+
+    <section class="section" aria-labelledby="sicherheit-title">
+      <span class="eyebrow">Schutz und Begrenzung</span>
+      <h2 id="sicherheit-title">Sicherheitsmaßnahmen</h2>
+      <p>Wir setzen angemessene technische und organisatorische Maßnahmen ein. Dazu gehören insbesondere verschlüsselte Übertragung, rollenbezogene Zugriffe, getrennte Administrationsbereiche, sichere Geheimnisverwaltung, pseudonyme Gerätekennungen, gehashte Zugangsdaten, kurze Sitzungen, Schutz vor wiederholten Anmeldeversuchen, Protokollierung sicherheitskritischer Aktionen, regelmäßige Updates sowie Datensicherung und Wiederherstellungsverfahren.</p>
+      <p>Kein digitales System kann einen absoluten Schutz garantieren. Bei einem Datenschutzvorfall bewerten wir unverzüglich Risiken und erfüllen erforderliche Benachrichtigungs- und Meldepflichten.</p>
+    </section>
+
+    <section class="section" aria-labelledby="loeschung-title">
+      <span class="eyebrow">Nicht länger als nötig</span>
+      <h2 id="loeschung-title">Löschung, Aufbewahrung und Widerspruch</h2>
+      <p>Die konkreten Regelfristen stehen bei jedem Nutzungsfall. Nach Ablauf löschen oder anonymisieren wir personenbezogene Daten. Ausnahmen gelten, wenn:</p>
+      <ul class="plain-list">
+        <li>gesetzliche Aufbewahrungsfristen eine längere Speicherung verlangen,</li>
+        <li>ein laufender Vorgang, Sicherheitsvorfall oder Rechtsanspruch noch geklärt werden muss,</li>
+        <li>du einer längeren, klar bestimmten Nutzung wirksam zugestimmt hast oder</li>
+        <li>Daten in einer Sicherungskopie erst mit dem nächsten geregelten Löschzyklus entfernt werden können und bis dahin gesperrt bleiben.</li>
+      </ul>
+      <p>Beruht eine Verarbeitung auf unserem berechtigten Interesse, kannst du aus Gründen deiner besonderen Situation widersprechen. Wir verarbeiten die betreffenden Daten dann nicht weiter, sofern keine zwingenden schutzwürdigen Gründe oder Rechtsansprüche entgegenstehen.</p>
+    </section>
+
+    <section id="rechte" class="section" aria-labelledby="rechte-title">
+      <span class="eyebrow">Du behältst die Kontrolle</span>
+      <h2 id="rechte-title">Deine Datenschutzrechte</h2>
+      <p>Im Rahmen der gesetzlichen Voraussetzungen hast du insbesondere folgende Rechte:</p>
+      <div class="rights">
+        <div class="right"><strong>Auskunft</strong><span>Welche Daten wir über dich verarbeiten und wofür.</span></div>
+        <div class="right"><strong>Berichtigung</strong><span>Unrichtige oder unvollständige Angaben korrigieren lassen.</span></div>
+        <div class="right"><strong>Löschung</strong><span>Daten entfernen lassen, wenn kein zulässiger Grund mehr besteht.</span></div>
+        <div class="right"><strong>Einschränkung</strong><span>Verarbeitung in gesetzlich vorgesehenen Fällen begrenzen lassen.</span></div>
+        <div class="right"><strong>Datenübertragbarkeit</strong><span>Bereitgestellte Daten in einem gängigen Format erhalten, soweit anwendbar.</span></div>
+        <div class="right"><strong>Widerspruch</strong><span>Verarbeitungen auf Grundlage von Art. 6 Abs. 1 f DSGVO widersprechen.</span></div>
+        <div class="right"><strong>Widerruf</strong><span>Eine Einwilligung jederzeit für die Zukunft zurücknehmen.</span></div>
+        <div class="right"><strong>Beschwerde</strong><span>Dich an eine Datenschutzaufsichtsbehörde wenden.</span></div>
+      </div>
+      <p>Zur Ausübung deiner Rechte genügt eine Nachricht an <a href="mailto:info@ssv53.de">info@ssv53.de</a>. Damit wir keine Daten an Unbefugte herausgeben, können wir einen angemessenen Identitätsnachweis verlangen.</p>
+
+      <h3 style="margin-top:22px">Zuständige Aufsichtsbehörde</h3>
+      <p>Die Landesbeauftragte für den Datenschutz und für das Recht auf Akteneinsicht Brandenburg<br>Stahnsdorfer Damm 77<br>14532 Kleinmachnow<br>Telefon: 033203 356-0<br>E-Mail: <a href="mailto:Poststelle@LDA.Brandenburg.de">Poststelle@LDA.Brandenburg.de</a><br><a href="https://www.lda.brandenburg.de/lda/de/service/formulare-und-musterschreiben/beschwerdeformular/" rel="noopener noreferrer">Online-Beschwerdeformular</a></p>
+      <p>Du kannst dich auch an jede andere nach Art. 77 DSGVO zuständige Aufsichtsbehörde wenden.</p>
+    </section>
+
+    <section class="section" aria-labelledby="links-title">
+      <span class="eyebrow">Transparenz</span>
+      <h2 id="links-title">Weiterführende Informationen</h2>
+      <ul class="source-links">
+        <li><a href="https://eur-lex.europa.eu/legal-content/DE/TXT/?uri=CELEX%3A32016R0679" rel="noopener noreferrer">Datenschutz-Grundverordnung (EUR-Lex)</a></li>
+        <li><a href="https://www.gesetze-im-internet.de/ttdsg/__25.html" rel="noopener noreferrer">§ 25 TDDDG – Schutz der Privatsphäre bei Endeinrichtungen</a></li>
+        <li><a href="https://docs.appack.de/datenschutz/" rel="noopener noreferrer">Datenschutzhinweise der Appack-Plattform</a></li>
+        <li><a href="https://privacy.microsoft.com/de-de/privacystatement" rel="noopener noreferrer">Datenschutzerklärung von Microsoft</a></li>
+        <li><a href="https://www.apple.com/legal/privacy/de-ww/" rel="noopener noreferrer">Datenschutz bei Apple</a></li>
+        <li><a href="https://policies.google.com/privacy?hl=de" rel="noopener noreferrer">Datenschutzerklärung von Google</a></li>
+        <li><a href="https://privacyportal.husqvarnagroup.com/ga/privacy-notice" rel="noopener noreferrer">Datenschutzhinweise der Husqvarna Group</a></li>
+        <li><a href="https://www.hunterirrigation.com/privacy-policy" rel="noopener noreferrer">Datenschutzhinweise von Hunter Industries</a></li>
+        <li><a href="https://commission.europa.eu/law/law-topic/data-protection/international-dimension-data-protection/adequacy-decisions_en" rel="noopener noreferrer">Angemessenheitsbeschlüsse der Europäischen Kommission</a></li>
+      </ul>
+    </section>
+
+    <section class="section" aria-labelledby="aenderungen-title">
+      <span class="eyebrow">Aktueller Stand</span>
+      <h2 id="aenderungen-title">Änderungen dieser Erklärung</h2>
+      <p>Wir passen diese Datenschutzerklärung an, wenn Funktionen, Empfänger, Speicherdauern oder rechtliche Anforderungen sich wesentlich ändern. Die jeweils aktuelle Fassung ist in der App unter „Datenschutz“ erreichbar. Bei einer wesentlichen Änderung, die deine Entscheidung oder Einwilligung betrifft, informieren wir in angemessener Form und holen erforderlichenfalls erneut eine Einwilligung ein.</p>
+      <p><strong>Versionsstand:</strong> 25. August 2026</p>
+    </section>
+
+    <footer>
+      <p>Schönwalder SV 1953 e.V. · Kurmärkische Straße 2 · 14621 Schönwalde-Glien</p>
+      <p><a href="mailto:info@ssv53.de">info@ssv53.de</a></p>
+    </footer>
+  </main>
+</body>
+</html>

@@ -281,12 +281,20 @@ class TrainerOccupancyApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200, response.get_body())
         moved = self.store.events["trainer-test-001"]
         self.assertEqual(moved.creator_name, "Juliane Beispiel")
-        self.assertEqual(moved.creator_email, "juliane@example.de")
+        self.assertEqual(moved.creator_email, "")
         self.assertEqual(moved.moved_by_name, "App Administrator")
-        self.assertEqual(moved.moved_by_mobile, "+49 170 1234567")
+        self.assertEqual(moved.moved_by_mobile, "")
         public_event = moved.to_public_event()
         self.assertEqual(public_event["creator"]["name"], "Juliane Beispiel")
         self.assertEqual(public_event["movedBy"]["name"], "App Administrator")
+        self.assertEqual(
+            set(public_event["creator"]),
+            {"id", "name", "role", "contactRef"},
+        )
+        self.assertEqual(
+            set(public_event["movedBy"]),
+            {"id", "name", "role", "contactRef"},
+        )
 
     def test_manual_creator_can_enrich_own_incomplete_profile_name_on_move(self) -> None:
         payload = self.payload()
@@ -316,7 +324,7 @@ class TrainerOccupancyApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200, response.get_body())
         moved = self.store.events["trainer-test-001"]
         self.assertEqual(moved.creator_name, "Marco Hartwig")
-        self.assertEqual(moved.creator_email, "hartwig-marco@web.de")
+        self.assertEqual(moved.creator_email, "")
 
     def test_relocated_training_can_be_cancelled_after_multiple_moves(self) -> None:
         payload = {
@@ -411,15 +419,18 @@ class TrainerOccupancyApiTests(unittest.TestCase):
         self.assertEqual(next(iter(self.store.events.values())).resource_id, "kunstrasen")
 
 
-    def test_oversized_optional_profile_image_never_blocks_creation(self) -> None:
+    def test_profile_contact_copy_is_ignored_without_blocking_creation(self) -> None:
         payload = self.payload()
         payload["creator"]["image"] = "data:image/jpeg;base64," + ("A" * 12000)
         response = function_app.ssv53_trainer_occupancies(request(payload))
         self.assertEqual(response.status_code, 200)
         event = self.store.events["trainer-test-001"]
-        self.assertTrue(event.creator_image.startswith("data:image/jpeg;base64,"))
+        self.assertEqual(event.creator_image, "")
         self.assertEqual(event.creator_name, "Juliane Beispiel")
-        self.assertEqual(event.creator_email, "juliane@example.de")
+        self.assertEqual(event.creator_email, "")
+        public = event.to_public_event()
+        self.assertNotIn("image", public["creator"])
+        self.assertNotIn("email", public["creator"])
 
 if __name__ == "__main__":
     unittest.main()

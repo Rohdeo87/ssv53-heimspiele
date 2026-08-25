@@ -14,7 +14,12 @@ from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from typing import Any, Mapping
 
-from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError
+from azure.core import MatchConditions
+from azure.core.exceptions import (
+    ResourceExistsError,
+    ResourceModifiedError,
+    ResourceNotFoundError,
+)
 from azure.data.tables import TableClient, UpdateMode
 from azure.identity import ManagedIdentityCredential
 
@@ -45,6 +50,8 @@ from occupancy.runtime_source import resolve_occupancy_match_source
 PIN_ITERATIONS_MINIMUM = 200_000
 SESSION_MINUTES = 30
 REQUEST_MINUTES = 10
+DEFAULT_LOGIN_RETENTION_DAYS = 7
+DEFAULT_CONSOLE_AUDIT_RETENTION_DAYS = 180
 ALLOWED_ACTIONS = frozenset(
     {
         "PARK_MOWER", "START_MOWING", "START_IRRIGATION",
@@ -446,6 +453,85 @@ class ConsoleTableStore:
             hashlib.sha256,
         ).hexdigest()
         return not bool(entity.get("revoked")) and hmac.compare_digest(expected, actual)
+
+    def cleanup_retention(
+        self,
+        *,
+        now_utc: datetime,
+        login_retention_days: int = DEFAULT_LOGIN_RETENTION_DAYS,
+        audit_retention_days: int = DEFAULT_CONSOLE_AUDIT_RETENTION_DAYS,
+    ) -> dict[str, int]:
+        """Löscht alte Login- und Auditmetadaten, niemals Gerätefreigaben."""
+
+        now = now_utc.astimezone(timezone.utc)
+        login_cutoff = now - timedelta(days=max(1, login_retention_days))
+        audit_cutoff = now - timedelta(days=max(1, audit_retention_days))
+        result = {"deleted": 0, "skipped": 0}
+        entities = self.client.query_entities(
+            query_filter="PartitionKey eq @partition",
+            parameters={"partition": self.PARTITION},
+        )
+        for raw_entity in entities:
+            entity = dict(raw_entity)
+            concurrency = _retention_concurrency(raw_entity)
+            row_key = str(entity.get("RowKey") or "")
+            try:
+                if row_key.startswith("loginfail-"):
+                    delete = _retention_datetime(entity.get("failure_utc")) < login_cutoff
+                elif row_key.startswith("login-"):
+                    # Sperren bleiben bis zum Ablauf plus Aufbewahrungsfrist
+                    # bestehen; ein Cleanup kann daher nie eine aktive Sperre
+                    # vorzeitig aufheben.
+                    delete = _retention_datetime(
+                        entity.get("locked_until_utc") or entity.get("updated_utc")
+                    ) < login_cutoff
+                elif row_key.startswith("audit-"):
+                    delete = _retention_datetime(entity.get("timestamp_utc")) < audit_cutoff
+                else:
+                    # activation-* und device-* sind für die einmalige
+                    # Gerätefreischaltung dauerhaft erforderlich.
+                    continue
+                if delete:
+                    if concurrency is None:
+                        result["skipped"] += 1
+                        continue
+                    self.client.delete_entity(
+                        partition_key=self.PARTITION,
+                        row_key=row_key,
+                        **concurrency,
+                    )
+                    result["deleted"] += 1
+            except (
+                TypeError,
+                ValueError,
+                ResourceModifiedError,
+                ResourceNotFoundError,
+            ):
+                result["skipped"] += 1
+        return result
+
+
+def _retention_datetime(value: Any) -> datetime:
+    if isinstance(value, datetime):
+        parsed = value
+    else:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise ValueError("Aufbewahrungszeitpunkt benötigt eine Zeitzone")
+    return parsed.astimezone(timezone.utc)
+
+
+def _retention_concurrency(entity: Mapping[str, Any]) -> dict[str, Any] | None:
+    metadata = getattr(entity, "metadata", {}) or {}
+    etag = str(
+        metadata.get("etag")
+        or entity.get("etag")
+        or entity.get("odata.etag")
+        or ""
+    ).strip()
+    if not etag:
+        return None
+    return {"etag": etag, "match_condition": MatchConditions.IfNotModified}
 
 
 def client_key(remote_ip: str, environment: Mapping[str, str]) -> str:
