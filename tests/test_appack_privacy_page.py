@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 import re
 import unittest
 from html.parser import HTMLParser
@@ -9,6 +11,34 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 HTML_PATH = ROOT / "appack-datenschutzerklaerung-2026.html"
 TXT_PATH = ROOT / "appack-datenschutzerklaerung-2026.txt"
+FIELD_ORDER = (
+    "Daten",
+    "Zweck",
+    "Rechtsgrundlage",
+    "Empfänger",
+    "Speicherdauer",
+    "Herkunft",
+    "Pflicht / freiwillig",
+)
+CONTENT_FINGERPRINT = "6cbd082b9edd8311303e18c5c1d078978b05f0dfa6e1e3bdad93337fc57c5760"
+
+
+class FragmentTextParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.parts: list[str] = []
+
+    def handle_data(self, data: str) -> None:
+        stripped = data.strip()
+        if stripped:
+            self.parts.append(stripped)
+
+
+def normalized_markup_text(fragment: str) -> str:
+    parser = FragmentTextParser()
+    parser.feed(fragment)
+    parser.close()
+    return " ".join(parser.parts)
 
 
 class StrictPageParser(HTMLParser):
@@ -99,18 +129,51 @@ class PrivacyPageTests(unittest.TestCase):
             with self.subTest(text=text):
                 self.assertIn(text, self.html)
 
-    def test_purpose_groups_and_seven_column_tables(self) -> None:
-        groups = re.findall(r"<summary>(\d)\. ([^<]+)</summary>", self.html)
-        self.assertEqual(["1", "2", "3", "4", "5"], [number for number, _ in groups])
-        tables = re.findall(r"<table>(.*?)</table>", self.html, re.DOTALL)
-        self.assertEqual(5, len(tables))
-        for index, table in enumerate(tables, 1):
-            headers = re.findall(r"<th>(.*?)</th>", table, re.DOTALL)
-            self.assertEqual(7, len(headers), f"Tabelle {index} hat nicht sieben Spalten")
-            rows = re.findall(r"<tr>(.*?)</tr>", table, re.DOTALL)[1:]
-            self.assertGreater(len(rows), 0)
-            for row in rows:
-                self.assertEqual(7, len(re.findall(r"<td\b", row)))
+    def test_purpose_groups_use_progressive_disclosure_cards(self) -> None:
+        self.assertEqual(5, self.html.count('<details class="purpose-group">'))
+        self.assertEqual(20, self.html.count('<details class="processing-card">'))
+        group_parts = self.html.split('<details class="purpose-group">')[1:]
+        self.assertEqual([5, 5, 3, 2, 5], [part.count('<details class="processing-card">') for part in group_parts])
+        self.assertEqual(5, self.html.count('class="purpose-index" aria-hidden="true"'))
+        self.assertNotIn('role="listitem"', self.html)
+        self.assertNotIn("<table", self.html)
+        self.assertNotIn("table-wrap", self.html)
+        self.assertNotIn("min-width:1180px", self.html)
+
+    def test_all_140_processing_values_are_unchanged(self) -> None:
+        groups: list[list[list[str]]] = []
+        group_parts = self.html.split('<details class="purpose-group">')[1:]
+        value_pattern = re.compile(
+            r'<(span|dd)\b[^>]*data-privacy-field="([^"]+)"[^>]*>(.*?)</\1>',
+            re.DOTALL,
+        )
+        for group_part in group_parts:
+            cards = re.findall(
+                r'<details class="processing-card">(.*?)</details>',
+                group_part,
+                re.DOTALL,
+            )
+            rows: list[list[str]] = []
+            for card in cards:
+                values: dict[str, str] = {}
+                for _, label, fragment in value_pattern.findall(card):
+                    self.assertNotIn(label, values, f"Doppeltes Datenschutzfeld {label}")
+                    values[label] = normalized_markup_text(fragment)
+                self.assertEqual(set(FIELD_ORDER), set(values))
+                rows.append([values[label] for label in FIELD_ORDER])
+            groups.append(rows)
+        payload = json.dumps(groups, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+        self.assertEqual(CONTENT_FINGERPRINT, hashlib.sha256(payload).hexdigest())
+
+    def test_layout_is_mobile_and_large_text_safe(self) -> None:
+        for rule in (
+            "max-width:720px",
+            "overflow-wrap:anywhere",
+            ".processing-fields{grid-template-columns:1fr}",
+            "details.processing-card>.processing-body{display:block!important}",
+        ):
+            with self.subTest(rule=rule):
+                self.assertIn(rule, self.html)
 
     def test_confirmed_retention_values_and_transparency_are_present(self) -> None:
         for text in (

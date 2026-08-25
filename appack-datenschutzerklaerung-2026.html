@@ -10,67 +10,83 @@
     :root{
       --blue:#285ea7;--blue-dark:#17457f;--gold:#c7a238;--ink:#172033;
       --muted:#657084;--line:#dfe4ec;--soft:#f4f6f9;--soft-blue:#eef5ff;
-      --green:#19723b;--shadow:0 5px 20px rgba(20,38,70,.08)
+      --shadow:0 4px 16px rgba(20,38,70,.07)
     }
-    *{box-sizing:border-box}
+    *{box-sizing:border-box;min-width:0}
     html{scroll-behavior:smooth;background:#fff}
-    body{margin:0;background:#fff;color:var(--ink);font-family:Arial,Helvetica,sans-serif;font-size:17px;line-height:1.58}
+    body{margin:0;background:#fff;color:var(--ink);font-family:Arial,Helvetica,sans-serif;font-size:18px;line-height:1.5;overflow-wrap:anywhere}
     a{color:var(--blue-dark);text-decoration-thickness:1.5px;text-underline-offset:3px}
     a:hover{text-decoration-thickness:2.5px}
-    a:focus-visible,summary:focus-visible{outline:3px solid var(--gold);outline-offset:4px;border-radius:4px}
+    a:focus-visible,summary:focus-visible{outline:3px solid var(--gold);outline-offset:3px;border-radius:8px}
     .skip{position:absolute;left:12px;top:-100px;z-index:20;padding:12px 16px;border-radius:0 0 10px 10px;background:var(--blue-dark);color:#fff;font-weight:700}
     .skip:focus{top:0}
-    .shell{width:min(100%,980px);margin:auto;padding:calc(20px + env(safe-area-inset-top)) 18px calc(42px + env(safe-area-inset-bottom))}
-    .head{text-align:center;padding:4px 0 20px}
-    .logo{width:82px;height:82px;object-fit:contain}
-    h1{margin:9px 0 10px;font-size:clamp(30px,6vw,42px);line-height:1.15}
-    .gold{width:190px;height:3px;margin:0 auto 14px;border:0;background:var(--gold)}
+    .shell{max-width:720px;margin:auto;padding:calc(18px + env(safe-area-inset-top)) 18px calc(36px + env(safe-area-inset-bottom))}
+    .head{text-align:center;margin-bottom:22px}
+    .logo{width:78px;height:78px;object-fit:contain}
+    h1{margin:8px 0 10px;font-size:30px;line-height:1.2}
+    .gold{width:180px;height:3px;margin:0 auto 13px;border:0;background:var(--gold)}
     .version{margin:0;color:var(--muted);font-size:15px}
-    h2{margin:0 0 12px;font-size:clamp(24px,4vw,31px);line-height:1.25}
+    h2{margin:4px 0 12px;font-size:23px;line-height:1.28}
     h3{margin:0 0 8px;font-size:20px;line-height:1.3}
     p{margin:10px 0}
-    .lead{font-size:19px;line-height:1.55}
-    .card,.section,.purpose-group{margin:16px 0;padding:22px;border:1px solid var(--line);border-radius:19px;background:#fff;box-shadow:var(--shadow)}
+    .lead{font-size:18px;line-height:1.55}
+    .card,.section,.purpose-group,.toc{margin:14px 0;border:1px solid var(--line);border-radius:18px;background:#fff;box-shadow:var(--shadow)}
+    .card,.section{padding:18px}
     .summary{border-left:7px solid var(--gold);background:linear-gradient(135deg,#fff,#fbfcff)}
-    .eyebrow{display:block;margin-bottom:5px;color:var(--blue);font-size:14px;font-weight:800;letter-spacing:.055em;text-transform:uppercase}
-    .key-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:19px 0 0;padding:0;list-style:none}
-    .key-list li{min-width:0;padding:14px;border:1px solid #d9e3f1;border-radius:14px;background:var(--soft-blue)}
+    .eyebrow{display:block;margin-bottom:5px;color:var(--blue);font-size:14px;font-weight:800;letter-spacing:.05em;text-transform:uppercase}
+    .key-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:17px 0 0;padding:0;list-style:none}
+    .key-list li{padding:14px;border:1px solid #d9e3f1;border-radius:14px;background:var(--soft-blue)}
     .key-list strong,.key-list span{display:block}
     .key-list span{margin-top:3px;color:var(--muted);font-size:15px}
-    .toc{position:relative;margin:18px 0;padding:18px;border:1px solid var(--line);border-radius:17px;background:var(--soft)}
-    .toc strong{display:block;margin-bottom:9px}
-    .toc ul{display:flex;flex-wrap:wrap;gap:8px;margin:0;padding:0;list-style:none}
-    .toc a{display:block;padding:9px 12px;border:1px solid #d4dce7;border-radius:999px;background:#fff;text-decoration:none;font-size:15px;font-weight:700}
-    .contact{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-    .contact-box{min-width:0;padding:16px;border:1px solid var(--line);border-radius:14px;background:var(--soft)}
+    .toc{overflow:hidden}
+    .toc>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:62px;padding:15px 18px;cursor:pointer;list-style:none;color:var(--ink);font-weight:800}
+    .toc>summary::-webkit-details-marker{display:none}
+    .toc>summary::after{content:"+";display:grid;place-items:center;width:34px;height:34px;flex:0 0 34px;border-radius:50%;background:var(--soft-blue);color:var(--blue);font-size:24px;line-height:1}
+    .toc[open]>summary::after{content:"−"}
+    .toc nav{padding:0 18px 18px;border-top:1px solid var(--line)}
+    .toc ul{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:14px 0 0;padding:0;list-style:none}
+    .toc a{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:48px;padding:10px 12px;border:1px solid #d9e3f1;border-radius:12px;background:var(--soft);text-decoration:none;font-size:15px;font-weight:700}
+    .toc a::after{content:"›";color:var(--blue);font-size:22px;line-height:1}
+    .contact{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .contact-box{padding:15px;border:1px solid var(--line);border-radius:14px;background:var(--soft)}
     .contact-box strong,.contact-box span{display:block}
     .contact-box span{margin-top:5px}
-    .principles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px;margin-top:15px}
-    .principle{padding:15px;border:1px solid var(--line);border-radius:14px;background:var(--soft)}
+    .principles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:15px}
+    .principle{padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--soft)}
     .principle strong{display:block;color:var(--blue-dark)}
     .principle span{display:block;margin-top:4px;color:var(--muted);font-size:15px}
     details.purpose-group{padding:0;overflow:hidden}
-    details.purpose-group>summary{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:76px;padding:19px 22px;cursor:pointer;list-style:none;font-size:21px;font-weight:800}
+    details.purpose-group>summary{display:grid;grid-template-columns:42px minmax(0,1fr) 36px;align-items:center;gap:12px;min-height:78px;padding:17px 18px;cursor:pointer;list-style:none}
     details.purpose-group>summary::-webkit-details-marker{display:none}
-    details.purpose-group>summary::after{content:"+";display:grid;place-items:center;width:36px;height:36px;flex:0 0 36px;border-radius:50%;background:var(--soft-blue);color:var(--blue);font-size:27px;line-height:1}
+    details.purpose-group>summary::after{content:"+";display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:var(--soft-blue);color:var(--blue);font-size:25px;line-height:1}
     details.purpose-group[open]>summary::after{content:"−"}
     details.purpose-group[open]>summary{border-bottom:1px solid var(--line)}
-    .purpose-inner{padding:18px 20px 22px}
-    .table-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:14px}
-    table{width:100%;min-width:1180px;border-collapse:collapse;background:#fff;font-size:14px;line-height:1.45}
-    caption{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-    th,td{padding:13px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
-    th{position:sticky;top:0;background:var(--blue-dark);color:#fff;font-size:13px;letter-spacing:.02em}
-    tbody tr:last-child td{border-bottom:0}
-    tbody tr:nth-child(even){background:#fafbfd}
-    td:first-child{font-weight:700;color:var(--blue-dark)}
+    .purpose-index{display:grid;place-items:center;width:42px;height:42px;border-radius:13px;background:var(--blue);color:#fff;font-size:19px;font-weight:800}
+    .purpose-title{display:block;font-size:19px;font-weight:800;line-height:1.3}
+    .purpose-count{display:block;margin-top:2px;color:var(--muted);font-size:14px;font-weight:400}
+    .purpose-inner{padding:14px}
+    .processing-list{display:grid;gap:10px}
+    .processing-card{overflow:hidden;border:1px solid var(--line);border-radius:14px;background:#fff}
+    .processing-card>summary{display:grid;grid-template-columns:minmax(0,1fr) 32px;align-items:center;gap:12px;min-height:72px;padding:14px 15px;cursor:pointer;list-style:none;background:linear-gradient(135deg,#fff,#fbfcff)}
+    .processing-card>summary::-webkit-details-marker{display:none}
+    .processing-card>summary::after{content:"›";display:grid;place-items:center;width:32px;height:32px;border-radius:10px;background:var(--soft-blue);color:var(--blue);font-size:24px;font-weight:700;line-height:1;transform:rotate(90deg);transition:transform .18s ease}
+    .processing-card[open]>summary::after{transform:rotate(-90deg)}
+    .processing-card[open]>summary{border-bottom:1px solid var(--line)}
+    .processing-kicker{display:block;margin-bottom:3px;color:var(--blue);font-size:12px;font-weight:800;letter-spacing:.045em;text-transform:uppercase}
+    .processing-title{display:block;font-size:17px;font-weight:800;line-height:1.35}
+    .processing-body{padding:13px;background:var(--soft)}
+    .processing-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:0}
+    .processing-field{padding:12px;border:1px solid var(--line);border-radius:12px;background:#fff}
+    .processing-field:last-child{grid-column:1/-1}
+    .processing-field dt{margin:0 0 4px;color:var(--muted);font-size:12px;font-weight:800;letter-spacing:.035em;text-transform:uppercase}
+    .processing-field dd{margin:0;font-size:15px;line-height:1.48}
     .legal-basis{font-weight:700}
     .note{margin:15px 0 0;padding:13px 15px;border-left:5px solid var(--blue);border-radius:10px;background:var(--soft-blue)}
     .warning{border-left-color:var(--gold);background:#fffbef}
     .plain-list{margin:10px 0;padding-left:22px}
     .plain-list li{margin:7px 0}
-    .service-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;margin:14px 0 0;padding:0;list-style:none}
-    .service-list li{min-width:0;padding:14px;border:1px solid var(--line);border-radius:13px;background:var(--soft)}
+    .service-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0 0;padding:0;list-style:none}
+    .service-list li{padding:14px;border:1px solid var(--line);border-radius:13px;background:var(--soft)}
     .service-list strong,.service-list span{display:block}
     .service-list span{margin-top:4px;color:var(--muted);font-size:15px}
     .rights{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}
@@ -80,21 +96,24 @@
     .source-links{font-size:15px}
     .source-links li{margin:8px 0}
     footer{margin-top:22px;padding-top:20px;border-top:1px solid var(--line);text-align:center;color:var(--muted);font-size:14px}
-    @media(max-width:720px){
-      body{font-size:16px}.shell{padding-left:12px;padding-right:12px}.card,.section{padding:18px}.key-list,.principles,.contact,.service-list,.rights{grid-template-columns:1fr}
-      details.purpose-group>summary{padding:17px 18px}.purpose-inner{padding:14px}
-      .table-wrap{border:0;overflow:visible}
-      table{min-width:0;border-collapse:separate;border-spacing:0 12px;background:transparent}
-      thead{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0,0,0,0)}
-      tbody,tr,td{display:block;width:100%}
-      tr{overflow:hidden;border:1px solid var(--line);border-radius:14px;background:#fff!important;box-shadow:0 3px 12px rgba(20,38,70,.06)}
-      td{display:grid;grid-template-columns:minmax(105px,35%) minmax(0,1fr);gap:10px;padding:10px 12px;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
-      td::before{content:attr(data-label);color:var(--muted);font-size:12px;font-weight:800;letter-spacing:.035em;text-transform:uppercase}
-      td:last-child{border-bottom:0}
+    @media(max-width:620px){
+      body{font-size:17px}.shell{padding-left:12px;padding-right:12px}.key-list,.principles,.contact,.service-list,.rights,.processing-fields{grid-template-columns:1fr}
+      .processing-field:last-child{grid-column:auto}.toc ul{grid-template-columns:1fr}
     }
-    @media(max-width:380px){td{grid-template-columns:1fr;gap:4px}}
-    @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
-    @media print{.skip,.toc{display:none}.shell{max-width:none}.card,.section,.purpose-group{box-shadow:none;break-inside:avoid}details.purpose-group{display:block}details.purpose-group>.purpose-inner{display:block!important}.table-wrap{overflow:visible}table{min-width:0;font-size:10px}}
+    @media(max-width:390px){
+      h1{font-size:27px}.card,.section{padding:16px}
+      details.purpose-group>summary{grid-template-columns:38px minmax(0,1fr) 34px;padding:14px;gap:7px 9px}
+      details.purpose-group>summary>.purpose-index{grid-column:1;grid-row:1}
+      details.purpose-group>summary>span:nth-child(2){grid-column:1/-1;grid-row:2}
+      details.purpose-group>summary::after{grid-column:3;grid-row:1}
+      .purpose-index{width:38px;height:38px}.purpose-title{font-size:17px;hyphens:auto}.purpose-count{overflow-wrap:normal}.purpose-inner{padding:10px}.processing-card>summary{padding:13px}
+    }
+    @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.processing-card>summary::after{transition:none}}
+    @media print{
+      .skip,.toc{display:none}.shell{max-width:none}.card,.section,.purpose-group,.processing-card{box-shadow:none;break-inside:avoid}
+      details.purpose-group,details.processing-card{display:block}details.purpose-group>.purpose-inner,details.processing-card>.processing-body{display:block!important}
+      .processing-fields{grid-template-columns:1fr 1fr}
+    }
   </style>
 </head>
 <body>
@@ -119,17 +138,19 @@
       </ul>
     </section>
 
-    <nav class="toc" aria-label="Inhalt der Datenschutzerklärung">
-      <strong>Direkt zu</strong>
-      <ul>
-        <li><a href="#verantwortlich">Verantwortlicher</a></li>
-        <li><a href="#verarbeitungen">Nutzungsfälle</a></li>
-        <li><a href="#speicher">Gerätespeicher</a></li>
-        <li><a href="#empfaenger">Dienstleister</a></li>
-        <li><a href="#minderjaehrige">Kinder &amp; Jugendliche</a></li>
-        <li><a href="#rechte">Deine Rechte</a></li>
-      </ul>
-    </nav>
+    <details class="toc">
+      <summary>Inhalte auf einen Blick</summary>
+      <nav aria-label="Inhalt der Datenschutzerklärung">
+        <ul>
+          <li><a href="#verantwortlich">Verantwortlicher</a></li>
+          <li><a href="#verarbeitungen">Nutzungsfälle</a></li>
+          <li><a href="#speicher">Gerätespeicher</a></li>
+          <li><a href="#empfaenger">Dienstleister</a></li>
+          <li><a href="#minderjaehrige">Kinder &amp; Jugendliche</a></li>
+          <li><a href="#rechte">Deine Rechte</a></li>
+        </ul>
+      </nav>
+    </details>
 
     <section id="verantwortlich" class="section" aria-labelledby="verantwortlich-title">
       <span class="eyebrow">Wer entscheidet über die Verarbeitung?</span>
@@ -162,259 +183,799 @@
     <section id="verarbeitungen" aria-labelledby="verarbeitungen-title">
       <span class="eyebrow">Vollständiger Überblick</span>
       <h2 id="verarbeitungen-title">Welche Daten wir wofür verarbeiten</h2>
-      <p>Die folgenden Tabellen beschreiben die derzeit vorgesehenen Funktionen. Eine Angabe ist nur dann erforderlich, wenn du die jeweilige Funktion nutzt oder eine entsprechende Vereinsrolle wahrnimmst.</p>
+      <p>Die folgenden Übersichten beschreiben die derzeit vorgesehenen Funktionen. Eine Angabe ist nur dann erforderlich, wenn du die jeweilige Funktion nutzt oder eine entsprechende Vereinsrolle wahrnimmst.</p>
 
-      <details class="purpose-group" open>
-        <summary>1. App-Zugang, Profile und Kommunikation</summary>
+      <details class="purpose-group">
+        <summary>
+          <span class="purpose-index" aria-hidden="true">1</span>
+          <span>
+            <span class="purpose-title">App-Zugang, Profile und Kommunikation</span>
+            <span class="purpose-count">5 Nutzungsfälle</span>
+          </span>
+        </summary>
         <div class="purpose-inner">
-          <div class="table-wrap" role="region" aria-label="Datenschutzdetails zu App-Zugang, Profilen und Kommunikation" tabindex="0">
-            <table>
-              <caption>App-Zugang, Profile und Kommunikation</caption>
-              <thead><tr><th>Daten</th><th>Zweck</th><th>Rechtsgrundlage</th><th>Empfänger</th><th>Speicherdauer</th><th>Herkunft</th><th>Pflicht / freiwillig</th></tr></thead>
-              <tbody>
-                <tr>
-                  <td data-label="Daten">Technische Zugriffsdaten, IP-Adresse, Zeit, App-/Geräteversion, Fehler- und Sicherheitsdaten</td>
-                  <td data-label="Zweck">Inhalte ausliefern, Störungen beheben, Missbrauch abwehren und Betrieb absichern</td>
-                  <td data-label="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 f DSGVO</span> – sicherer und zuverlässiger App-Betrieb</td>
-                  <td data-label="Empfänger">vmapit/Appack; bei vereinseigenen Funktionen Microsoft Azure; befugte Administration</td>
-                  <td data-label="Speicherdauer">Betriebsprotokolle grundsätzlich höchstens 30 Tage; sicherheitsrelevante Nachweise nur so lange wie zur Klärung erforderlich</td>
-                  <td data-label="Herkunft">Automatisch vom Endgerät und den beteiligten Systemen</td>
-                  <td data-label="Pflicht / freiwillig">Technisch erforderlich; ohne diese Daten ist die jeweilige Onlinefunktion nicht möglich</td>
-                </tr>
-                <tr>
-                  <td data-label="Daten">Profil-ID, Name, E-Mail, optional Telefon/Mobilnummer, Profilfoto sowie Gruppen und Rollen</td>
-                  <td data-label="Zweck">Anmeldung, persönliche Funktionen, Rollenprüfung, interne Zuordnung und Erreichbarkeit</td>
-                  <td data-label="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 b und f DSGVO</span>; zusätzliche freiwillige Angaben und Fotos <span class="legal-basis">Art. 6 Abs. 1 a DSGVO</span></td>
-                  <td data-label="Empfänger">vmapit/Appack; Vereinsadministration; je nach Seiteneinstellung Öffentlichkeit, alle App-Nutzer oder bestimmte Gruppen/Rollen</td>
-                  <td data-label="Speicherdauer">Bis zur Profillöschung oder zum Ende des Funktionsbezugs; freiwillige öffentliche/interne Angaben bis Widerruf; gesetzliche Nachweise bleiben vorbehalten</td>
-                  <td data-label="Herkunft">Von dir, Erziehungsberechtigten oder befugter Vereinsadministration</td>
-                  <td data-label="Pflicht / freiwillig">Profil nur für geschützte Funktionen nötig; Kontaktzusätze und Foto freiwillig, soweit nicht funktionsbedingt vereinbart</td>
-                </tr>
-                <tr>
-                  <td data-label="Daten">Funktionsbezeichnung, dienstliche oder freigegebene Kontaktwege, Foto, Chat-Kennung</td>
-                  <td data-label="Zweck">Ansprechpartnerinnen und Ansprechpartner auffindbar machen und Vereinsarbeit koordinieren</td>
-                  <td data-label="Rechtsgrundlage">Dokumentierte Freigabe regelmäßig <span class="legal-basis">Art. 6 Abs. 1 a DSGVO</span>; für eindeutig dienstliche Funktionskontakte im Einzelfall <span class="legal-basis">Art. 6 Abs. 1 f DSGVO</span>. Fotos, private Kanäle und Social-Links nur bei passender dokumentierter Freigabe</td>
-                  <td data-label="Empfänger">Im Belegungsplan alle Personen, die diese App-Seite öffnen können; auf anderen Seiten nach der dort eingestellten Sichtbarkeit; befugte Administration und vmapit/Appack</td>
-                  <td data-label="Speicherdauer">Für die Dauer der Funktion; freiwillige Angaben bis Änderung oder Widerruf; danach Entfernung aus aktiven Ansichten</td>
-                  <td data-label="Herkunft">Ansprechpartner-Datenbank und – falls dort nichts vorliegt – freigegebene Profildaten</td>
-                  <td data-label="Pflicht / freiwillig">Veröffentlichung privater Kanäle, Foto und Social-Links freiwillig und über info@ssv53.de für die Zukunft widerrufbar; ein dienstlicher Vereinskontakt kann funktionsbedingt erforderlich sein</td>
-                </tr>
-                <tr>
-                  <td data-label="Daten">Chatnachrichten, Anhänge, Absender, Empfänger, Zeit und Zustellstatus</td>
-                  <td data-label="Zweck">Direkte und gruppenbezogene Vereinskommunikation</td>
-                  <td data-label="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 b und f DSGVO</span></td>
-                  <td data-label="Empfänger">Kommunikationspartner, berechtigte Gruppen, vmapit/Appack; Administration nur im erforderlichen Support-/Missbrauchsfall</td>
-                  <td data-label="Speicherdauer">Bis zur nutzerseitigen Löschung oder dem Ende des Kommunikationszwecks; spätestens nach den im Chatmodul festgelegten Fristen</td>
-                  <td data-label="Herkunft">Von den Kommunikationsbeteiligten</td>
-                  <td data-label="Pflicht / freiwillig">Freiwillig; ohne Nachricht keine Chatkommunikation</td>
-                </tr>
-                <tr>
-                  <td data-label="Daten">Push-Token, Geräteplattform, gewählte Themen sowie Zustellinformationen</td>
-                  <td data-label="Zweck">Gewünschte Vereins-, Funktions- und Sicherheitsmitteilungen zustellen</td>
-                  <td data-label="Rechtsgrundlage">Optionale Push-Mitteilungen <span class="legal-basis">Art. 6 Abs. 1 a DSGVO</span>; funktionsbezogene Nachrichten zusätzlich <span class="legal-basis">Art. 6 Abs. 1 b oder f DSGVO</span></td>
-                  <td data-label="Empfänger">vmapit/Appack; Apple Push Notification Service oder Google Firebase Cloud Messaging</td>
-                  <td data-label="Speicherdauer">Bis Push deaktiviert, das Profil gelöscht oder der Token ungültig wird; Zustellprotokolle nur kurzfristig zur Fehleranalyse</td>
-                  <td data-label="Herkunft">Endgerät, Betriebssystem und deine Auswahl</td>
-                  <td data-label="Pflicht / freiwillig">Freiwillig; in den Geräte- oder App-Einstellungen abschaltbar</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+                  <div class="processing-list" aria-label="Datenschutzdetails zu App-Zugang, Profilen und Kommunikation">
+          <details class="processing-card">
+            <summary>
+              <span>
+                <span class="processing-kicker">Zweck</span>
+                <span class="processing-title" data-privacy-field="Zweck">Inhalte ausliefern, Störungen beheben, Missbrauch abwehren und Betrieb absichern</span>
+              </span>
+            </summary>
+            <div class="processing-body">
+              <dl class="processing-fields">
+                <div class="processing-field">
+                  <dt>Daten</dt>
+                  <dd data-privacy-field="Daten">Technische Zugriffsdaten, IP-Adresse, Zeit, App-/Geräteversion, Fehler- und Sicherheitsdaten</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Rechtsgrundlage</dt>
+                  <dd data-privacy-field="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 f DSGVO</span> – sicherer und zuverlässiger App-Betrieb</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Empfänger</dt>
+                  <dd data-privacy-field="Empfänger">vmapit/Appack; bei vereinseigenen Funktionen Microsoft Azure; befugte Administration</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Speicherdauer</dt>
+                  <dd data-privacy-field="Speicherdauer">Betriebsprotokolle grundsätzlich höchstens 30 Tage; sicherheitsrelevante Nachweise nur so lange wie zur Klärung erforderlich</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Herkunft</dt>
+                  <dd data-privacy-field="Herkunft">Automatisch vom Endgerät und den beteiligten Systemen</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Pflicht / freiwillig</dt>
+                  <dd data-privacy-field="Pflicht / freiwillig">Technisch erforderlich; ohne diese Daten ist die jeweilige Onlinefunktion nicht möglich</dd>
+                </div>
+              </dl>
+            </div>
+          </details>
+          <details class="processing-card">
+            <summary>
+              <span>
+                <span class="processing-kicker">Zweck</span>
+                <span class="processing-title" data-privacy-field="Zweck">Anmeldung, persönliche Funktionen, Rollenprüfung, interne Zuordnung und Erreichbarkeit</span>
+              </span>
+            </summary>
+            <div class="processing-body">
+              <dl class="processing-fields">
+                <div class="processing-field">
+                  <dt>Daten</dt>
+                  <dd data-privacy-field="Daten">Profil-ID, Name, E-Mail, optional Telefon/Mobilnummer, Profilfoto sowie Gruppen und Rollen</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Rechtsgrundlage</dt>
+                  <dd data-privacy-field="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 b und f DSGVO</span>; zusätzliche freiwillige Angaben und Fotos <span class="legal-basis">Art. 6 Abs. 1 a DSGVO</span></dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Empfänger</dt>
+                  <dd data-privacy-field="Empfänger">vmapit/Appack; Vereinsadministration; je nach Seiteneinstellung Öffentlichkeit, alle App-Nutzer oder bestimmte Gruppen/Rollen</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Speicherdauer</dt>
+                  <dd data-privacy-field="Speicherdauer">Bis zur Profillöschung oder zum Ende des Funktionsbezugs; freiwillige öffentliche/interne Angaben bis Widerruf; gesetzliche Nachweise bleiben vorbehalten</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Herkunft</dt>
+                  <dd data-privacy-field="Herkunft">Von dir, Erziehungsberechtigten oder befugter Vereinsadministration</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Pflicht / freiwillig</dt>
+                  <dd data-privacy-field="Pflicht / freiwillig">Profil nur für geschützte Funktionen nötig; Kontaktzusätze und Foto freiwillig, soweit nicht funktionsbedingt vereinbart</dd>
+                </div>
+              </dl>
+            </div>
+          </details>
+          <details class="processing-card">
+            <summary>
+              <span>
+                <span class="processing-kicker">Zweck</span>
+                <span class="processing-title" data-privacy-field="Zweck">Ansprechpartnerinnen und Ansprechpartner auffindbar machen und Vereinsarbeit koordinieren</span>
+              </span>
+            </summary>
+            <div class="processing-body">
+              <dl class="processing-fields">
+                <div class="processing-field">
+                  <dt>Daten</dt>
+                  <dd data-privacy-field="Daten">Funktionsbezeichnung, dienstliche oder freigegebene Kontaktwege, Foto, Chat-Kennung</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Rechtsgrundlage</dt>
+                  <dd data-privacy-field="Rechtsgrundlage">Dokumentierte Freigabe regelmäßig <span class="legal-basis">Art. 6 Abs. 1 a DSGVO</span>; für eindeutig dienstliche Funktionskontakte im Einzelfall <span class="legal-basis">Art. 6 Abs. 1 f DSGVO</span>. Fotos, private Kanäle und Social-Links nur bei passender dokumentierter Freigabe</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Empfänger</dt>
+                  <dd data-privacy-field="Empfänger">Im Belegungsplan alle Personen, die diese App-Seite öffnen können; auf anderen Seiten nach der dort eingestellten Sichtbarkeit; befugte Administration und vmapit/Appack</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Speicherdauer</dt>
+                  <dd data-privacy-field="Speicherdauer">Für die Dauer der Funktion; freiwillige Angaben bis Änderung oder Widerruf; danach Entfernung aus aktiven Ansichten</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Herkunft</dt>
+                  <dd data-privacy-field="Herkunft">Ansprechpartner-Datenbank und – falls dort nichts vorliegt – freigegebene Profildaten</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Pflicht / freiwillig</dt>
+                  <dd data-privacy-field="Pflicht / freiwillig">Veröffentlichung privater Kanäle, Foto und Social-Links freiwillig und über info@ssv53.de für die Zukunft widerrufbar; ein dienstlicher Vereinskontakt kann funktionsbedingt erforderlich sein</dd>
+                </div>
+              </dl>
+            </div>
+          </details>
+          <details class="processing-card">
+            <summary>
+              <span>
+                <span class="processing-kicker">Zweck</span>
+                <span class="processing-title" data-privacy-field="Zweck">Direkte und gruppenbezogene Vereinskommunikation</span>
+              </span>
+            </summary>
+            <div class="processing-body">
+              <dl class="processing-fields">
+                <div class="processing-field">
+                  <dt>Daten</dt>
+                  <dd data-privacy-field="Daten">Chatnachrichten, Anhänge, Absender, Empfänger, Zeit und Zustellstatus</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Rechtsgrundlage</dt>
+                  <dd data-privacy-field="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 b und f DSGVO</span></dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Empfänger</dt>
+                  <dd data-privacy-field="Empfänger">Kommunikationspartner, berechtigte Gruppen, vmapit/Appack; Administration nur im erforderlichen Support-/Missbrauchsfall</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Speicherdauer</dt>
+                  <dd data-privacy-field="Speicherdauer">Bis zur nutzerseitigen Löschung oder dem Ende des Kommunikationszwecks; spätestens nach den im Chatmodul festgelegten Fristen</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Herkunft</dt>
+                  <dd data-privacy-field="Herkunft">Von den Kommunikationsbeteiligten</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Pflicht / freiwillig</dt>
+                  <dd data-privacy-field="Pflicht / freiwillig">Freiwillig; ohne Nachricht keine Chatkommunikation</dd>
+                </div>
+              </dl>
+            </div>
+          </details>
+          <details class="processing-card">
+            <summary>
+              <span>
+                <span class="processing-kicker">Zweck</span>
+                <span class="processing-title" data-privacy-field="Zweck">Gewünschte Vereins-, Funktions- und Sicherheitsmitteilungen zustellen</span>
+              </span>
+            </summary>
+            <div class="processing-body">
+              <dl class="processing-fields">
+                <div class="processing-field">
+                  <dt>Daten</dt>
+                  <dd data-privacy-field="Daten">Push-Token, Geräteplattform, gewählte Themen sowie Zustellinformationen</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Rechtsgrundlage</dt>
+                  <dd data-privacy-field="Rechtsgrundlage">Optionale Push-Mitteilungen <span class="legal-basis">Art. 6 Abs. 1 a DSGVO</span>; funktionsbezogene Nachrichten zusätzlich <span class="legal-basis">Art. 6 Abs. 1 b oder f DSGVO</span></dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Empfänger</dt>
+                  <dd data-privacy-field="Empfänger">vmapit/Appack; Apple Push Notification Service oder Google Firebase Cloud Messaging</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Speicherdauer</dt>
+                  <dd data-privacy-field="Speicherdauer">Bis Push deaktiviert, das Profil gelöscht oder der Token ungültig wird; Zustellprotokolle nur kurzfristig zur Fehleranalyse</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Herkunft</dt>
+                  <dd data-privacy-field="Herkunft">Endgerät, Betriebssystem und deine Auswahl</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Pflicht / freiwillig</dt>
+                  <dd data-privacy-field="Pflicht / freiwillig">Freiwillig; in den Geräte- oder App-Einstellungen abschaltbar</dd>
+                </div>
+              </dl>
+            </div>
+          </details>
+        </div>
         </div>
       </details>
 
       <details class="purpose-group">
-        <summary>2. Vereinsinformationen, Inhalte und Mitwirkung</summary>
+        <summary>
+          <span class="purpose-index" aria-hidden="true">2</span>
+          <span>
+            <span class="purpose-title">Vereinsinformationen, Inhalte und Mitwirkung</span>
+            <span class="purpose-count">5 Nutzungsfälle</span>
+          </span>
+        </summary>
         <div class="purpose-inner">
-          <div class="table-wrap" role="region" aria-label="Datenschutzdetails zu Vereinsinformationen und Mitwirkung" tabindex="0">
-            <table>
-              <caption>Vereinsinformationen, Inhalte und Mitwirkung</caption>
-              <thead><tr><th>Daten</th><th>Zweck</th><th>Rechtsgrundlage</th><th>Empfänger</th><th>Speicherdauer</th><th>Herkunft</th><th>Pflicht / freiwillig</th></tr></thead>
-              <tbody>
-                <tr>
-                  <td data-label="Daten">Beiträge, Termine, Dateien, FAQ-Inhalte, Galerieaufnahmen und Veranstaltungsangaben</td>
-                  <td data-label="Zweck">Vereinsinformation, Dokumentenbereitstellung, Öffentlichkeitsarbeit und Veranstaltungsorganisation</td>
-                  <td data-label="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 f DSGVO</span>; bei erkennbaren Personen je nach Fall <span class="legal-basis">Art. 6 Abs. 1 a DSGVO</span> oder berechtigtes Interesse</td>
-                  <td data-label="Empfänger">Je nach Inhalt Öffentlichkeit, alle App-Nutzer oder nur berechtigte Rollen; vmapit/Appack</td>
-                  <td data-label="Speicherdauer">Solange der Inhalt aktuell und für den Vereinszweck erforderlich ist; Personenaufnahmen bis Zweckfortfall oder wirksamem Widerruf, sofern keine andere Grundlage greift</td>
-                  <td data-label="Herkunft">Verein, Veranstalter, Mitglieder oder mitwirkende Personen</td>
-                  <td data-label="Pflicht / freiwillig">Ansehen freiwillig; Mitwirkung und Personenaufnahmen nur nach den jeweiligen Voraussetzungen</td>
-                </tr>
-                <tr>
-                  <td data-label="Daten">Reservierungszeit, Ressource, Profilbezug, Name, Buchungsinhalt/Kommentar und Änderungsstatus</td>
-                  <td data-label="Zweck">Vereinsheim und weitere Ressourcen buchen, Doppelbelegungen vermeiden, verantwortliche Person erreichen</td>
-                  <td data-label="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 b und f DSGVO</span></td>
-                  <td data-label="Empfänger">Buchende Person, berechtigte Trainer/Mitarbeitende/Vorstand/Administration; vmapit/Appack; im Platzwart-Dashboard nur erforderliche nächste Vereinsheimbelegungen</td>
-                  <td data-label="Speicherdauer">Bis zur Durchführung und organisatorischen Abwicklung der Buchung; danach nur, solange eine offene Klärung oder gesetzliche Nachweis-, Aufbewahrungs- oder Verjährungsfrist dies erfordert, andernfalls Löschung</td>
-                  <td data-label="Herkunft">Buchende Person, Profil und befugte Administration</td>
-                  <td data-label="Pflicht / freiwillig">Für eine Reservierung erforderliche Angaben; Freitext freiwillig und auf notwendige Inhalte zu beschränken</td>
-                </tr>
-                <tr>
-                  <td data-label="Daten">Formularinhalt, Kategorie, Zeitpunkt, optional Profil-/Kontaktdaten und Bearbeitungsstatus</td>
-                  <td data-label="Zweck">Feedback, Bedarf, Funktionsvorschläge und sonstige Anliegen bearbeiten</td>
-                  <td data-label="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 b oder f DSGVO</span>; freiwillige Zusatzangaben <span class="legal-basis">Art. 6 Abs. 1 a DSGVO</span></td>
-                  <td data-label="Empfänger">Je nach Modul befugte Trainer, Vorstand, Administration oder Geschäftsstelle; vmapit/Appack</td>
-                  <td data-label="Speicherdauer">Bis Abschluss des gemeldeten Vorgangs; danach nur, solange eine sachliche Dokumentation, offene Klärung oder gesetzliche Nachweis- beziehungsweise Verjährungsfrist erforderlich ist, andernfalls Löschung</td>
-                  <td data-label="Herkunft">Von dir und – bei angemeldeter Nutzung – aus deinem Profil</td>
-                  <td data-label="Pflicht / freiwillig">Meldung freiwillig; Pflichtfelder sind für Bearbeitung und Rückmeldung nötig</td>
-                </tr>
-                <tr>
-                  <td data-label="Daten">Antwortauswahl, Freitext, Zeitpunkt und – nur wenn konfiguriert – Profilbezug</td>
-                  <td data-label="Zweck">Umfragen, Abstimmungen und Bedarfsplanung, einschließlich SSV53-Shirt-Umfragen</td>
-                  <td data-label="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 a DSGVO</span>; rein organisatorische Mitgliederabfragen gegebenenfalls <span class="legal-basis">Art. 6 Abs. 1 b oder f DSGVO</span></td>
-                  <td data-label="Empfänger">Befugte Auswertende im Verein; vmapit/Appack; Ergebnisse nur in der angekündigten Form</td>
-                  <td data-label="Speicherdauer">Personenbezug bis Abschluss und Auswertung und danach nach der in der Umfrage festgelegten Löschfrist; anonymisierte Gesamtergebnisse können ohne Personenbezug länger erhalten bleiben</td>
-                  <td data-label="Herkunft">Von teilnehmenden Personen</td>
-                  <td data-label="Pflicht / freiwillig">Freiwillig; Nichtteilnahme hat keine Nachteile, soweit nicht ausdrücklich anders begründet</td>
-                </tr>
-                <tr>
-                  <td data-label="Daten">Bei Kartenaufruf IP-/Gerätedaten und gegebenenfalls freigegebener Standort; bei Spenden die beim Zielanbieter eingegebenen Daten</td>
-                  <td data-label="Zweck">Anfahrt darstellen beziehungsweise freiwillige Spende ermöglichen</td>
-                  <td data-label="Rechtsgrundlage">Karten-/Standortfunktion und Spende auf deine Anforderung <span class="legal-basis">Art. 6 Abs. 1 a oder b DSGVO</span></td>
-                  <td data-label="Empfänger">Jeweils sichtbar benannter Karten-, Plattform- oder Spendenanbieter; der Verein erhält nur die dort ausgewiesenen Informationen</td>
-                  <td data-label="Speicherdauer">Nach den Hinweisen des externen Anbieters; Standortfreigabe kann im Betriebssystem widerrufen werden</td>
-                  <td data-label="Herkunft">Endgerät und deine Eingaben beim Zielanbieter</td>
-                  <td data-label="Pflicht / freiwillig">Freiwillig; externe Inhalte werden nur bei Nutzung der Funktion aufgerufen</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+                  <div class="processing-list" aria-label="Datenschutzdetails zu Vereinsinformationen und Mitwirkung">
+          <details class="processing-card">
+            <summary>
+              <span>
+                <span class="processing-kicker">Zweck</span>
+                <span class="processing-title" data-privacy-field="Zweck">Vereinsinformation, Dokumentenbereitstellung, Öffentlichkeitsarbeit und Veranstaltungsorganisation</span>
+              </span>
+            </summary>
+            <div class="processing-body">
+              <dl class="processing-fields">
+                <div class="processing-field">
+                  <dt>Daten</dt>
+                  <dd data-privacy-field="Daten">Beiträge, Termine, Dateien, FAQ-Inhalte, Galerieaufnahmen und Veranstaltungsangaben</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Rechtsgrundlage</dt>
+                  <dd data-privacy-field="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 f DSGVO</span>; bei erkennbaren Personen je nach Fall <span class="legal-basis">Art. 6 Abs. 1 a DSGVO</span> oder berechtigtes Interesse</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Empfänger</dt>
+                  <dd data-privacy-field="Empfänger">Je nach Inhalt Öffentlichkeit, alle App-Nutzer oder nur berechtigte Rollen; vmapit/Appack</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Speicherdauer</dt>
+                  <dd data-privacy-field="Speicherdauer">Solange der Inhalt aktuell und für den Vereinszweck erforderlich ist; Personenaufnahmen bis Zweckfortfall oder wirksamem Widerruf, sofern keine andere Grundlage greift</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Herkunft</dt>
+                  <dd data-privacy-field="Herkunft">Verein, Veranstalter, Mitglieder oder mitwirkende Personen</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Pflicht / freiwillig</dt>
+                  <dd data-privacy-field="Pflicht / freiwillig">Ansehen freiwillig; Mitwirkung und Personenaufnahmen nur nach den jeweiligen Voraussetzungen</dd>
+                </div>
+              </dl>
+            </div>
+          </details>
+          <details class="processing-card">
+            <summary>
+              <span>
+                <span class="processing-kicker">Zweck</span>
+                <span class="processing-title" data-privacy-field="Zweck">Vereinsheim und weitere Ressourcen buchen, Doppelbelegungen vermeiden, verantwortliche Person erreichen</span>
+              </span>
+            </summary>
+            <div class="processing-body">
+              <dl class="processing-fields">
+                <div class="processing-field">
+                  <dt>Daten</dt>
+                  <dd data-privacy-field="Daten">Reservierungszeit, Ressource, Profilbezug, Name, Buchungsinhalt/Kommentar und Änderungsstatus</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Rechtsgrundlage</dt>
+                  <dd data-privacy-field="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 b und f DSGVO</span></dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Empfänger</dt>
+                  <dd data-privacy-field="Empfänger">Buchende Person, berechtigte Trainer/Mitarbeitende/Vorstand/Administration; vmapit/Appack; im Platzwart-Dashboard nur erforderliche nächste Vereinsheimbelegungen</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Speicherdauer</dt>
+                  <dd data-privacy-field="Speicherdauer">Bis zur Durchführung und organisatorischen Abwicklung der Buchung; danach nur, solange eine offene Klärung oder gesetzliche Nachweis-, Aufbewahrungs- oder Verjährungsfrist dies erfordert, andernfalls Löschung</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Herkunft</dt>
+                  <dd data-privacy-field="Herkunft">Buchende Person, Profil und befugte Administration</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Pflicht / freiwillig</dt>
+                  <dd data-privacy-field="Pflicht / freiwillig">Für eine Reservierung erforderliche Angaben; Freitext freiwillig und auf notwendige Inhalte zu beschränken</dd>
+                </div>
+              </dl>
+            </div>
+          </details>
+          <details class="processing-card">
+            <summary>
+              <span>
+                <span class="processing-kicker">Zweck</span>
+                <span class="processing-title" data-privacy-field="Zweck">Feedback, Bedarf, Funktionsvorschläge und sonstige Anliegen bearbeiten</span>
+              </span>
+            </summary>
+            <div class="processing-body">
+              <dl class="processing-fields">
+                <div class="processing-field">
+                  <dt>Daten</dt>
+                  <dd data-privacy-field="Daten">Formularinhalt, Kategorie, Zeitpunkt, optional Profil-/Kontaktdaten und Bearbeitungsstatus</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Rechtsgrundlage</dt>
+                  <dd data-privacy-field="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 b oder f DSGVO</span>; freiwillige Zusatzangaben <span class="legal-basis">Art. 6 Abs. 1 a DSGVO</span></dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Empfänger</dt>
+                  <dd data-privacy-field="Empfänger">Je nach Modul befugte Trainer, Vorstand, Administration oder Geschäftsstelle; vmapit/Appack</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Speicherdauer</dt>
+                  <dd data-privacy-field="Speicherdauer">Bis Abschluss des gemeldeten Vorgangs; danach nur, solange eine sachliche Dokumentation, offene Klärung oder gesetzliche Nachweis- beziehungsweise Verjährungsfrist erforderlich ist, andernfalls Löschung</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Herkunft</dt>
+                  <dd data-privacy-field="Herkunft">Von dir und – bei angemeldeter Nutzung – aus deinem Profil</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Pflicht / freiwillig</dt>
+                  <dd data-privacy-field="Pflicht / freiwillig">Meldung freiwillig; Pflichtfelder sind für Bearbeitung und Rückmeldung nötig</dd>
+                </div>
+              </dl>
+            </div>
+          </details>
+          <details class="processing-card">
+            <summary>
+              <span>
+                <span class="processing-kicker">Zweck</span>
+                <span class="processing-title" data-privacy-field="Zweck">Umfragen, Abstimmungen und Bedarfsplanung, einschließlich SSV53-Shirt-Umfragen</span>
+              </span>
+            </summary>
+            <div class="processing-body">
+              <dl class="processing-fields">
+                <div class="processing-field">
+                  <dt>Daten</dt>
+                  <dd data-privacy-field="Daten">Antwortauswahl, Freitext, Zeitpunkt und – nur wenn konfiguriert – Profilbezug</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Rechtsgrundlage</dt>
+                  <dd data-privacy-field="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 a DSGVO</span>; rein organisatorische Mitgliederabfragen gegebenenfalls <span class="legal-basis">Art. 6 Abs. 1 b oder f DSGVO</span></dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Empfänger</dt>
+                  <dd data-privacy-field="Empfänger">Befugte Auswertende im Verein; vmapit/Appack; Ergebnisse nur in der angekündigten Form</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Speicherdauer</dt>
+                  <dd data-privacy-field="Speicherdauer">Personenbezug bis Abschluss und Auswertung und danach nach der in der Umfrage festgelegten Löschfrist; anonymisierte Gesamtergebnisse können ohne Personenbezug länger erhalten bleiben</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Herkunft</dt>
+                  <dd data-privacy-field="Herkunft">Von teilnehmenden Personen</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Pflicht / freiwillig</dt>
+                  <dd data-privacy-field="Pflicht / freiwillig">Freiwillig; Nichtteilnahme hat keine Nachteile, soweit nicht ausdrücklich anders begründet</dd>
+                </div>
+              </dl>
+            </div>
+          </details>
+          <details class="processing-card">
+            <summary>
+              <span>
+                <span class="processing-kicker">Zweck</span>
+                <span class="processing-title" data-privacy-field="Zweck">Anfahrt darstellen beziehungsweise freiwillige Spende ermöglichen</span>
+              </span>
+            </summary>
+            <div class="processing-body">
+              <dl class="processing-fields">
+                <div class="processing-field">
+                  <dt>Daten</dt>
+                  <dd data-privacy-field="Daten">Bei Kartenaufruf IP-/Gerätedaten und gegebenenfalls freigegebener Standort; bei Spenden die beim Zielanbieter eingegebenen Daten</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Rechtsgrundlage</dt>
+                  <dd data-privacy-field="Rechtsgrundlage">Karten-/Standortfunktion und Spende auf deine Anforderung <span class="legal-basis">Art. 6 Abs. 1 a oder b DSGVO</span></dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Empfänger</dt>
+                  <dd data-privacy-field="Empfänger">Jeweils sichtbar benannter Karten-, Plattform- oder Spendenanbieter; der Verein erhält nur die dort ausgewiesenen Informationen</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Speicherdauer</dt>
+                  <dd data-privacy-field="Speicherdauer">Nach den Hinweisen des externen Anbieters; Standortfreigabe kann im Betriebssystem widerrufen werden</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Herkunft</dt>
+                  <dd data-privacy-field="Herkunft">Endgerät und deine Eingaben beim Zielanbieter</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Pflicht / freiwillig</dt>
+                  <dd data-privacy-field="Pflicht / freiwillig">Freiwillig; externe Inhalte werden nur bei Nutzung der Funktion aufgerufen</dd>
+                </div>
+              </dl>
+            </div>
+          </details>
+        </div>
           <p class="note warning"><strong>Bitte keine sensiblen Daten in Freitextfelder schreiben.</strong> Gesundheitsdaten, Zugangsdaten oder private Angaben anderer Personen gehören nur dann in eine Meldung, wenn dies zwingend erforderlich und rechtlich zulässig ist.</p>
         </div>
       </details>
 
       <details class="purpose-group">
-        <summary>3. Platzbelegung, Trainings und Spiele</summary>
+        <summary>
+          <span class="purpose-index" aria-hidden="true">3</span>
+          <span>
+            <span class="purpose-title">Platzbelegung, Trainings und Spiele</span>
+            <span class="purpose-count">3 Nutzungsfälle</span>
+          </span>
+        </summary>
         <div class="purpose-inner">
-          <div class="table-wrap" role="region" aria-label="Datenschutzdetails zur Platzbelegung" tabindex="0">
-            <table>
-              <caption>Platzbelegung, Trainings und Spiele</caption>
-              <thead><tr><th>Daten</th><th>Zweck</th><th>Rechtsgrundlage</th><th>Empfänger</th><th>Speicherdauer</th><th>Herkunft</th><th>Pflicht / freiwillig</th></tr></thead>
-              <tbody>
-                <tr>
-                  <td data-label="Daten">Mannschaft, Gegner, Wettbewerb, Spielstätte, Datum, Anstoß, Spielkennung und Status</td>
-                  <td data-label="Zweck">Heimspiele automatisch und aktuell in den Belegungsplan übernehmen</td>
-                  <td data-label="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 f DSGVO</span> – verlässliche Platz- und Vereinsorganisation</td>
-                  <td data-label="Empfänger">Nutzer des Belegungsplans; vereinseigene Azure-Verarbeitung; öffentliches FUSSBALL.DE-Angebot als Datenquelle</td>
-                  <td data-label="Speicherdauer">Aktuelle Saison und erforderlicher Änderungsverlauf; nach Saisonende grundsätzlich höchstens 12 Monate personenbezogen, sofern überhaupt Personenbezug besteht</td>
-                  <td data-label="Herkunft">Öffentlich abrufbarer DFB-/FUSSBALL.DE-Spielplan und vereinsinterne Zuordnung</td>
-                  <td data-label="Pflicht / freiwillig">Keine Eingabe durch App-Nutzer; es werden keine Spielerdaten für den Belegungsplan benötigt</td>
-                </tr>
-                <tr>
-                  <td data-label="Daten">Training/Event, Platz, Start/Ende, Mannschaft/Bereich, Erstellerprofil, Verlegungs- oder Absageinformation und handelnde Person</td>
-                  <td data-label="Zweck">Belegungen erstellen, verschieben oder absagen, Konflikte erkennen und Mähzeiten sicher anpassen</td>
-                  <td data-label="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 b und f DSGVO</span></td>
-                  <td data-label="Empfänger">Alle Personen, die den Belegungsplan in der App öffnen können; handelnde Trainer und App-Administration; Microsoft Azure. Kontaktkarten können freigegebene Ansprechpartnerdaten anzeigen</td>
-                  <td data-label="Speicherdauer">In Azure: abgelaufene aktive Termine bis 90 Tage nach Terminende, gelöschte Termine bis 90 Tage nach Lösch-/Änderungszeitpunkt und reduziertes Änderungs-/Metadatenprotokoll bis 180 Tage. Freigegebene Ansprechpartnerdaten gelten nach den oben beschriebenen funktions- und widerrufsbezogenen Fristen</td>
-                  <td data-label="Herkunft">Eingabe der handelnden Person, Appack-Profil, Ansprechpartner-Datenbank und Vereinsplan</td>
-                  <td data-label="Pflicht / freiwillig">Für die Buchungsaktion erforderliche Angaben; zusätzliche Beschreibung freiwillig. Aktionsschaltflächen werden anhand der Appack-Profilrolle in der Seite eingeblendet</td>
-                </tr>
-                <tr>
-                  <td data-label="Daten">Zeit, Platz, betroffene Buchung und Spiel sowie technische Vorgangskennung</td>
-                  <td data-label="Zweck">Automatische Warnung bei einer neuen Spielansetzung, die eine bestehende Buchung überschneidet</td>
-                  <td data-label="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 f DSGVO</span> – Konflikte rechtzeitig intern klären</td>
-                  <td data-label="Empfänger">Ausschließlich festgelegte zentrale Vereinsadressen; Microsoft Azure; Maildienst</td>
-                  <td data-label="Speicherdauer">Technische Versand- und Deduplizierungsdaten grundsätzlich höchstens 180 Tage; die E-Mail im Empfängerpostfach nach der dort festgelegten Löschregel oder länger bei offener Klärung</td>
-                  <td data-label="Herkunft">DFB-/FUSSBALL.DE-Spielplan, Belegungsplan und interne Kontaktzuordnung</td>
-                  <td data-label="Pflicht / freiwillig">Automatischer interner Organisationsvorgang; keine E-Mail an Trainerinnen oder Trainer</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+                  <div class="processing-list" aria-label="Datenschutzdetails zur Platzbelegung">
+          <details class="processing-card">
+            <summary>
+              <span>
+                <span class="processing-kicker">Zweck</span>
+                <span class="processing-title" data-privacy-field="Zweck">Heimspiele automatisch und aktuell in den Belegungsplan übernehmen</span>
+              </span>
+            </summary>
+            <div class="processing-body">
+              <dl class="processing-fields">
+                <div class="processing-field">
+                  <dt>Daten</dt>
+                  <dd data-privacy-field="Daten">Mannschaft, Gegner, Wettbewerb, Spielstätte, Datum, Anstoß, Spielkennung und Status</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Rechtsgrundlage</dt>
+                  <dd data-privacy-field="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 f DSGVO</span> – verlässliche Platz- und Vereinsorganisation</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Empfänger</dt>
+                  <dd data-privacy-field="Empfänger">Nutzer des Belegungsplans; vereinseigene Azure-Verarbeitung; öffentliches FUSSBALL.DE-Angebot als Datenquelle</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Speicherdauer</dt>
+                  <dd data-privacy-field="Speicherdauer">Aktuelle Saison und erforderlicher Änderungsverlauf; nach Saisonende grundsätzlich höchstens 12 Monate personenbezogen, sofern überhaupt Personenbezug besteht</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Herkunft</dt>
+                  <dd data-privacy-field="Herkunft">Öffentlich abrufbarer DFB-/FUSSBALL.DE-Spielplan und vereinsinterne Zuordnung</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Pflicht / freiwillig</dt>
+                  <dd data-privacy-field="Pflicht / freiwillig">Keine Eingabe durch App-Nutzer; es werden keine Spielerdaten für den Belegungsplan benötigt</dd>
+                </div>
+              </dl>
+            </div>
+          </details>
+          <details class="processing-card">
+            <summary>
+              <span>
+                <span class="processing-kicker">Zweck</span>
+                <span class="processing-title" data-privacy-field="Zweck">Belegungen erstellen, verschieben oder absagen, Konflikte erkennen und Mähzeiten sicher anpassen</span>
+              </span>
+            </summary>
+            <div class="processing-body">
+              <dl class="processing-fields">
+                <div class="processing-field">
+                  <dt>Daten</dt>
+                  <dd data-privacy-field="Daten">Training/Event, Platz, Start/Ende, Mannschaft/Bereich, Erstellerprofil, Verlegungs- oder Absageinformation und handelnde Person</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Rechtsgrundlage</dt>
+                  <dd data-privacy-field="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 b und f DSGVO</span></dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Empfänger</dt>
+                  <dd data-privacy-field="Empfänger">Alle Personen, die den Belegungsplan in der App öffnen können; handelnde Trainer und App-Administration; Microsoft Azure. Kontaktkarten können freigegebene Ansprechpartnerdaten anzeigen</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Speicherdauer</dt>
+                  <dd data-privacy-field="Speicherdauer">In Azure: abgelaufene aktive Termine bis 90 Tage nach Terminende, gelöschte Termine bis 90 Tage nach Lösch-/Änderungszeitpunkt und reduziertes Änderungs-/Metadatenprotokoll bis 180 Tage. Freigegebene Ansprechpartnerdaten gelten nach den oben beschriebenen funktions- und widerrufsbezogenen Fristen</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Herkunft</dt>
+                  <dd data-privacy-field="Herkunft">Eingabe der handelnden Person, Appack-Profil, Ansprechpartner-Datenbank und Vereinsplan</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Pflicht / freiwillig</dt>
+                  <dd data-privacy-field="Pflicht / freiwillig">Für die Buchungsaktion erforderliche Angaben; zusätzliche Beschreibung freiwillig. Aktionsschaltflächen werden anhand der Appack-Profilrolle in der Seite eingeblendet</dd>
+                </div>
+              </dl>
+            </div>
+          </details>
+          <details class="processing-card">
+            <summary>
+              <span>
+                <span class="processing-kicker">Zweck</span>
+                <span class="processing-title" data-privacy-field="Zweck">Automatische Warnung bei einer neuen Spielansetzung, die eine bestehende Buchung überschneidet</span>
+              </span>
+            </summary>
+            <div class="processing-body">
+              <dl class="processing-fields">
+                <div class="processing-field">
+                  <dt>Daten</dt>
+                  <dd data-privacy-field="Daten">Zeit, Platz, betroffene Buchung und Spiel sowie technische Vorgangskennung</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Rechtsgrundlage</dt>
+                  <dd data-privacy-field="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 f DSGVO</span> – Konflikte rechtzeitig intern klären</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Empfänger</dt>
+                  <dd data-privacy-field="Empfänger">Ausschließlich festgelegte zentrale Vereinsadressen; Microsoft Azure; Maildienst</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Speicherdauer</dt>
+                  <dd data-privacy-field="Speicherdauer">Technische Versand- und Deduplizierungsdaten grundsätzlich höchstens 180 Tage; die E-Mail im Empfängerpostfach nach der dort festgelegten Löschregel oder länger bei offener Klärung</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Herkunft</dt>
+                  <dd data-privacy-field="Herkunft">DFB-/FUSSBALL.DE-Spielplan, Belegungsplan und interne Kontaktzuordnung</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Pflicht / freiwillig</dt>
+                  <dd data-privacy-field="Pflicht / freiwillig">Automatischer interner Organisationsvorgang; keine E-Mail an Trainerinnen oder Trainer</dd>
+                </div>
+              </dl>
+            </div>
+          </details>
+        </div>
           <p class="note"><strong>Sichtbarkeit im Belegungsplan:</strong> Diese App-Seite ist derzeit nicht auf eine bestimmte Rolle begrenzt. Dort bewusst freigegebene Ansprechpartnerkarten können Name, Funktion, Bild sowie freigegebene Telefon-, Mobil-, E-Mail-, Chat- und Social-Kanäle zeigen. Die Veröffentlichung muss dokumentiert freigegeben sein und kann für die Zukunft über <a href="mailto:info@ssv53.de">info@ssv53.de</a> geändert oder widerrufen werden.</p>
           <p class="note warning"><strong>Schreibaktionen von Trainerinnen und Trainern:</strong> Die App bietet Aktionen anhand der Appack-Profilrolle an. Azure verarbeitet dafür nur eine reduzierte Identitätsangabe und prüft Feld-, Zeit- und Sicherheitsgrenzen der Änderung. Bitte keine sensiblen Angaben in Titel oder Beschreibung eintragen.</p>
         </div>
       </details>
 
       <details class="purpose-group">
-        <summary>4. Shop, Bestellungen und Bestellverwaltung</summary>
+        <summary>
+          <span class="purpose-index" aria-hidden="true">4</span>
+          <span>
+            <span class="purpose-title">Shop, Bestellungen und Bestellverwaltung</span>
+            <span class="purpose-count">2 Nutzungsfälle</span>
+          </span>
+        </summary>
         <div class="purpose-inner">
-          <div class="table-wrap" role="region" aria-label="Datenschutzdetails zu Shop und Bestellungen" tabindex="0">
-            <table>
-              <caption>Shop, Bestellungen und Bestellverwaltung</caption>
-              <thead><tr><th>Daten</th><th>Zweck</th><th>Rechtsgrundlage</th><th>Empfänger</th><th>Speicherdauer</th><th>Herkunft</th><th>Pflicht / freiwillig</th></tr></thead>
-              <tbody>
-                <tr>
-                  <td data-label="Daten">Bestellkennung, Name/Profilbezug, E-Mail, Artikel, Größe, Ausführung, Menge, Status und Zeitpunkte</td>
-                  <td data-label="Zweck">Bestellung erfassen, zuordnen, bearbeiten, zur Abholung bereitstellen und Status in „Meine Bestellungen“ anzeigen</td>
-                  <td data-label="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 b DSGVO</span>; Buchungs-/Nachweispflichten <span class="legal-basis">Art. 6 Abs. 1 c DSGVO</span></td>
-                  <td data-label="Empfänger">Befugte Bestellverwaltung, vmapit/Appack, Microsoft Azure für vereinseigene Abläufe sowie Maildienst zur Abholinformation</td>
-                  <td data-label="Speicherdauer">Operative Daten bis Abschluss; Buchungsbelege regelmäßig 8 Jahre, Bücher/Abschlüsse 10 Jahre und relevante Geschäftsbriefe 6 Jahre ab Ende des Kalenderjahres, soweit die jeweilige gesetzliche Kategorie greift</td>
-                  <td data-label="Herkunft">Von der bestellenden Person und aus dem App-Profil</td>
-                  <td data-label="Pflicht / freiwillig">Für eine Bestellung erforderliche Angaben; ohne diese ist Bearbeitung/Zuordnung nicht möglich</td>
-                </tr>
-                <tr>
-                  <td data-label="Daten">Empfängeradresse, Bestellkennung, Abholstatus und Versandzeit</td>
-                  <td data-label="Zweck">Hochwertige Abhol- und Statusmail versenden und Doppelversand verhindern</td>
-                  <td data-label="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 b und f DSGVO</span></td>
-                  <td data-label="Empfänger">Bestellende Person, vereinsintern berechtigte Verwaltung, tatsächlich eingesetzter OVH-Maildienst</td>
-                  <td data-label="Speicherdauer">Technischer Versand-/Deduplizierungsnachweis höchstens 180 Tage; die Bestellmail entsprechend der zutreffenden Geschäftsbrief-/Nachweisfrist, nicht benötigte Komfortdaten früher</td>
-                  <td data-label="Herkunft">Bestellung und App-Profil</td>
-                  <td data-label="Pflicht / freiwillig">E-Mail erforderlich, wenn die Abholinformation per Mail erfolgen soll</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+                  <div class="processing-list" aria-label="Datenschutzdetails zu Shop und Bestellungen">
+          <details class="processing-card">
+            <summary>
+              <span>
+                <span class="processing-kicker">Zweck</span>
+                <span class="processing-title" data-privacy-field="Zweck">Bestellung erfassen, zuordnen, bearbeiten, zur Abholung bereitstellen und Status in „Meine Bestellungen“ anzeigen</span>
+              </span>
+            </summary>
+            <div class="processing-body">
+              <dl class="processing-fields">
+                <div class="processing-field">
+                  <dt>Daten</dt>
+                  <dd data-privacy-field="Daten">Bestellkennung, Name/Profilbezug, E-Mail, Artikel, Größe, Ausführung, Menge, Status und Zeitpunkte</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Rechtsgrundlage</dt>
+                  <dd data-privacy-field="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 b DSGVO</span>; Buchungs-/Nachweispflichten <span class="legal-basis">Art. 6 Abs. 1 c DSGVO</span></dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Empfänger</dt>
+                  <dd data-privacy-field="Empfänger">Befugte Bestellverwaltung, vmapit/Appack, Microsoft Azure für vereinseigene Abläufe sowie Maildienst zur Abholinformation</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Speicherdauer</dt>
+                  <dd data-privacy-field="Speicherdauer">Operative Daten bis Abschluss; Buchungsbelege regelmäßig 8 Jahre, Bücher/Abschlüsse 10 Jahre und relevante Geschäftsbriefe 6 Jahre ab Ende des Kalenderjahres, soweit die jeweilige gesetzliche Kategorie greift</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Herkunft</dt>
+                  <dd data-privacy-field="Herkunft">Von der bestellenden Person und aus dem App-Profil</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Pflicht / freiwillig</dt>
+                  <dd data-privacy-field="Pflicht / freiwillig">Für eine Bestellung erforderliche Angaben; ohne diese ist Bearbeitung/Zuordnung nicht möglich</dd>
+                </div>
+              </dl>
+            </div>
+          </details>
+          <details class="processing-card">
+            <summary>
+              <span>
+                <span class="processing-kicker">Zweck</span>
+                <span class="processing-title" data-privacy-field="Zweck">Hochwertige Abhol- und Statusmail versenden und Doppelversand verhindern</span>
+              </span>
+            </summary>
+            <div class="processing-body">
+              <dl class="processing-fields">
+                <div class="processing-field">
+                  <dt>Daten</dt>
+                  <dd data-privacy-field="Daten">Empfängeradresse, Bestellkennung, Abholstatus und Versandzeit</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Rechtsgrundlage</dt>
+                  <dd data-privacy-field="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 b und f DSGVO</span></dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Empfänger</dt>
+                  <dd data-privacy-field="Empfänger">Bestellende Person, vereinsintern berechtigte Verwaltung, tatsächlich eingesetzter OVH-Maildienst</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Speicherdauer</dt>
+                  <dd data-privacy-field="Speicherdauer">Technischer Versand-/Deduplizierungsnachweis höchstens 180 Tage; die Bestellmail entsprechend der zutreffenden Geschäftsbrief-/Nachweisfrist, nicht benötigte Komfortdaten früher</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Herkunft</dt>
+                  <dd data-privacy-field="Herkunft">Bestellung und App-Profil</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Pflicht / freiwillig</dt>
+                  <dd data-privacy-field="Pflicht / freiwillig">E-Mail erforderlich, wenn die Abholinformation per Mail erfolgen soll</dd>
+                </div>
+              </dl>
+            </div>
+          </details>
+        </div>
           <p class="note warning">Zahlungsdaten werden nur dann in der App verarbeitet, wenn dies bei einem Bestellweg ausdrücklich angezeigt wird. Bei Weiterleitung zu einem externen Zahlungs- oder Shopanbieter gelten zusätzlich dessen Datenschutzinformationen.</p>
         </div>
       </details>
 
       <details class="purpose-group">
-        <summary>5. Platzwart-Dashboard, Mäher und Beregnung</summary>
+        <summary>
+          <span class="purpose-index" aria-hidden="true">5</span>
+          <span>
+            <span class="purpose-title">Platzwart-Dashboard, Mäher und Beregnung</span>
+            <span class="purpose-count">5 Nutzungsfälle</span>
+          </span>
+        </summary>
         <div class="purpose-inner">
-          <div class="table-wrap" role="region" aria-label="Datenschutzdetails zu Platzpflege, Mäher und Beregnung" tabindex="0">
-            <table>
-              <caption>Platzwart-Dashboard, Mäher und Beregnung</caption>
-              <thead><tr><th>Daten</th><th>Zweck</th><th>Rechtsgrundlage</th><th>Empfänger</th><th>Speicherdauer</th><th>Herkunft</th><th>Pflicht / freiwillig</th></tr></thead>
-              <tbody>
-                <tr>
-                  <td data-label="Daten">Pseudonyme Gerätekennung, Aktivierungsstatus, gehashter Gerätetoken, Anmeldezeit, fehlgeschlagene Anmeldungen, Sperrstatus und Sitzungstoken</td>
-                  <td data-label="Zweck">Nur freigegebene Platzwart-Geräte zulassen, PIN-Zugang schützen und Missbrauch verhindern</td>
-                  <td data-label="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 f DSGVO</span> – Anlagen- und IT-Sicherheit</td>
-                  <td data-label="Empfänger">Befugte Platzwarte/Administration; Microsoft Azure</td>
-                  <td data-label="Speicherdauer">Aktive Gerätefreigabe bis Widerruf oder Gerätewechsel; der pseudonyme Geräte-/Aktivierungsnachweis bleibt anschließend für Einmalverwendung und Widerrufsschutz, solange dieses Zugangssystem betrieben wird und der Nachweis erforderlich ist. Sitzung 30 Minuten; fehlgeschlagene Anmeldungen 7 Tage, temporäre Sperre 30 Minuten</td>
-                  <td data-label="Herkunft">Aktivierungsvorgang, Endgerät und Anmeldung</td>
-                  <td data-label="Pflicht / freiwillig">Für den geschützten Platzwart-Zugang erforderlich</td>
-                </tr>
-                <tr>
-                  <td data-label="Daten">Bedienaktion, Ergebnis, Zeitpunkt, Vorgangskennung und pseudonyme Gerätezuordnung</td>
-                  <td data-label="Zweck">Sicherheitskritische Befehle nachvollziehen, Fehlbedienung untersuchen und Anlagen schützen</td>
-                  <td data-label="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 f DSGVO</span></td>
-                  <td data-label="Empfänger">Eng begrenzte Vereinsadministration; Microsoft Azure; bei technischem Bedarf die jeweiligen Geräteplattformen</td>
-                  <td data-label="Speicherdauer">Reduziertes Bedien- und Sicherheitsaudit 180 Tage; ausführliche technische Diagnoseprotokolle grundsätzlich 30 Tage</td>
-                  <td data-label="Herkunft">Dashboard, sichere Automatik und Geräteschnittstellen</td>
-                  <td data-label="Pflicht / freiwillig">Für sichere Fernsteuerung erforderlich; Zugriff nur über ein freigeschaltetes Platzwart-Gerät mit PIN und zeitlich begrenzter Sitzung</td>
-                </tr>
-                <tr>
-                  <td data-label="Daten">Mäherstatus, Verbindung, Akku, Flächenfortschritt, Fehler, Schnitthöhe, Laufzeiten, Stations-/Start-/Parkzustand und Gerätekennung</td>
-                  <td data-label="Zweck">Rasen sicher pflegen, Belegungen berücksichtigen, Betrieb überwachen und Mäher steuern</td>
-                  <td data-label="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 f DSGVO</span> – sichere und effiziente Pflege der Vereinsanlage</td>
-                  <td data-label="Empfänger">Befugte Platzwarte/Administration, Microsoft Azure und Husqvarna Automower Connect</td>
-                  <td data-label="Speicherdauer">Livewerte nur für Anzeige/Steuerung; technische Protokolle grundsätzlich 30 Tage; verdichtete Betriebsstatistiken ohne Personenbezug können länger erhalten bleiben</td>
-                  <td data-label="Herkunft">Mäher, Husqvarna-Plattform, Belegungsplan und sichere Automatik</td>
-                  <td data-label="Pflicht / freiwillig">Für automatisierte Platzpflege erforderlich; kein personenbezogenes Leistungsprofil</td>
-                </tr>
-                <tr>
-                  <td data-label="Daten">Beregnungsplan, Zonen, Laufzeiten, Status, bestätigtes Ende, Pausen/Änderungen, Steuergerätekennung und Wetter-/Anlageninformationen</td>
-                  <td data-label="Zweck">Beregnung steuern, Mäher zuvor sicher parken, Nachlauf einhalten und tatsächliche Läufe dokumentieren</td>
-                  <td data-label="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 f DSGVO</span></td>
-                  <td data-label="Empfänger">Befugte Platzwarte/Administration, Microsoft Azure und Hunter Hydrawise</td>
-                  <td data-label="Speicherdauer">Live-/Planwerte für die Steuerung; technische Protokolle grundsätzlich 30 Tage; personenbezogen zuordenbarer Sicherheits-/Änderungsnachweis höchstens 180 Tage</td>
-                  <td data-label="Herkunft">Hydrawise, Steuergerät, Bedienhandlungen, sichere Automatik und Belegungsplan</td>
-                  <td data-label="Pflicht / freiwillig">Für automatisierte Beregnung und Mähersicherheit erforderlich</td>
-                </tr>
-                <tr>
-                  <td data-label="Daten">Tagesstatus, Mäh-/Beregnungszeiten, Fehler- und Sicherheitsereignisse sowie Empfängeradresse des Berichts</td>
-                  <td data-label="Zweck">Täglichen Sicherheitsbericht an eine festgelegte verantwortliche Stelle senden</td>
-                  <td data-label="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 f DSGVO</span></td>
-                  <td data-label="Empfänger">Festgelegte vereinsinterne Berichtsempfänger, Microsoft Azure und Maildienst</td>
-                  <td data-label="Speicherdauer">Ausgangsdaten wie oben; Berichtsmails nach der vereinsintern für das Empfängerpostfach festgelegten Löschregel, länger nur bei einem konkret zu klärenden Vorfall</td>
-                  <td data-label="Herkunft">Azure-Betriebsdaten, Mäher, Beregnung und Belegungsplan</td>
-                  <td data-label="Pflicht / freiwillig">Interner Sicherheitsprozess; keine allgemeine App-Nutzerfunktion</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+                  <div class="processing-list" aria-label="Datenschutzdetails zu Platzpflege, Mäher und Beregnung">
+          <details class="processing-card">
+            <summary>
+              <span>
+                <span class="processing-kicker">Zweck</span>
+                <span class="processing-title" data-privacy-field="Zweck">Nur freigegebene Platzwart-Geräte zulassen, PIN-Zugang schützen und Missbrauch verhindern</span>
+              </span>
+            </summary>
+            <div class="processing-body">
+              <dl class="processing-fields">
+                <div class="processing-field">
+                  <dt>Daten</dt>
+                  <dd data-privacy-field="Daten">Pseudonyme Gerätekennung, Aktivierungsstatus, gehashter Gerätetoken, Anmeldezeit, fehlgeschlagene Anmeldungen, Sperrstatus und Sitzungstoken</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Rechtsgrundlage</dt>
+                  <dd data-privacy-field="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 f DSGVO</span> – Anlagen- und IT-Sicherheit</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Empfänger</dt>
+                  <dd data-privacy-field="Empfänger">Befugte Platzwarte/Administration; Microsoft Azure</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Speicherdauer</dt>
+                  <dd data-privacy-field="Speicherdauer">Aktive Gerätefreigabe bis Widerruf oder Gerätewechsel; der pseudonyme Geräte-/Aktivierungsnachweis bleibt anschließend für Einmalverwendung und Widerrufsschutz, solange dieses Zugangssystem betrieben wird und der Nachweis erforderlich ist. Sitzung 30 Minuten; fehlgeschlagene Anmeldungen 7 Tage, temporäre Sperre 30 Minuten</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Herkunft</dt>
+                  <dd data-privacy-field="Herkunft">Aktivierungsvorgang, Endgerät und Anmeldung</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Pflicht / freiwillig</dt>
+                  <dd data-privacy-field="Pflicht / freiwillig">Für den geschützten Platzwart-Zugang erforderlich</dd>
+                </div>
+              </dl>
+            </div>
+          </details>
+          <details class="processing-card">
+            <summary>
+              <span>
+                <span class="processing-kicker">Zweck</span>
+                <span class="processing-title" data-privacy-field="Zweck">Sicherheitskritische Befehle nachvollziehen, Fehlbedienung untersuchen und Anlagen schützen</span>
+              </span>
+            </summary>
+            <div class="processing-body">
+              <dl class="processing-fields">
+                <div class="processing-field">
+                  <dt>Daten</dt>
+                  <dd data-privacy-field="Daten">Bedienaktion, Ergebnis, Zeitpunkt, Vorgangskennung und pseudonyme Gerätezuordnung</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Rechtsgrundlage</dt>
+                  <dd data-privacy-field="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 f DSGVO</span></dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Empfänger</dt>
+                  <dd data-privacy-field="Empfänger">Eng begrenzte Vereinsadministration; Microsoft Azure; bei technischem Bedarf die jeweiligen Geräteplattformen</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Speicherdauer</dt>
+                  <dd data-privacy-field="Speicherdauer">Reduziertes Bedien- und Sicherheitsaudit 180 Tage; ausführliche technische Diagnoseprotokolle grundsätzlich 30 Tage</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Herkunft</dt>
+                  <dd data-privacy-field="Herkunft">Dashboard, sichere Automatik und Geräteschnittstellen</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Pflicht / freiwillig</dt>
+                  <dd data-privacy-field="Pflicht / freiwillig">Für sichere Fernsteuerung erforderlich; Zugriff nur über ein freigeschaltetes Platzwart-Gerät mit PIN und zeitlich begrenzter Sitzung</dd>
+                </div>
+              </dl>
+            </div>
+          </details>
+          <details class="processing-card">
+            <summary>
+              <span>
+                <span class="processing-kicker">Zweck</span>
+                <span class="processing-title" data-privacy-field="Zweck">Rasen sicher pflegen, Belegungen berücksichtigen, Betrieb überwachen und Mäher steuern</span>
+              </span>
+            </summary>
+            <div class="processing-body">
+              <dl class="processing-fields">
+                <div class="processing-field">
+                  <dt>Daten</dt>
+                  <dd data-privacy-field="Daten">Mäherstatus, Verbindung, Akku, Flächenfortschritt, Fehler, Schnitthöhe, Laufzeiten, Stations-/Start-/Parkzustand und Gerätekennung</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Rechtsgrundlage</dt>
+                  <dd data-privacy-field="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 f DSGVO</span> – sichere und effiziente Pflege der Vereinsanlage</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Empfänger</dt>
+                  <dd data-privacy-field="Empfänger">Befugte Platzwarte/Administration, Microsoft Azure und Husqvarna Automower Connect</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Speicherdauer</dt>
+                  <dd data-privacy-field="Speicherdauer">Livewerte nur für Anzeige/Steuerung; technische Protokolle grundsätzlich 30 Tage; verdichtete Betriebsstatistiken ohne Personenbezug können länger erhalten bleiben</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Herkunft</dt>
+                  <dd data-privacy-field="Herkunft">Mäher, Husqvarna-Plattform, Belegungsplan und sichere Automatik</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Pflicht / freiwillig</dt>
+                  <dd data-privacy-field="Pflicht / freiwillig">Für automatisierte Platzpflege erforderlich; kein personenbezogenes Leistungsprofil</dd>
+                </div>
+              </dl>
+            </div>
+          </details>
+          <details class="processing-card">
+            <summary>
+              <span>
+                <span class="processing-kicker">Zweck</span>
+                <span class="processing-title" data-privacy-field="Zweck">Beregnung steuern, Mäher zuvor sicher parken, Nachlauf einhalten und tatsächliche Läufe dokumentieren</span>
+              </span>
+            </summary>
+            <div class="processing-body">
+              <dl class="processing-fields">
+                <div class="processing-field">
+                  <dt>Daten</dt>
+                  <dd data-privacy-field="Daten">Beregnungsplan, Zonen, Laufzeiten, Status, bestätigtes Ende, Pausen/Änderungen, Steuergerätekennung und Wetter-/Anlageninformationen</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Rechtsgrundlage</dt>
+                  <dd data-privacy-field="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 f DSGVO</span></dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Empfänger</dt>
+                  <dd data-privacy-field="Empfänger">Befugte Platzwarte/Administration, Microsoft Azure und Hunter Hydrawise</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Speicherdauer</dt>
+                  <dd data-privacy-field="Speicherdauer">Live-/Planwerte für die Steuerung; technische Protokolle grundsätzlich 30 Tage; personenbezogen zuordenbarer Sicherheits-/Änderungsnachweis höchstens 180 Tage</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Herkunft</dt>
+                  <dd data-privacy-field="Herkunft">Hydrawise, Steuergerät, Bedienhandlungen, sichere Automatik und Belegungsplan</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Pflicht / freiwillig</dt>
+                  <dd data-privacy-field="Pflicht / freiwillig">Für automatisierte Beregnung und Mähersicherheit erforderlich</dd>
+                </div>
+              </dl>
+            </div>
+          </details>
+          <details class="processing-card">
+            <summary>
+              <span>
+                <span class="processing-kicker">Zweck</span>
+                <span class="processing-title" data-privacy-field="Zweck">Täglichen Sicherheitsbericht an eine festgelegte verantwortliche Stelle senden</span>
+              </span>
+            </summary>
+            <div class="processing-body">
+              <dl class="processing-fields">
+                <div class="processing-field">
+                  <dt>Daten</dt>
+                  <dd data-privacy-field="Daten">Tagesstatus, Mäh-/Beregnungszeiten, Fehler- und Sicherheitsereignisse sowie Empfängeradresse des Berichts</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Rechtsgrundlage</dt>
+                  <dd data-privacy-field="Rechtsgrundlage"><span class="legal-basis">Art. 6 Abs. 1 f DSGVO</span></dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Empfänger</dt>
+                  <dd data-privacy-field="Empfänger">Festgelegte vereinsinterne Berichtsempfänger, Microsoft Azure und Maildienst</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Speicherdauer</dt>
+                  <dd data-privacy-field="Speicherdauer">Ausgangsdaten wie oben; Berichtsmails nach der vereinsintern für das Empfängerpostfach festgelegten Löschregel, länger nur bei einem konkret zu klärenden Vorfall</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Herkunft</dt>
+                  <dd data-privacy-field="Herkunft">Azure-Betriebsdaten, Mäher, Beregnung und Belegungsplan</dd>
+                </div>
+                <div class="processing-field">
+                  <dt>Pflicht / freiwillig</dt>
+                  <dd data-privacy-field="Pflicht / freiwillig">Interner Sicherheitsprozess; keine allgemeine App-Nutzerfunktion</dd>
+                </div>
+              </dl>
+            </div>
+          </details>
+        </div>
           <p class="note">Die Mäh- und Beregnungsautomatik entscheidet über Geräteaktionen, nicht über Menschen. Sie erzeugt keine Entscheidung mit rechtlicher oder ähnlich erheblicher Wirkung gegenüber einer Person im Sinne von Art. 22 DSGVO.</p>
         </div>
       </details>
