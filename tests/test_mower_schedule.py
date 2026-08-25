@@ -23,6 +23,22 @@ TZ = ZoneInfo("Europe/Berlin")
 
 
 class MowerPlannerTests(unittest.TestCase):
+    def test_kunstrasen_e2_monday_does_not_block_grass_mower(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        config = load_json(root / "mower" / "config.json")
+
+        blocks = build_training_blocks(
+            config["training"],
+            date(2026, 8, 24),
+            1,
+            TZ,
+        )
+
+        self.assertNotIn(
+            "som-kr-e2-mo",
+            {block.details["schedule_id"] for block in blocks},
+        )
+
     def test_production_ue40_monday_blocks_grass_with_training_buffers(self) -> None:
         root = Path(__file__).resolve().parents[1]
         config = load_json(root / "mower" / "config.json")
