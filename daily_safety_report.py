@@ -570,6 +570,7 @@ def summarize_irrigation_statistics(
     rows: Sequence[Mapping[str, Any]],
     *,
     expected_zone_count: int = 7,
+    expected_relay_ids: frozenset[int] | None = None,
 ) -> dict[str, Any]:
     """Verdichtet reale Minutenbeobachtungen statt Soll-Laufzeiten.
 
@@ -618,11 +619,128 @@ def summarize_irrigation_statistics(
             and len(item["completed"]) >= expected_zone_count
         ):
             completed_runs[(item["plan"], completed_at)] = item
+    completed_records = [
+        {
+            "plan": key[0],
+            "completed_at": key[1],
+            "duration_minutes": plan_active_minutes.get(key[0], 0),
+            "observed_only": False,
+        }
+        for key in completed_runs
+    ]
+
+    # Auch ein direkt in Hydrawise gestarteter Lauf ist ein realer Lauf. Er
+    # besitzt jedoch keinen von unserer Automatik erzeugten Planabschluss.
+    # Deshalb wird zusätzlich die binäre Relay-Folge ausgewertet: exakt die
+    # freigegebenen Relays, immer nur eine Zone gleichzeitig, jede Zone in
+    # genau einem zusammenhängenden Abschnitt und anschließend mindestens
+    # fünf Minuten frei. Das ist deutlich strenger als eine Sollzeit und
+    # verhindert zugleich Doppelzählungen mit regulären Abschlüssen.
+    observed_sequences: list[dict[str, Any]] = []
+    sequence: dict[str, Any] | None = None
+    last_active_at: datetime | None = None
+
+    def finish_observed_sequence() -> None:
+        nonlocal sequence, last_active_at
+        if sequence is None or last_active_at is None:
+            sequence = None
+            last_active_at = None
+            return
+        relays = set(sequence["relays"])
+        expected = (
+            set(expected_relay_ids)
+            if expected_relay_ids is not None
+            else None
+        )
+        complete_set = (
+            relays == expected
+            if expected is not None
+            else len(relays) == expected_zone_count
+        )
+        if (
+            not sequence["invalid"]
+            and complete_set
+            and len(sequence["order"]) == expected_zone_count
+        ):
+            observed_sequences.append(
+                {
+                    **sequence,
+                    "completed_at": last_active_at + timedelta(minutes=1),
+                }
+            )
+        sequence = None
+        last_active_at = None
+
+    for item in observations:
+        timestamp = item["timestamp"]
+        active = item["active"]
+        if active:
+            if (
+                sequence is not None
+                and last_active_at is not None
+                and timestamp - last_active_at > timedelta(minutes=5)
+            ):
+                finish_observed_sequence()
+            if sequence is None:
+                sequence = {
+                    "started_at": timestamp,
+                    "relays": set(),
+                    "order": [],
+                    "plans": set(),
+                    "active_minutes": 0,
+                    "invalid": False,
+                }
+            sequence["active_minutes"] += 1
+            if item["plan"]:
+                sequence["plans"].add(item["plan"])
+            if len(active) != 1:
+                sequence["invalid"] = True
+            else:
+                relay_id = int(active[0])
+                if not sequence["order"] or sequence["order"][-1] != relay_id:
+                    if relay_id in sequence["relays"]:
+                        sequence["invalid"] = True
+                    sequence["order"].append(relay_id)
+                sequence["relays"].add(relay_id)
+            last_active_at = timestamp
+        elif (
+            sequence is not None
+            and last_active_at is not None
+            and timestamp - last_active_at > timedelta(minutes=5)
+        ):
+            finish_observed_sequence()
+    if (
+        sequence is not None
+        and last_active_at is not None
+        and observations
+        and observations[-1]["timestamp"] - last_active_at > timedelta(minutes=5)
+    ):
+        finish_observed_sequence()
+
+    inferred_complete_plans: set[str] = set()
+    for observed in observed_sequences:
+        completed_at = observed["completed_at"]
+        duplicate = any(
+            abs((record["completed_at"] - completed_at).total_seconds()) <= 10 * 60
+            for record in completed_records
+        )
+        inferred_complete_plans.update(observed["plans"])
+        if duplicate:
+            continue
+        completed_records.append(
+            {
+                "plan": "",
+                "completed_at": completed_at,
+                "duration_minutes": int(observed["active_minutes"]),
+                "observed_only": True,
+            }
+        )
+
     ordered_completed = sorted(
-        completed_runs,
-        key=lambda value: value[1],
+        completed_records,
+        key=lambda value: value["completed_at"],
     )
-    last_key = ordered_completed[-1] if ordered_completed else None
+    last_record = ordered_completed[-1] if ordered_completed else None
 
     # Unsichere oder nur teilweise ausgeführte Läufe werden nicht in die
     # normalen Statistik-Kacheln gemischt. Sie werden separat für ein
@@ -657,6 +775,9 @@ def summarize_irrigation_statistics(
             item["completed_at"] is not None
             and len(item["completed"]) >= expected_zone_count
         )
+    for plan in inferred_complete_plans:
+        if plan in plan_evidence:
+            plan_evidence[plan]["complete"] = True
 
     gaps: list[dict[str, Any]] = []
     for previous, current in zip(observations, observations[1:]):
@@ -682,7 +803,7 @@ def summarize_irrigation_statistics(
 
     affected_runs: list[dict[str, Any]] = []
     for plan, evidence in plan_evidence.items():
-        confirmed = sorted(evidence["confirmed"])
+        confirmed = sorted(evidence["confirmed"] | evidence["active"])
         if evidence["complete"] or not evidence["failed"]:
             continue
         affected_runs.append(
@@ -739,9 +860,11 @@ def summarize_irrigation_statistics(
         "available": True,
         "wateringMinutes7d": sum(1 for item in observations if item["active"]),
         "completedRuns7d": len(ordered_completed),
-        "lastCompletedAt": last_key[1].isoformat() if last_key else None,
+        "lastCompletedAt": (
+            last_record["completed_at"].isoformat() if last_record else None
+        ),
         "lastCompletedDurationMinutes": (
-            plan_active_minutes.get(last_key[0], 0) if last_key else None
+            last_record["duration_minutes"] if last_record else None
         ),
         "zoneMinutes7d": [
             {"relayId": relay_id, "minutes": minutes}
@@ -804,7 +927,26 @@ def dashboard_irrigation_statistics(
             journal_failed = True
     if not rows and insights_failed and (reader is None or journal_failed):
         raise RuntimeError("Beregnungsnachweise sind derzeit nicht erreichbar.")
-    result = summarize_irrigation_statistics(rows)
+    try:
+        expected_zone_count = int(values.get("HYDRAWISE_EXPECTED_ZONE_COUNT", "7"))
+    except (TypeError, ValueError):
+        expected_zone_count = 7
+    expected_relay_ids: frozenset[int] | None = None
+    try:
+        parsed_relay_ids = frozenset(
+            int(value.strip())
+            for value in str(values.get("HYDRAWISE_EXPECTED_RELAY_IDS", "")).split(",")
+            if value.strip()
+        )
+        if len(parsed_relay_ids) == expected_zone_count:
+            expected_relay_ids = parsed_relay_ids
+    except (TypeError, ValueError):
+        expected_relay_ids = None
+    result = summarize_irrigation_statistics(
+        rows,
+        expected_zone_count=expected_zone_count,
+        expected_relay_ids=expected_relay_ids,
+    )
     if journal_failed:
         attention = result.get("attention") or {
             "severity": "warning",

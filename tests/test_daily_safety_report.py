@@ -1,4 +1,5 @@
-from datetime import datetime, timezone
+import json
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -140,6 +141,97 @@ def test_irrigation_statistics_separates_partial_run_and_related_gap():
     assert value["attention"]["summary"] == "2 von 7 Zonen bestätigt."
     assert value["attention"]["affectedRuns"][0]["confirmedRelayIds"] == [100, 101]
     assert value["attention"]["dataGaps"][0]["missingMinutes"] == 298
+
+
+def test_irrigation_statistics_recognizes_complete_external_seven_zone_run():
+    relays = [101, 102, 103, 104, 105, 106, 107]
+    rows = []
+    minute = 0
+    for relay_id in relays:
+        for _sample in range(2):
+            rows.append(
+                {
+                    "timestamp": (
+                        datetime(2026, 8, 27, 2, 15, tzinfo=timezone.utc)
+                        + timedelta(minutes=minute)
+                    ).isoformat(),
+                    "decision_code": "IRRIGATION_FAILED_HOLD",
+                    "active_relay_ids": json.dumps([relay_id]),
+                    "irrigation_plan_id": "stale-failed-plan",
+                    "irrigation_phase": "FAILED",
+                    "irrigation_completed_utc": "",
+                    "completed_relay_ids": "[]",
+                }
+            )
+            minute += 1
+    for _sample in range(7):
+        rows.append(
+            {
+                "timestamp": (
+                    datetime(2026, 8, 27, 2, 15, tzinfo=timezone.utc)
+                    + timedelta(minutes=minute)
+                ).isoformat(),
+                "decision_code": "IRRIGATION_FAILED_HOLD",
+                "active_relay_ids": "[]",
+                "irrigation_plan_id": "stale-failed-plan",
+                "irrigation_phase": "FAILED",
+                "irrigation_completed_utc": "",
+                "completed_relay_ids": "[]",
+            }
+        )
+        minute += 1
+
+    value = summarize_irrigation_statistics(
+        rows,
+        expected_relay_ids=frozenset(relays),
+    )
+
+    assert value["completedRuns7d"] == 1
+    assert value["lastCompletedDurationMinutes"] == 14
+    assert value["lastCompletedAt"] == "2026-08-27T02:29:00+00:00"
+    assert value["attention"] is None
+
+
+def test_irrigation_statistics_never_promotes_incomplete_external_run():
+    relays = [101, 102, 103, 104, 105, 106, 107]
+    rows = [
+        {
+            "timestamp": (
+                datetime(2026, 8, 27, 2, 15, tzinfo=timezone.utc)
+                + timedelta(minutes=index)
+            ).isoformat(),
+            "decision_code": "IRRIGATION_FAILED_HOLD",
+            "active_relay_ids": json.dumps([relay_id]),
+            "irrigation_plan_id": "partial-plan",
+            "irrigation_phase": "FAILED",
+            "irrigation_completed_utc": "",
+            "completed_relay_ids": "[]",
+        }
+        for index, relay_id in enumerate(relays[:-1])
+    ]
+    rows.extend(
+        {
+            "timestamp": (
+                datetime(2026, 8, 27, 2, 21, tzinfo=timezone.utc)
+                + timedelta(minutes=index)
+            ).isoformat(),
+            "decision_code": "IRRIGATION_FAILED_HOLD",
+            "active_relay_ids": "[]",
+            "irrigation_plan_id": "partial-plan",
+            "irrigation_phase": "FAILED",
+            "irrigation_completed_utc": "",
+            "completed_relay_ids": "[]",
+        }
+        for index in range(7)
+    )
+
+    value = summarize_irrigation_statistics(
+        rows,
+        expected_relay_ids=frozenset(relays),
+    )
+
+    assert value["completedRuns7d"] == 0
+    assert value["attention"]["summary"] == "6 von 7 Zonen bestätigt."
 
 
 def test_dashboard_irrigation_statistics_queries_eight_day_window():

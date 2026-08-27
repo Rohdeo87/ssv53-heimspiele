@@ -72,6 +72,8 @@ def _reset_state(
     *,
     now_utc: datetime,
     hydrawise_observed_utc: str | None,
+    confirmed_clear_since_utc: str,
+    confirmed_clear_origin: str,
 ) -> AutomationState:
     return replace(
         state,
@@ -79,7 +81,8 @@ def _reset_state(
         last_decision_code="IRRIGATION_FAILED_RESET",
         last_hydrawise_success_utc=now_utc.isoformat(),
         last_hydrawise_observed_utc=hydrawise_observed_utc,
-        hydrawise_clear_since_utc=now_utc.isoformat(),
+        hydrawise_clear_since_utc=confirmed_clear_since_utc,
+        hydrawise_clear_origin=confirmed_clear_origin,
         last_hydrawise_active_count=0,
         next_irrigation_start_utc=None,
         irrigation_phase=None,
@@ -232,10 +235,44 @@ def reset_failed_irrigation(
         )
 
     previous_reason = state.irrigation_failed_reason
+    # Ein bereits minutenweise und ohne Lücke bestätigter Nachlauf muss durch
+    # den befehlsfreien Reset nicht künstlich von vorn beginnen. Er wird nur
+    # übernommen, wenn der Timer unmittelbar zuvor noch frisch war, der
+    # Ursprung eindeutig ein beobachtetes Beregnungsende ist und der aktuelle
+    # unabhängige Hydrawise-Liveabruf weiterhin alle sieben Zonen als frei
+    # bestätigt. Bei jeder Unsicherheit beginnt die Bestätigung bei ``now``.
+    confirmed_clear_since = now
+    confirmed_clear_origin = "DATA_GAP"
+    try:
+        previous_success = datetime.fromisoformat(
+            str(state.last_hydrawise_success_utc or "").replace("Z", "+00:00")
+        ).astimezone(timezone.utc)
+        previous_clear_since = datetime.fromisoformat(
+            str(state.hydrawise_clear_since_utc or "").replace("Z", "+00:00")
+        ).astimezone(timezone.utc)
+    except ValueError:
+        previous_success = None
+        previous_clear_since = None
+    if (
+        previous_success is not None
+        and previous_clear_since is not None
+        and state.hydrawise_clear_origin
+        in {
+            "IRRIGATION_ACTIVE",
+            "IRRIGATION_END",
+            "POSSIBLE_IRRIGATION_DURING_GAP",
+        }
+        and timedelta(0) <= now - previous_success <= timedelta(minutes=3)
+        and previous_clear_since <= previous_success
+    ):
+        confirmed_clear_since = previous_clear_since
+        confirmed_clear_origin = str(state.hydrawise_clear_origin)
     reset = _reset_state(
         state,
         now_utc=now,
         hydrawise_observed_utc=safety.observed_at_utc,
+        confirmed_clear_since_utc=confirmed_clear_since.isoformat(),
+        confirmed_clear_origin=confirmed_clear_origin,
     )
     try:
         store.save(reset, expected_revision=state.revision)

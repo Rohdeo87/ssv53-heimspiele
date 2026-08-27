@@ -139,6 +139,21 @@ class IrrigationRecoveryTests(unittest.TestCase):
         self.assertEqual(saved.park_confirmed_utc, (NOW - timedelta(minutes=5)).isoformat())
         self.assertEqual(result.hydrawise["observed_relay_ids"], RELAYS)
 
+    def test_success_preserves_fresh_continuous_post_irrigation_proof(self) -> None:
+        clear_since = NOW - timedelta(hours=2)
+        state = replace(
+            failed_state(),
+            last_hydrawise_success_utc=(NOW - timedelta(minutes=1)).isoformat(),
+            hydrawise_clear_since_utc=clear_since.isoformat(),
+            hydrawise_clear_origin="IRRIGATION_END",
+        )
+
+        _result, store = self._run(state)
+
+        saved = store.load()
+        self.assertEqual(saved.hydrawise_clear_since_utc, clear_since.isoformat())
+        self.assertEqual(saved.hydrawise_clear_origin, "IRRIGATION_END")
+
     def test_wrong_confirmation_stops_before_any_live_read(self) -> None:
         calls = {"mower": 0, "hydrawise": 0}
         store = InMemoryStateStore(failed_state())

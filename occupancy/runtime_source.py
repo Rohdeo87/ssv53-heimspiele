@@ -22,6 +22,8 @@ class OccupancyMatchSource:
     source_generated_at_utc: str | None = None
     source_commit: str | None = None
     fallback_used: bool = False
+    fresh: bool = True
+    age_minutes: int | None = None
 
 
 def _truthy(value: str | None) -> bool:
@@ -45,6 +47,10 @@ def _validate_age(value: datetime, now_utc: datetime, max_age_minutes: int) -> N
         raise ValueError("Der Spielplan liegt unzulässig in der Zukunft.")
     if age_seconds > max_age_minutes * 60:
         raise ValueError("Der Spielplan ist älter als das zulässige Maximalalter.")
+
+
+def _age_minutes(value: datetime, now_utc: datetime) -> int:
+    return max(0, int((now_utc - value).total_seconds() // 60))
 
 
 def _safe_blob_path(value: Any, label: str) -> str:
@@ -90,6 +96,7 @@ def _load_cache(
     cache_dir: Path,
     now_utc: datetime,
     max_age_minutes: int,
+    fresh_age_minutes: int,
     expected_etag: str | None = None,
 ) -> OccupancyMatchSource | None:
     matches_path, metadata_path = _cache_paths(cache_dir)
@@ -108,6 +115,7 @@ def _load_cache(
             "source_generated_at_utc",
         )
         _validate_age(source_generated_at, now_utc, max_age_minutes)
+        age_minutes = _age_minutes(source_generated_at, now_utc)
         data = matches_path.read_bytes()
         if _hash(data) != metadata.get("occupancy_matches_sha256"):
             return None
@@ -120,6 +128,8 @@ def _load_cache(
             source_generated_at_utc=source_generated_at.isoformat(),
             source_commit=metadata.get("source_commit"),
             fallback_used=True,
+            fresh=age_minutes <= fresh_age_minutes,
+            age_minutes=age_minutes,
         )
     except (OSError, UnicodeError, ValueError, KeyError, json.JSONDecodeError):
         return None
@@ -131,6 +141,7 @@ def _download_current(
     cache_dir: Path,
     now_utc: datetime,
     max_age_minutes: int,
+    fresh_age_minutes: int,
 ) -> OccupancyMatchSource:
     manifest_blob = container_client.get_blob_client("current/manifest.json")
     properties = manifest_blob.get_blob_properties()
@@ -139,6 +150,7 @@ def _download_current(
         cache_dir=cache_dir,
         now_utc=now_utc,
         max_age_minutes=max_age_minutes,
+        fresh_age_minutes=fresh_age_minutes,
         expected_etag=etag or None,
     )
     if cached is not None:
@@ -165,6 +177,7 @@ def _download_current(
         "source_generated_at_utc",
     )
     _validate_age(source_generated_at, now_utc, max_age_minutes)
+    age_minutes = _age_minutes(source_generated_at, now_utc)
 
     data = container_client.get_blob_client(matches_blob).download_blob().readall()
     if _hash(data) != expected_sha:
@@ -194,6 +207,8 @@ def _download_current(
         source_generated_at_utc=source_generated_at.isoformat(),
         source_commit=metadata["source_commit"],
         fallback_used=False,
+        fresh=age_minutes <= fresh_age_minutes,
+        age_minutes=age_minutes,
     )
 
 
@@ -201,6 +216,7 @@ def resolve_occupancy_match_source(
     environment: Mapping[str, str],
     *,
     now_utc: datetime,
+    allow_stale_display: bool = False,
     service_client_factory: Callable[..., Any] = BlobServiceClient,
     credential_factory: Callable[..., Any] = ManagedIdentityCredential,
 ) -> OccupancyMatchSource:
@@ -208,9 +224,9 @@ def resolve_occupancy_match_source(
 
     Unlike the mower input resolver this deliberately does not roll back to the
     previous manifest: the public calendar must not silently resurrect an old
-    kickoff after an official reschedule. A locally validated cache remains
-    available for short Azure interruptions; otherwise the endpoint fails
-    visibly instead of returning a known-stale schedule.
+    kickoff after an official reschedule. Read-only calendar rendering may use
+    the *current*, hash-validated manifest for a short, explicitly marked grace
+    period. Safety-relevant conflict checks remain strict by default.
     """
 
     if now_utc.tzinfo is None or now_utc.utcoffset() is None:
@@ -244,6 +260,28 @@ def resolve_occupancy_match_source(
         raise RuntimeError(
             "SSV53_OCCUPANCY_MAX_AGE_MINUTES muss zwischen 60 und 10080 liegen."
         )
+    try:
+        hard_max_age_minutes = int(
+            environment.get(
+                "SSV53_OCCUPANCY_HARD_MAX_AGE_MINUTES",
+                "1440",
+            )
+        )
+    except ValueError as exc:
+        raise RuntimeError(
+            "SSV53_OCCUPANCY_HARD_MAX_AGE_MINUTES ist ungültig."
+        ) from exc
+    if (
+        hard_max_age_minutes < max_age_minutes
+        or hard_max_age_minutes > 10080
+    ):
+        raise RuntimeError(
+            "SSV53_OCCUPANCY_HARD_MAX_AGE_MINUTES muss mindestens der "
+            "Frischegrenze entsprechen und darf 10080 nicht überschreiten."
+        )
+    effective_max_age_minutes = (
+        hard_max_age_minutes if allow_stale_display else max_age_minutes
+    )
     cache_dir = Path(
         str(environment.get("SSV53_OCCUPANCY_CACHE_DIR") or "/tmp/ssv53-occupancy")
     )
@@ -258,7 +296,8 @@ def resolve_occupancy_match_source(
             container_client=service_client.get_container_client(container_name),
             cache_dir=cache_dir,
             now_utc=now_utc,
-            max_age_minutes=max_age_minutes,
+            max_age_minutes=effective_max_age_minutes,
+            fresh_age_minutes=max_age_minutes,
         )
     except (UnicodeError, ValueError, KeyError, json.JSONDecodeError) as exc:
         # A reachable but malformed/new manifest must never be hidden by an
@@ -273,7 +312,8 @@ def resolve_occupancy_match_source(
     cached = _load_cache(
         cache_dir=cache_dir,
         now_utc=now_utc,
-        max_age_minutes=max_age_minutes,
+        max_age_minutes=effective_max_age_minutes,
+        fresh_age_minutes=max_age_minutes,
     )
     if cached is not None:
         return cached

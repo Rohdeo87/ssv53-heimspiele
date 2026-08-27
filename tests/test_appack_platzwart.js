@@ -57,7 +57,7 @@ test("Platzwart-Seite ist syntaktisch gültig und enthält keine Zugangsdaten", 
   assert.match(html, /class="next-start-fact hidden"/);
   assert.match(html, /Geschätzt:/);
   assert.match(html, /Nach Plan:/);
-  assert.match(html, /Nach Beregnungsende \+ 120 Min\./);
+  assert.match(html, /Nach bestätigtem Beregnungsende \+ 120 Min\./);
   assert.match(html, /startButton\.classList\.toggle\("hidden"/);
   assert.match(html, /parkButton\.classList\.toggle\("hidden"/);
   assert.match(html, /function mowerActions\(s\)/);
@@ -388,7 +388,7 @@ test("nächster Mäherstart unterscheidet Plan, Beregnung und Ladeschätzung", (
   assert.match(nextStart({ generatedAt, mower: { activity: "CHARGING", connected: true, errorCode: 0, batteryPercent: 70, restartBatteryPercent: 90 }, automation: { continuousMowingOwned: true }, occupancy: { safeWindows: [longCurrentWindow] } }), /^Geschätzt: /);
   assert.match(nextStart({ generatedAt, mower: { activity: "CHARGING", connected: true, errorCode: 0, batteryPercent: 99, restartBatteryPercent: 90 }, automation: { continuousMowingOwned: true, hydrawiseClearSince: "2026-08-20T16:25:00Z", hydrawiseClearOrigin: "DATA_GAP" }, occupancy: { safeWindows: [longCurrentWindow] } }), /^Nach Sicherheitsprüfung: .*18:27 Uhr$/);
   assert.match(nextStart({ generatedAt, mower: { activity: "CHARGING", connected: true, errorCode: 0, batteryPercent: 99, restartBatteryPercent: 90 }, automation: { continuousMowingOwned: true, hydrawiseClearSince: "2026-08-20T16:25:00Z", hydrawiseClearOrigin: "IRRIGATION_END" }, occupancy: { safeWindows: [{ ...longCurrentWindow, command_deadline: "2026-08-20T20:00:00Z" }] } }), /^Nach Sicherheitsprüfung: .*20:25 Uhr$/);
-  assert.equal(nextStart({ mower: { activity: "PARKED_IN_CS" }, automation: { irrigationPhase: "RUNNING" }, occupancy: {} }), "Nach Beregnungsende + 120 Min.");
+  assert.equal(nextStart({ mower: { activity: "PARKED_IN_CS" }, automation: { irrigationPhase: "RUNNING" }, occupancy: {} }), "Nach bestätigtem Beregnungsende + 120 Min.");
   assert.equal(nextStart({ mower: { activity: "MOWING" }, automation: {}, occupancy: {} }), null);
   assert.equal(nextStart({ mower: { activity: "LEAVING" }, automation: {}, occupancy: {} }), null);
   assert.equal(nextStart({ mower: { activity: "GOING_HOME" }, automation: {}, occupancy: {} }), null);

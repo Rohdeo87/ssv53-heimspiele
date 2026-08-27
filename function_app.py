@@ -286,6 +286,7 @@ def _occupancy_match_source(
     *,
     now_utc: datetime | None = None,
     environment: dict[str, str] | None = None,
+    allow_stale_display: bool = False,
 ) -> OccupancyMatchSource:
     """Öffentliche Belegung aus dem gemeinsamen strukturierten Matchmodell.
 
@@ -296,6 +297,7 @@ def _occupancy_match_source(
     return resolve_occupancy_match_source(
         environment if environment is not None else os.environ,
         now_utc=now_utc or datetime.now(timezone.utc),
+        allow_stale_display=allow_stale_display,
     )
 
 def _occupancy_matches_path() -> tuple[str, str]:
@@ -425,7 +427,10 @@ def ssv53_occupancy(req: func.HttpRequest) -> func.HttpResponse:
     season = req.params.get("season") or "Sommer"
 
     try:
-        match_source = _occupancy_match_source(now_utc=now_utc)
+        match_source = _occupancy_match_source(
+            now_utc=now_utc,
+            allow_stale_display=True,
+        )
         matches_path = match_source.matches_path
         config_path = os.environ.get(
             "OCCUPANCY_CONFIG_PATH",
@@ -503,6 +508,11 @@ def ssv53_occupancy(req: func.HttpRequest) -> func.HttpResponse:
             match_source.source_generated_at_utc
         )
         payload["match_source_fallback"] = match_source.fallback_used
+        payload["match_source_fresh"] = match_source.fresh
+        payload["match_source_age_minutes"] = match_source.age_minutes
+        payload["match_source_warning"] = (
+            None if match_source.fresh else "MATCH_SOURCE_UPDATE_DELAYED"
+        )
         return func.HttpResponse(
             json.dumps(
                 payload,
@@ -512,7 +522,7 @@ def ssv53_occupancy(req: func.HttpRequest) -> func.HttpResponse:
             status_code=200,
             mimetype="application/json",
             charset="utf-8",
-            headers=_occupancy_headers(cache=True),
+            headers=_occupancy_headers(cache=match_source.fresh),
         )
     except ValueError as exc:
         return func.HttpResponse(

@@ -1386,7 +1386,21 @@ def apply_venue_rules(
                 match.venue_rule = rule.name
                 break
         else:
-            if not match.venue_raw:
+            if not match.venue_raw and match.team_role == "away":
+                # Ein formal als Auswärtsspiel geführter Termin ohne bereits
+                # veröffentlichte Spielstätte ist keine Platzbelegung in
+                # Schönwalde. Sobald der Verband später doch einen lokalen
+                # Platz einträgt, greifen bei der nächsten Abfrage weiterhin
+                # die normalen, strengeren Spielstättenregeln.
+                match.decision = "exclude"
+                match.calendar = ""
+                match.venue_rule = "Auswärtsspiel ohne Spielstätte"
+                match.warnings = [
+                    warning
+                    for warning in match.warnings
+                    if warning != "Spielstätte fehlt"
+                ]
+            elif not match.venue_raw:
                 match.decision = "review"
                 match.calendar = ""
                 match.venue_rule = "Spielstätte fehlt"

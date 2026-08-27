@@ -357,6 +357,12 @@ background: #fff4f4;
 color: #8f1111;
 }
 
+#calendar-status[data-state="warning"] {
+border-color: rgba(178, 132, 10, 0.24);
+background: #fffaf0;
+color: #6f5608;
+}
+
 
 #calendar-status[data-state="empty"] {
 top: 50%;
@@ -4950,6 +4956,13 @@ return event.extendedProps
 
 updateMatchResourceVisibility(matchResourceIds);
 renderEvents(visibleEvents);
+if (payload.match_source_fresh === false && visibleEvents.length > 0) {
+setStatus(
+"warning",
+"Die Spieldaten werden gerade aktualisiert. Der letzte bestätigte Stand und alle Trainings bleiben sichtbar.",
+false
+);
+}
 } catch (error) {
 if (token !== state.fetchToken) return;
 

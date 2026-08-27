@@ -1525,6 +1525,31 @@ class FullFailsafeTests(unittest.TestCase):
         self.assertTrue(store.load().continuous_mowing_owned)
         self.assertIsNone(store.load().irrigation_phase)
 
+    def test_recovered_external_irrigation_failure_restarts_owned_park(self) -> None:
+        state = AutomationState(
+            parked_by_automation=True,
+            automation_park_source="irrigation",
+            automation_restart_allowed=True,
+            park_command_sent_utc=(NOW - timedelta(hours=5)).isoformat(),
+            park_confirmed_utc=(NOW - timedelta(hours=5)).isoformat(),
+            hydrawise_clear_since_utc=(NOW - timedelta(minutes=120)).isoformat(),
+            hydrawise_clear_origin="IRRIGATION_END",
+            last_hydrawise_success_utc=(NOW - timedelta(minutes=1)).isoformat(),
+        )
+        calls = []
+        output, store = self._run(
+            state,
+            result(
+                activity="PARKED_IN_CS",
+                override_action="FORCE_MOW",
+                external_reason_id=None,
+            ),
+            start=lambda *args: calls.append(args) or {"accepted": True},
+        )
+        self.assertEqual(output.decision_code, "CONTINUOUS_MOWING_START_SENT")
+        self.assertEqual(len(calls), 1)
+        self.assertTrue(store.load().continuous_mowing_owned)
+
     def test_manual_pause_still_blocks_restart_after_owned_irrigation_park(self) -> None:
         state = irrigation_state(phase="COMPLETE_HOLD")
         state = AutomationState.from_mapping(
@@ -2134,6 +2159,140 @@ class FullFailsafeTests(unittest.TestCase):
             "PARK_COMMAND_SENT_FOR_HYDRAWISE_HOLD",
         )
         self.assertEqual(len(park_calls), 1)
+        self.assertEqual(suspend_calls, [])
+
+    def test_already_running_external_irrigation_is_observed_not_failed(self) -> None:
+        active = result(
+            activity="PARKED_IN_CS",
+            active_ids=[RELAYS[0]],
+            clear=False,
+            irrigation_start=NOW - timedelta(minutes=5),
+        )
+        active.details["hydrawise"]["zones"][0]["running"] = True
+        active.details["hydrawise"]["zone_observations"][0]["running"] = True
+        suspend_calls = []
+        zone_calls = []
+
+        output, store = self._run(
+            AutomationState(),
+            active,
+            suspend=lambda *args: suspend_calls.append(args),
+            zone=lambda *args: zone_calls.append(args),
+        )
+
+        self.assertNotEqual(output.decision_code, "IRRIGATION_FAILED_HOLD")
+        self.assertIsNone(store.load().irrigation_phase)
+        self.assertIsNone(store.load().irrigation_failed_reason)
+        self.assertTrue(output.details["external_irrigation_observation"]["active"])
+        self.assertEqual(suspend_calls, [])
+        self.assertEqual(zone_calls, [])
+
+    def test_external_zone_transition_gap_is_observed_not_failed(self) -> None:
+        transition = result(
+            activity="PARKED_IN_CS",
+            active_ids=[],
+            clear=True,
+            irrigation_start=NOW - timedelta(minutes=20),
+        )
+        state = AutomationState(
+            hydrawise_clear_since_utc=NOW.isoformat(),
+            hydrawise_clear_origin="IRRIGATION_END",
+            last_hydrawise_success_utc=(NOW - timedelta(minutes=1)).isoformat(),
+        )
+
+        output, store = self._run(state, transition)
+
+        self.assertNotEqual(output.decision_code, "IRRIGATION_FAILED_HOLD")
+        self.assertIsNone(store.load().irrigation_phase)
+        self.assertTrue(output.details["external_irrigation_observation"]["active"])
+
+    def test_specific_stale_external_plan_failure_recovers_only_after_full_hold(self) -> None:
+        state = AutomationState(
+            parked_by_automation=True,
+            automation_park_source="irrigation",
+            automation_restart_allowed=False,
+            park_command_sent_utc=(NOW - timedelta(hours=3)).isoformat(),
+            park_confirmed_utc=(NOW - timedelta(hours=3)).isoformat(),
+            irrigation_phase="FAILED",
+            irrigation_failed_reason=(
+                "RuntimeError: Hydrawise-Zonenplan enthält ungültige Werte."
+            ),
+            hydrawise_clear_since_utc=(NOW - timedelta(minutes=121)).isoformat(),
+            hydrawise_clear_origin="IRRIGATION_END",
+            last_hydrawise_success_utc=(NOW - timedelta(minutes=1)).isoformat(),
+        )
+
+        output, store = self._run(state, result())
+
+        self.assertNotEqual(output.decision_code, "IRRIGATION_FAILED_HOLD")
+        self.assertIsNone(store.load().irrigation_phase)
+        self.assertIsNone(store.load().irrigation_failed_reason)
+        self.assertTrue(output.details["irrigation_failure_recovery"]["recovered"])
+
+    def test_unknown_irrigation_failure_never_recovers_automatically(self) -> None:
+        state = AutomationState(
+            parked_by_automation=True,
+            automation_park_source="irrigation",
+            automation_restart_allowed=True,
+            park_command_sent_utc=(NOW - timedelta(hours=3)).isoformat(),
+            park_confirmed_utc=(NOW - timedelta(hours=3)).isoformat(),
+            irrigation_phase="FAILED",
+            irrigation_failed_reason="Unbekannter Gerätefehler",
+            hydrawise_clear_since_utc=(NOW - timedelta(hours=4)).isoformat(),
+            hydrawise_clear_origin="IRRIGATION_END",
+            last_hydrawise_success_utc=(NOW - timedelta(minutes=1)).isoformat(),
+        )
+
+        output, store = self._run(state, result())
+
+        self.assertEqual(output.decision_code, "IRRIGATION_FAILED_HOLD")
+        self.assertEqual(store.load().irrigation_phase, "FAILED")
+
+    def test_direct_hydrawise_resume_supersedes_pause_after_two_cycles(self) -> None:
+        pause = {
+            "version": 1,
+            "kind": "PAUSE",
+            "status": "ACTIVE",
+            "suspend_until_utc": (NOW + timedelta(days=3)).isoformat(),
+            "commanded_relay_ids": RELAYS,
+        }
+        store = InMemoryStateStore(
+            AutomationState(irrigation_schedule_override_json=json.dumps(pause))
+        )
+        suspend_calls = []
+
+        first, _ = self._continue(
+            store,
+            result(),
+            now=NOW,
+            suspend=lambda *args: suspend_calls.append(args),
+        )
+        self.assertEqual(
+            first.decision_code,
+            "IRRIGATION_SCHEDULE_EXTERNAL_RESUME_CONFIRMING",
+        )
+        self.assertIsNotNone(store.load().irrigation_schedule_override_json)
+
+        second, _ = self._continue(
+            store,
+            result(),
+            now=NOW + timedelta(minutes=1),
+            suspend=lambda *args: suspend_calls.append(args),
+        )
+        self.assertEqual(
+            second.decision_code,
+            "IRRIGATION_SCHEDULE_EXTERNAL_RESUME_CONFIRMING",
+        )
+        self._continue(
+            store,
+            result(),
+            now=NOW + timedelta(minutes=2),
+            suspend=lambda *args: suspend_calls.append(args),
+        )
+
+        self.assertIsNone(store.load().irrigation_schedule_override_json)
+        history = json.loads(store.load().irrigation_schedule_history_json or "[]")
+        self.assertEqual(history[-1]["status"], "SUPERSEDED_EXTERNALLY")
         self.assertEqual(suspend_calls, [])
 
     def test_confirmation_gap_restarts_proof_without_false_activation(self) -> None:

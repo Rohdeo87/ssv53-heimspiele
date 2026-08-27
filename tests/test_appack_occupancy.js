@@ -88,6 +88,12 @@ test("Bedienelemente wechseln nur bei echtem Überlauf in den Großtextmodus", (
   assert.equal(overflow({...element, scrollHeight: 48}), true);
 });
 
+test("kurz verzögerte Spieldaten lassen den Kalender sichtbar", () => {
+  assert.match(html, /payload\.match_source_fresh === false/);
+  assert.match(html, /Der letzte bestätigte Stand und alle Trainings bleiben sichtbar/);
+  assert.match(html, /#calendar-status\[data-state="warning"\]/);
+});
+
 test("Azure-Zeiten werden auf allen Geräten als Berliner Vereinszeit angezeigt", () => {
   const helper = extractFunction("toClubWallClockDate");
   const script = [

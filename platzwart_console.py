@@ -691,6 +691,9 @@ def _irrigation_schedule_payload(
             "processedZones": len(override.get("commanded_relay_ids") or []),
             "totalZones": 7,
             "error": override.get("error"),
+            "externalChangeConfirming": bool(
+                override.get("external_resume_candidate_since_utc")
+            ),
             "zones": public_zones,
         }
     return {

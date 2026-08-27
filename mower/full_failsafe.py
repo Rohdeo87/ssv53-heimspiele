@@ -66,6 +66,9 @@ SAFE_PARK_SOURCES = frozenset(
 ACTIVE_IRRIGATION_PHASES = frozenset(
     {"PLANNED", "SUSPENDING", "READY", "START_RESERVED", "RUNNING", "STOPPING"}
 )
+RECOVERABLE_EXTERNAL_PLAN_FAILURE = (
+    "RuntimeError: Hydrawise-Zonenplan enthält ungültige Werte."
+)
 PARK_GUARD_BLOCK_SOURCES = frozenset({"training", "match", "special", "irrigation"})
 
 
@@ -890,6 +893,44 @@ def _next_scheduled_irrigation_start(
     return min(starts, default=None)
 
 
+def _external_irrigation_is_running_or_changing_zone(
+    state: AutomationState,
+    details: dict[str, Any],
+    *,
+    now_utc: datetime,
+    previous_state: AutomationState,
+) -> bool:
+    """Erkennt einen bereits extern gestarteten Hydrawise-Lauf.
+
+    Ein in Hydrawise oder am Controller gestarteter Lauf darf nicht nachträglich
+    als neuer Automatikplan übernommen werden. Insbesondere ist eine laufende
+    Zone kein ungültiger Zonenplan. Während der kurzen Umschaltpause zwischen
+    zwei Zonen bleibt die Erkennung erhalten; der normale 120-Minuten-Nachlauf
+    wird weiterhin allein aus den fortlaufenden Live-Beobachtungen abgeleitet.
+    """
+
+    if _active_relay_ids(details):
+        return True
+    clear_since = _parse_time(state.hydrawise_clear_since_utc)
+    previous_clear_since = _parse_time(previous_state.hydrawise_clear_since_utc)
+    previous_cycle_proves_transition = (
+        int(previous_state.last_hydrawise_active_count or 0) > 0
+        or (
+            previous_state.hydrawise_clear_origin == "IRRIGATION_END"
+            and previous_clear_since is not None
+            and timedelta(0)
+            <= now_utc - previous_clear_since
+            <= timedelta(minutes=5)
+        )
+    )
+    return bool(
+        previous_cycle_proves_transition
+        and state.hydrawise_clear_origin == "IRRIGATION_END"
+        and clear_since is not None
+        and timedelta(0) <= now_utc - clear_since <= timedelta(minutes=5)
+    )
+
+
 def _cycle_state(
     state: AutomationState,
     result: CycleResult,
@@ -1677,6 +1718,160 @@ def run_full_failsafe_cycle(
         if schedule_override is not None and str(schedule_override.get("status")) == "ACTIVE":
             override_kind = str(schedule_override.get("kind") or "")
             suspend_until = _parse_time(schedule_override.get("suspend_until_utc"))
+            if override_kind in {"PAUSE", "SKIP_NEXT"} and suspend_until is not None:
+                # Direkte Änderungen in der Hydrawise-App bleiben ausdrücklich
+                # möglich. Meldet Hydrawise trotz unserer bestätigten Pause
+                # wieder alle sieben Zonen vor dem gespeicherten Pausenende,
+                # wurde die Pause extern aufgehoben. Zwei fortlaufende frische
+                # Minutenbeobachtungen verhindern eine Reaktion auf flüchtige
+                # oder teilweise API-Antworten. Es wird dabei kein Befehl an
+                # Hydrawise gesendet.
+                observations = _zone_observation_by_relay(details)
+                live_starts = {
+                    relay_id: _parse_time(observation.get("scheduled_start_utc"))
+                    for relay_id, observation in observations.items()
+                    if observation.get("valid") is True
+                }
+                active_ids = _active_relay_ids(details)
+                exact_live_set = (
+                    set(observations) == set(expected_relay_ids)
+                    and set(live_starts) == set(expected_relay_ids)
+                    and relay_allowlist_valid
+                    and hydra_safety.get("available") is True
+                    and hydra_safety.get("fresh") is True
+                )
+                external_resume = bool(
+                    active_ids
+                    or (
+                        exact_live_set
+                        and all(start is not None for start in live_starts.values())
+                        and min(live_starts.values()) <= suspend_until
+                    )
+                )
+                candidate_since = _parse_time(
+                    schedule_override.get("external_resume_candidate_since_utc")
+                )
+                candidate_last = _parse_time(
+                    schedule_override.get("external_resume_candidate_last_seen_utc")
+                )
+                proof_payload = {
+                    "active": sorted(active_ids),
+                    "starts": {
+                        str(relay_id): start.isoformat() if start is not None else None
+                        for relay_id, start in sorted(live_starts.items())
+                    },
+                }
+                proof_hash = _plan_change_fingerprint(
+                    "EXTERNAL_RESUME", proof_payload
+                )
+                continuous = (
+                    candidate_last is not None
+                    and timedelta(0) <= now - candidate_last <= timedelta(minutes=3)
+                )
+                if external_resume:
+                    if (
+                        candidate_since is None
+                        or not continuous
+                        or schedule_override.get("external_resume_candidate_hash")
+                        != proof_hash
+                    ):
+                        confirming_override = {
+                            **schedule_override,
+                            "external_resume_candidate_hash": proof_hash,
+                            "external_resume_candidate_since_utc": now.isoformat(),
+                            "external_resume_candidate_last_seen_utc": now.isoformat(),
+                        }
+                        confirming_state = replace(
+                            state,
+                            revision=state.revision + 1,
+                            irrigation_schedule_override_json=(
+                                dump_irrigation_schedule_object(confirming_override)
+                            ),
+                        )
+                        return _persist_result(
+                            store=store,
+                            original=original,
+                            state=confirming_state,
+                            result=result,
+                            details=details,
+                            settings=settings,
+                            decision_code="IRRIGATION_SCHEDULE_EXTERNAL_RESUME_CONFIRMING",
+                            message=(
+                                "Eine direkte Hydrawise-Änderung wird über zwei "
+                                "Minutenzyklen bestätigt."
+                            ),
+                        )
+                    confirmation_minutes = _env_int(
+                        environment,
+                        "IRRIGATION_PLAN_CHANGE_CONFIRMATION_MINUTES",
+                        2,
+                        minimum=1,
+                        maximum=15,
+                    )
+                    if now - candidate_since < timedelta(
+                        minutes=confirmation_minutes
+                    ):
+                        confirming_override = {
+                            **schedule_override,
+                            "external_resume_candidate_last_seen_utc": now.isoformat(),
+                        }
+                        confirming_state = replace(
+                            state,
+                            revision=state.revision + 1,
+                            irrigation_schedule_override_json=(
+                                dump_irrigation_schedule_object(confirming_override)
+                            ),
+                        )
+                        return _persist_result(
+                            store=store,
+                            original=original,
+                            state=confirming_state,
+                            result=result,
+                            details=details,
+                            settings=settings,
+                            decision_code="IRRIGATION_SCHEDULE_EXTERNAL_RESUME_CONFIRMING",
+                            message=(
+                                "Die zweite Bestätigung der direkten "
+                                "Hydrawise-Änderung steht noch aus."
+                            ),
+                        )
+                    state = replace(
+                        state,
+                        revision=state.revision + 1,
+                        irrigation_schedule_override_json=None,
+                        irrigation_schedule_history_json=(
+                            append_irrigation_schedule_history(
+                                state.irrigation_schedule_history_json,
+                                now_utc=now,
+                                action=override_kind,
+                                status="SUPERSEDED_EXTERNALLY",
+                                summary=(
+                                    "Die Pause wurde direkt in Hydrawise "
+                                    "geändert oder aufgehoben."
+                                ),
+                            )
+                        ),
+                    )
+                    schedule_override = None
+                elif candidate_since is not None or candidate_last is not None:
+                    cleaned_override = dict(schedule_override)
+                    for key in (
+                        "external_resume_candidate_hash",
+                        "external_resume_candidate_since_utc",
+                        "external_resume_candidate_last_seen_utc",
+                    ):
+                        cleaned_override.pop(key, None)
+                    state = replace(
+                        state,
+                        revision=state.revision + 1,
+                        irrigation_schedule_override_json=(
+                            dump_irrigation_schedule_object(cleaned_override)
+                        ),
+                    )
+                    schedule_override = cleaned_override
+            if schedule_override is None:
+                override_kind = ""
+                suspend_until = None
             if override_kind == "CUSTOM_NEXT":
                 desired_start = _parse_time(schedule_override.get("desired_start_utc"))
                 if desired_start is None:
@@ -2048,7 +2243,26 @@ def run_full_failsafe_cycle(
             decision_code="IRRIGATION_STATE_INVALID_HOLD",
             message="Ein unbekannter Beregnungszustand sperrt jede automatische Fortsetzung.",
         )
-    if irrigation_due and state.irrigation_phase is None:
+    external_irrigation_observed = (
+        operator_action not in {"START_IRRIGATION", "START_IRRIGATION_ZONE"}
+        and state.irrigation_phase is None
+        and _external_irrigation_is_running_or_changing_zone(
+            state,
+            details,
+            now_utc=now,
+            previous_state=original,
+        )
+    )
+    details["external_irrigation_observation"] = {
+        "active": external_irrigation_observed,
+        "command_sent": False,
+        "reason": (
+            "Hydrawise-Lauf wurde bereits außerhalb der Automatik gestartet."
+            if external_irrigation_observed
+            else None
+        ),
+    }
+    if irrigation_due and state.irrigation_phase is None and not external_irrigation_observed:
         try:
             if operator_action == "START_IRRIGATION":
                 plan_id, zones = _validated_operator_plan(
@@ -2485,16 +2699,49 @@ def run_full_failsafe_cycle(
         )
 
     if state.irrigation_phase == "FAILED":
-        return _persist_result(
-            store=store,
-            original=original,
-            state=state,
-            result=result,
-            details=details,
-            settings=settings,
-            decision_code="IRRIGATION_FAILED_HOLD",
-            message="Beregnungsfehler gespeichert; automatischer Start bleibt gesperrt.",
+        failed_clear_since = _parse_time(state.hydrawise_clear_since_utc)
+        failed_release_minutes = _env_int(
+            environment,
+            "HYDRAWISE_CLEAR_CONFIRMATION_MINUTES",
+            120,
+            minimum=1,
+            maximum=1440,
         )
+        recoverable_external_plan_failure = (
+            state.irrigation_failed_reason == RECOVERABLE_EXTERNAL_PLAN_FAILURE
+            and mower.get("connected") is True
+            and activity in PARKED_ACTIVITIES
+            and error_code == 0
+            and mower_state not in ERROR_STATES
+            and hydra_safety.get("available") is True
+            and hydra_safety.get("fresh") is True
+            and hydra_safety.get("clear_now") is True
+            and int(hydra_safety.get("active_zone_count") or 0) == 0
+            and relay_allowlist_valid
+            and failed_clear_since is not None
+            and state.hydrawise_clear_origin == "IRRIGATION_END"
+            and now - failed_clear_since
+            >= timedelta(minutes=failed_release_minutes)
+        )
+        if recoverable_external_plan_failure:
+            details["irrigation_failure_recovery"] = {
+                "recovered": True,
+                "reason": "Extern gestarteter Lauf ist seit 120 Minuten sicher beendet.",
+                "clear_since_utc": failed_clear_since.isoformat(),
+                "command_sent": False,
+            }
+            state = _clear_irrigation(state)
+        else:
+            return _persist_result(
+                store=store,
+                original=original,
+                state=state,
+                result=result,
+                details=details,
+                settings=settings,
+                decision_code="IRRIGATION_FAILED_HOLD",
+                message="Beregnungsfehler gespeichert; automatischer Start bleibt gesperrt.",
+            )
 
     if state.irrigation_phase in ACTIVE_IRRIGATION_PHASES:
         park_confirmed = _parse_time(state.park_confirmed_utc)

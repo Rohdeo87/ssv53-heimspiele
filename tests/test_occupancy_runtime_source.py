@@ -105,6 +105,7 @@ def _environment(cache: str) -> dict[str, str]:
         "SSV53_CONFIG_MANAGED_IDENTITY_CLIENT_ID": "client",
         "SSV53_OCCUPANCY_CACHE_DIR": cache,
         "SSV53_OCCUPANCY_MAX_AGE_MINUTES": "720",
+        "SSV53_OCCUPANCY_HARD_MAX_AGE_MINUTES": "1440",
     }
 
 
@@ -193,6 +194,65 @@ class OccupancyRuntimeSourceTests(unittest.TestCase):
                     service_client_factory=lambda **_: (_ for _ in ()).throw(
                         ServiceRequestError("offline")
                     ),
+                    credential_factory=lambda **_: object(),
+                )
+
+    def test_read_only_display_uses_current_validated_feed_during_short_delay(self) -> None:
+        blobs = _blobs()
+        with tempfile.TemporaryDirectory() as cache:
+            result = resolve_occupancy_match_source(
+                _environment(cache),
+                now_utc=GENERATED + timedelta(minutes=721),
+                allow_stale_display=True,
+                service_client_factory=lambda **_: _Service(blobs),
+                credential_factory=lambda **_: object(),
+            )
+            self.assertFalse(result.fresh)
+            self.assertEqual(result.age_minutes, 721)
+            self.assertEqual(result.source_kind, "azure_blob")
+
+    def test_safety_relevant_lookup_stays_strict_during_same_delay(self) -> None:
+        blobs = _blobs()
+        with tempfile.TemporaryDirectory() as cache:
+            with self.assertRaisesRegex(RuntimeError, "kein veralteter Spielplan"):
+                resolve_occupancy_match_source(
+                    _environment(cache),
+                    now_utc=GENERATED + timedelta(minutes=721),
+                    service_client_factory=lambda **_: _Service(blobs),
+                    credential_factory=lambda **_: object(),
+                )
+
+    def test_read_only_display_rejects_feed_beyond_hard_limit(self) -> None:
+        blobs = _blobs()
+        with tempfile.TemporaryDirectory() as cache:
+            with self.assertRaisesRegex(RuntimeError, "kein veralteter Spielplan"):
+                resolve_occupancy_match_source(
+                    _environment(cache),
+                    now_utc=GENERATED + timedelta(minutes=1441),
+                    allow_stale_display=True,
+                    service_client_factory=lambda **_: _Service(blobs),
+                    credential_factory=lambda **_: object(),
+                )
+
+    def test_read_only_display_never_hides_malformed_current_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as cache:
+            original = _blobs()
+            resolve_occupancy_match_source(
+                _environment(cache),
+                now_utc=NOW,
+                service_client_factory=lambda **_: _Service(original, '"etag-old"'),
+                credential_factory=lambda **_: object(),
+            )
+            broken = _blobs(_feed("2026-08-29T13:00+02:00"))
+            manifest = json.loads(broken["current/manifest.json"])
+            manifest["occupancy_matches_sha256"] = "0" * 64
+            broken["current/manifest.json"] = json.dumps(manifest).encode("utf-8")
+            with self.assertRaisesRegex(RuntimeError, "kein veralteter Spielplan"):
+                resolve_occupancy_match_source(
+                    _environment(cache),
+                    now_utc=GENERATED + timedelta(minutes=721),
+                    allow_stale_display=True,
+                    service_client_factory=lambda **_: _Service(broken, '"etag-new"'),
                     credential_factory=lambda **_: object(),
                 )
 
