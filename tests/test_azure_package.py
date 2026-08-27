@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -39,6 +40,8 @@ class AzurePackageTests(unittest.TestCase):
                 self.assertIn("function_app.py", names)
                 self.assertIn("requirements.txt", names)
                 self.assertIn("package-manifest.json", names)
+                self.assertIn("daily_safety_report.py", names)
+                self.assertIn("mower/irrigation_schedule.py", names)
                 self.assertIn("mower/controller.py", names)
                 self.assertIn("public/rasen.ics", names)
                 self.assertIn("public/kunstrasen.ics", names)
@@ -77,6 +80,27 @@ class AzurePackageTests(unittest.TestCase):
                 ):
                     with self.subTest(marker=marker):
                         self.assertNotIn(marker, joined)
+
+                archive.extractall(Path(directory) / "extracted")
+
+            import_check = subprocess.run(
+                [sys.executable, "-c", "import function_app"],
+                cwd=Path(directory) / "extracted",
+                env={
+                    **os.environ,
+                    "PYTHONPATH": str(Path(directory) / "extracted"),
+                },
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(
+                import_check.returncode,
+                0,
+                msg=(
+                    "Das Azure-Quellpaket muss function_app vollständig "
+                    f"importieren können:\n{import_check.stderr}"
+                ),
+            )
 
     def test_build_workflow_is_artifact_only(self) -> None:
         content = WORKFLOW.read_text(encoding="utf-8")

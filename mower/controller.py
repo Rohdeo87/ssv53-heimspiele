@@ -7,7 +7,6 @@ from typing import Any, Mapping
 
 from mower.config_source import resolve_runtime_inputs
 from mower.dry_run import run_read_only_cycle
-from mower.park_only import run_park_only_cycle
 from mower.runtime import (
     ControlMode,
     CycleResult,
@@ -67,7 +66,7 @@ def run_control_cycle(
     past_due: bool,
     source: str = "azure-timer",
     live_cycle_runner: LiveCycleRunner = run_read_only_cycle,
-    park_only_runner: ParkOnlyRunner = run_park_only_cycle,
+    park_only_runner: ParkOnlyRunner | None = None,
     full_mower_runner: FullMowerRunner | None = None,
     full_failsafe_runner: FullFailsafeRunner | None = None,
     runtime_input_resolver: RuntimeInputResolver = resolve_runtime_inputs,
@@ -147,6 +146,13 @@ def run_control_cycle(
         return result
 
     if settings.control_mode is ControlMode.PARK_ONLY:
+        if park_only_runner is None:
+            # Die schreibfähige PARK_ONLY-Implementierung wird nur geladen,
+            # wenn dieser Modus tatsächlich aktiv ist. Reine DRY_RUN-Pakete
+            # bleiben dadurch importierbar, ohne Aktionsmodule mitzuliefern.
+            from mower.park_only import run_park_only_cycle
+
+            park_only_runner = run_park_only_cycle
         return park_only_runner(
             now_utc=now_utc,
             settings=settings,

@@ -11,6 +11,7 @@ from pathlib import Path, PurePosixPath
 
 
 REQUIRED_FILES = (
+    "daily_safety_report.py",
     "function_app.py",
     "host.json",
     "order_mail.py",
@@ -35,6 +36,7 @@ REQUIRED_FILES = (
     "mower/hydrawise.py",
     "mower/irrigation_recovery.py",
     "mower/irrigation_journal.py",
+    "mower/irrigation_schedule.py",
     "mower/planner.py",
     "mower/runtime.py",
     "mower/safety.py",

@@ -20,7 +20,7 @@ FIELD_ORDER = (
     "Herkunft",
     "Pflicht / freiwillig",
 )
-CONTENT_FINGERPRINT = "6cbd082b9edd8311303e18c5c1d078978b05f0dfa6e1e3bdad93337fc57c5760"
+CONTENT_FINGERPRINT = "664d818081a10f6403df67ea4cba4940c3155eaa146e7935ec95f3e55f365c9a"
 
 
 class FragmentTextParser(HTMLParser):

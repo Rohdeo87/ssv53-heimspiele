@@ -248,7 +248,7 @@ class OrderMailStore:
         if saved_recipient_hash and saved_recipient_hash != recipient_hash:
             raise OrderMailError(
                 "ORDER_RECIPIENT_CONFLICT",
-                "Für diese Bestellnummer wurde bereits eine andere Empfängeradresse registriert.",
+                "Für diese Reservierungsnummer wurde bereits eine andere Empfängeradresse registriert.",
                 status_code=409,
             )
         if status == "sent":
@@ -471,7 +471,7 @@ def _safe_short_text(value: Any, *, field: str, max_length: int) -> str:
     if not text or len(text) > max_length:
         raise OrderMailError(
             "ORDER_DETAILS_INVALID",
-            f"Das Feld {field} der Bestellübersicht ist ungültig.",
+            f"Das Feld {field} der Reservierungsübersicht ist ungültig.",
             status_code=400,
         )
     return text
@@ -481,7 +481,7 @@ def _strict_int(value: Any, *, field: str, minimum: int, maximum: int) -> int:
     if isinstance(value, bool):
         raise OrderMailError(
             "ORDER_DETAILS_INVALID",
-            f"Das Feld {field} der Bestellübersicht ist ungültig.",
+            f"Das Feld {field} der Reservierungsübersicht ist ungültig.",
             status_code=400,
         )
     try:
@@ -489,19 +489,19 @@ def _strict_int(value: Any, *, field: str, minimum: int, maximum: int) -> int:
     except (TypeError, ValueError) as exc:
         raise OrderMailError(
             "ORDER_DETAILS_INVALID",
-            f"Das Feld {field} der Bestellübersicht ist ungültig.",
+            f"Das Feld {field} der Reservierungsübersicht ist ungültig.",
             status_code=400,
         ) from exc
     if str(parsed) != str(value).strip() and not isinstance(value, int):
         raise OrderMailError(
             "ORDER_DETAILS_INVALID",
-            f"Das Feld {field} der Bestellübersicht ist ungültig.",
+            f"Das Feld {field} der Reservierungsübersicht ist ungültig.",
             status_code=400,
         )
     if parsed < minimum or parsed > maximum:
         raise OrderMailError(
             "ORDER_DETAILS_INVALID",
-            f"Das Feld {field} der Bestellübersicht ist außerhalb des erlaubten Bereichs.",
+            f"Das Feld {field} der Reservierungsübersicht ist außerhalb des erlaubten Bereichs.",
             status_code=400,
         )
     return parsed
@@ -541,13 +541,13 @@ def _normalize_product_keys(
     if group and group not in ALLOWED_GROUP_KEYS:
         raise OrderMailError(
             "ORDER_DETAILS_INVALID",
-            "Die Produktgruppe der Bestellübersicht ist ungültig.",
+            "Die Produktgruppe der Reservierungsübersicht ist ungültig.",
             status_code=400,
         )
     if color and color not in ALLOWED_COLOR_KEYS:
         raise OrderMailError(
             "ORDER_DETAILS_INVALID",
-            "Die Produktfarbe der Bestellübersicht ist ungültig.",
+            "Die Produktfarbe der Reservierungsübersicht ist ungültig.",
             status_code=400,
         )
     return group or None, color or None
@@ -573,7 +573,7 @@ def _validate_order_details(
     if not isinstance(raw_items, list) or not raw_items or len(raw_items) > MAX_ORDER_ITEMS:
         raise OrderMailError(
             "ORDER_DETAILS_INVALID",
-            "Die Bestellübersicht enthält eine ungültige Anzahl von Positionen.",
+            "Die Reservierungsübersicht enthält eine ungültige Anzahl von Positionen.",
             status_code=400,
         )
 
@@ -583,7 +583,7 @@ def _validate_order_details(
         if not isinstance(raw_item, Mapping):
             raise OrderMailError(
                 "ORDER_DETAILS_INVALID",
-                "Eine Position der Bestellübersicht ist ungültig.",
+                "Eine Position der Reservierungsübersicht ist ungültig.",
                 status_code=400,
             )
 
@@ -620,7 +620,7 @@ def _validate_order_details(
         if calculated_total > MAX_ORDER_TOTAL_CENTS:
             raise OrderMailError(
                 "ORDER_DETAILS_INVALID",
-                "Die Gesamtsumme der Bestellübersicht überschreitet den erlaubten Bereich.",
+                "Die Gesamtsumme der Reservierungsübersicht überschreitet den erlaubten Bereich.",
                 status_code=400,
             )
 
@@ -648,7 +648,7 @@ def _validate_order_details(
         if total != calculated_total:
             raise OrderMailError(
                 "ORDER_TOTAL_MISMATCH",
-                "Die übermittelte Gesamtsumme stimmt nicht mit den Bestellpositionen überein.",
+                "Die übermittelte Gesamtsumme stimmt nicht mit den reservierten T-Shirts überein.",
                 status_code=400,
             )
 
@@ -665,7 +665,7 @@ def _validate_ready_request(
     if not ORDER_ID_PATTERN.fullmatch(order_id):
         raise OrderMailError(
             "ORDER_ID_INVALID",
-            "Die Bestellnummer ist ungültig.",
+            "Die Reservierungsnummer ist ungültig.",
             status_code=400,
         )
     if not EMAIL_PATTERN.fullmatch(recipient):
@@ -689,7 +689,7 @@ def _plain_order_details(items: list[dict[str, Any]], total_cents: int | None) -
     if not items:
         return ""
 
-    lines = ["", "Deine Bestellung:"]
+    lines = ["", "Deine Reservierung:"]
     for item in items:
         lines.append(
             f"- {item['variant']} | Größe {item['size']} | "
@@ -763,16 +763,15 @@ def _build_ready_message(
     items: list[dict[str, Any]],
     total_cents: int | None,
 ) -> EmailMessage:
-    subject = "Deine SSV53-Bestellung ist abholbereit"
+    subject = "Deine SSV53-Reservierung ist zur Ausgabe bereit"
 
     details_plain = _plain_order_details(items, total_cents)
     plain = (
         f"Hallo {name},\n\n"
-        f"deine Bestellung {order_id} ist ab sofort abholbereit.\n"
+        f"deine Reservierung {order_id} ist ab sofort zur Ausgabe bereit.\n"
         f"{details_plain}\n"
-        "Bezahlung: bei Abholung.\n\n"
-        "Den aktuellen Status deiner Bestellung findest du in der SSV53-App "
-        "unter „Sonstiges → Meine Bestellungen“.\n\n"
+        "Den aktuellen Status deiner Reservierung findest du in der SSV53-App "
+        "unter „Sonstiges → Meine Reservierungen“.\n\n"
         "Viele Grüße\n"
         "Schönwalder SV 1953 e.V.\n"
     )
@@ -802,7 +801,7 @@ def _build_ready_message(
         )
         details_section = f"""
           <div style="margin-top:26px;font-size:17px;font-weight:800;color:{APP_DARK_BLUE};">
-            Deine Bestellung
+            Deine Reservierung
           </div>
           <div style="height:2px;background:{APP_GOLD};width:86px;margin:8px 0 14px 0;"></div>
           {product_rows}
@@ -830,7 +829,7 @@ def _build_ready_message(
             <tr>
               <td align="center" style="padding:4px 24px 0 24px;">
                 <div style="font-size:25px;line-height:1.25;font-weight:800;color:#111111;">
-                  Deine Bestellung ist abholbereit
+                  Deine Reservierung ist zur Ausgabe bereit
                 </div>
                 <div style="margin-top:8px;font-size:14px;line-height:1.5;color:#555555;">
                   Schönwalder SV 1953 e.V.
@@ -845,7 +844,7 @@ def _build_ready_message(
                   Hallo <strong>{safe_name}</strong>,
                 </div>
                 <div style="margin-top:9px;font-size:15px;line-height:1.6;color:#374151;">
-                  deine Bestellung ist ab sofort zur Abholung bereit.
+                  deine Reservierung ist ab sofort zur Ausgabe bereit.
                 </div>
 
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
@@ -854,7 +853,7 @@ def _build_ready_message(
                   <tr>
                     <td style="padding:13px 15px;">
                       <div style="font-size:12px;line-height:1.3;color:{APP_MUTED};">
-                        Bestellnummer
+                        Reservierungsnummer
                       </div>
                       <div style="margin-top:3px;font-size:16px;line-height:1.3;
                                   font-weight:800;color:{APP_DARK_BLUE};">
@@ -864,27 +863,16 @@ def _build_ready_message(
                     <td align="right" valign="middle" style="padding:13px 15px;">
                       <span style="display:inline-block;padding:7px 10px;border-radius:999px;
                                    background:{APP_BLUE};color:#FFFFFF;font-size:12px;
-                                   font-weight:800;">ABHOLBEREIT</span>
+                                   font-weight:800;">AUSGABEBEREIT</span>
                     </td>
                   </tr>
                 </table>
 
                 {details_section}
 
-                <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
-                       style="margin-top:18px;border-collapse:separate;border-spacing:0;
-                              border:1px solid {APP_BORDER};border-radius:14px;background:#F8FAFC;">
-                  <tr>
-                    <td style="padding:14px 16px;font-size:14px;line-height:1.55;color:#374151;">
-                      <strong style="color:{APP_DARK_BLUE};">Bezahlung</strong><br>
-                      Bei Abholung
-                    </td>
-                  </tr>
-                </table>
-
                 <div style="margin-top:22px;font-size:14px;line-height:1.6;color:#555555;">
                   Den aktuellen Status findest du jederzeit in der SSV53-App unter
-                  <strong>Sonstiges → Meine Bestellungen</strong>.
+                  <strong>Sonstiges → Meine Reservierungen</strong>.
                 </div>
 
                 <div style="margin-top:28px;font-size:14px;line-height:1.6;color:#374151;">
@@ -897,7 +885,7 @@ def _build_ready_message(
 
           <div style="max-width:620px;margin:13px auto 0 auto;padding:0 12px;
                       text-align:center;font-size:11px;line-height:1.5;color:#8A94A3;">
-            Diese E-Mail wurde automatisch zu deiner SSV53-T-Shirt-Bestellung versendet.
+            Diese E-Mail wurde automatisch zu deiner SSV53-T-Shirt-Reservierung versendet.
           </div>
         </td>
       </tr>
@@ -928,7 +916,7 @@ def send_order_ready_mail(
     if not settings.enabled:
         raise OrderMailError(
             "ORDER_MAIL_DISABLED",
-            "Der produktive Bestell-Mailversand ist noch deaktiviert.",
+            "Der produktive Reservierungs-Mailversand ist noch deaktiviert.",
             status_code=503,
         )
 
@@ -953,7 +941,7 @@ def send_order_ready_mail(
     if claim != "claimed":
         raise OrderMailError(
             "ORDER_MAIL_BUSY",
-            "Für diese Bestellung wird bereits eine Mail verarbeitet.",
+            "Für diese Reservierung wird bereits eine Mail verarbeitet.",
             status_code=409,
         )
 

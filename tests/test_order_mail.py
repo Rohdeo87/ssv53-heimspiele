@@ -128,7 +128,7 @@ class OrderMailTests(unittest.TestCase):
         smtp = FakeSMTP.instances[-1]
         self.assertEqual(
             smtp.message["Subject"],
-            "Deine SSV53-Bestellung ist abholbereit",
+            "Deine SSV53-Reservierung ist zur Ausgabe bereit",
         )
         self.assertEqual(smtp.message["To"], "test@example.org")
         self.assertIn(

@@ -127,10 +127,12 @@ class OrderMailDetailTests(unittest.TestCase):
         self.assertIn("Icon_Verein.png", html)
         self.assertIn("Kids_wei%C3%9F.jpeg", html)
         self.assertIn("Damen_blau.jpeg", html)
-        self.assertIn("ABHOLBEREIT", html)
+        self.assertIn("AUSGABEBEREIT", html)
         self.assertIn("Gesamtsumme", html)
         self.assertIn("45,00 €", html)
-        self.assertIn("Sonstiges → Meine Bestellungen", html)
+        self.assertIn("Sonstiges → Meine Reservierungen", html)
+        self.assertNotIn("Bezahlung", html)
+        self.assertIn("Deine Reservierung", plain)
 
     def test_client_supplied_image_url_is_never_used(self):
         payload = self.payload()
