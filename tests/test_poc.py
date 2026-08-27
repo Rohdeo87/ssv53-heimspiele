@@ -86,6 +86,53 @@ class ClubParserTest(unittest.TestCase):
         apply_venue_rules(item, rules(), "exclude", config()["local_venue_pattern"])
         self.assertEqual(("include", "Rasen"), (item.decision, item.calendar))
 
+    def test_away_game_without_published_venue_does_not_block_feed(self):
+        item = Match(
+            external_id="AWAY-WITHOUT-VENUE",
+            match_number="710029016",
+            team_id="TEAM-UE40",
+            team_name="Schönwalder SV (Ü40)",
+            team_category="Herren Ü40 | Kreispokal",
+            team_role="away",
+            kickoff="2026-09-25T18:30+02:00",
+            home_team="FC Deetz Ü40",
+            away_team="Schönwalder SV (Ü40)",
+            competition="Herren Ü40 | Kreispokal",
+            match_type="PO",
+            status="",
+            venue_raw="",
+            detail_url="https://www.fussball.de/spiel/example/-/spiel/AWAY-WITHOUT-VENUE",
+            source_url="fixture://club",
+            warnings=["Spielstätte fehlt"],
+        )
+        apply_venue_rules(item, rules(), "exclude", config()["local_venue_pattern"])
+        self.assertEqual("exclude", item.decision)
+        self.assertEqual("Auswärtsspiel ohne Spielstätte", item.venue_rule)
+        self.assertNotIn("Spielstätte fehlt", item.warnings)
+
+    def test_home_game_without_published_venue_still_requires_review(self):
+        item = Match(
+            external_id="HOME-WITHOUT-VENUE",
+            match_number="710029017",
+            team_id="TEAM-A",
+            team_name="Schönwalder SV",
+            team_category="A-Junioren",
+            team_role="home",
+            kickoff="2026-09-26T12:00+02:00",
+            home_team="Schönwalder SV",
+            away_team="Gastverein",
+            competition="A-Junioren",
+            match_type="ME",
+            status="",
+            venue_raw="",
+            detail_url="https://www.fussball.de/spiel/example/-/spiel/HOME-WITHOUT-VENUE",
+            source_url="fixture://club",
+            warnings=["Spielstätte fehlt"],
+        )
+        apply_venue_rules(item, rules(), "exclude", config()["local_venue_pattern"])
+        self.assertEqual("review", item.decision)
+        self.assertEqual("Spielstätte fehlt", item.venue_rule)
+
     def test_venue_rules_include_both_local_pitches_and_exclude_deetz(self):
         matches = parse_club_matchplan(self.fixture(), "fixture://club", config())
         for item in matches:
