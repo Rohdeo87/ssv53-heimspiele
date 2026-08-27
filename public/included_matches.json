@@ -78,7 +78,7 @@
     "team_name": "Schönwalder SV (Ü40)",
     "team_category": "Herren Ü40 | Kreisliga",
     "team_role": "home",
-    "kickoff": "2026-09-04T19:00+02:00",
+    "kickoff": "2026-09-04T18:30+02:00",
     "home_team": "Schönwalder SV (Ü40)",
     "away_team": "SV Grün-Weiss Brieselang Ü40",
     "competition": "Fr, | Herren Ü40 | Kreisliga",
@@ -90,9 +90,9 @@
     "decision": "include",
     "calendar": "Kunstrasen",
     "venue_rule": "Kunstrasen Schönwalde",
-    "event_start": "2026-09-04T18:00+02:00",
-    "event_end": "2026-09-04T21:30+02:00",
-    "checksum": "7f298b1bb6a56fcec8c9d83ef868cd017892a0153e2d8272ae002f409baa5a6e",
+    "event_start": "2026-09-04T17:30+02:00",
+    "event_end": "2026-09-04T21:00+02:00",
+    "checksum": "c5ddf905678fde69d10f5d2bfb0bb04e8c978f6ae8d35f093e52e07bf1da2e41",
     "warnings": []
   },
   {

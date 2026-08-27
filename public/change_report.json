@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-26T16:37:56+00:00",
+  "generatedAt": "2026-08-27T10:58:43+00:00",
   "status": "ok",
   "counts": {
     "before": 42,
     "after": 42,
     "added": 0,
-    "changed": 0,
+    "changed": 1,
     "removed": 0
   },
   "guard": {
@@ -16,6 +16,69 @@
     "reasons": []
   },
   "added": [],
-  "changed": [],
+  "changed": [
+    {
+      "id": "dfb:031DB86VLC000000VS5489BUVUR5FS5A",
+      "label": "Schönwalder SV (Ü40) · Schönwalder SV (Ü40) – SV Grün-Weiss Brieselang Ü40 · 04.09.2026 18:30 · Kunstrasen",
+      "before": {
+        "id": "dfb:031DB86VLC000000VS5489BUVUR5FS5A",
+        "title": "Spiel Schönwalder SV (Ü40): Schönwalder SV (Ü40) – SV Grün-Weiss Brieselang Ü40",
+        "start": "2026-09-04T18:00+02:00",
+        "end": "2026-09-04T21:30+02:00",
+        "kickoff": "2026-09-04T19:00+02:00",
+        "place": "kunstrasen",
+        "calendar": "Kunstrasen",
+        "team": "Schönwalder SV (Ü40)",
+        "teamCategory": "Herren Ü40 | Kreisliga",
+        "teamRole": "home",
+        "homeTeam": "Schönwalder SV (Ü40)",
+        "awayTeam": "SV Grün-Weiss Brieselang Ü40",
+        "competition": "Fr, | Herren Ü40 | Kreisliga",
+        "status": "",
+        "detailLink": "https://www.fussball.de/spiel/schoenwalder-sv-ue40-sv-gruen-weiss-brieselang-ue40/-/spiel/031DB86VLC000000VS5489BUVUR5FS5A",
+        "source": "fussball.de",
+        "checksum": "7f298b1bb6a56fcec8c9d83ef868cd017892a0153e2d8272ae002f409baa5a6e"
+      },
+      "after": {
+        "id": "dfb:031DB86VLC000000VS5489BUVUR5FS5A",
+        "title": "Spiel Schönwalder SV (Ü40): Schönwalder SV (Ü40) – SV Grün-Weiss Brieselang Ü40",
+        "start": "2026-09-04T17:30+02:00",
+        "end": "2026-09-04T21:00+02:00",
+        "kickoff": "2026-09-04T18:30+02:00",
+        "place": "kunstrasen",
+        "calendar": "Kunstrasen",
+        "team": "Schönwalder SV (Ü40)",
+        "teamCategory": "Herren Ü40 | Kreisliga",
+        "teamRole": "home",
+        "homeTeam": "Schönwalder SV (Ü40)",
+        "awayTeam": "SV Grün-Weiss Brieselang Ü40",
+        "competition": "Fr, | Herren Ü40 | Kreisliga",
+        "status": "",
+        "detailLink": "https://www.fussball.de/spiel/schoenwalder-sv-ue40-sv-gruen-weiss-brieselang-ue40/-/spiel/031DB86VLC000000VS5489BUVUR5FS5A",
+        "source": "fussball.de",
+        "checksum": "c5ddf905678fde69d10f5d2bfb0bb04e8c978f6ae8d35f093e52e07bf1da2e41"
+      },
+      "changes": [
+        {
+          "field": "kickoff",
+          "label": "Anstoß",
+          "before": "2026-09-04T19:00+02:00",
+          "after": "2026-09-04T18:30+02:00"
+        },
+        {
+          "field": "start",
+          "label": "Belegungsbeginn",
+          "before": "2026-09-04T18:00+02:00",
+          "after": "2026-09-04T17:30+02:00"
+        },
+        {
+          "field": "end",
+          "label": "Belegungsende",
+          "before": "2026-09-04T21:30+02:00",
+          "after": "2026-09-04T21:00+02:00"
+        }
+      ]
+    }
+  ],
   "removed": []
 }
