@@ -36,7 +36,7 @@ class OccupancyDeployWorkflowTests(unittest.TestCase):
 
     def test_deploy_still_preserves_settings_and_full_failsafe_package(self) -> None:
         self.assertIn("Azure-Appsettings nach Deployment vergleichen", self.workflow)
-        self.assertIn("FULL_FAILSAFE_7_ZONES_120_MIN_CAPABLE_LOCKED", self.workflow)
+        self.assertIn("FULL_FAILSAFE_7_ZONES_150_MIN_ADAPTIVE_SHADOW_LOCKED", self.workflow)
         self.assertIn("park_write_gate_required", self.workflow)
         self.assertIn("start_write_gate_required", self.workflow)
         self.assertIn("irrigation_write_gate_required", self.workflow)

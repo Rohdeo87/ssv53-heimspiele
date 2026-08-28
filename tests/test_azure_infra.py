@@ -33,7 +33,20 @@ class AzureInfrastructureTests(unittest.TestCase):
             "HYDRAWISE_EXPECTED_RELAY_IDS: '9104894,9104906,9104909,9104911,9104913,9104920,9104921'",
             self.bicep,
         )
-        self.assertIn("HYDRAWISE_CLEAR_CONFIRMATION_MINUTES: '120'", self.bicep)
+        self.assertIn("POST_IRRIGATION_DRYING_MINUTES: '150'", self.bicep)
+        self.assertIn("HYDRAWISE_CLEAR_CONFIRMATION_MINUTES: '150'", self.bicep)
+        self.assertIn(
+            "FULL_MOWER_HYDRAWISE_CLEAR_CONFIRMATION_MINUTES: '10'",
+            self.bicep,
+        )
+        self.assertIn("MOWER_PARK_LEAD_MINUTES: '4'", self.bicep)
+        self.assertIn("MOWER_PARK_CONFIRMATION_CYCLES: '2'", self.bicep)
+        self.assertIn("param weatherEnabled bool = false", self.bicep)
+        self.assertIn("WEATHER_ENABLED: string(weatherEnabled)", self.bicep)
+        self.assertIn("WEATHER_PROVIDER: 'OPEN_METEO'", self.bicep)
+        self.assertIn("WEATHER_MONTHLY_CALL_LIMIT: '900'", self.bicep)
+        self.assertIn("ADAPTIVE_EXECUTION_ENABLED: 'false'", self.bicep)
+        self.assertIn("IRRIGATION_FINISH_AFTER_SUNRISE_MINUTES: '60'", self.bicep)
 
     def test_storage_uses_managed_identity_without_shared_key(self) -> None:
         self.assertIn("allowSharedKeyAccess: false", self.bicep)
@@ -62,6 +75,9 @@ class AzureInfrastructureTests(unittest.TestCase):
                 "runtimeConfigMaxAgeMinutes",
                 "alertsEnabled",
                 "dynamicConfigEnabled",
+                "weatherEnabled",
+                "weatherLatitude",
+                "weatherLongitude",
             },
             set(self.parameters["parameters"]),
         )

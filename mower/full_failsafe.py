@@ -139,6 +139,39 @@ def _finish_operator_request(
     )
 
 
+def _mower_status_is_fresh(
+    mower: Mapping[str, Any],
+    *,
+    now_utc: datetime,
+    max_age_seconds: int,
+) -> bool:
+    raw = mower.get("status_timestamp_ms")
+    try:
+        observed = datetime.fromtimestamp(float(raw) / 1000, tz=timezone.utc)
+    except (TypeError, ValueError, OSError):
+        return False
+    age_seconds = (now_utc.astimezone(timezone.utc) - observed).total_seconds()
+    return -60 <= age_seconds <= max_age_seconds
+
+
+def _park_confirmation_ready(
+    state: AutomationState,
+    *,
+    now_utc: datetime,
+    activity: str,
+    confirmation_minutes: int,
+    required_observations: int,
+) -> bool:
+    confirmed = _parse_time(state.park_confirmed_utc)
+    return (
+        state.parked_by_automation
+        and activity in PARKED_ACTIVITIES
+        and confirmed is not None
+        and now_utc - confirmed >= timedelta(minutes=confirmation_minutes)
+        and int(state.park_confirmed_observations or 0) >= required_observations
+    )
+
+
 def _occupancy_block_key(block: Mapping[str, Any]) -> str | None:
     """Bindet eine Platzwart-Freigabe an genau den angezeigten Belegungsblock."""
 
@@ -905,7 +938,7 @@ def _external_irrigation_is_running_or_changing_zone(
     Ein in Hydrawise oder am Controller gestarteter Lauf darf nicht nachträglich
     als neuer Automatikplan übernommen werden. Insbesondere ist eine laufende
     Zone kein ungültiger Zonenplan. Während der kurzen Umschaltpause zwischen
-    zwei Zonen bleibt die Erkennung erhalten; der normale 120-Minuten-Nachlauf
+    zwei Zonen bleibt die Erkennung erhalten; die konfigurierte Trocknungssperre
     wird weiterhin allein aus den fortlaufenden Live-Beobachtungen abgeleitet.
     """
 
@@ -980,6 +1013,7 @@ def _state_details(state: AutomationState, *, persisted: bool, error: str | None
         "automation_restart_allowed": state.automation_restart_allowed,
         "park_command_sent_utc": state.park_command_sent_utc,
         "park_confirmed_utc": state.park_confirmed_utc,
+        "park_confirmed_observations": state.park_confirmed_observations,
         "continuous_mowing_owned": state.continuous_mowing_owned,
         "irrigation_phase": state.irrigation_phase,
         "irrigation_plan_id": state.irrigation_plan_id,
@@ -1211,6 +1245,24 @@ def run_full_failsafe_cycle(
     error_code = int(mower.get("error_code") or 0)
     battery = int(mower.get("battery_percent") or 0)
     target_area = _as_dict(mower.get("target_work_area"))
+    mower_status_max_age_seconds = _env_int(
+        environment,
+        "MOWER_STATUS_MAX_AGE_SECONDS",
+        180,
+        minimum=30,
+        maximum=900,
+    )
+    mower_status_fresh = _mower_status_is_fresh(
+        mower,
+        now_utc=now,
+        max_age_seconds=mower_status_max_age_seconds,
+    )
+    details["mower_status_gate"] = {
+        "connected": mower.get("connected") is True,
+        "fresh": mower_status_fresh,
+        "max_age_seconds": mower_status_max_age_seconds,
+        "status_timestamp_ms": mower.get("status_timestamp_ms"),
+    }
 
     store = state_store_factory(environment)
     original = store.load()
@@ -1470,12 +1522,23 @@ def run_full_failsafe_cycle(
             override_status = "APPLYING"
 
         if override_kind == "RESUME" and override_status == "PARKING":
-            park_confirmed = _parse_time(state.park_confirmed_utc)
+            required_park_observations = _env_int(
+                environment,
+                "MOWER_PARK_CONFIRMATION_CYCLES",
+                2,
+                minimum=2,
+                maximum=10,
+            )
             if (
-                state.parked_by_automation
-                and activity in PARKED_ACTIVITIES
-                and park_confirmed is not None
-                and now - park_confirmed >= timedelta(minutes=1)
+                _park_confirmation_ready(
+                    state,
+                    now_utc=now,
+                    activity=activity,
+                    confirmation_minutes=1,
+                    required_observations=required_park_observations,
+                )
+                and mower.get("connected") is True
+                and mower_status_fresh
             ):
                 schedule_override = {**schedule_override, "status": "APPLYING"}
                 state = replace(
@@ -2702,9 +2765,9 @@ def run_full_failsafe_cycle(
         failed_clear_since = _parse_time(state.hydrawise_clear_since_utc)
         failed_release_minutes = _env_int(
             environment,
-            "HYDRAWISE_CLEAR_CONFIRMATION_MINUTES",
-            120,
-            minimum=1,
+            "POST_IRRIGATION_DRYING_MINUTES",
+            150,
+            minimum=150,
             maximum=1440,
         )
         recoverable_external_plan_failure = (
@@ -2726,7 +2789,10 @@ def run_full_failsafe_cycle(
         if recoverable_external_plan_failure:
             details["irrigation_failure_recovery"] = {
                 "recovered": True,
-                "reason": "Extern gestarteter Lauf ist seit 120 Minuten sicher beendet.",
+                "reason": (
+                    "Extern gestarteter Lauf ist seit der konfigurierten "
+                    "Trocknungszeit sicher beendet."
+                ),
                 "clear_since_utc": failed_clear_since.isoformat(),
                 "command_sent": False,
             }
@@ -2744,13 +2810,19 @@ def run_full_failsafe_cycle(
             )
 
     if state.irrigation_phase in ACTIVE_IRRIGATION_PHASES:
-        park_confirmed = _parse_time(state.park_confirmed_utc)
         confirmation_minutes = _env_int(
             environment,
             "MOWER_PARK_CONFIRMATION_MINUTES",
             1,
             minimum=1,
             maximum=15,
+        )
+        required_park_observations = _env_int(
+            environment,
+            "MOWER_PARK_CONFIRMATION_CYCLES",
+            2,
+            minimum=2,
+            maximum=10,
         )
         if not state.parked_by_automation:
             return _persist_result(
@@ -3096,12 +3168,27 @@ def run_full_failsafe_cycle(
             )
 
         if (
-            park_confirmed is None
-            or now - park_confirmed < timedelta(minutes=confirmation_minutes)
-            or activity not in PARKED_ACTIVITIES
+            not _park_confirmation_ready(
+                state,
+                now_utc=now,
+                activity=activity,
+                confirmation_minutes=confirmation_minutes,
+                required_observations=required_park_observations,
+            )
+            or mower.get("connected") is not True
+            or not mower_status_fresh
             or error_code != 0
             or mower_state in ERROR_STATES
         ):
+            details["irrigation_park_gate"] = {
+                "connected": mower.get("connected") is True,
+                "status_fresh": mower_status_fresh,
+                "activity": activity,
+                "observations": int(state.park_confirmed_observations or 0),
+                "required_observations": required_park_observations,
+                "confirmed_since_utc": state.park_confirmed_utc,
+                "minimum_minutes": confirmation_minutes,
+            }
             return _persist_result(
                 store=store,
                 original=original,
@@ -3116,7 +3203,7 @@ def run_full_failsafe_cycle(
         occupancy_conflict_sources = (
             _source_parts(blocked_now.get("source"))
             | _source_parts(parking_block.get("source"))
-        ) & frozenset({"training", "match"})
+        ) - frozenset({"irrigation"})
         if occupancy_conflict_sources:
             details["irrigation_occupancy_guard"] = {
                 "active": True,
@@ -3132,7 +3219,7 @@ def run_full_failsafe_cycle(
                 decision_code="IRRIGATION_WAIT_FOR_OCCUPANCY_CLEAR",
                 message=(
                     "Die regulären Planstarts sind suspendiert; der vorgezogene "
-                    "Wasserstart wartet auf das Ende von Training oder Spiel."
+                    "Wasserstart wartet auf das Ende der Rasenbelegung."
                 ),
             )
 
@@ -3338,8 +3425,8 @@ def run_full_failsafe_cycle(
                     settings=settings,
                     decision_code="IRRIGATION_OPERATOR_STOPPED_BETWEEN_ZONES",
                     message=(
-                        "Keine weitere Zone startet; der 120-Minuten-"
-                        "Sicherheitsnachlauf beginnt."
+                        "Keine weitere Zone startet; die konfigurierte "
+                        "Trocknungssperre beginnt."
                     ),
                 )
             scheduled_override_start = min(
@@ -3876,7 +3963,10 @@ def run_full_failsafe_cycle(
                 details=details,
                 settings=settings,
                 decision_code="IRRIGATION_OPERATOR_STOPPED_NOW",
-                message="Hydrawise hat das Ende bestätigt; der 120-Minuten-Sicherheitsnachlauf beginnt.",
+                message=(
+                    "Hydrawise hat das Ende bestätigt; die konfigurierte "
+                    "Trocknungssperre beginnt."
+                ),
             )
 
         if state.irrigation_phase == "START_RESERVED":
@@ -4016,8 +4106,8 @@ def run_full_failsafe_cycle(
                     settings=settings,
                     decision_code="IRRIGATION_OPERATOR_STOPPED_AFTER_ZONE",
                     message=(
-                        "Die Zone ist bestätigt beendet; der 120-Minuten-"
-                        "Sicherheitsnachlauf beginnt."
+                        "Die Zone ist bestätigt beendet; die konfigurierte "
+                        "Trocknungssperre beginnt."
                     ),
                 )
             started_at = _parse_time(state.irrigation_zone_started_utc)
@@ -4156,12 +4246,12 @@ def run_full_failsafe_cycle(
     release_minutes = _env_int(
         environment,
         (
-            "HYDRAWISE_CLEAR_CONFIRMATION_MINUTES"
+            "POST_IRRIGATION_DRYING_MINUTES"
             if release_origin in full_release_origins
             else "HYDRAWISE_DATA_GAP_CONFIRMATION_MINUTES"
         ),
-        120 if release_origin in full_release_origins else 2,
-        minimum=1,
+        150 if release_origin in full_release_origins else 2,
+        minimum=150 if release_origin in full_release_origins else 1,
         maximum=1440,
     )
     release = evaluate_continuous_clear_confirmation(
@@ -4187,6 +4277,9 @@ def run_full_failsafe_cycle(
         **release.to_dict(),
         "origin": release_origin,
         "full_post_irrigation_hold": release_origin in full_release_origins,
+        "post_irrigation_drying_minutes": (
+            release_minutes if release_origin in full_release_origins else None
+        ),
         "cancelled_without_run_release": cancelled_without_run_release,
         "effective_allowed": release.allowed or cancelled_without_run_release,
     }

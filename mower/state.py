@@ -52,6 +52,7 @@ class AutomationState:
     automation_restart_allowed: bool = False
     park_command_sent_utc: str | None = None
     park_confirmed_utc: str | None = None
+    park_confirmed_observations: int = 0
     automation_park_until_utc: str | None = None
     last_start_command_utc: str | None = None
     continuous_mowing_owned: bool = False
@@ -99,6 +100,8 @@ class AutomationState:
             raise ValueError("Unerwarteter Zustands-Schlüssel.")
         if self.revision < 0:
             raise ValueError("revision darf nicht negativ sein.")
+        if self.park_confirmed_observations < 0:
+            raise ValueError("park_confirmed_observations darf nicht negativ sein.")
         if self.hydrawise_clear_origin not in {
             None,
             "DATA_GAP",
@@ -204,6 +207,9 @@ class AutomationState:
             park_confirmed_utc=_require_utc_iso(
                 _normalize_optional_text(values.get("park_confirmed_utc")),
                 "park_confirmed_utc",
+            ),
+            park_confirmed_observations=int(
+                values.get("park_confirmed_observations", 0) or 0
             ),
             automation_park_until_utc=_require_utc_iso(
                 _normalize_optional_text(
@@ -451,13 +457,33 @@ class AutomationState:
                 clear_origin = "DATA_GAP"
 
         parked_activity = str(mower_activity or "").strip().upper()
+        previous_parked_activity = str(self.last_mower_activity or "").strip().upper()
         park_confirmed = self.park_confirmed_utc
-        if (
-            self.parked_by_automation
-            and park_confirmed is None
-            and parked_activity in {"PARKED_IN_CS", "CHARGING"}
-        ):
-            park_confirmed = started.isoformat()
+        park_observations = int(self.park_confirmed_observations or 0)
+        if self.parked_by_automation and parked_activity in {
+            "PARKED_IN_CS",
+            "CHARGING",
+        }:
+            continuity = (
+                previous_parked_activity in {"PARKED_IN_CS", "CHARGING"}
+                and park_confirmed is not None
+                and park_observations > 0
+            )
+            if continuity:
+                park_observations += 1
+            elif park_confirmed is not None:
+                # Abwärtskompatible Migration eines bereits persistenten
+                # Parkzeitpunkts: Die Zeit bleibt erhalten, zählt aber ohne
+                # vorherige Aktivitätsbeobachtung erst als genau ein Zyklus.
+                park_observations = 1
+            else:
+                park_confirmed = started.isoformat()
+                park_observations = 1
+        else:
+            # Verlässt der Mäher die Station oder ist der Parkvorgang nicht
+            # mehr im Besitz der Automatik, muss die Bestätigung neu beginnen.
+            park_confirmed = None
+            park_observations = 0
         return replace(
             self,
             revision=self.revision + 1,
@@ -492,6 +518,7 @@ class AutomationState:
                 else None
             ),
             park_confirmed_utc=park_confirmed,
+            park_confirmed_observations=park_observations,
         )
 
     def record_command(
@@ -529,6 +556,7 @@ class AutomationState:
                 automation_restart_allowed=bool(restart_allowed),
                 park_command_sent_utc=sent.isoformat(),
                 park_confirmed_utc=None,
+                park_confirmed_observations=0,
                 automation_park_until_utc=(
                     _as_utc(park_until_utc, "park_until_utc").isoformat()
                     if park_until_utc is not None
@@ -548,6 +576,7 @@ class AutomationState:
                 last_start_command_utc=sent.isoformat(),
                 park_command_sent_utc=None,
                 park_confirmed_utc=None,
+                park_confirmed_observations=0,
                 automation_park_until_utc=None,
                 continuous_mowing_owned=bool(continuous_mowing),
                 continuous_mowing_work_area_id=(
@@ -579,6 +608,7 @@ class AutomationState:
             automation_restart_allowed=False,
             park_command_sent_utc=None,
             park_confirmed_utc=None,
+            park_confirmed_observations=0,
             automation_park_until_utc=None,
             last_command_fingerprint=None,
             last_command_utc=None,

@@ -149,7 +149,7 @@ jobs:
               if marker not in backend:
                   raise SystemExit(f"Shop-Mail-Markierung fehlt im ZIP: {marker}")
 
-          if manifest.get("safety_stage") != "FULL_FAILSAFE_7_ZONES_120_MIN_CAPABLE_LOCKED":
+          if manifest.get("safety_stage") != "FULL_FAILSAFE_7_ZONES_150_MIN_ADAPTIVE_SHADOW_LOCKED":
               raise SystemExit("FULL_FAILSAFE Sicherheitsstufe wurde verändert.")
 
           print("FULL_FAILSAFE-Paket enthält die neue Shop-Mail bei unveränderter Sicherheitsstufe.")

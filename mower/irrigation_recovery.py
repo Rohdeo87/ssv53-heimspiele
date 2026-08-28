@@ -206,7 +206,7 @@ def reset_failed_irrigation(
     status = hydrawise_fetcher(api_key, controller_id)
     reset_horizon_minutes = max(
         90,
-        int(environment.get("HYDRAWISE_CLEAR_CONFIRMATION_MINUTES", "120")),
+        int(environment.get("POST_IRRIGATION_DRYING_MINUTES", "150")),
     )
     safety: HydrawiseSafetySnapshot = evaluate_safety_status(
         status,

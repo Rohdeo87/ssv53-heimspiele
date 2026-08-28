@@ -24,6 +24,27 @@ def cycle() -> CycleResult:
                 "irrigation_plan_id": "plan-1",
                 "irrigation_phase": "RUNNING",
                 "irrigation_completed_relay_ids": [11],
+                "park_command_sent_utc": "2026-08-21T04:10:00+00:00",
+                "park_confirmed_utc": "2026-08-21T04:12:00+00:00",
+                "park_confirmed_observations": 2,
+            },
+            "weather": {
+                "enabled": True,
+                "available": True,
+                "fresh": True,
+                "provider": "OPEN_METEO",
+            },
+            "adaptive_planning": {
+                "plan_id": "adaptive-1",
+                "status": "SHADOW_PLAN_READY",
+                "water_recommendation": "KEEP_BASELINE",
+                "selected": {
+                    "irrigation_start_utc": "2026-08-21T04:30:00+00:00",
+                    "irrigation_end_utc": "2026-08-21T07:10:00+00:00",
+                    "earliest_mow_resume_utc": "2026-08-21T09:40:00+00:00",
+                    "lost_dry_mowing_minutes": 310,
+                    "expected_rain_mm": 0.0,
+                },
             },
         },
     )
@@ -35,6 +56,11 @@ def test_observation_entity_is_idempotent_per_minute():
     assert entity["RowKey"] == "20260821T0415Z"
     assert entity["active_relay_ids"] == "[22]"
     assert entity["completed_relay_ids"] == "[11]"
+    assert entity["park_confirmed_observations"] == 2
+    assert entity["weather_provider"] == "OPEN_METEO"
+    assert entity["adaptive_plan_id"] == "adaptive-1"
+    assert entity["adaptive_earliest_mow_resume_utc"] == "2026-08-21T09:40:00+00:00"
+    assert entity["schema_version"] == 2
 
 
 def test_record_replaces_same_minute_without_append_duplicates():

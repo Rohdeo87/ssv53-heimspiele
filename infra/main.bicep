@@ -44,6 +44,15 @@ param alertsEnabled bool = true
 @description('Dynamische Laufzeitdaten bleiben beim Erstdeployment zunächst deaktiviert.')
 param dynamicConfigEnabled bool = false
 
+@description('Kostenfreier Wetterabruf bleibt beim Erstdeployment deaktiviert.')
+param weatherEnabled bool = false
+
+@description('Breitengrad des Sportplatzes; erst bei aktiviertem Wetter erforderlich.')
+param weatherLatitude string = ''
+
+@description('Längengrad des Sportplatzes; erst bei aktiviertem Wetter erforderlich.')
+param weatherLongitude string = ''
+
 @description('Maximale Instanzzahl des Flex-Consumption-Plans.')
 @minValue(40)
 @maxValue(1000)
@@ -362,8 +371,14 @@ resource functionAppSettings 'Microsoft.Web/sites/config@2024-04-01' = {
     PARK_LOOKAHEAD_MINUTES: '10'
     HYDRAWISE_EXPECTED_ZONE_COUNT: '7'
     HYDRAWISE_EXPECTED_RELAY_IDS: '9104894,9104906,9104909,9104911,9104913,9104920,9104921'
-    HYDRAWISE_CLEAR_CONFIRMATION_MINUTES: '120'
+    HYDRAWISE_CLEAR_CONFIRMATION_MINUTES: '150'
+    HYDRAWISE_DATA_GAP_CONFIRMATION_MINUTES: '2'
+    FULL_MOWER_HYDRAWISE_CLEAR_CONFIRMATION_MINUTES: '10'
+    POST_IRRIGATION_DRYING_MINUTES: '150'
+    MOWER_PARK_LEAD_MINUTES: '4'
     MOWER_PARK_CONFIRMATION_MINUTES: '1'
+    MOWER_PARK_CONFIRMATION_CYCLES: '2'
+    MOWER_STATUS_MAX_AGE_SECONDS: '180'
     MOWER_PARK_PROGRESS_GRACE_MINUTES: '3'
     IRRIGATION_FAILSAFE_DOCK_LEAD_MINUTES: '40'
     IRRIGATION_CAPTURE_MAX_LEAD_MINUTES: '45'
@@ -373,6 +388,27 @@ resource functionAppSettings 'Microsoft.Web/sites/config@2024-04-01' = {
     IRRIGATION_PLAN_LEASE_MINUTES: '3'
     IRRIGATION_PLAN_CHANGE_CONFIRMATION_MINUTES: '2'
     IRRIGATION_EARLY_STOP_TOLERANCE_SECONDS: '120'
+    ADAPTIVE_PLANNING_ENABLED: 'false'
+    ADAPTIVE_EXECUTION_ENABLED: 'false'
+    PLANNING_HORIZON_HOURS: '48'
+    IRRIGATION_CANDIDATE_STEP_MINUTES: '5'
+    IRRIGATION_PREFERRED_START_FROM: '01:00'
+    IRRIGATION_PREFERRED_START_UNTIL: '07:30'
+    IRRIGATION_TARGET_START_LOCAL: '04:30'
+    IRRIGATION_FINISH_AFTER_SUNRISE_MINUTES: '60'
+    WEATHER_ENABLED: string(weatherEnabled)
+    WEATHER_SHADOW_ONLY: 'true'
+    WEATHER_PROVIDER: 'OPEN_METEO'
+    WEATHER_LATITUDE: weatherLatitude
+    WEATHER_LONGITUDE: weatherLongitude
+    WEATHER_FORECAST_HOURS: '72'
+    WEATHER_FORECAST_MAX_AGE_MINUTES: '120'
+    WEATHER_MINIMUM_FETCH_INTERVAL_MINUTES: '60'
+    WEATHER_DAILY_CALL_LIMIT: '24'
+    WEATHER_MONTHLY_CALL_LIMIT: '900'
+    RAIN_REDUCE_MIN_MM: '3.0'
+    RAIN_SKIP_MIN_MM: '8.0'
+    RAIN_SKIP_MIN_PROBABILITY: '80'
     MOWER_CONTINUE_MIN_BATTERY_PERCENT: '60'
     MOWER_RESTART_BATTERY_PERCENT: '90'
     MAX_AUTOMATIC_START_MINUTES: '720'

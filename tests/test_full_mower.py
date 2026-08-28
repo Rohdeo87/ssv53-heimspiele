@@ -37,6 +37,8 @@ ENVIRONMENT = {
     "HUSQVARNA_CLIENT_ID": "client",
     "HUSQVARNA_CLIENT_SECRET": "secret",
     "HYDRAWISE_CLEAR_CONFIRMATION_MINUTES": "10",
+    "FULL_MOWER_HYDRAWISE_CLEAR_CONFIRMATION_MINUTES": "10",
+    "POST_IRRIGATION_DRYING_MINUTES": "150",
     "MOWER_PARK_CONFIRMATION_MINUTES": "1",
     "MAX_AUTOMATIC_START_MINUTES": "360",
 }
@@ -263,6 +265,24 @@ class FullMowerParkingTests(unittest.TestCase):
 
 
 class FullMowerStartTests(unittest.TestCase):
+    def test_post_irrigation_origin_uses_150_minute_drying_gate(self) -> None:
+        state = AutomationState.from_mapping(
+            {
+                **parked_state("training").to_dict(),
+                "hydrawise_clear_origin": "IRRIGATION_END",
+                "hydrawise_clear_since_utc": (
+                    NOW - timedelta(minutes=149)
+                ).isoformat(),
+            }
+        )
+        result, calls, _store = self._run_start(state=state)
+        self.assertEqual(result.decision_code, "HYDRAWISE_RELEASE_NOT_CONFIRMED")
+        self.assertEqual(calls, [])
+        self.assertEqual(
+            result.details["hydrawise_release_gate"]["required_clear_minutes"],
+            150,
+        )
+
     def _run_start(
         self,
         *,

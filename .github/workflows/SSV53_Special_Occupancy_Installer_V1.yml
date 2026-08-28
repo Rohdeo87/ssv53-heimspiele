@@ -148,7 +148,7 @@ jobs:
               )
               assert (
                   manifest["safety_stage"]
-                  == "FULL_FAILSAFE_7_ZONES_120_MIN_CAPABLE_LOCKED"
+                  == "FULL_FAILSAFE_7_ZONES_150_MIN_ADAPTIVE_SHADOW_LOCKED"
               )
               assert manifest["park_write_gate_required"] is True
               assert manifest["start_write_gate_required"] is True

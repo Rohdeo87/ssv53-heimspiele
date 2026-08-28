@@ -495,12 +495,23 @@ def run_full_mower_cycle(
             message="Der Platz ist noch gesperrt oder die nächste Sperre steht unmittelbar an.",
         )
 
+    full_release_origins = {
+        "IRRIGATION_ACTIVE",
+        "IRRIGATION_END",
+        "POSSIBLE_IRRIGATION_DURING_GAP",
+    }
+    release_origin = cycle_state.hydrawise_clear_origin or "DATA_GAP"
+    full_post_irrigation_hold = release_origin in full_release_origins
     confirmation_minutes = _positive_int(
         environment,
-        "HYDRAWISE_CLEAR_CONFIRMATION_MINUTES",
-        10,
-        minimum=1,
-        maximum=60,
+        (
+            "POST_IRRIGATION_DRYING_MINUTES"
+            if full_post_irrigation_hold
+            else "FULL_MOWER_HYDRAWISE_CLEAR_CONFIRMATION_MINUTES"
+        ),
+        150 if full_post_irrigation_hold else 10,
+        minimum=150 if full_post_irrigation_hold else 1,
+        maximum=1440,
     )
     hydrawise_release = _hydrawise_release_confirmation(
         cycle_state=cycle_state,
@@ -508,7 +519,11 @@ def run_full_mower_cycle(
         now_utc=now_utc,
         confirmation_minutes=confirmation_minutes,
     )
-    details["hydrawise_release_gate"] = hydrawise_release.to_dict()
+    details["hydrawise_release_gate"] = {
+        **hydrawise_release.to_dict(),
+        "origin": release_origin,
+        "full_post_irrigation_hold": full_post_irrigation_hold,
+    }
     if not hydrawise_release.allowed:
         return _persist_cycle_only(
             store=store,

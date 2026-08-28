@@ -29,14 +29,18 @@ class FullFailsafePackageTests(unittest.TestCase):
                 joined = b"\n".join(sources.values())
             self.assertEqual(
                 manifest["safety_stage"],
-                "FULL_FAILSAFE_7_ZONES_120_MIN_CAPABLE_LOCKED",
+                "FULL_FAILSAFE_7_ZONES_150_MIN_ADAPTIVE_SHADOW_LOCKED",
             )
             self.assertEqual(manifest["expected_hydrawise_zone_count"], 7)
             self.assertEqual(
                 manifest["expected_hydrawise_relay_ids"],
                 [9104894, 9104906, 9104909, 9104911, 9104913, 9104920, 9104921],
             )
-            self.assertEqual(manifest["hydrawise_continuous_clear_minutes"], 120)
+            self.assertEqual(manifest["post_irrigation_drying_minutes"], 150)
+            self.assertEqual(manifest["mower_active_park_lead_minutes"], 4)
+            self.assertTrue(manifest["adaptive_planning_shadow_only"])
+            self.assertTrue(manifest["adaptive_execution_locked"])
+            self.assertFalse(manifest["weather_paid_calls_supported"])
             self.assertEqual(manifest["irrigation_plan_lease_minutes"], 3)
             self.assertEqual(
                 manifest["irrigation_plan_change_confirmation_minutes"],

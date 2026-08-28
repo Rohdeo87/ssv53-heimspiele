@@ -56,6 +56,36 @@ class AutomationStateTests(unittest.TestCase):
         self.assertFalse(started.parked_by_automation)
         self.assertEqual(started.last_start_command_utc, NOW.isoformat())
 
+    def test_park_requires_two_distinct_observations_and_resets_after_departure(self) -> None:
+        parked = AutomationState().record_command(
+            fingerprint="park",
+            sent_utc=NOW - timedelta(minutes=2),
+            action="PARK",
+        )
+        first = parked.record_cycle(
+            started_utc=NOW,
+            success=True,
+            decision_code="PARKED",
+            mower_activity="PARKED_IN_CS",
+        )
+        second = first.record_cycle(
+            started_utc=NOW + timedelta(minutes=1),
+            success=True,
+            decision_code="PARKED",
+            mower_activity="CHARGING",
+        )
+        departed = second.record_cycle(
+            started_utc=NOW + timedelta(minutes=2),
+            success=True,
+            decision_code="LEAVING",
+            mower_activity="LEAVING",
+        )
+        self.assertEqual(first.park_confirmed_observations, 1)
+        self.assertEqual(second.park_confirmed_observations, 2)
+        self.assertEqual(first.park_confirmed_utc, NOW.isoformat())
+        self.assertIsNone(departed.park_confirmed_utc)
+        self.assertEqual(departed.park_confirmed_observations, 0)
+
     def test_hydrawise_clear_confirmation_starts_at_poll_time(self) -> None:
         state = AutomationState().record_cycle(
             started_utc=NOW,

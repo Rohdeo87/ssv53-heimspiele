@@ -27,7 +27,7 @@ def settings(*, live: bool = True) -> RuntimeSettings:
             "ENABLE_START_COMMANDS": str(live).lower(),
             "ENABLE_IRRIGATION_COMMANDS": str(live).lower(),
             "FULL_MOWER_CONFIRMATION": "SSV53-TRAINING-MATCH-PARK-START" if live else "LOCKED",
-            "FULL_FAILSAFE_CONFIRMATION": "SSV53-MOWER-HYDRAWISE-7-ZONES-120-MINUTES" if live else "LOCKED",
+            "FULL_FAILSAFE_CONFIRMATION": "SSV53-MOWER-HYDRAWISE-7-ZONES-150-MINUTES-ADAPTIVE-V1" if live else "LOCKED",
             "PARK_LOOKAHEAD_MINUTES": "10",
         }
     )
@@ -40,7 +40,11 @@ ENV = {
     "HYDRAWISE_CONTROLLER_ID": "controller",
     "HYDRAWISE_EXPECTED_ZONE_COUNT": "7",
     "HYDRAWISE_EXPECTED_RELAY_IDS": ",".join(str(value) for value in RELAYS),
-    "HYDRAWISE_CLEAR_CONFIRMATION_MINUTES": "120",
+    "HYDRAWISE_CLEAR_CONFIRMATION_MINUTES": "2",
+    "HYDRAWISE_DATA_GAP_CONFIRMATION_MINUTES": "2",
+    "POST_IRRIGATION_DRYING_MINUTES": "150",
+    "MOWER_PARK_CONFIRMATION_CYCLES": "2",
+    "MOWER_STATUS_MAX_AGE_SECONDS": "180",
     "MOWER_PARK_CONFIRMATION_MINUTES": "1",
     "MOWER_PARK_PROGRESS_GRACE_MINUTES": "3",
     "IRRIGATION_FAILSAFE_DOCK_LEAD_MINUTES": "40",
@@ -178,6 +182,7 @@ def result(
                 ),
                 "external_reason_id": external_reason_id,
                 "error_code": 0,
+                "status_timestamp_ms": int(NOW.timestamp() * 1000),
                 "battery_percent": battery,
                 "target_work_area": {"id": 849199, "name": "Rasenfläche", "enabled": True, "cutting_height_percent": 12, "use_global_cutting_height": False},
             },
@@ -218,6 +223,8 @@ def irrigation_state(*, phase: str, current: int | None = None) -> AutomationSta
         automation_restart_allowed=True,
         park_command_sent_utc=(NOW - timedelta(minutes=10)).isoformat(),
         park_confirmed_utc=(NOW - timedelta(minutes=5)).isoformat(),
+        park_confirmed_observations=2,
+        last_mower_activity="PARKED_IN_CS",
         irrigation_phase=phase,
         irrigation_plan_id="plan",
         irrigation_plan_json=__import__("json").dumps(plan),
@@ -245,6 +252,8 @@ def irrigation_state(*, phase: str, current: int | None = None) -> AutomationSta
 
 class FullFailsafeTests(unittest.TestCase):
     def _run(self, state: AutomationState, cycle: CycleResult, *, now: datetime = NOW, **senders):
+        cycle = deepcopy(cycle)
+        cycle.details["mower"]["status_timestamp_ms"] = int(now.timestamp() * 1000)
         store = InMemoryStateStore(state)
         output = run_full_failsafe_cycle(
             now_utc=now,
@@ -265,6 +274,8 @@ class FullFailsafeTests(unittest.TestCase):
         return output, store
 
     def _continue(self, store, cycle: CycleResult, *, now: datetime, **senders):
+        cycle = deepcopy(cycle)
+        cycle.details["mower"]["status_timestamp_ms"] = int(now.timestamp() * 1000)
         output = run_full_failsafe_cycle(
             now_utc=now,
             settings=settings(),
@@ -1238,8 +1249,13 @@ class FullFailsafeTests(unittest.TestCase):
             [999999],
         )
 
-    def test_irrigation_start_waits_for_training_or_match_to_clear(self) -> None:
-        for source in ("irrigation+training", "irrigation+match"):
+    def test_irrigation_start_waits_for_every_rasen_occupancy_to_clear(self) -> None:
+        for source in (
+            "irrigation+training",
+            "irrigation+match",
+            "irrigation+special",
+            "irrigation+future-occupancy-type",
+        ):
             with self.subTest(source=source):
                 zone_calls = []
                 state = irrigation_state(phase="READY")
@@ -1268,6 +1284,40 @@ class FullFailsafeTests(unittest.TestCase):
         self.assertEqual(output.decision_code, "IRRIGATION_ZONE_START_SENT")
         self.assertEqual(calls[0][1:3], (RELAYS[0], 1200))
         self.assertEqual(store.load().irrigation_phase, "START_RESERVED")
+
+    def test_water_start_requires_connected_and_fresh_mower_status(self) -> None:
+        for condition in ("disconnected", "stale"):
+            with self.subTest(condition=condition):
+                cycle = result(block_source="irrigation")
+                if condition == "disconnected":
+                    cycle.details["mower"]["connected"] = False
+                    at = NOW
+                else:
+                    cycle.details["mower"]["status_timestamp_ms"] = int(
+                        (NOW - timedelta(minutes=10)).timestamp() * 1000
+                    )
+                    at = NOW
+                store = InMemoryStateStore(irrigation_state(phase="READY"))
+                calls = []
+                output = run_full_failsafe_cycle(
+                    now_utc=at,
+                    settings=settings(),
+                    environment=ENV,
+                    past_due=False,
+                    source="test",
+                    read_only_runner=lambda **_: cycle,
+                    state_store_factory=lambda _env: store,
+                    park_sender=lambda *_: {"accepted": True},
+                    start_sender=lambda *_: {"accepted": True},
+                    suspend_zone_sender=lambda *_: {"message_type": "info"},
+                    start_zone_sender=lambda *args: calls.append(args)
+                    or {"message_type": "info"},
+                )
+                self.assertEqual(
+                    output.decision_code,
+                    "IRRIGATION_WAIT_FOR_CONFIRMED_PARK",
+                )
+                self.assertEqual(calls, [])
 
     def test_water_start_requires_two_distinct_parked_cycles(self) -> None:
         initial = irrigation_state(phase="READY")
@@ -1497,7 +1547,7 @@ class FullFailsafeTests(unittest.TestCase):
         self.assertEqual(output.decision_code, "HYDRAWISE_CLEAR_CONFIRMATION_HOLD")
         self.assertEqual(
             output.details["hydrawise_release_gate"]["required_clear_minutes"],
-            120,
+            150,
         )
 
     def test_owned_irrigation_park_can_restart_in_cancelled_training_window(self) -> None:
@@ -1505,8 +1555,8 @@ class FullFailsafeTests(unittest.TestCase):
         state = AutomationState.from_mapping(
             {
                 **state.to_dict(),
-                "irrigation_completed_utc": (NOW - timedelta(minutes=120)).isoformat(),
-                "hydrawise_clear_since_utc": (NOW - timedelta(minutes=120)).isoformat(),
+                "irrigation_completed_utc": (NOW - timedelta(minutes=150)).isoformat(),
+                "hydrawise_clear_since_utc": (NOW - timedelta(minutes=150)).isoformat(),
                 "last_hydrawise_success_utc": (NOW - timedelta(minutes=1)).isoformat(),
             }
         )
@@ -1532,7 +1582,7 @@ class FullFailsafeTests(unittest.TestCase):
             automation_restart_allowed=True,
             park_command_sent_utc=(NOW - timedelta(hours=5)).isoformat(),
             park_confirmed_utc=(NOW - timedelta(hours=5)).isoformat(),
-            hydrawise_clear_since_utc=(NOW - timedelta(minutes=120)).isoformat(),
+            hydrawise_clear_since_utc=(NOW - timedelta(minutes=150)).isoformat(),
             hydrawise_clear_origin="IRRIGATION_END",
             last_hydrawise_success_utc=(NOW - timedelta(minutes=1)).isoformat(),
         )
@@ -1555,8 +1605,8 @@ class FullFailsafeTests(unittest.TestCase):
         state = AutomationState.from_mapping(
             {
                 **state.to_dict(),
-                "irrigation_completed_utc": (NOW - timedelta(minutes=120)).isoformat(),
-                "hydrawise_clear_since_utc": (NOW - timedelta(minutes=120)).isoformat(),
+                "irrigation_completed_utc": (NOW - timedelta(minutes=150)).isoformat(),
+                "hydrawise_clear_since_utc": (NOW - timedelta(minutes=150)).isoformat(),
                 "last_hydrawise_success_utc": (NOW - timedelta(minutes=1)).isoformat(),
             }
         )
@@ -2217,7 +2267,7 @@ class FullFailsafeTests(unittest.TestCase):
             irrigation_failed_reason=(
                 "RuntimeError: Hydrawise-Zonenplan enthält ungültige Werte."
             ),
-            hydrawise_clear_since_utc=(NOW - timedelta(minutes=121)).isoformat(),
+            hydrawise_clear_since_utc=(NOW - timedelta(minutes=151)).isoformat(),
             hydrawise_clear_origin="IRRIGATION_END",
             last_hydrawise_success_utc=(NOW - timedelta(minutes=1)).isoformat(),
         )

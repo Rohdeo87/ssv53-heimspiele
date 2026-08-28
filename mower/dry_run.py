@@ -42,6 +42,8 @@ from mower.planner import (
 )
 from mower.runtime import ControlMode, CycleResult, RuntimeSettings
 from mower.state_store import AzureTableStateStore, StateStore
+from mower.adaptive_planner import build_adaptive_plan
+from mower.weather_service import resolve_weather
 from training_cancellations import AzureTableCancellationStore
 from special_occupancy import (
     AzureTableSpecialOccupancyStore,
@@ -249,6 +251,22 @@ def run_read_only_cycle(
     minimum_remaining = int(
         planning.get("minimum_mowing_window_minutes", 30)
     )
+    planning_horizon_hours = int(
+        environment.get("PLANNING_HORIZON_HOURS", "48")
+    )
+    if not 24 <= planning_horizon_hours <= 168:
+        raise RuntimeError(
+            "PLANNING_HORIZON_HOURS muss zwischen 24 und 168 liegen."
+        )
+    planning_horizon_days = max(
+        2,
+        (planning_horizon_hours + 23) // 24,
+    )
+
+    weather_resolution = resolve_weather(
+        environment,
+        now_utc=now_utc,
+    )
 
     hydrawise_status: dict[str, Any] | None = None
     hydrawise_label = "nicht verbunden"
@@ -295,7 +313,7 @@ def run_read_only_cycle(
         cancellation_store = cancellation_store_factory(environment)
         cancellations = cancellation_store.list_active(
             now_local.date(),
-            now_local.date() + timedelta(days=2),
+            now_local.date() + timedelta(days=planning_horizon_days),
         )
         effective_cancellations, unresolved_cancellations = (
             resolve_training_cancellation_keys(
@@ -317,7 +335,9 @@ def run_read_only_cycle(
         time.min,
         tzinfo=tz,
     )
-    special_horizon_end = special_horizon_start + timedelta(days=2)
+    special_horizon_end = special_horizon_start + timedelta(
+        days=planning_horizon_days
+    )
     if special_enabled:
         try:
             special_store = special_store_factory(environment)
@@ -354,8 +374,17 @@ def run_read_only_cycle(
         match_blocks,
         hydrawise_status,
         now_local.date(),
-        2,
+        planning_horizon_days,
         effective_cancellations,
+    )
+    adaptive_plan = build_adaptive_plan(
+        now_utc=now_utc,
+        timezone_name=settings.timezone_name,
+        blocks=merged_blocks,
+        zones=hydrawise_zones,
+        weather_snapshot=weather_resolution.snapshot,
+        weather_fresh=weather_resolution.fresh,
+        environment=environment,
     )
     active_block, active_window = current_context(plans, now_local)
     next_block = next_block_after(plans, now_local)
@@ -554,6 +583,8 @@ def run_read_only_cycle(
                     else None
                 ),
             },
+            "weather": weather_resolution.to_dict(),
+            "adaptive_planning": adaptive_plan.to_dict(),
             "automation_state": automation_state_details,
             "training_cancellations": {
                 "available": cancellation_error is None,

@@ -37,6 +37,15 @@
     },
     "dynamicConfigEnabled": {
       "value": false
+    },
+    "weatherEnabled": {
+      "value": false
+    },
+    "weatherLatitude": {
+      "value": ""
+    },
+    "weatherLongitude": {
+      "value": ""
     }
   }
 }
