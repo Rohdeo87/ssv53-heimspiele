@@ -11,6 +11,7 @@ from daily_safety_report import (
     process_daily_report,
     report_recipient,
     should_attempt_delivery,
+    summarize_adaptive_shadow,
     summarize_report,
     summarize_irrigation_statistics,
 )
@@ -367,6 +368,63 @@ def test_summary_calculates_today_mowing_and_average_return_duration():
     )
     assert summary.mowing_minutes_today == 2
     assert summary.average_return_minutes_7d == 4
+    assert summary.median_return_minutes_7d == 4
+    assert summary.p95_return_minutes_7d == 5
+    assert summary.return_measurements_7d == 2
+
+
+def test_paused_mower_does_not_turn_delayed_error_code_into_active_report_error():
+    item = row("2026-08-20T04:59:01Z", error=93)
+    item["mower_state"] = "PAUSED"
+    summary = summarize_report(
+        parse_cycle_rows([item]),
+        now_utc=datetime(2026, 8, 20, 5, 0, tzinfo=timezone.utc),
+        exception_count_24h=0,
+    )
+    assert summary.current_error_code == 0
+    assert not any("Mäherfehler aktiv" in warning for warning in summary.warnings)
+
+
+def test_adaptive_shadow_summary_reports_freshness_and_real_plan_changes():
+    rows = []
+    for minute, start, fresh in [
+        (0, "2026-08-21T02:30:00Z", True),
+        (1, "2026-08-21T02:30:00Z", True),
+        (2, "2026-08-21T03:00:00Z", True),
+        (3, "2026-08-21T03:00:00Z", False),
+    ]:
+        item = row(f"2026-08-20T04:{minute:02d}:01Z")
+        item.update(
+            weather_enabled=True,
+            weather_available=True,
+            weather_fresh=fresh,
+            weather_provider="OPEN_METEO",
+            adaptive_enabled=True,
+            adaptive_execution_enabled=False,
+            adaptive_status="SHADOW_PLAN_READY",
+            adaptive_recommendation="KEEP_BASELINE",
+            adaptive_irrigation_start_utc=start,
+            adaptive_irrigation_end_utc="2026-08-21T05:40:00Z",
+            adaptive_earliest_mow_resume_utc="2026-08-21T08:10:00Z",
+            adaptive_lost_dry_mowing_minutes=310,
+            adaptive_drying_extension_minutes=0,
+            adaptive_expected_rain_mm=0.4,
+        )
+        rows.append(item)
+    summary = summarize_adaptive_shadow(
+        parse_cycle_rows(rows),
+        now_utc=datetime(2026, 8, 20, 5, 0, tzinfo=timezone.utc),
+        archived_snapshots=[],
+    )
+    assert summary.enabled is True
+    assert summary.execution_enabled is False
+    assert summary.latest_status == "SHADOW_PLAN_READY"
+    assert summary.weather_fresh_percent_24h == 75
+    assert summary.plan_changes_24h == 1
+    assert summary.irrigation_start_utc == datetime(
+        2026, 8, 21, 3, 0, tzinfo=timezone.utc
+    )
+    assert summary.rain_validation_samples == 0
 
 
 def test_recipient_is_required_and_validated():
@@ -395,7 +453,24 @@ class Queries:
         self.calls += 1
         if query.startswith("exceptions"):
             return [{"exception_count": 0}]
-        return [row("2026-08-20T04:59:01Z")]
+        value = row("2026-08-20T04:59:01Z")
+        value.update(
+            weather_enabled=True,
+            weather_available=True,
+            weather_fresh=True,
+            weather_provider="OPEN_METEO",
+            adaptive_enabled=True,
+            adaptive_execution_enabled=False,
+            adaptive_status="SHADOW_PLAN_READY",
+            adaptive_recommendation="KEEP_BASELINE",
+            adaptive_irrigation_start_utc="2026-08-21T02:30:00Z",
+            adaptive_irrigation_end_utc="2026-08-21T05:10:00Z",
+            adaptive_earliest_mow_resume_utc="2026-08-21T07:40:00Z",
+            adaptive_lost_dry_mowing_minutes=310,
+            adaptive_drying_extension_minutes=0,
+            adaptive_expected_rain_mm=0.0,
+        )
+        return [value]
 
 
 def test_process_sends_once_and_marks_success(monkeypatch):
@@ -421,7 +496,14 @@ def test_process_sends_once_and_marks_success(monkeypatch):
     assert result["sent"] is True
     assert store.marks == ["sent"]
     assert sent[0]["To"] == "thomas.rohde@ssv53.de"
-    assert "Bestätigte Abschlüsse (7 Tage)" in sent[0].get_body(preferencelist=("plain",)).get_content()
+    plain = sent[0].get_body(preferencelist=("plain",)).get_content()
+    assert "Bestätigte Abschlüsse (7 Tage)" in plain
+    assert "Adaptive Planung – Schattenbetrieb" in plain
+    assert "keine Gerätebefehle" in plain
+    assert "Schattenplan bereit" in plain
+    assert "Basisberegnung beibehalten" in plain
+    assert "Prognosearchiv: vorübergehend nicht lesbar" in plain
+    assert result["adaptive_execution_enabled"] is False
 
     duplicate = process_daily_report(
         datetime(2026, 8, 20, 6, 0, tzinfo=timezone.utc),
@@ -429,5 +511,6 @@ def test_process_sends_once_and_marks_success(monkeypatch):
         query_client=Queries(),
         store=Store(claim=False),
         mail_sender=lambda settings, message: pytest.fail("duplicate mail"),
+        forecast_reader=lambda _values, _start, _end: [],
     )
     assert duplicate["reason"] == "already_claimed"

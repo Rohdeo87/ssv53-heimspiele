@@ -40,6 +40,11 @@ class FullFailsafePackageTests(unittest.TestCase):
             self.assertEqual(manifest["mower_active_park_lead_minutes"], 4)
             self.assertTrue(manifest["adaptive_planning_shadow_only"])
             self.assertTrue(manifest["adaptive_execution_locked"])
+            self.assertEqual(manifest["adaptive_forecast_archive_days"], 21)
+            self.assertTrue(manifest["adaptive_daily_shadow_report"])
+            self.assertFalse(
+                manifest["adaptive_forecast_archive_can_send_device_commands"]
+            )
             self.assertFalse(manifest["weather_paid_calls_supported"])
             self.assertEqual(manifest["irrigation_plan_lease_minutes"], 3)
             self.assertEqual(

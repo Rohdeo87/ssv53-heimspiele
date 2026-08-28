@@ -55,12 +55,33 @@ Der Schattenplan wird in jedem Steuerzyklus unter `details.adaptive_planning`
 protokolliert und zusammen mit Wetterfrische, Parkzeitpunkten, Empfehlung und
 berechneter Freigabe im bestehenden Beregnungsjournal gespeichert.
 
+Jeder stündlich neu geladene Wetterdatensatz wird zusätzlich in einem
+versionierten 21-Tage-Ringpuffer gespeichert. Der Puffer enthält höchstens
+`21 * 24` komprimierte Snapshots und wächst deshalb nicht unbegrenzt. Eine
+spätere Providerangabe für eine bereits vergangene Stunde wird ausdrücklich
+nicht als Messung auf dem Sportplatz bezeichnet. Ohne eigenen Regenmesser ist
+sie nur eine Vergleichsgröße zur Bewertung der früheren Prognose.
+
+Der tägliche 7-Uhr-Sicherheitsbericht enthält im Schattenbetrieb zusätzlich:
+
+- aktuelles empfohlenes Beregnungsfenster und früheste Mähfreigabe;
+- Wetterfrische und Planänderungen der letzten 24 Stunden;
+- mögliche verlorene trockene Mähzeit und zusätzliche Trocknung;
+- Anzahl archivierter Prognoseversionen;
+- Prognose gegen später vom Provider gemeldeten Niederschlag;
+- Median und P95 der realen Heimfahrzeiten.
+
+Ein Ausfall dieses rein beobachtenden Archivs verhindert weder den
+Sicherheitsbericht noch einen Steuerzyklus und kann keine Geräteaktion
+auslösen.
+
 ## Freigabestufen
 
 1. Code und Sicherheitskorrekturen aktivieren. (abgeschlossen)
 2. Wetter und adaptive Planung nur im Schattenbetrieb aktivieren. (abgeschlossen)
-3. Mehrere Wochen Vorhersage, tatsächlichen Regen, Heimfahrten und
-   Beregnungsverläufe vergleichen.
+3. Mehrere Wochen Vorhersage, später gemeldeten Regen, Heimfahrten und
+   Beregnungsverläufe vergleichen. (Messung und Tagesbericht vorbereitet;
+   Beobachtungszeit läuft nach Produktionsrollout)
 4. Erst nach fachlicher Auswertung eine neue, getrennte Live-Ausführung
    implementieren und mit einem neuen Bestätigungstext absichern.
 

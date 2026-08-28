@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import html
 import json
+import math
 import re
+import statistics
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta, timezone
@@ -27,6 +29,11 @@ from order_mail import (
     _open_authenticated_smtp,
 )
 from mower.irrigation_journal import read_irrigation_observations
+from mower.weather import WeatherSnapshot
+from mower.weather_store import (
+    forecast_rain_validation,
+    read_archived_weather_snapshots,
+)
 
 
 REPORT_PARTITION = "ssv53-daily-safety-report-v1"
@@ -59,6 +66,20 @@ class CycleObservation:
     work_area_type: str
     work_area_progress: int
     work_area_last_completed: int
+    weather_enabled: bool
+    weather_available: bool
+    weather_fresh: bool
+    weather_provider: str
+    adaptive_enabled: bool
+    adaptive_execution_enabled: bool
+    adaptive_status: str
+    adaptive_recommendation: str
+    adaptive_irrigation_start_utc: datetime | None
+    adaptive_irrigation_end_utc: datetime | None
+    adaptive_earliest_mow_resume_utc: datetime | None
+    adaptive_lost_dry_mowing_minutes: int
+    adaptive_drying_extension_minutes: int
+    adaptive_expected_rain_mm: float
 
 
 @dataclass(frozen=True)
@@ -75,6 +96,9 @@ class DailyReportSummary:
     average_daily_mowing_minutes_7d: int
     mowing_minutes_today: int
     average_return_minutes_7d: int | None
+    median_return_minutes_7d: int | None
+    p95_return_minutes_7d: int | None
+    return_measurements_7d: int
     completed_area_cycles_7d: int
     current_work_area_progress: int
     last_completed_area_utc: datetime | None
@@ -91,6 +115,32 @@ class DailyReportSummary:
     parking_source: str
     overall_status: str
     warnings: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class AdaptiveShadowSummary:
+    enabled: bool
+    execution_enabled: bool
+    latest_status: str
+    latest_recommendation: str
+    irrigation_start_utc: datetime | None
+    irrigation_end_utc: datetime | None
+    earliest_mow_resume_utc: datetime | None
+    lost_dry_mowing_minutes: int
+    drying_extension_minutes: int
+    expected_rain_mm: float
+    plan_changes_24h: int
+    weather_cycles_24h: int
+    weather_fresh_cycles_24h: int
+    weather_fresh_percent_24h: int
+    weather_provider: str
+    archive_available: bool
+    archived_snapshots: int
+    rain_validation_samples: int
+    forecast_rain_mm: float
+    reported_rain_mm: float
+    mean_absolute_rain_error_mm: float
+    maximum_rain_error_mm: float
 
 
 def _parse_utc(value: Any) -> datetime | None:
@@ -114,6 +164,13 @@ def _as_int(value: Any) -> int:
         return int(value or 0)
     except (TypeError, ValueError):
         return 0
+
+
+def _as_float(value: Any) -> float:
+    try:
+        return float(value or 0.0)
+    except (TypeError, ValueError):
+        return 0.0
 
 
 def report_recipient(values: Mapping[str, str]) -> str:
@@ -296,7 +353,21 @@ traces
     parking_source=tostring(p.details.current_plan.parking_block.source),
     work_area_type=tostring(p.details.mower.target_work_area.type),
     work_area_progress=toint(p.details.mower.target_work_area.progress),
-    work_area_last_completed=tolong(p.details.mower.target_work_area.last_time_completed)
+    work_area_last_completed=tolong(p.details.mower.target_work_area.last_time_completed),
+    weather_enabled=tobool(p.details.weather.enabled),
+    weather_available=tobool(p.details.weather.available),
+    weather_fresh=tobool(p.details.weather.fresh),
+    weather_provider=tostring(p.details.weather.provider),
+    adaptive_enabled=tobool(p.details.adaptive_planning.enabled),
+    adaptive_execution_enabled=tobool(p.details.adaptive_planning.execution_enabled),
+    adaptive_status=tostring(p.details.adaptive_planning.status),
+    adaptive_recommendation=tostring(p.details.adaptive_planning.water_recommendation),
+    adaptive_irrigation_start_utc=tostring(p.details.adaptive_planning.selected.irrigation_start_utc),
+    adaptive_irrigation_end_utc=tostring(p.details.adaptive_planning.selected.irrigation_end_utc),
+    adaptive_earliest_mow_resume_utc=tostring(p.details.adaptive_planning.selected.earliest_mow_resume_utc),
+    adaptive_lost_dry_mowing_minutes=toint(p.details.adaptive_planning.selected.lost_dry_mowing_minutes),
+    adaptive_drying_extension_minutes=toint(p.details.adaptive_planning.selected.drying_extension_minutes),
+    adaptive_expected_rain_mm=todouble(p.details.adaptive_planning.selected.expected_rain_mm)
 | order by timestamp asc
 """.strip()
 
@@ -336,8 +407,133 @@ def parse_cycle_rows(rows: Sequence[Mapping[str, Any]]) -> list[CycleObservation
             work_area_type=str(row.get("work_area_type") or "").upper(),
             work_area_progress=_as_int(row.get("work_area_progress")),
             work_area_last_completed=_as_int(row.get("work_area_last_completed")),
+            weather_enabled=_as_bool(row.get("weather_enabled")),
+            weather_available=_as_bool(row.get("weather_available")),
+            weather_fresh=_as_bool(row.get("weather_fresh")),
+            weather_provider=str(row.get("weather_provider") or ""),
+            adaptive_enabled=_as_bool(row.get("adaptive_enabled")),
+            adaptive_execution_enabled=_as_bool(
+                row.get("adaptive_execution_enabled")
+            ),
+            adaptive_status=str(row.get("adaptive_status") or "").upper(),
+            adaptive_recommendation=str(
+                row.get("adaptive_recommendation") or ""
+            ).upper(),
+            adaptive_irrigation_start_utc=_parse_utc(
+                row.get("adaptive_irrigation_start_utc")
+            ),
+            adaptive_irrigation_end_utc=_parse_utc(
+                row.get("adaptive_irrigation_end_utc")
+            ),
+            adaptive_earliest_mow_resume_utc=_parse_utc(
+                row.get("adaptive_earliest_mow_resume_utc")
+            ),
+            adaptive_lost_dry_mowing_minutes=_as_int(
+                row.get("adaptive_lost_dry_mowing_minutes")
+            ),
+            adaptive_drying_extension_minutes=_as_int(
+                row.get("adaptive_drying_extension_minutes")
+            ),
+            adaptive_expected_rain_mm=_as_float(
+                row.get("adaptive_expected_rain_mm")
+            ),
         )
     return sorted(observations.values(), key=lambda item: item.timestamp_utc)
+
+
+def _return_durations_minutes(
+    observations: Sequence[CycleObservation],
+) -> list[float]:
+    durations: list[float] = []
+    going_home_started_at: datetime | None = None
+    previous_activity: str | None = None
+    for item in observations:
+        if item.activity == "GOING_HOME":
+            if previous_activity != "GOING_HOME":
+                going_home_started_at = item.timestamp_utc
+        elif going_home_started_at is not None:
+            if item.activity in PARKED_ACTIVITIES:
+                duration = (item.timestamp_utc - going_home_started_at).total_seconds() / 60
+                if 0 < duration <= 60:
+                    durations.append(duration)
+            going_home_started_at = None
+        previous_activity = item.activity
+    return durations
+
+
+def summarize_adaptive_shadow(
+    observations: Sequence[CycleObservation],
+    *,
+    now_utc: datetime,
+    archived_snapshots: Sequence[WeatherSnapshot] = (),
+    archive_available: bool = True,
+) -> AdaptiveShadowSummary:
+    last_24h_start = now_utc - timedelta(hours=24)
+    last_24h = [item for item in observations if item.timestamp_utc >= last_24h_start]
+    latest = observations[-1] if observations else None
+    weather_cycles = [item for item in last_24h if item.weather_enabled]
+    weather_fresh = [
+        item
+        for item in weather_cycles
+        if item.weather_available and item.weather_fresh
+    ]
+    plan_values = [
+        (
+            item.adaptive_recommendation,
+            item.adaptive_irrigation_start_utc,
+            item.adaptive_irrigation_end_utc,
+            item.adaptive_earliest_mow_resume_utc,
+        )
+        for item in last_24h
+        if item.adaptive_enabled and item.adaptive_status
+    ]
+    plan_changes = sum(
+        1 for previous, current in zip(plan_values, plan_values[1:]) if current != previous
+    )
+    validation = forecast_rain_validation(
+        archived_snapshots,
+        period_start_utc=max(
+            now_utc - timedelta(days=7),
+            archived_snapshots[0].fetched_at if archived_snapshots else now_utc,
+        ),
+        period_end_utc=now_utc - timedelta(hours=1),
+    )
+    return AdaptiveShadowSummary(
+        enabled=bool(latest and latest.adaptive_enabled),
+        execution_enabled=bool(latest and latest.adaptive_execution_enabled),
+        latest_status=latest.adaptive_status if latest else "",
+        latest_recommendation=latest.adaptive_recommendation if latest else "",
+        irrigation_start_utc=(
+            latest.adaptive_irrigation_start_utc if latest else None
+        ),
+        irrigation_end_utc=latest.adaptive_irrigation_end_utc if latest else None,
+        earliest_mow_resume_utc=(
+            latest.adaptive_earliest_mow_resume_utc if latest else None
+        ),
+        lost_dry_mowing_minutes=(
+            latest.adaptive_lost_dry_mowing_minutes if latest else 0
+        ),
+        drying_extension_minutes=(
+            latest.adaptive_drying_extension_minutes if latest else 0
+        ),
+        expected_rain_mm=latest.adaptive_expected_rain_mm if latest else 0.0,
+        plan_changes_24h=plan_changes,
+        weather_cycles_24h=len(weather_cycles),
+        weather_fresh_cycles_24h=len(weather_fresh),
+        weather_fresh_percent_24h=(
+            round(len(weather_fresh) * 100 / len(weather_cycles))
+            if weather_cycles
+            else 0
+        ),
+        weather_provider=latest.weather_provider if latest else "",
+        archive_available=archive_available,
+        archived_snapshots=len(archived_snapshots),
+        rain_validation_samples=int(validation["sample_count"]),
+        forecast_rain_mm=float(validation["forecast_total_mm"]),
+        reported_rain_mm=float(validation["reported_total_mm"]),
+        mean_absolute_rain_error_mm=float(validation["mean_absolute_error_mm"]),
+        maximum_rain_error_mm=float(validation["maximum_error_mm"]),
+    )
 
 
 def summarize_report(
@@ -408,24 +604,17 @@ def summarize_report(
     completion_times.sort()
     completed_cycles = len(completion_times)
     last_completed_area_utc = completion_times[-1] if completion_times else None
-    return_minutes: list[float] = []
-    going_home_started_at: datetime | None = None
-    previous_activity: str | None = None
-    for item in relevant:
-        if item.activity == "GOING_HOME":
-            if previous_activity != "GOING_HOME":
-                going_home_started_at = item.timestamp_utc
-        elif going_home_started_at is not None:
-            if item.activity in PARKED_ACTIVITIES:
-                duration_minutes = (
-                    item.timestamp_utc - going_home_started_at
-                ).total_seconds() / 60
-                if 0 < duration_minutes <= 60:
-                    return_minutes.append(duration_minutes)
-            going_home_started_at = None
-        previous_activity = item.activity
+    return_minutes = _return_durations_minutes(relevant)
     average_return_minutes = (
         round(sum(return_minutes) / len(return_minutes))
+        if return_minutes
+        else None
+    )
+    median_return_minutes = (
+        round(statistics.median(return_minutes)) if return_minutes else None
+    )
+    p95_return_minutes = (
+        round(sorted(return_minutes)[max(0, math.ceil(0.95 * len(return_minutes)) - 1)])
         if return_minutes
         else None
     )
@@ -436,10 +625,14 @@ def summarize_report(
     expected_cycles = 24 * 60
     latest = relevant[-1] if relevant else None
     warnings: list[str] = []
+    latest_error_active = bool(
+        latest
+        and latest.mower_state in {"ERROR", "FATAL_ERROR", "ERROR_AT_POWER_UP"}
+    )
     if not latest:
         warnings.append("Keine aktuelle Mähertelemetrie vorhanden")
     else:
-        if latest.error_code or latest.mower_state in {"ERROR", "FATAL_ERROR", "ERROR_AT_POWER_UP"}:
+        if latest_error_active:
             warnings.append(
                 f"Mäherfehler aktiv: Zustand {latest.mower_state}, Fehlercode {latest.error_code}"
             )
@@ -466,13 +659,16 @@ def summarize_report(
         average_daily_mowing_minutes_7d=round(mowing_minutes / 7),
         mowing_minutes_today=days[-1][1],
         average_return_minutes_7d=average_return_minutes,
+        median_return_minutes_7d=median_return_minutes,
+        p95_return_minutes_7d=p95_return_minutes,
+        return_measurements_7d=len(return_minutes),
         completed_area_cycles_7d=completed_cycles,
         current_work_area_progress=latest.work_area_progress if latest else 0,
         last_completed_area_utc=last_completed_area_utc,
         daily_mowing_minutes=days,
         current_activity=latest.activity if latest else "UNBEKANNT",
         current_state=latest.mower_state if latest else "UNBEKANNT",
-        current_error_code=latest.error_code if latest else 0,
+        current_error_code=(latest.error_code if latest_error_active else 0),
         current_battery_percent=latest.battery_percent if latest else 0,
         hydrawise_available=latest.hydrawise_available if latest else False,
         hydrawise_fresh=latest.hydrawise_fresh if latest else False,
@@ -974,10 +1170,50 @@ def _local_time(value: datetime | None) -> str:
     return value.astimezone(REPORT_TIME_ZONE).strftime("%d.%m.%Y, %H:%M Uhr")
 
 
+def _adaptive_status_text(value: str) -> str:
+    return {
+        "SHADOW_PLAN_READY": "Schattenplan bereit",
+        "NO_SAFE_WINDOW": "Kein sicheres Zeitfenster gefunden",
+        "NO_COMPLETE_IRRIGATION_PLAN": "Kein vollständiger Sieben-Zonen-Plan",
+        "DISABLED": "Deaktiviert",
+    }.get(str(value or "").upper(), value or "Noch kein Messwert")
+
+
+def _recommendation_text(value: str) -> str:
+    return {
+        "KEEP_BASELINE": "Basisberegnung beibehalten",
+        "REDUCE_RECOMMENDED": "Reduzierung empfohlen – nur Beobachtung",
+        "SKIP_RECOMMENDED": "Auslassen empfohlen – nur Beobachtung",
+    }.get(str(value or "").upper(), value or "Noch keine Empfehlung")
+
+
+def _mower_status_text(state: str, activity: str) -> str:
+    mower_state = str(state or "").upper()
+    mower_activity = str(activity or "").upper()
+    if mower_state == "PAUSED":
+        return "Pausiert"
+    if mower_state == "STOPPED" or mower_activity == "STOPPED_IN_GARDEN":
+        return "Manuell gestoppt"
+    if mower_state in {"ERROR", "FATAL_ERROR", "ERROR_AT_POWER_UP"}:
+        return "Mäherfehler"
+    return {
+        "MOWING": "Mäht",
+        "LEAVING": "Fährt auf den Platz",
+        "GOING_HOME": "Fährt zur Station",
+        "PARKED_IN_CS": "Geparkt",
+        "CHARGING": "Lädt",
+        "SEARCHING_FOR_CHARGING_STATION": "Sucht Ladestation",
+    }.get(
+        mower_activity,
+        "Status wird geprüft" if mower_activity == "NOT_APPLICABLE" else mower_activity or "Unbekannt",
+    )
+
+
 def build_message(
     settings: OrderMailSettings,
     recipient: str,
     summary: DailyReportSummary,
+    adaptive: AdaptiveShadowSummary | None = None,
 ) -> EmailMessage:
     warning_text = " · ".join(summary.warnings) if summary.warnings else "Keine Abweichung erkannt"
     daily_rows = "".join(
@@ -987,7 +1223,10 @@ def build_message(
         for day, minutes in summary.daily_mowing_minutes
     )
     facts = [
-        ("Aktueller Zustand", f"{summary.current_state} / {summary.current_activity}"),
+        (
+            "Aktueller Zustand",
+            _mower_status_text(summary.current_state, summary.current_activity),
+        ),
         ("Akku", f"{summary.current_battery_percent} %"),
         ("Fehlercode", str(summary.current_error_code or "kein Fehler")),
         ("Minutenzyklen 24 h", f"{summary.cycle_count_24h} / ca. {summary.expected_cycles_24h}"),
@@ -1024,6 +1263,94 @@ def build_message(
         f"{html.escape(value)}</td></tr>"
         for label, value in facts
     )
+    adaptive_facts: list[tuple[str, str]] = []
+    if adaptive is not None:
+        irrigation_window = (
+            f"{_local_time(adaptive.irrigation_start_utc)} bis "
+            f"{adaptive.irrigation_end_utc.astimezone(REPORT_TIME_ZONE).strftime('%H:%M Uhr')}"
+            if adaptive.irrigation_start_utc is not None
+            and adaptive.irrigation_end_utc is not None
+            else "Noch nicht geplant"
+        )
+        validation_text = (
+            f"{adaptive.rain_validation_samples} Stunden · Prognose "
+            f"{adaptive.forecast_rain_mm:.1f} mm · später gemeldet "
+            f"{adaptive.reported_rain_mm:.1f} mm · Ø Abweichung "
+            f"{adaptive.mean_absolute_rain_error_mm:.2f} mm"
+            if adaptive.rain_validation_samples
+            else "Noch keine ausreichende Messbasis"
+        )
+        adaptive_facts = [
+            (
+                "Betriebsart",
+                "Nur Beobachtung – keine Gerätebefehle"
+                if not adaptive.execution_enabled
+                else "Live-Ausführung",
+            ),
+            ("Planstatus", _adaptive_status_text(adaptive.latest_status)),
+            ("Wasserempfehlung", _recommendation_text(adaptive.latest_recommendation)),
+            ("Vorgeschlagenes Fenster", irrigation_window),
+            ("Früheste Mähfreigabe", _local_time(adaptive.earliest_mow_resume_utc)),
+            (
+                "Möglicher Verlust trockener Mähzeit",
+                _minutes(adaptive.lost_dry_mowing_minutes),
+            ),
+            (
+                "Zusätzliche Trocknung",
+                f"{adaptive.drying_extension_minutes} Min.",
+            ),
+            (
+                "Wetterdaten 24 h",
+                f"{adaptive.weather_fresh_percent_24h} % frisch · "
+                f"{adaptive.weather_provider or 'Provider nicht gemeldet'}",
+            ),
+            ("Planänderungen 24 h", str(adaptive.plan_changes_24h)),
+            (
+                "Prognosearchiv",
+                f"{adaptive.archived_snapshots} Versionen"
+                if adaptive.archive_available
+                else "vorübergehend nicht lesbar",
+            ),
+            ("Prognosevergleich", validation_text),
+            (
+                "Heimfahrten 7 Tage",
+                (
+                    f"{summary.return_measurements_7d} Messungen · Median "
+                    f"{summary.median_return_minutes_7d} Min. · P95 "
+                    f"{summary.p95_return_minutes_7d} Min."
+                    if summary.return_measurements_7d
+                    else "Noch keine vollständige Messung"
+                ),
+            ),
+        ]
+    adaptive_rows = "".join(
+        f"<tr><td style='width:45%;padding:10px 10px 10px 0;border-bottom:1px solid {APP_BORDER};"
+        f"color:{APP_MUTED};font-size:13px;'>{html.escape(label)}</td>"
+        f"<td style='padding:10px 0;border-bottom:1px solid {APP_BORDER};font-weight:700;'>"
+        f"{html.escape(value)}</td></tr>"
+        for label, value in adaptive_facts
+    )
+    adaptive_plain = (
+        ["", "Adaptive Planung – Schattenbetrieb:"]
+        + [f"{label}: {value}" for label, value in adaptive_facts]
+        + [
+            "Hinweis: Der später von Open-Meteo gemeldete Niederschlag ist kein Messwert "
+            "eines Regenmessers direkt auf dem Sportplatz."
+        ]
+        if adaptive_facts
+        else []
+    )
+    adaptive_html = (
+        f"<tr><td style='padding-top:25px;font-size:13px;font-weight:800;color:#285EA7;'>"
+        f"ADAPTIVE PLANUNG – SCHATTENBETRIEB</td></tr>"
+        f"<tr><td><table role='presentation' width='100%' cellspacing='0' cellpadding='0' "
+        f"style='border-collapse:collapse;'>{adaptive_rows}</table></td></tr>"
+        f"<tr><td style='padding-top:12px;color:{APP_MUTED};font-size:12px;line-height:1.55;'>"
+        "Der später von Open-Meteo gemeldete Niederschlag ist kein Messwert eines "
+        "Regenmessers direkt auf dem Sportplatz.</td></tr>"
+        if adaptive_rows
+        else ""
+    )
     status_color = "#B42318" if summary.warnings else "#157347"
     subject = f"SSV53 Sicherheitsbericht: {summary.overall_status} – {summary.report_date.strftime('%d.%m.%Y')}"
     plain = "\n".join(
@@ -1033,6 +1360,7 @@ def build_message(
             f"Hinweise: {warning_text}",
             "",
             *[f"{label}: {value}" for label, value in facts],
+            *adaptive_plain,
             "",
             "Mähzeiten der letzten sieben Tage:",
             *[f"{day.strftime('%d.%m.%Y')}: {_minutes(minutes)}" for day, minutes in summary.daily_mowing_minutes],
@@ -1052,6 +1380,7 @@ def build_message(
 <div style="font-size:12px;font-weight:800;color:{status_color};text-transform:uppercase;letter-spacing:.5px;">{html.escape(summary.overall_status)}</div>
 <div style="padding-top:5px;line-height:1.5;">{html.escape(warning_text)}</div></div></td></tr>
 <tr><td><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">{fact_rows}</table></td></tr>
+{adaptive_html}
 <tr><td style="padding-top:25px;font-size:13px;font-weight:800;color:#285EA7;">MÄHZEITEN – LETZTE 7 TAGE</td></tr>
 <tr><td><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">{daily_rows}</table></td></tr>
 <tr><td style="padding-top:22px;color:{APP_MUTED};font-size:12px;line-height:1.55;">Bestätigte Flächenabschlüsse werden ausschließlich aus dem Husqvarna-EPOS-Feld lastTimeCompleted ermittelt. Mähzeit, Heimfahrten und automatische Neustarts gelten nicht als Abschluss.</td></tr>
@@ -1081,6 +1410,9 @@ def process_daily_report(
     query_client: ApplicationInsightsQueryClient | Any | None = None,
     store: AzureDailyReportStore | Any | None = None,
     mail_sender: MailSender = _send_message,
+    forecast_reader: Callable[
+        [Mapping[str, str], datetime, datetime], Sequence[WeatherSnapshot]
+    ] = read_archived_weather_snapshots,
 ) -> dict[str, Any]:
     if not enabled(values):
         return {"enabled": False, "sent": False, "reason": "disabled"}
@@ -1108,12 +1440,37 @@ def process_daily_report(
         exception_count = _as_int(
             exception_rows[0].get("exception_count") if exception_rows else 0
         )
+        observations = parse_cycle_rows(cycle_rows)
         summary = summarize_report(
-            parse_cycle_rows(cycle_rows),
+            observations,
             now_utc=now_utc,
             exception_count_24h=exception_count,
         )
-        mail_sender(settings, build_message(settings, recipient, summary))
+        archive_available = True
+        try:
+            archived_snapshots = list(
+                forecast_reader(
+                    values,
+                    now_utc - timedelta(days=8),
+                    now_utc,
+                )
+            )
+        except Exception:
+            # Das Prognosearchiv ist reine Beobachtung. Sein Ausfall darf den
+            # Sicherheitsbericht nicht verhindern und niemals Geräteaktionen
+            # beeinflussen.
+            archive_available = False
+            archived_snapshots = []
+        adaptive = summarize_adaptive_shadow(
+            observations,
+            now_utc=now_utc,
+            archived_snapshots=archived_snapshots,
+            archive_available=archive_available,
+        )
+        mail_sender(
+            settings,
+            build_message(settings, recipient, summary, adaptive),
+        )
         directory.mark(local_now.date(), "sent", now_utc)
         return {
             "enabled": True,
@@ -1122,6 +1479,10 @@ def process_daily_report(
             "cycles_24h": summary.cycle_count_24h,
             "mowing_minutes_7d": summary.mowing_minutes_7d,
             "completed_area_cycles_7d": summary.completed_area_cycles_7d,
+            "adaptive_status": adaptive.latest_status,
+            "adaptive_execution_enabled": adaptive.execution_enabled,
+            "weather_fresh_percent_24h": adaptive.weather_fresh_percent_24h,
+            "forecast_validation_samples": adaptive.rain_validation_samples,
         }
     except Exception:
         directory.mark(local_now.date(), "failed", now_utc)

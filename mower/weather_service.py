@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Mapping
 
 from mower.weather import (
@@ -91,7 +91,16 @@ def resolve_weather(
     try:
         store = store_factory(environment)
         cached = store.load_latest()
-        if cached is not None and cached.is_fresh(now, settings.max_age_minutes):
+        cache_fresh = bool(
+            cached is not None and cached.is_fresh(now, settings.max_age_minutes)
+        )
+        cache_inside_fetch_interval = bool(
+            cached is not None
+            and timedelta(0)
+            <= now - cached.fetched_at
+            < timedelta(minutes=settings.minimum_fetch_interval_minutes)
+        )
+        if cache_fresh and cache_inside_fetch_interval:
             return WeatherResolution(
                 enabled=True,
                 shadow_only=settings.shadow_only,
@@ -111,18 +120,27 @@ def resolve_weather(
             monthly_limit=settings.monthly_call_limit,
         )
         if not reserved:
+            cache_fresh = bool(
+                cached is not None and cached.is_fresh(now, settings.max_age_minutes)
+            )
             return WeatherResolution(
                 enabled=True,
                 shadow_only=settings.shadow_only,
                 available=cached is not None,
-                fresh=False,
-                source="stale-cache" if cached is not None else "unavailable",
+                fresh=cache_fresh,
+                source=(
+                    "cache"
+                    if cache_fresh
+                    else "stale-cache" if cached is not None else "unavailable"
+                ),
                 snapshot=cached,
                 fetch_attempted=False,
                 budget_reason=reason,
                 budget=budget,
                 error=(
-                    "Wetterbudget oder Mindestabstand verhindert einen neuen Abruf; "
+                    None
+                    if cache_fresh
+                    else "Wetterbudget oder Mindestabstand verhindert einen neuen Abruf; "
                     "veraltete Daten dürfen keine Beregnung reduzieren."
                 ),
             )
@@ -147,12 +165,19 @@ def resolve_weather(
             error=None,
         )
     except Exception as exc:
+        cache_fresh = bool(
+            cached is not None and cached.is_fresh(now, settings.max_age_minutes)
+        )
         return WeatherResolution(
             enabled=True,
             shadow_only=settings.shadow_only,
             available=cached is not None,
-            fresh=False,
-            source="stale-cache" if cached is not None else "unavailable",
+            fresh=cache_fresh,
+            source=(
+                "cache-refresh-error"
+                if cache_fresh
+                else "stale-cache" if cached is not None else "unavailable"
+            ),
             snapshot=cached,
             fetch_attempted=False,
             budget_reason=None,

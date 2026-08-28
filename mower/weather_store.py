@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import base64
+import gzip
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
-from typing import Mapping, Protocol
+from typing import Any, Mapping, Protocol, Sequence
 
 from azure.core import MatchConditions
 from azure.core.exceptions import HttpResponseError, ResourceExistsError, ResourceNotFoundError
@@ -11,6 +13,50 @@ from azure.data.tables import TableClient, UpdateMode
 from azure.identity import ManagedIdentityCredential
 
 from mower.weather import WeatherSnapshot
+
+
+FORECAST_ARCHIVE_PARTITION = "ssv53-weather-forecast-v1"
+FORECAST_ARCHIVE_DAYS = 21
+
+
+def _archive_row_key(fetched_at: datetime) -> str:
+    """Maps an hourly fetch into a bounded 21-day ring buffer."""
+
+    value = fetched_at.astimezone(timezone.utc)
+    return f"slot-{value.date().toordinal() % FORECAST_ARCHIVE_DAYS:02d}-{value.hour:02d}"
+
+
+def _encode_snapshot(snapshot: WeatherSnapshot) -> str:
+    raw = json.dumps(
+        snapshot.to_dict(), ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")
+    return base64.b64encode(gzip.compress(raw, compresslevel=6)).decode("ascii")
+
+
+def _decode_snapshot(value: Any) -> WeatherSnapshot:
+    encoded = str(value or "").strip()
+    if not encoded:
+        raise RuntimeError("Archivierter Wetter-Snapshot fehlt.")
+    try:
+        raw = gzip.decompress(base64.b64decode(encoded, validate=True))
+        payload = json.loads(raw.decode("utf-8"))
+    except (ValueError, OSError, json.JSONDecodeError) as exc:
+        raise RuntimeError("Archivierter Wetter-Snapshot ist beschädigt.") from exc
+    if not isinstance(payload, dict):
+        raise RuntimeError("Archivierter Wetter-Snapshot hat ein ungültiges Format.")
+    return WeatherSnapshot.from_mapping(payload)
+
+
+def forecast_archive_entity(snapshot: WeatherSnapshot) -> dict[str, Any]:
+    fetched = snapshot.fetched_at.astimezone(timezone.utc)
+    return {
+        "PartitionKey": FORECAST_ARCHIVE_PARTITION,
+        "RowKey": _archive_row_key(fetched),
+        "FetchedAtUtc": fetched.isoformat(),
+        "Provider": snapshot.provider,
+        "SnapshotGzipBase64": _encode_snapshot(snapshot),
+        "SchemaVersion": 1,
+    }
 
 
 class WeatherStore(Protocol):
@@ -39,6 +85,7 @@ class InMemoryWeatherStore:
     day_key: str | None = None
     day_count: int = 0
     last_reserved_utc: datetime | None = None
+    archive: dict[str, WeatherSnapshot] = field(default_factory=dict)
 
     def load_latest(self) -> WeatherSnapshot | None:
         return self.latest
@@ -80,6 +127,7 @@ class InMemoryWeatherStore:
 
     def save_latest(self, snapshot: WeatherSnapshot) -> None:
         self.latest = snapshot
+        self.archive[_archive_row_key(snapshot.fetched_at)] = snapshot
 
 
 class AzureTableWeatherStore:
@@ -226,6 +274,14 @@ class AzureTableWeatherStore:
         }
 
     def save_latest(self, snapshot: WeatherSnapshot) -> None:
+        # Der Ringpuffer ist absichtlich auf 21 * 24 Einträge begrenzt. Ein
+        # Slot wird erst drei Wochen später überschrieben; es gibt weder
+        # ungebremstes Tabellenwachstum noch einen löschenden Cleanup-Job.
+        self._table_client.upsert_entity(
+            entity=forecast_archive_entity(snapshot),
+            mode=UpdateMode.REPLACE,
+            timeout=5,
+        )
         self._table_client.upsert_entity(
             entity={
                 "PartitionKey": self.PARTITION_KEY,
@@ -239,3 +295,112 @@ class AzureTableWeatherStore:
             mode=UpdateMode.REPLACE,
             timeout=5,
         )
+
+
+def read_archived_weather_snapshots(
+    values: Mapping[str, str],
+    period_start_utc: datetime,
+    period_end_utc: datetime,
+    *,
+    table_client: TableClient | Any | None = None,
+) -> list[WeatherSnapshot]:
+    """Reads the bounded forecast history and rejects stale ring-buffer slots."""
+
+    start = period_start_utc.astimezone(timezone.utc)
+    end = period_end_utc.astimezone(timezone.utc)
+    if end < start:
+        raise ValueError("Das Ende des Wetterzeitraums liegt vor dem Anfang.")
+    if end - start > timedelta(days=FORECAST_ARCHIVE_DAYS):
+        start = end - timedelta(days=FORECAST_ARCHIVE_DAYS)
+    client = table_client or AzureTableWeatherStore.from_environment(values)._table_client
+    snapshots: dict[datetime, WeatherSnapshot] = {}
+    for entity in client.query_entities(
+        query_filter="PartitionKey eq @partition",
+        parameters={"partition": FORECAST_ARCHIVE_PARTITION},
+    ):
+        try:
+            fetched = datetime.fromisoformat(
+                str(entity.get("FetchedAtUtc") or "").replace("Z", "+00:00")
+            )
+            if fetched.tzinfo is None or fetched.utcoffset() is None:
+                continue
+            fetched = fetched.astimezone(timezone.utc)
+            if not start <= fetched <= end:
+                continue
+            snapshot = _decode_snapshot(entity.get("SnapshotGzipBase64"))
+        except (TypeError, ValueError, RuntimeError):
+            continue
+        if snapshot.fetched_at != fetched:
+            continue
+        snapshots[fetched] = snapshot
+    return [snapshots[key] for key in sorted(snapshots)]
+
+
+def forecast_rain_validation(
+    snapshots: Sequence[WeatherSnapshot],
+    *,
+    period_start_utc: datetime,
+    period_end_utc: datetime,
+    minimum_forecast_lead_hours: int = 3,
+) -> dict[str, float | int]:
+    """Compares an earlier forecast with a later provider report.
+
+    The later value is deliberately called *reported*, not measured: without
+    an on-site rain gauge Open-Meteo cannot prove the amount on the pitch.
+    """
+
+    start = period_start_utc.astimezone(timezone.utc).replace(
+        minute=0, second=0, microsecond=0
+    )
+    end = period_end_utc.astimezone(timezone.utc).replace(
+        minute=0, second=0, microsecond=0
+    )
+    ordered = sorted(snapshots, key=lambda item: item.fetched_at)
+    errors: list[float] = []
+    forecast_total = 0.0
+    reported_total = 0.0
+    target = start
+    while target < end:
+        forecasts = [
+            item
+            for item in ordered
+            if target - timedelta(hours=24)
+            <= item.fetched_at
+            <= target - timedelta(hours=minimum_forecast_lead_hours)
+        ]
+        reports = [
+            item
+            for item in ordered
+            if target + timedelta(hours=1)
+            <= item.fetched_at
+            <= target + timedelta(hours=6)
+        ]
+        if forecasts and reports:
+            forecast_point = next(
+                (point for point in forecasts[-1].points if point.timestamp == target),
+                None,
+            )
+            reported_point = next(
+                (point for point in reports[-1].points if point.timestamp == target),
+                None,
+            )
+            if forecast_point is not None and reported_point is not None:
+                forecast_value = max(
+                    0.0,
+                    float(forecast_point.precipitation_mm or forecast_point.rain_mm or 0.0),
+                )
+                reported_value = max(
+                    0.0,
+                    float(reported_point.precipitation_mm or reported_point.rain_mm or 0.0),
+                )
+                forecast_total += forecast_value
+                reported_total += reported_value
+                errors.append(abs(forecast_value - reported_value))
+        target += timedelta(hours=1)
+    return {
+        "sample_count": len(errors),
+        "forecast_total_mm": round(forecast_total, 2),
+        "reported_total_mm": round(reported_total, 2),
+        "mean_absolute_error_mm": round(sum(errors) / len(errors), 2) if errors else 0.0,
+        "maximum_error_mm": round(max(errors), 2) if errors else 0.0,
+    }
