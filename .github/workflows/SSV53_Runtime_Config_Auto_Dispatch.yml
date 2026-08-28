@@ -2,6 +2,13 @@ name: SSV53 Runtime-Config automatisch aktualisieren
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - public/summary.json
+      - public/included_matches.json
+      - public/quality_report.json
   schedule:
     - cron: "47 1,7,13,19 * * *"
 
@@ -22,6 +29,8 @@ jobs:
     steps:
       - name: Runtime-Config-Workflow sicher starten
         uses: actions/github-script@v8
+        env:
+          SOURCE_SHA: ${{ github.event_name == 'push' && github.sha || '' }}
         with:
           script: |
             await github.rest.actions.createWorkflowDispatch({
@@ -32,7 +41,7 @@ jobs:
               inputs: {
                 operation: "publish",
                 publish_confirmation: "SSV53-RUNTIME-CONFIG-PUBLISH",
-                source_sha: "",
+                source_sha: process.env.SOURCE_SHA,
               },
             });
 
@@ -42,9 +51,13 @@ jobs:
           {
             echo "# Runtime-Config-Aktualisierung angestoßen"
             echo
-            echo "- Anlass: **zeitgesteuerter/manueller Wiederherstellungslauf**"
+            echo "- Anlass: **${GITHUB_EVENT_NAME}**"
             echo "- Zielbranch: **feature/azure-mower-migration**"
-            echo "- Quelldaten: **neuester freigegebener Stand aus main**"
+            if [ "$GITHUB_EVENT_NAME" = "push" ]; then
+              echo "- Quelldaten: **exakter Commit ${GITHUB_SHA} des neuen Spielbestands**"
+            else
+              echo "- Quelldaten: **neuester freigegebener Stand aus main**"
+            fi
             echo "- Altersgrenze der Quelldaten: **12 Stunden**"
             echo "- Azure-Betriebsmodus wird verändert: **nein**"
             echo "- Mäher-/Beregnungsbefehle: **keine**"

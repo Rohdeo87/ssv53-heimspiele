@@ -24,14 +24,18 @@ class RuntimeConfigAutomationTests(unittest.TestCase):
     def test_dispatcher_is_only_a_fallback_not_a_skip_run_trigger(self) -> None:
         self.assertNotIn("workflow_run:", self.dispatcher)
         self.assertNotIn("SSV53 Heimspiele aktualisieren", self.dispatcher)
+        self.assertIn("push:", self.dispatcher)
+        self.assertIn("- main", self.dispatcher)
+        self.assertIn("- public/summary.json", self.dispatcher)
         self.assertIn('cron: "47 1,7,13,19 * * *"', self.dispatcher)
         self.assertIn("createWorkflowDispatch", self.dispatcher)
         self.assertIn('ref: "feature/azure-mower-migration"', self.dispatcher)
-        self.assertIn('source_sha: ""', self.dispatcher)
+        self.assertIn("github.event_name == 'push' && github.sha || ''", self.dispatcher)
+        self.assertIn("source_sha: process.env.SOURCE_SHA", self.dispatcher)
 
     def test_match_update_is_delay_tolerant_and_rate_limited(self) -> None:
         self.assertIn('cron: "20 * * * *"', self.updater)
-        self.assertIn("actions: write", self.updater)
+        self.assertNotIn("actions: write", self.updater)
         self.assertIn("Bei Zeitplanlauf immer den neuesten main-Stand verwenden", self.updater)
         self.assertIn("github.event_name == 'schedule'", self.updater)
         self.assertIn(
@@ -42,14 +46,14 @@ class RuntimeConfigAutomationTests(unittest.TestCase):
         self.assertIn("steps.timing_confirm.outputs.should_run == 'true'", self.updater)
         self.assertIn("steps.scrape.outcome == 'success'", self.updater)
         self.assertIn("steps.feed.outcome == 'success'", self.updater)
-        self.assertIn("steps.changes.outcome == 'success'", self.updater)
-        self.assertIn("steps.persist.outcome == 'success'", self.updater)
+        self.assertIn('steps.changes.outcome }}" = "success"', self.updater)
+        self.assertIn('steps.persist.outcome }}" != "success"', self.updater)
 
-    def test_only_successful_real_update_dispatches_exact_source_commit(self) -> None:
-        self.assertIn("Frischen Spielbestand gezielt", self.updater)
-        self.assertIn('workflow_id: "azure-runtime-config-rollout.yml"', self.updater)
-        self.assertIn('echo "source_sha=$(git rev-parse HEAD)"', self.updater)
-        self.assertIn("source_sha: process.env.SOURCE_SHA", self.updater)
+    def test_skip_run_cannot_dispatch_but_data_commit_can(self) -> None:
+        self.assertNotIn("createWorkflowDispatch", self.updater)
+        self.assertNotIn("workflow_run:", self.dispatcher)
+        self.assertIn("public/summary.json", self.dispatcher)
+        self.assertIn("source_sha: process.env.SOURCE_SHA", self.dispatcher)
 
     def test_dispatcher_only_requests_runtime_publish(self) -> None:
         self.assertIn('operation: "publish"', self.dispatcher)
