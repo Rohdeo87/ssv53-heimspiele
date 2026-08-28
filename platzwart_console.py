@@ -729,12 +729,14 @@ def _mower_display_activity(
         return "PAUSED"
     if mower_state == "STOPPED" or activity == "STOPPED_IN_GARDEN":
         return "STOPPED"
-    if mower_state in {"OFF", "WAIT_UPDATING", "WAIT_POWER_UP", "RESTRICTED"}:
+    if mower_state in {"OFF", "WAIT_UPDATING", "WAIT_POWER_UP"}:
         return mower_state
     if inactive_reason == "SEARCHING_FOR_SATELLITES":
         return "SEARCHING_FOR_POSITION"
     if inactive_reason == "PLANNING":
         return "PLANNING"
+    if mower_state == "RESTRICTED":
+        return "RESTRICTED"
     if activity != "NOT_APPLICABLE" or mower_state != "IN_OPERATION":
         return activity
     if mode in {"HOME", "MAIN_AREA", "SECONDARY_AREA", "POI"}:

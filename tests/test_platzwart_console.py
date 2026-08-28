@@ -160,7 +160,9 @@ class PlatzwartAuthenticationTests(unittest.TestCase):
     def test_satellite_search_and_position_error_are_distinct(self) -> None:
         searching = {
             "activity": "MOWING",
-            "state": "IN_OPERATION",
+            # Diese reale 580-EPOS-Kombination trat nach dem Deployment auf:
+            # SEARCHING_FOR_SATELLITES muss auch RESTRICTED überstimmen.
+            "state": "RESTRICTED",
             "inactive_reason": "SEARCHING_FOR_SATELLITES",
             "error_code": 0,
         }
