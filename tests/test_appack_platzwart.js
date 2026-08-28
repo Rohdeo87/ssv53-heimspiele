@@ -37,6 +37,11 @@ test("Platzwart-Seite ist syntaktisch gültig und enthält keine Zugangsdaten", 
   assert.match(html, /function submitPin\(\)/);
   assert.doesNotMatch(html, /id="login-button"/);
   assert.match(html, /function clearActionError\(\)/);
+  assert.match(html, /new AbortController\(\)/);
+  assert.match(html, /controller\.abort\(\)/);
+  assert.match(html, /visibilitychange/);
+  assert.match(html, /pageshow/);
+  assert.match(html, /function loadOnResume\(\)/);
   assert.match(html, /Mäher-, Beregnungs-, Platzbelegungs- und Vereinsheimdaten konnten nicht geladen werden/);
   assert.match(html, /Bedienaktion konnte nicht an die Platzpflege-Steuerung übermittelt werden/);
   assert.doesNotMatch(html, />Failed to fetch</);
@@ -198,9 +203,9 @@ test("Großtextmodus reagiert nur auf echten Überlauf", () => {
 });
 
 test("EPOS-Suchzustand bleibt verbunden und wird als Satellitensuche angezeigt", () => {
-  const names = ["isSearching(m)", "activity(m)"];
+  const names = ["isSearching(m)", "hasActiveMowerError(m)", "activity(m)"];
   const source = names.map((name) => html.split("\n").find((line) => line.includes(`function ${name}`))).join("\n");
-  const getActivity = new Function(`${source}\nreturn {isSearching,activity};`)();
+  const getActivity = new Function(`${source}\nreturn {isSearching,hasActiveMowerError,activity};`)();
   const mower = {
     activity: "NOT_APPLICABLE",
     displayActivity: "SEARCHING_FOR_POSITION",
@@ -226,7 +231,28 @@ test("EPOS-Suchzustand bleibt verbunden und wird als Satellitensuche angezeigt",
     getActivity.activity({ activity: "MOWING", displayActivity: "MOWING", inactiveReason: "NONE", model: "Automower 450X", state: "IN_OPERATION", connected: true }),
     "Mäht"
   );
+  assert.equal(
+    getActivity.activity({ activity: "NOT_APPLICABLE", state: "PAUSED", connected: true, errorCode: 0 }),
+    "Pausiert"
+  );
+  assert.equal(
+    getActivity.activity({ activity: "NOT_APPLICABLE", state: "ERROR", connected: true, errorCode: 93, errorMessage: "Keine genaue Satellitenposition" }),
+    "Keine genaue Satellitenposition"
+  );
+  assert.equal(
+    getActivity.activity({ activity: "NOT_APPLICABLE", state: "UNKNOWN", connected: true, errorCode: 0 }),
+    "Status wird geprüft"
+  );
+  assert.equal(
+    getActivity.hasActiveMowerError({ state: "ERROR", errorCode: 93, errorActive: true }),
+    true
+  );
+  assert.equal(
+    getActivity.hasActiveMowerError({ state: "PAUSED", errorCode: 93, errorActive: false }),
+    false
+  );
   assert.match(html, /disconnected\?"Getrennt":m\.connected===true\?"Verbunden"/);
+  assert.doesNotMatch(html, /m\.activity\|\|"Unbekannt"/);
 });
 
 test("Platzbelegung nutzt echte Zeiten und trennt Termine innerhalb eines Sperrblocks", () => {

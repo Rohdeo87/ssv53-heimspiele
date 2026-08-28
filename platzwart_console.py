@@ -723,6 +723,14 @@ def _mower_display_activity(
     ).upper()
     mower_state = str(mower.get("state") or "UNKNOWN").upper()
     mode = str(mower.get("mode") or "UNKNOWN").upper()
+    if mower_state in {"ERROR", "FATAL_ERROR", "ERROR_AT_POWER_UP"}:
+        return "ERROR"
+    if mower_state == "PAUSED":
+        return "PAUSED"
+    if mower_state == "STOPPED" or activity == "STOPPED_IN_GARDEN":
+        return "STOPPED"
+    if mower_state in {"OFF", "WAIT_UPDATING", "WAIT_POWER_UP", "RESTRICTED"}:
+        return mower_state
     if inactive_reason == "SEARCHING_FOR_SATELLITES":
         return "SEARCHING_FOR_POSITION"
     if inactive_reason == "PLANNING":
@@ -732,6 +740,86 @@ def _mower_display_activity(
     if mode in {"HOME", "MAIN_AREA", "SECONDARY_AREA", "POI"}:
         return "SEARCHING_FOR_POSITION"
     return activity
+
+
+_MOWER_ERROR_MESSAGES = {
+    # Die Codes entsprechen der Status-/Fehlercodetabelle der Husqvarna
+    # Automower Connect API. Unbekannte Codes bleiben sichtbar, werden aber
+    # nicht als unverständlicher Rohstatus ausgegeben.
+    78: "Mäher ist gerutscht",
+    93: "Keine genaue Satellitenposition",
+}
+
+
+def _mower_error_active(mower: Mapping[str, Any]) -> bool:
+    """Trennt einen aktiven Fehlerzustand von einem verzögert gelieferten Code.
+
+    Die Sicherheitslogik verwendet weiterhin unverändert jeden Fehlercode als
+    Startsperre. Für die Anzeige gilt ein Fehler aber nur dann als *aktuell*,
+    wenn Husqvarna zugleich einen ERROR-Zustand meldet. So kann ein sauberer
+    Folgezustand wie PAUSED nicht mehr als fortbestehender Fehler erscheinen.
+    """
+
+    try:
+        error_code = int(mower.get("error_code") or mower.get("errorCode") or 0)
+    except (TypeError, ValueError):
+        error_code = 0
+    mower_state = str(mower.get("state") or "UNKNOWN").upper()
+    return error_code > 0 and mower_state in {
+        "ERROR",
+        "FATAL_ERROR",
+        "ERROR_AT_POWER_UP",
+    }
+
+
+def _mower_error_message(mower: Mapping[str, Any]) -> str | None:
+    try:
+        error_code = int(mower.get("error_code") or mower.get("errorCode") or 0)
+    except (TypeError, ValueError):
+        return None
+    if error_code <= 0:
+        return None
+    return _MOWER_ERROR_MESSAGES.get(error_code, f"Gerätefehler (Code {error_code})")
+
+
+def _mower_display_label(
+    mower: Mapping[str, Any],
+    state: AutomationState,
+) -> str:
+    display_activity = _mower_display_activity(mower, state)
+    if display_activity == "ERROR":
+        return _mower_error_message(mower) or "Mäherfehler"
+    if display_activity == "RESTRICTED":
+        restricted_reason = str(
+            mower.get("restricted_reason") or mower.get("restrictedReason") or "NONE"
+        ).upper()
+        return {
+            "WEEK_SCHEDULE": "Wartet auf Zeitplan",
+            "PARK_OVERRIDE": "Geparkt bis zur Freigabe",
+            "SENSOR": "Pause durch Sensor",
+            "DAILY_LIMIT": "Tagesziel erreicht",
+            "FOTA": "Softwareupdate läuft",
+            "FROST": "Frostschutz aktiv",
+            "ALL_WORK_AREAS_COMPLETED": "Rasenfläche vollständig gemäht",
+            "EXTERNAL": "Extern angehalten",
+            "WORK_AREA_ABANDONED": "Arbeitsbereich abgebrochen",
+        }.get(restricted_reason, "Zurzeit nicht im Mähbetrieb")
+    return {
+        "SEARCHING": "Sucht Satellitensignal",
+        "SEARCHING_FOR_POSITION": "Sucht Satellitensignal",
+        "SEARCHING_FOR_CHARGING_STATION": "Sucht Ladestation",
+        "PLANNING": "Plant die Route",
+        "MOWING": "Mäht",
+        "LEAVING": "Fährt auf den Platz",
+        "GOING_HOME": "Fährt zur Station",
+        "PARKED_IN_CS": "Geparkt",
+        "CHARGING": "Lädt",
+        "PAUSED": "Pausiert",
+        "STOPPED": "Manuell gestoppt",
+        "OFF": "Ausgeschaltet",
+        "WAIT_UPDATING": "Softwareupdate läuft",
+        "WAIT_POWER_UP": "Startet das System",
+    }.get(display_activity, "Status wird geprüft")
 
 
 def _appack_graphql(token: str, query: str, variables: Mapping[str, Any]) -> dict[str, Any]:
@@ -1077,9 +1165,12 @@ def live_status(environment: Mapping[str, str], now_utc: datetime) -> dict[str, 
             "activity": mower.get("activity"), "state": mower.get("state"),
             "model": mower.get("model"),
             "displayActivity": _mower_display_activity(mower, state),
+            "displayLabel": _mower_display_label(mower, state),
             "inactiveReason": mower.get("inactive_reason") or mower.get("inactiveReason"),
             "mode": mower.get("mode"),
             "batteryPercent": mower.get("battery_percent"), "errorCode": mower.get("error_code"),
+            "errorActive": _mower_error_active(mower),
+            "errorMessage": _mower_error_message(mower),
             "connected": mower.get("connected"),
             "statusTimestamp": mower.get("status_timestamp_ms"),
             "restartBatteryPercent": _restart_battery_percent(environment),
@@ -1133,8 +1224,11 @@ def unavailable_live_status(now_utc: datetime) -> dict[str, Any]:
             "activity": None,
             "state": None,
             "displayActivity": None,
+            "displayLabel": None,
             "batteryPercent": None,
             "errorCode": None,
+            "errorActive": False,
+            "errorMessage": None,
             "connected": None,
             "workAreaProgress": None,
             "cuttingHeightMm": None,

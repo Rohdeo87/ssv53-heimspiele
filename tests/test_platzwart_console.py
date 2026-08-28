@@ -11,6 +11,10 @@ from platzwart_console import (
     _CLUBHOUSE_CACHE,
     _clubhouse_events,
     _enrich_display_block,
+    _mower_display_activity,
+    _mower_display_label,
+    _mower_error_active,
+    _mower_error_message,
     _STATISTICS_CACHE,
     _restart_battery_percent,
     PlatzwartError,
@@ -140,6 +144,63 @@ class PlatzwartAuthenticationTests(unittest.TestCase):
         self.assertEqual(_restart_battery_percent({"MOWER_RESTART_BATTERY_PERCENT": "invalid"}), 90)
         self.assertEqual(_restart_battery_percent({"MOWER_RESTART_BATTERY_PERCENT": "55"}), 60)
 
+    def test_paused_state_never_leaks_not_applicable_to_dashboard(self) -> None:
+        mower = {
+            "activity": "NOT_APPLICABLE",
+            "state": "PAUSED",
+            "inactive_reason": "NONE",
+            "error_code": 0,
+        }
+
+        self.assertEqual(_mower_display_activity(mower, AutomationState()), "PAUSED")
+        self.assertEqual(_mower_display_label(mower, AutomationState()), "Pausiert")
+        self.assertFalse(_mower_error_active(mower))
+        self.assertIsNone(_mower_error_message(mower))
+
+    def test_satellite_search_and_position_error_are_distinct(self) -> None:
+        searching = {
+            "activity": "MOWING",
+            "state": "IN_OPERATION",
+            "inactive_reason": "SEARCHING_FOR_SATELLITES",
+            "error_code": 0,
+        }
+        position_error = {
+            "activity": "NOT_APPLICABLE",
+            "state": "ERROR",
+            "inactive_reason": "NONE",
+            "error_code": 93,
+        }
+
+        self.assertEqual(
+            _mower_display_label(searching, AutomationState()),
+            "Sucht Satellitensignal",
+        )
+        self.assertFalse(_mower_error_active(searching))
+        self.assertEqual(
+            _mower_display_label(position_error, AutomationState()),
+            "Keine genaue Satellitenposition",
+        )
+        self.assertTrue(_mower_error_active(position_error))
+        self.assertEqual(
+            _mower_error_message(position_error),
+            "Keine genaue Satellitenposition",
+        )
+
+    def test_non_error_followup_state_does_not_show_retained_error_as_active(self) -> None:
+        mower = {
+            "activity": "NOT_APPLICABLE",
+            "state": "PAUSED",
+            "inactive_reason": "NONE",
+            "error_code": 93,
+        }
+
+        self.assertEqual(_mower_display_label(mower, AutomationState()), "Pausiert")
+        self.assertFalse(_mower_error_active(mower))
+        self.assertEqual(
+            _mower_error_message(mower),
+            "Keine genaue Satellitenposition",
+        )
+
     def test_live_status_exposes_next_start_and_restart_threshold(self) -> None:
         live_cycle = result(activity="CHARGING", battery=70)
         live_cycle.details["mower"]["target_work_area"]["progress"] = 40
@@ -175,6 +236,9 @@ class PlatzwartAuthenticationTests(unittest.TestCase):
             payload = live_status(environment, NOW)
         self.assertEqual(payload["mower"]["restartBatteryPercent"], 92)
         self.assertEqual(payload["mower"]["model"], "Husqvarna Automower 580 EPOS")
+        self.assertEqual(payload["mower"]["displayLabel"], "Lädt")
+        self.assertFalse(payload["mower"]["errorActive"])
+        self.assertIsNone(payload["mower"]["errorMessage"])
         self.assertEqual(len(payload["occupancy"]["safeWindows"]), 1)
         self.assertEqual(payload["occupancy"]["upcoming"][0]["title"], "Training A")
         self.assertEqual(payload["statistics"]["completedAreaCycles7d"], 3)
