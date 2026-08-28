@@ -16,6 +16,11 @@ on:
         required: false
         type: string
         default: ""
+      source_sha:
+        description: "Optionaler geprüfter Commit aus dem erfolgreichen Spielabruf"
+        required: false
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -71,14 +76,29 @@ jobs:
       - name: Geprüften Spielbestand atomar aus main laden
         id: source
         shell: bash
+        env:
+          REQUESTED_SOURCE_SHA: ${{ inputs.source_sha }}
         run: |
           set -euo pipefail
           SOURCE_DIR="$RUNNER_TEMP/runtime-source"
           mkdir -p "$SOURCE_DIR"
 
-          git fetch --no-tags --depth=1 origin \
+          git fetch --no-tags --depth=50 origin \
             "+refs/heads/$SOURCE_BRANCH:refs/remotes/origin/$SOURCE_BRANCH"
-          SOURCE_SHA="$(git rev-parse "refs/remotes/origin/$SOURCE_BRANCH")"
+          LATEST_SOURCE_SHA="$(git rev-parse "refs/remotes/origin/$SOURCE_BRANCH")"
+          SOURCE_SHA="$LATEST_SOURCE_SHA"
+
+          if [ -n "$REQUESTED_SOURCE_SHA" ]; then
+            if ! git cat-file -e "$REQUESTED_SOURCE_SHA^{commit}" 2>/dev/null; then
+              echo "Der angeforderte Spielplan-Commit ist nicht abrufbar." >&2
+              exit 1
+            fi
+            if ! git merge-base --is-ancestor "$REQUESTED_SOURCE_SHA" "$LATEST_SOURCE_SHA"; then
+              echo "Der angeforderte Spielplan-Commit gehört nicht zum aktuellen main-Verlauf." >&2
+              exit 1
+            fi
+            SOURCE_SHA="$REQUESTED_SOURCE_SHA"
+          fi
 
           for name in included_matches.json summary.json quality_report.json; do
             git show "$SOURCE_SHA:public/$name" > "$SOURCE_DIR/$name"

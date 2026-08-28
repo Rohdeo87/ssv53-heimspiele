@@ -18,9 +18,15 @@ class RuntimeConfigRolloutWorkflowTests(unittest.TestCase):
             self.content,
         )
         self.assertIn(
-            'SOURCE_SHA="$(git rev-parse "refs/remotes/origin/$SOURCE_BRANCH")"',
+            'LATEST_SOURCE_SHA="$(git rev-parse "refs/remotes/origin/$SOURCE_BRANCH")"',
             self.content,
         )
+        self.assertIn("REQUESTED_SOURCE_SHA: ${{ inputs.source_sha }}", self.content)
+        self.assertIn(
+            'git merge-base --is-ancestor "$REQUESTED_SOURCE_SHA" "$LATEST_SOURCE_SHA"',
+            self.content,
+        )
+        self.assertIn('SOURCE_SHA="$REQUESTED_SOURCE_SHA"', self.content)
         self.assertIn('git show "$SOURCE_SHA:public/$name"', self.content)
         self.assertNotIn('cp "public/$name" "$SOURCE_DIR/$name"', self.content)
 

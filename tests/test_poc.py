@@ -565,6 +565,8 @@ class ScheduleProtectionTest(unittest.TestCase):
             random_delay_min_seconds=120,
             random_delay_max_seconds=720,
             closing_margin_seconds=60,
+            minimum_source_refresh_interval_minutes=240,
+            source_summary_path="public/summary.json",
         )
 
     def test_window_is_open_from_0600_until_before_2200(self):
@@ -588,6 +590,94 @@ class ScheduleProtectionTest(unittest.TestCase):
         from datetime import datetime
         from schedule_guard import choose_delay_seconds
         self.assertIsNone(choose_delay_seconds(datetime.fromisoformat("2026-07-15T21:58:30+02:00"), self.settings))
+
+    def test_recent_real_feed_suppresses_duplicate_scrape(self):
+        import json
+        import tempfile
+        from datetime import datetime
+        from pathlib import Path
+        from schedule_guard import source_refresh_decision
+
+        with tempfile.TemporaryDirectory() as directory:
+            summary = Path(directory) / "summary.json"
+            summary.write_text(
+                json.dumps({"generated_at": "2026-07-15T08:00:00+00:00"}),
+                encoding="utf-8",
+            )
+            due, age, reason = source_refresh_decision(
+                datetime.fromisoformat("2026-07-15T12:00:00+02:00"),
+                self.settings,
+                summary,
+            )
+
+        self.assertFalse(due)
+        self.assertEqual(120.0, age)
+        self.assertEqual("SOURCE_FRESH", reason)
+
+    def test_old_real_feed_allows_refresh(self):
+        import json
+        import tempfile
+        from datetime import datetime
+        from pathlib import Path
+        from schedule_guard import source_refresh_decision
+
+        with tempfile.TemporaryDirectory() as directory:
+            summary = Path(directory) / "summary.json"
+            summary.write_text(
+                json.dumps({"generated_at": "2026-07-15T05:59:59+00:00"}),
+                encoding="utf-8",
+            )
+            due, age, reason = source_refresh_decision(
+                datetime.fromisoformat("2026-07-15T12:00:00+02:00"),
+                self.settings,
+                summary,
+            )
+
+        self.assertTrue(due)
+        self.assertGreater(age, 240)
+        self.assertEqual("SOURCE_REFRESH_DUE", reason)
+
+    def test_missing_or_invalid_summary_fails_towards_safe_refresh(self):
+        import tempfile
+        from datetime import datetime
+        from pathlib import Path
+        from schedule_guard import source_refresh_decision
+
+        with tempfile.TemporaryDirectory() as directory:
+            missing = Path(directory) / "summary.json"
+            due, age, reason = source_refresh_decision(
+                datetime.fromisoformat("2026-07-15T12:00:00+02:00"),
+                self.settings,
+                missing,
+            )
+
+        self.assertTrue(due)
+        self.assertIsNone(age)
+        self.assertEqual("SOURCE_MISSING_OR_INVALID", reason)
+
+    def test_manual_refresh_bypasses_only_minimum_interval(self):
+        import json
+        import tempfile
+        from datetime import datetime
+        from pathlib import Path
+        from schedule_guard import source_refresh_decision
+
+        with tempfile.TemporaryDirectory() as directory:
+            summary = Path(directory) / "summary.json"
+            summary.write_text(
+                json.dumps({"generated_at": "2026-07-15T09:59:00+00:00"}),
+                encoding="utf-8",
+            )
+            due, age, reason = source_refresh_decision(
+                datetime.fromisoformat("2026-07-15T12:00:00+02:00"),
+                self.settings,
+                summary,
+                force_refresh=True,
+            )
+
+        self.assertTrue(due)
+        self.assertEqual(1.0, age)
+        self.assertEqual("FORCED", reason)
 
 
 if __name__ == "__main__":
