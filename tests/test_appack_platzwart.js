@@ -255,6 +255,23 @@ test("EPOS-Suchzustand bleibt verbunden und wird als Satellitensuche angezeigt",
   assert.doesNotMatch(html, /m\.activity\|\|"Unbekannt"/);
 });
 
+test("Pausierter Mäher wird auch im Gesamtzustand eindeutig angezeigt", () => {
+  const names = ["isMowerPaused(m)", "simpleStatus(s)"];
+  const source = names.map((name) => html.split("\n").find((line) => line.includes(`function ${name}`))).join("\n");
+  const status = new Function(`${source}\nreturn {isMowerPaused,simpleStatus};`)();
+  const paused = {
+    overall: { code: "MANUAL_OR_ERROR_HOLD" },
+    mower: { state: "PAUSED", activity: "NOT_APPLICABLE", displayActivity: "PAUSED" },
+  };
+  assert.equal(status.isMowerPaused(paused.mower), true);
+  assert.equal(
+    status.simpleStatus(paused),
+    "Der Mäher wurde pausiert. Die Automatik startet ihn deshalb nicht selbstständig. Die Schutzregeln bleiben aktiv."
+  );
+  assert.match(html, /mowerPaused\?"Mäher pausiert"/);
+  assert.match(html, /manualOutside\|\|mowerPaused\?"warn":"good"/);
+});
+
 test("Platzbelegung nutzt echte Zeiten und trennt Termine innerhalb eines Sperrblocks", () => {
   const names = ["localDay(value)", "calendarTime(v,referenceValue)", "occupancyItems(block)", "occupancySchedule(block)", "occupancyDisplayItems(block)", "occupancyName(block)", "occupancyWhen(block,current,reference)", "occupancyBlockWhen(block,current,reference)"];
   const source = names.map((name) => html.split("\n").find((line) => line.includes(`function ${name}`))).join("\n");
