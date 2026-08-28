@@ -334,7 +334,7 @@ jobs:
           git push origin HEAD:feature/azure-mower-migration
 
       - name: Sicheren Azure-Deploy auf Migrationsbranch starten
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             await github.rest.actions.createWorkflowDispatch({
@@ -348,7 +348,7 @@ jobs:
             });
 
       - name: Auftrag als übernommen markieren
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const changed =
@@ -708,7 +708,7 @@ jobs:
 
       - name: Auftrag bei Erfolg abschließen
         if: success() && inputs.request_issue != ''
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const issueNumber =
@@ -730,7 +730,7 @@ jobs:
 
       - name: Auftrag bei Fehler markieren
         if: failure() && inputs.request_issue != ''
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const issueNumber =
