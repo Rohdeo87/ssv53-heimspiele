@@ -16,6 +16,11 @@ on:
         required: false
         type: string
         default: ""
+      source_sha:
+        description: "Optionaler geprüfter Commit aus dem erfolgreichen Spielabruf"
+        required: false
+        type: string
+        default: ""
 
 permissions:
   contents: read

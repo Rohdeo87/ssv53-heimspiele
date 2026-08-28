@@ -19,17 +19,15 @@ on:
         type: boolean
         default: false
   schedule:
-    # GitHub-Cron läuft in UTC. Diese vier Startpunkte liegen sowohl bei
-    # Winter- als auch Sommerzeit sicher zwischen 06:00 und 22:00 Uhr Berlin.
-    # Vor dem eigentlichen Abruf folgt zusätzlich eine zufällige Wartezeit.
-    - cron: "20 5 * * *"
-    - cron: "20 10 * * *"
-    - cron: "20 15 * * *"
-    - cron: "20 19 * * *"
+    # GitHub kann geplante Läufe deutlich verspätet zustellen. Der stündliche
+    # Trigger schafft deshalb mehrere Chancen im Berliner Abruffenster. Der
+    # Quellfrische-Schutz begrenzt echte DFB-Abrufe weiterhin auf etwa alle 4 h.
+    - cron: "20 * * * *"
 
 permissions:
   contents: write
   issues: write
+  actions: write
 
 concurrency:
   group: ssv53-match-update
@@ -46,6 +44,14 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Bei Zeitplanlauf immer den neuesten main-Stand verwenden
+        if: ${{ github.event_name == 'schedule' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin "${{ github.event.repository.default_branch }}"
+          git reset --hard "origin/${{ github.event.repository.default_branch }}"
+
       - name: Python einrichten
         uses: actions/setup-python@v7
         with:
@@ -55,7 +61,14 @@ jobs:
       - name: Berliner Abruffenster prüfen
         id: timing
         shell: bash
-        run: python schedule_guard.py prepare --config config.json
+        env:
+          FORCE_REFRESH: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          ARGS=(prepare --config config.json)
+          if [ "$FORCE_REFRESH" = "true" ]; then
+            ARGS+=(--force-refresh)
+          fi
+          python schedule_guard.py "${ARGS[@]}"
 
       - name: Startzeit gegebenenfalls zufällig verschieben
         if: steps.timing.outputs.should_run == 'true'
@@ -74,7 +87,14 @@ jobs:
         id: timing_confirm
         if: steps.timing.outputs.should_run == 'true'
         shell: bash
-        run: python schedule_guard.py confirm --config config.json
+        env:
+          FORCE_REFRESH: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          ARGS=(confirm --config config.json)
+          if [ "$FORCE_REFRESH" = "true" ]; then
+            ARGS+=(--force-refresh)
+          fi
+          python schedule_guard.py "${ARGS[@]}"
 
       - name: Abhängigkeiten installieren
         if: steps.timing_confirm.outputs.should_run == 'true'
@@ -206,6 +226,30 @@ jobs:
             git commit -m "Platzspiele, Änderungsbericht und Abrufschutz aktualisiert"
             git push origin "HEAD:$TARGET_BRANCH"
           fi
+          echo "source_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Frischen Spielbestand gezielt zur Azure-Veröffentlichung übergeben
+        if: ${{ steps.timing_confirm.outputs.should_run == 'true' && github.ref_name == github.event.repository.default_branch && steps.scrape.outcome == 'success' && steps.feed.outcome == 'success' && steps.changes.outcome == 'success' && steps.persist.outcome == 'success' }}
+        uses: actions/github-script@v8
+        env:
+          SOURCE_SHA: ${{ steps.persist.outputs.source_sha }}
+        with:
+          script: |
+            if (!process.env.SOURCE_SHA) {
+              core.setFailed("Der atomare Quell-Commit des Spielplans fehlt.");
+              return;
+            }
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: "azure-runtime-config-rollout.yml",
+              ref: "feature/azure-mower-migration",
+              inputs: {
+                operation: "publish",
+                publish_confirmation: "SSV53-RUNTIME-CONFIG-PUBLISH",
+                source_sha: process.env.SOURCE_SHA,
+              },
+            });
 
       - name: Bei Handlungsbedarf GitHub-Issue erzeugen
         id: notify
@@ -239,7 +283,7 @@ jobs:
         shell: bash
         run: |
           if [ "${{ steps.timing.outputs.should_run }}" != "true" ]; then
-            echo "Kein Abruf: außerhalb des erlaubten Zeitfensters oder zu nah an 22:00 Uhr."
+            echo "Kein Abruf: ${{ steps.timing.outputs.skip_reason }}."
             exit 0
           fi
           if [ "${{ steps.timing_confirm.outputs.should_run }}" != "true" ]; then
