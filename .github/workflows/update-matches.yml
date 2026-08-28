@@ -27,7 +27,6 @@ on:
 permissions:
   contents: write
   issues: write
-  actions: write
 
 concurrency:
   group: ssv53-match-update
@@ -226,31 +225,6 @@ jobs:
             git commit -m "Platzspiele, Änderungsbericht und Abrufschutz aktualisiert"
             git push origin "HEAD:$TARGET_BRANCH"
           fi
-          echo "source_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-
-      - name: Frischen Spielbestand gezielt zur Azure-Veröffentlichung übergeben
-        if: ${{ steps.timing_confirm.outputs.should_run == 'true' && github.ref_name == github.event.repository.default_branch && steps.scrape.outcome == 'success' && steps.feed.outcome == 'success' && steps.changes.outcome == 'success' && steps.persist.outcome == 'success' }}
-        uses: actions/github-script@v8
-        env:
-          SOURCE_SHA: ${{ steps.persist.outputs.source_sha }}
-        with:
-          script: |
-            if (!process.env.SOURCE_SHA) {
-              core.setFailed("Der atomare Quell-Commit des Spielplans fehlt.");
-              return;
-            }
-            await github.rest.actions.createWorkflowDispatch({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: "azure-runtime-config-rollout.yml",
-              ref: "feature/azure-mower-migration",
-              inputs: {
-                operation: "publish",
-                publish_confirmation: "SSV53-RUNTIME-CONFIG-PUBLISH",
-                source_sha: process.env.SOURCE_SHA,
-              },
-            });
-
       - name: Bei Handlungsbedarf GitHub-Issue erzeugen
         id: notify
         if: ${{ always() && steps.timing_confirm.outputs.should_run == 'true' && github.ref_name == github.event.repository.default_branch }}
