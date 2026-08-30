@@ -56,7 +56,7 @@
     "team_role": "home",
     "kickoff": "2026-08-29T12:00+02:00",
     "home_team": "Schönwalder SV",
-    "away_team": "FC Schwedt 02 A-Junioren",
+    "away_team": "FC Schwedt 02",
     "competition": "Sa, | A-Junioren | Landesklasse",
     "match_type": "ME",
     "status": "",
@@ -68,7 +68,7 @@
     "venue_rule": "Rasen Schönwalde",
     "event_start": "2026-08-29T11:00+02:00",
     "event_end": "2026-08-29T14:30+02:00",
-    "checksum": "3495e2a087de55963c6e2bae8af83e8230988db392a5778fa4d9bafc39892a19",
+    "checksum": "2f892bea6abfbde832a59cf13568d1c25021a54289fb0e916a23d734782d2d7b",
     "warnings": []
   },
   {
@@ -178,7 +178,7 @@
     "team_role": "home",
     "kickoff": "2026-09-12T11:00+02:00",
     "home_team": "Schönwalder SV",
-    "away_team": "Oranienburger FC Eintracht U19",
+    "away_team": "Oranienburger FC Eintracht",
     "competition": "A-Junioren | Landesklasse",
     "match_type": "ME",
     "status": "",
@@ -190,7 +190,7 @@
     "venue_rule": "Rasen Schönwalde",
     "event_start": "2026-09-12T10:00+02:00",
     "event_end": "2026-09-12T13:30+02:00",
-    "checksum": "762d488ea8adae2e9ea7937bf8dad78dae77e9250c1893a6ba9a90145fabe0be",
+    "checksum": "1e9e445646d31c9b3a4459cee48a739d06f91c178a0dd02afe97e4b0b41f6f8e",
     "warnings": []
   },
   {
@@ -538,7 +538,7 @@
     "team_role": "home",
     "kickoff": "2026-11-28T11:00+01:00",
     "home_team": "Schönwalder SV",
-    "away_team": "MSV 1919 Neuruppin U19",
+    "away_team": "MSV 1919 Neuruppin",
     "competition": "Sa, | A-Junioren | Landesklasse",
     "match_type": "ME",
     "status": "",
@@ -550,7 +550,7 @@
     "venue_rule": "Rasen Schönwalde",
     "event_start": "2026-11-28T10:00+01:00",
     "event_end": "2026-11-28T13:30+01:00",
-    "checksum": "304533fd70d459f01d9bbc1d0def63141fa7007118b1f867cf6e53b71007651b",
+    "checksum": "be9bbbf720ea8c81a717635bdae827d71f94aef9e33aed556c939cd0402ff8f7",
     "warnings": []
   },
   {

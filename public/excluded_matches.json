@@ -967,7 +967,7 @@
     "team_category": "A-Junioren | Landesklasse",
     "team_role": "away",
     "kickoff": "2027-03-07T11:00+01:00",
-    "home_team": "FC Schwedt 02 A-Junioren",
+    "home_team": "FC Schwedt 02",
     "away_team": "Schönwalder SV",
     "competition": "So, | A-Junioren | Landesklasse",
     "match_type": "ME",
@@ -980,7 +980,7 @@
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2027-03-07T10:00+01:00",
     "event_end": "2027-03-07T13:30+01:00",
-    "checksum": "979063a7e91d8fd6000209f397779302da8b8c86855237d998d03f1764024f48",
+    "checksum": "301bcde532add1de10a426903746c1131df4b67fdac8022ae8ea9e1b4d6732c3",
     "warnings": []
   },
   {
@@ -1135,7 +1135,7 @@
     "team_category": "A-Junioren | Landesklasse",
     "team_role": "away",
     "kickoff": "2027-04-18T11:00+02:00",
-    "home_team": "Oranienburger FC Eintracht U19",
+    "home_team": "Oranienburger FC Eintracht",
     "away_team": "Schönwalder SV",
     "competition": "So, | A-Junioren | Landesklasse",
     "match_type": "ME",
@@ -1148,7 +1148,7 @@
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2027-04-18T10:00+02:00",
     "event_end": "2027-04-18T13:30+02:00",
-    "checksum": "2b15861e13ae39acd1cdb0eeb4ce5f0308649c7d64a4f038c0785fb85632f220",
+    "checksum": "1d596139ec413268df55961f7034171bc6894ff307a062f5c380a251b33a2d1d",
     "warnings": []
   },
   {
@@ -1183,7 +1183,7 @@
     "team_category": "A-Junioren | Landesklasse",
     "team_role": "away",
     "kickoff": "2027-05-02T11:30+02:00",
-    "home_team": "MSV 1919 Neuruppin U19",
+    "home_team": "MSV 1919 Neuruppin",
     "away_team": "Schönwalder SV",
     "competition": "So, | A-Junioren | Landesklasse",
     "match_type": "ME",
@@ -1196,7 +1196,7 @@
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2027-05-02T10:30+02:00",
     "event_end": "2027-05-02T14:00+02:00",
-    "checksum": "74e42b30d97fab4f83d52ff2486454aa69ed8f9aab27b2bb4feb537606977883",
+    "checksum": "00507a8bb84e497c6479e39024b2e865d84aeb22794449c7dc8f78ac17903ce1",
     "warnings": []
   },
   {
