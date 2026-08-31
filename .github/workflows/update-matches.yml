@@ -1,6 +1,13 @@
 name: SSV53 Heimspiele aktualisieren
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - poc_scraper.py
+      - create_feed.py
+      - config.json
+      - occupancy/match_model.py
   workflow_dispatch:
     inputs:
       skip_start_delay:

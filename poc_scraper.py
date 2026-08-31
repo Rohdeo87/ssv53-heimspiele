@@ -29,6 +29,8 @@ from urllib.parse import urljoin
 import requests
 from bs4 import BeautifulSoup, Tag
 
+from occupancy.match_model import MatchTimingError, resolve_match_timing
+
 LOG = logging.getLogger("ssv53-dfbnet-poc")
 BASE_URL = "https://www.fussball.de"
 DATE_TIME_PATTERNS = (
@@ -50,6 +52,7 @@ STATUS_TERMS = (
     "Abbruch",
     "vorläufiges Spiel",
 )
+MATCH_ROW_CLASSES = {"row-competition", "row-festival", "row-tournament"}
 
 
 class ScrapeError(RuntimeError):
@@ -105,8 +108,15 @@ class Match:
     venue_rule: str = ""
     event_start: str = ""
     event_end: str = ""
+    match_end: str = ""
+    match_duration_minutes: int = 0
+    duration_rule: str = ""
+    competition_format: str = ""
     checksum: str = ""
     warnings: list[str] = field(default_factory=list)
+    home_team_id: str = ""
+    away_team_id: str = ""
+    postponed_to: str = ""
 
 
 class Client:
@@ -587,7 +597,7 @@ def fetch_club_matchplan(
 ) -> tuple[str, str]:
     url = club_matchplan_url(config, date_from, date_to)
     body = client.get_text(url)
-    if "row-competition" not in body and "club-matchplan-table" not in body:
+    if not any(marker in body for marker in MATCH_ROW_CLASSES) and "club-matchplan-table" not in body:
         raise ScrapeError(
             f"Vereinsspielplan {date_from}–{date_to}: erwartete Struktur fehlt"
         )
@@ -605,7 +615,7 @@ def row_text(row: Tag) -> str:
 
 def is_next_match_header(row: Tag) -> bool:
     classes = row_classes(row)
-    if "row-competition" in classes or "row-headline" in classes:
+    if MATCH_ROW_CLASSES.intersection(classes) or "row-headline" in classes:
         return True
     text = row_text(row)
     if parse_datetime(text) is None:
@@ -650,7 +660,7 @@ def kickoff_for_competition_row(
     sibling = competition_row.find_previous_sibling("tr")
     while sibling is not None:
         classes = row_classes(sibling)
-        if "row-competition" in classes:
+        if MATCH_ROW_CLASSES.intersection(classes):
             break
         if "row-headline" in classes or is_next_match_header(sibling):
             return parse_datetime(row_text(sibling))
@@ -689,6 +699,29 @@ def source_detail_ids(soup: BeautifulSoup) -> set[str]:
         if detail_id:
             result.add(detail_id)
     return result
+
+
+def extract_festival_group_id(url: str) -> str:
+    match = re.search(r"/-/staffel/([A-Z0-9]+-G)(?:[/?#]|$)", url, re.IGNORECASE)
+    return match.group(1) if match else ""
+
+
+def postponed_kickoff(rows: list[Tag], detail_id: str) -> str:
+    """A dated score link is a relocation pointer, not a second kickoff."""
+    targets = set()
+    for element in select_from_rows(rows, '.column-score .info-text'):
+        target = parse_datetime(row_text(element))
+        if target is None:
+            continue
+        link = element.find_parent('a')
+        if not detail_id or not isinstance(link, Tag) or extract_detail_id(
+            urljoin(BASE_URL, str(link.get('href') or ''))
+        ) != detail_id:
+            raise ScrapeError("Verlegungshinweis ohne eindeutig zugehörige Spiel-ID")
+        targets.add(target.isoformat(timespec="minutes"))
+    if len(targets) > 1:
+        raise ScrapeError(f"Widersprüchliche Verlegungsziele für Spiel {detail_id}")
+    return next(iter(targets), "")
 
 
 def select_from_rows(rows: Iterable[Tag], selector: str) -> list[Tag]:
@@ -804,7 +837,20 @@ def determine_club_team(
     away_team: str,
     team_category: str,
     club_team_pattern: str,
+    *,
+    is_festival: bool = False,
 ) -> tuple[str, str, str]:
+    if is_festival:
+        # The inactive host label is not a team. Only linked participants
+        # matching OUR club may supply the team identity/contact lookup.
+        participants = {}
+        for index, element in enumerate(club_elements):
+            name = normalize_space(element.get_text(" ", strip=True))
+            team_id = team_id_for_club_element(element)
+            if team_id and club_name_match(name, club_team_pattern):
+                participants[team_id] = (name, team_id, "home" if index == 0 else "away")
+        if len(participants) == 1:
+            return next(iter(participants.values()))
     home_match = club_name_match(home_team, club_team_pattern)
     away_match = club_name_match(away_team, club_team_pattern)
     if home_match and not away_match:
@@ -833,15 +879,20 @@ def has_more_results(html_text: str) -> bool:
 
 
 def match_duration_minutes(
-    team_name: str, team_category: str, config: dict[str, Any]
+    team_name: str,
+    team_category: str,
+    config: dict[str, Any],
+    *,
+    competition: str = "",
+    match_type: str = "",
 ) -> int:
-    timing = config.get("event_timing", {})
-    combined = normalize_space(f"{team_category} {team_name}")
-    for rule in timing.get("duration_rules", []) or []:
-        pattern = str(rule.get("pattern") or "")
-        if pattern and re.search(pattern, combined, re.IGNORECASE):
-            return max(int(rule.get("minutes", 90)), 1)
-    return max(int(timing.get("default_match_duration_minutes", 90)), 1)
+    return resolve_match_timing(
+        team_name=team_name,
+        team_category=team_category,
+        competition=competition,
+        match_type=match_type,
+        timing_config=config.get("event_timing", {}),
+    ).minutes
 
 
 
@@ -949,17 +1000,36 @@ def recalculate_event_times(match: Match, config: dict[str, Any]) -> None:
     if not match.kickoff:
         match.event_start = ""
         match.event_end = ""
+        match.match_end = ""
+        match.match_duration_minutes = 0
+        match.duration_rule = ""
+        match.competition_format = ""
         return
     try:
         kickoff = datetime.fromisoformat(match.kickoff)
     except ValueError:
         match.event_start = ""
         match.event_end = ""
+        match.match_end = ""
+        match.match_duration_minutes = 0
+        match.duration_rule = ""
+        match.competition_format = ""
         return
     timing = config.get("event_timing", {})
     before = int(timing.get("before_minutes", 60))
     after = int(timing.get("after_minutes", 60))
-    duration = match_duration_minutes(match.team_name, match.team_category, config)
+    timing_decision = resolve_match_timing(
+        team_name=match.team_name,
+        team_category=match.team_category,
+        competition=match.competition,
+        match_type=match.match_type,
+        timing_config=timing,
+    )
+    duration = timing_decision.minutes
+    match.match_duration_minutes = duration
+    match.duration_rule = timing_decision.duration_rule
+    match.competition_format = timing_decision.competition_format
+    match.match_end = (kickoff + timedelta(minutes=duration)).isoformat(timespec="minutes")
     match.event_start = (kickoff - timedelta(minutes=before)).isoformat(timespec="minutes")
     match.event_end = (kickoff + timedelta(minutes=duration + after)).isoformat(timespec="minutes")
 
@@ -1038,6 +1108,54 @@ def _normalized_duplicate_value(field_name: str, value: str) -> str:
     return text
 
 
+def resolve_postponement_chain(
+    detail_id: str, group: list[Match]
+) -> tuple[list[Match], list[dict[str, str]]]:
+    """Only discard an old row if an explicit, identity-checked chain ends
+    in a present final row. Missing targets, cycles and ambiguous edges fail
+    closed. No extra source request, no first/last/newest-row guessing.
+    """
+    if not any(item.postponed_to for item in group):
+        return group, []
+    numbers = {item.match_number for item in group}
+    identities = {tuple(sorted((item.home_team_id, item.away_team_id))) for item in group}
+    if len(numbers) != 1 or "" in numbers or len(identities) != 1:
+        raise ScrapeError(f"Verlegung {detail_id}: Spielnummer/Mannschafts-IDs widersprüchlich")
+    identity = next(iter(identities))
+    if not all(identity) or identity[0] == identity[1]:
+        raise ScrapeError(f"Verlegung {detail_id}: Mannschafts-IDs nicht eindeutig")
+    by_kickoff: dict[str, list[Match]] = {}
+    for item in group:
+        by_kickoff.setdefault(item.kickoff, []).append(item)
+    terminal_times = set()
+    for item in group:
+        current = item.kickoff
+        visited = set()
+        while True:
+            if not current or current in visited or current not in by_kickoff:
+                raise ScrapeError(f"Verlegung {detail_id}: Ziel fehlt oder zyklische Verlegung")
+            visited.add(current)
+            edges = {row.postponed_to for row in by_kickoff[current]}
+            if len(edges) != 1:
+                raise ScrapeError(f"Verlegung {detail_id}: widersprüchliche Zielangaben")
+            target = next(iter(edges))
+            if not target:
+                terminal_times.add(current)
+                break
+            current = target
+    if len(terminal_times) != 1:
+        raise ScrapeError(f"Verlegung {detail_id}: mehrere gültige Zieltermine")
+    final_time = next(iter(terminal_times))
+    final_rows = by_kickoff[final_time]
+    if not any(item.venue_raw for item in final_rows):
+        raise ScrapeError(f"Verlegung {detail_id}: Spielstätte am Zieltermin fehlt")
+    provenance = [
+        {"from": item.kickoff, "to": item.postponed_to}
+        for item in group if item.postponed_to
+    ]
+    return final_rows, provenance
+
+
 def _merge_duplicate_match_group(
     detail_id: str,
     group: list[Match],
@@ -1051,6 +1169,8 @@ def _merge_duplicate_match_group(
     dürfen sich ergänzen; widersprüchliche Angaben führen weiterhin zu einem
     harten Abbruch.
     """
+    occurrences = len(group)
+    group, relocations = resolve_postponement_chain(detail_id, group)
     critical_fields = (
         "match_number",
         "kickoff",
@@ -1058,6 +1178,8 @@ def _merge_duplicate_match_group(
         "away_team",
         "venue_raw",
         "status",
+        "home_team_id",
+        "away_team_id",
     )
     conflicts: dict[str, list[str]] = {}
     for field_name in critical_fields:
@@ -1072,9 +1194,17 @@ def _merge_duplicate_match_group(
 
     detail = {
         "detail_id": detail_id,
-        "occurrences": len(group),
+        "occurrences": occurrences,
         "conflicts": conflicts,
     }
+    if relocations:
+        detail["resolved"] = True
+        detail["resolution_attempt"] = {
+            "method": "explicit_postponement_chain",
+            "relocations": relocations,
+            "selected_kickoff": group[0].kickoff,
+            "resolved": True,
+        }
     if conflicts:
         resolved = resolver(detail_id, group, detail) if resolver else None
         if resolved is None:
@@ -1130,6 +1260,8 @@ def collapse_duplicate_detail_ids(
     without_detail_id: list[Match] = []
     for item in matches:
         detail_id = extract_detail_id(item.detail_url)
+        if not detail_id and extract_festival_group_id(item.detail_url):
+            detail_id = "festival:" + item.external_id
         if detail_id:
             grouped.setdefault(detail_id, []).append(item)
         else:
@@ -1140,7 +1272,7 @@ def collapse_duplicate_detail_ids(
     resolution_details: list[dict[str, Any]] = []
     result = list(without_detail_id)
     for detail_id, group in grouped.items():
-        if len(group) == 1:
+        if len(group) == 1 and not group[0].postponed_to:
             result.append(group[0])
             continue
         merged, detail = _merge_duplicate_match_group(detail_id, group, resolver)
@@ -1167,7 +1299,9 @@ def parse_club_matchplan(
     duplicate_resolver: Callable[[str, list[Match], dict[str, Any]], Match | None] | None = None,
 ) -> list[Match]:
     soup = BeautifulSoup(html_text, "lxml")
-    competition_rows = soup.select("tr.row-competition")
+    competition_rows = soup.select(
+        "tr.row-competition, tr.row-festival, tr.row-tournament"
+    )
     if not competition_rows:
         # Leere Zeitfenster sind zulässig, solange eine Spielplantabelle vorhanden ist.
         if "club-matchplan-table" in html_text or soup.select_one(".club-matchplan-table"):
@@ -1185,8 +1319,6 @@ def parse_club_matchplan(
             return []
         raise ScrapeError("Keine Vereinsspielplan-Tabelle gefunden")
 
-    default_lead = int(config.get("event_timing", {}).get("before_minutes", 60))
-    default_after = int(config.get("event_timing", {}).get("after_minutes", 60))
     club_team_pattern = str(config.get("club_team_pattern") or "")
 
     matches: list[Match] = []
@@ -1200,12 +1332,21 @@ def parse_club_matchplan(
 
         club_elements = select_from_rows(rows, ".club-name")
         clubs = unique_texts(club_elements)
+        normalized_block = normalize_match_text(block_text)
+        is_festival = bool(
+            re.search(
+                r"\b(?:kinderfussball|festival|spielfest|spielenachmittag)\b",
+                normalized_block,
+            )
+        )
         if len(clubs) < 2:
             fallback_elements = select_from_rows(rows, '[class*="club"]')
             clubs = [value for value in unique_texts(fallback_elements) if len(value) <= 120][:2]
             club_elements = fallback_elements[:2]
         home_team = clubs[0] if clubs else ""
         away_team = clubs[1] if len(clubs) > 1 else ""
+        if home_team and not away_team and is_festival:
+            away_team = "Kinderfußball-Festival"
         if len(clubs) == 1 and "spielfrei" in normalize_match_text(block_text):
             away_team = "spielfrei"
         if not home_team or not away_team:
@@ -1219,10 +1360,17 @@ def parse_club_matchplan(
                 detail_url = urljoin(BASE_URL, href)
                 break
 
+        if not detail_url and is_festival:
+            for link in select_from_rows(rows, 'a[href*="/staffel/"]'):
+                candidate = urljoin(BASE_URL, str(link.get("href") or ""))
+                if extract_festival_group_id(candidate):
+                    detail_url = candidate
+                    break
+
         detail_id = extract_detail_id(detail_url)
         number_match = re.search(r"\b(\d{9})\b", block_text)
         match_number = number_match.group(1) if number_match else ""
-        external_id = detail_id or match_number
+        external_id = detail_id or match_number or extract_festival_group_id(detail_url)
         if not external_id:
             seed = f"{kickoff}|{home_team}|{away_team}"
             external_id = hashlib.sha256(seed.encode("utf-8")).hexdigest()[:24]
@@ -1235,6 +1383,7 @@ def parse_club_matchplan(
             away_team,
             team_category,
             club_team_pattern,
+            is_festival=is_festival,
         )
         if team_role == "unknown":
             warnings.append("Vereinsmannschaft formal nicht eindeutig zugeordnet")
@@ -1262,15 +1411,15 @@ def parse_club_matchplan(
             detail_url=detail_url,
             source_url=source_url,
             warnings=warnings,
+            home_team_id=team_id_for_club_element(club_elements[0]) if club_elements else "",
+            away_team_id=team_id_for_club_element(club_elements[1]) if len(club_elements) > 1 else "",
+            postponed_to=postponed_kickoff(rows, detail_id),
         )
         if kickoff:
-            match.event_start = (
-                kickoff - timedelta(minutes=default_lead)
-            ).isoformat(timespec="minutes")
-            duration = match_duration_minutes(team_name, team_category, config)
-            match.event_end = (
-                kickoff + timedelta(minutes=duration + default_after)
-            ).isoformat(timespec="minutes")
+            try:
+                recalculate_event_times(match, config)
+            except MatchTimingError as exc:
+                match.warnings.append(str(exc))
         matches.append(match)
 
     source_ids = source_detail_ids(soup)
@@ -1280,6 +1429,12 @@ def parse_club_matchplan(
         if extract_detail_id(match.detail_url)
     }
     missing_ids = sorted(source_ids - parsed_ids_before_merge)
+    source_festivals = {
+        extract_festival_group_id(str(link.get("href") or ""))
+        for link in soup.select('a[href*="/staffel/"]')
+    } - {""}
+    parsed_festivals = {extract_festival_group_id(item.detail_url) for item in matches} - {""}
+    missing_festivals = sorted(source_festivals - parsed_festivals)
     (
         merged_matches,
         collapsed_duplicate_ids,
@@ -1306,6 +1461,8 @@ def parse_club_matchplan(
             "parsed_matches": len(merged_matches),
             "parsed_detail_ids": len(parsed_ids_after_merge),
             "missing_detail_ids": missing_ids,
+            "source_festival_groups": len(source_festivals),
+            "missing_festival_groups": missing_festivals,
             "duplicate_detail_ids": conflicting_duplicate_ids,
             "collapsed_duplicate_detail_ids": collapsed_duplicate_ids,
             "duplicate_conflicts": duplicate_conflicts,
@@ -1317,6 +1474,8 @@ def parse_club_matchplan(
             f"Unvollständiger Vereinsspielplan-Parser: {len(missing_ids)} Spiel-Link(s) nicht verarbeitet: "
             + ", ".join(missing_ids)
         )
+    if missing_festivals:
+        raise ScrapeError("Nicht verarbeitete Festival-Links: " + ", ".join(missing_festivals))
     if duplicate_conflicts:
         descriptions = []
         for item in duplicate_conflicts:
@@ -1386,6 +1545,9 @@ def apply_venue_rules(
         "venue": match.venue_raw,
         "calendar": match.calendar,
         "decision": match.decision,
+        "match_duration_minutes": match.match_duration_minutes,
+        "duration_rule": match.duration_rule,
+        "competition_format": match.competition_format,
     }
     match.checksum = hashlib.sha256(
         json.dumps(checksum_payload, ensure_ascii=False, sort_keys=True).encode("utf-8")
@@ -1607,10 +1769,25 @@ def evaluate_quality(
         if match.decision != "include":
             continue
         missing = []
-        for field_name in ("kickoff", "event_start", "event_end", "home_team", "away_team", "venue_raw", "team_name"):
+        for field_name in (
+            "kickoff",
+            "match_end",
+            "event_start",
+            "event_end",
+            "match_duration_minutes",
+            "duration_rule",
+            "competition_format",
+            "home_team",
+            "away_team",
+            "venue_raw",
+            "team_name",
+        ):
             if not getattr(match, field_name):
                 missing.append(field_name)
-        if not match.detail_url or not extract_detail_id(match.detail_url):
+        if (
+            match.competition_format != "festival"
+            and (not match.detail_url or not extract_detail_id(match.detail_url))
+        ):
             missing.append("detail_id")
         if missing:
             invalid_included.append({
@@ -1651,7 +1828,13 @@ def evaluate_quality(
         "event_timing": {
             "before_minutes": int(config.get("event_timing", {}).get("before_minutes", 60)),
             "after_minutes": int(config.get("event_timing", {}).get("after_minutes", 60)),
-            "default_match_duration_minutes": int(config.get("event_timing", {}).get("default_match_duration_minutes", 90)),
+            "configured_age_classes": sorted(
+                (config.get("event_timing", {}).get("age_class_rules", {}) or {}).keys()
+            ),
+            "configured_format_rules": [
+                str(item.get("id") or "")
+                for item in config.get("event_timing", {}).get("format_rules", []) or []
+            ],
         },
         "request_count": request_count,
         "accepted_windows": [

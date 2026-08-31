@@ -154,7 +154,9 @@ class ClubParserTest(unittest.TestCase):
         matches = parse_club_matchplan(self.fixture(), "fixture://club", config())
         item = next(m for m in matches if m.match_number == "610000001")
         self.assertEqual("2026-08-22T09:00+02:00", item.event_start)
-        self.assertEqual("2026-08-22T12:30+02:00", item.event_end)
+        self.assertEqual("2026-08-22T11:05+02:00", item.match_end)
+        self.assertEqual("2026-08-22T12:05+02:00", item.event_end)
+        self.assertEqual(65, item.match_duration_minutes)
 
     def test_identical_duplicate_detail_id_is_collapsed_safely(self):
         fixture = self.fixture()
@@ -232,7 +234,7 @@ class ClubParserTest(unittest.TestCase):
         )
         self.assertEqual("2026-08-21T19:00+02:00", item.kickoff)
         self.assertEqual("2026-08-21T18:00+02:00", item.event_start)
-        self.assertEqual("2026-08-21T21:30+02:00", item.event_end)
+        self.assertEqual("2026-08-21T21:45+02:00", item.event_end)
         self.assertEqual([], audit["duplicate_detail_ids"])
         self.assertEqual(1, len(audit["duplicate_resolutions"]))
         self.assertTrue(audit["duplicate_resolutions"][0]["resolution_attempt"]["resolved"])
@@ -253,6 +255,47 @@ class ClubParserTest(unittest.TestCase):
         matches = parse_club_matchplan(fixture, "fixture://empty", config(), audit)
         self.assertEqual([], matches)
         self.assertEqual(0, audit["competition_rows"])
+
+    def test_structurally_different_g_youth_festival_is_not_dropped(self):
+        festival = """
+        <table class="club-matchplan-table">
+          <tr class="row-headline"><td>Samstag, 12.09.2026 - 10:00 Uhr</td></tr>
+          <tr class="row-festival">
+            <td class="column-team">G-Junioren | Kinderfußball-Festival</td>
+            <td>TU Kinderfußball-Festival</td>
+            <td><a href="/mannschaft/test/-/saison/2627/team-id/FESTIVALTEAM000000000000000001">
+              <span class="club-name">Schönwalder SV G</span>
+            </a></td>
+          </tr>
+          <tr class="row-venue"><td>
+            <div class="venue">Kunstrasenplatz, Sportplatz Schönwalde Strandbad, Platz 2, KR</div>
+          </td></tr>
+        </table>
+        """
+        audit = {}
+        matches = parse_club_matchplan(festival, "fixture://festival", config(), audit)
+        self.assertEqual(1, len(matches))
+        item = matches[0]
+        apply_venue_rules(item, rules(), "exclude", config()["local_venue_pattern"])
+        self.assertEqual("Kinderfußball-Festival", item.away_team)
+        self.assertEqual("festival", item.competition_format)
+        self.assertEqual(90, item.match_duration_minutes)
+        self.assertEqual("2026-09-12T11:30+02:00", item.match_end)
+        self.assertEqual(("include", "Kunstrasen"), (item.decision, item.calendar))
+        quality = evaluate_quality(
+            [item],
+            [{
+                "date_from": "2026-07-01",
+                "date_to": "2027-06-30",
+                "accepted": True,
+                "truncated": False,
+                "missing_detail_ids": [],
+                "duplicate_detail_ids": [],
+            }],
+            config(),
+            1,
+        )
+        self.assertTrue(quality["publishable"], quality["errors"])
 
     def test_more_load_marker_is_detected(self):
         fixture = (ROOT / "tests" / "fixture_truncated_matchplan.html").read_text(encoding="utf-8")

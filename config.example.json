@@ -9,8 +9,92 @@
   "event_timing": {
     "before_minutes": 60,
     "after_minutes": 60,
-    "default_match_duration_minutes": 90,
-    "duration_rules": []
+    "format_rules": [
+      {
+        "id": "ssv53-e-festival-90-including-breaks-20260831",
+        "competition_format": "festival",
+        "age_class": "E",
+        "minutes": 90,
+        "source": "Vereinsvorgabe vom 31.08.2026: E-Festivals 90 Minuten einschließlich Pausen; Vor-/Nachlauf separat."
+      },
+      {
+        "id": "ssv53-festival-unclear-duration-90-20260831",
+        "competition_format": "festival",
+        "age_class": "",
+        "minutes": 90,
+        "source": "Vereinsvorgabe vom 31.08.2026: bei unklarer Festivaldauer 90 Minuten einschließlich Pausen; Vor-/Nachlauf separat."
+      }
+    ],
+    "age_class_rules": {
+      "HERREN": {
+        "id": "dfb-regel-7-herren-2x45",
+        "minutes": 90,
+        "halftime_minutes": 15,
+        "source": "https://www.dfb.de/mehr-fussball/fussball-regeln"
+      },
+      "UE40": {
+        "id": "fk-havelland-ue40-2026-27-dfb-standard",
+        "minutes": 90,
+        "halftime_minutes": 15,
+        "source": "https://www.fk-havelland.de/db.php/anhang/384/20260722+-+Wettspielanweisung+%C3%9C-Mannschaften+2026-27.pdf"
+      },
+      "UE50": {
+        "id": "fk-havelland-ue50-2026-27-dfb-standard",
+        "minutes": 90,
+        "halftime_minutes": 15,
+        "source": "https://www.fk-havelland.de/db.php/anhang/384/20260722+-+Wettspielanweisung+%C3%9C-Mannschaften+2026-27.pdf"
+      },
+      "A": {
+        "id": "flb-jugendordnung-2025-12-13-a-2x45",
+        "minutes": 90,
+        "halftime_minutes": 15,
+        "cup_extension_minutes": 30,
+        "source": "https://www.flb.de/seite/447298/statuten.html"
+      },
+      "B": {
+        "id": "flb-jugendordnung-2025-12-13-b-2x40",
+        "minutes": 80,
+        "halftime_minutes": 15,
+        "cup_extension_minutes": 20,
+        "source": "https://www.flb.de/seite/447298/statuten.html"
+      },
+      "C": {
+        "id": "flb-jugendordnung-2025-12-13-c-2x35",
+        "minutes": 70,
+        "halftime_minutes": 15,
+        "cup_extension_minutes": 10,
+        "source": "https://www.flb.de/seite/447298/statuten.html"
+      },
+      "D": {
+        "id": "flb-jugendordnung-2025-12-13-d-2x30",
+        "minutes": 60,
+        "halftime_minutes": 15,
+        "cup_extension_minutes": 10,
+        "source": "https://www.flb.de/seite/447298/statuten.html"
+      },
+      "E": {
+        "id": "flb-jugendordnung-2025-12-13-e-2x25",
+        "minutes": 50,
+        "halftime_minutes": 15,
+        "cup_extension_minutes": 10,
+        "source": "https://www.flb.de/seite/447298/statuten.html"
+      },
+      "F": {
+        "id": "flb-jugendordnung-2025-12-13-f-2x20",
+        "minutes": 40,
+        "halftime_minutes": 15,
+        "cup_extension_minutes": 10,
+        "source": "https://www.flb.de/seite/447298/statuten.html"
+      },
+      "G": {
+        "id": "flb-jugendordnung-2025-12-13-g-max-2x20",
+        "minutes": 40,
+        "halftime_minutes": 15,
+        "cup_extension_minutes": 10,
+        "source": "https://www.flb.de/seite/447298/statuten.html"
+      }
+    },
+    "fallback_rules": []
   },
   "adaptive_windows": {
     "initial_window_months": 3,
