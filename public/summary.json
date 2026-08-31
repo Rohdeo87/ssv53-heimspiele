@@ -1,17 +1,32 @@
 {
-  "generated_at": "2026-08-31T05:48:27+00:00",
+  "generated_at": "2026-08-31T19:48:08+00:00",
   "selection_mode": "club-wide venue",
   "event_timing": {
     "before_minutes": 60,
     "after_minutes": 60,
-    "default_match_duration_minutes": 90
+    "configured_age_classes": [
+      "A",
+      "B",
+      "C",
+      "D",
+      "E",
+      "F",
+      "G",
+      "HERREN",
+      "UE40",
+      "UE50"
+    ],
+    "configured_format_rules": [
+      "ssv53-e-festival-90-including-breaks-20260831",
+      "ssv53-festival-unclear-duration-90-20260831"
+    ]
   },
-  "total": 109,
-  "included": 42,
+  "total": 112,
+  "included": 45,
   "review": 0,
   "excluded": 67,
   "by_calendar": {
-    "Rasen": 37,
+    "Rasen": 40,
     "Kunstrasen": 5
   },
   "by_team": {
@@ -39,6 +54,24 @@
       "excluded": 0,
       "review": 0
     },
+    "Schönwalder SV 53 I (Fussball-3, 2019)": {
+      "total": 1,
+      "included": 1,
+      "excluded": 0,
+      "review": 0
+    },
+    "Schönwalder SV 53 I (Fussball-5, 2016)": {
+      "total": 1,
+      "included": 1,
+      "excluded": 0,
+      "review": 0
+    },
+    "Schönwalder SV 53 II (Fussball-5, 2017)": {
+      "total": 1,
+      "included": 1,
+      "excluded": 0,
+      "review": 0
+    },
     "SpG Perwenitz/​Schönwalde Ü50": {
       "total": 15,
       "included": 3,
@@ -57,11 +90,18 @@
     "Schönwalder SV (9er)",
     "Schönwalder SV (Ü40)",
     "Schönwalder SV 53",
+    "Schönwalder SV 53 I (Fussball-3, 2019)",
+    "Schönwalder SV 53 I (Fussball-5, 2016)",
+    "Schönwalder SV 53 II (Fussball-5, 2017)",
     "SpG Perwenitz/​Schönwalde Ü50",
     "Spielgemeinschaft Schönwalde-Perwenitz-Paaren"
   ],
   "team_registry_changes": {
-    "new": [],
+    "new": [
+      "Schönwalder SV 53 I (Fussball-3, 2019)",
+      "Schönwalder SV 53 I (Fussball-5, 2016)",
+      "Schönwalder SV 53 II (Fussball-5, 2017)"
+    ],
     "known": [
       "Spielgemeinschaft Schönwalde-Perwenitz-Paaren",
       "Schönwalder SV",
@@ -74,12 +114,12 @@
   },
   "publishable": true,
   "quality_errors": [],
-  "request_count": 5,
+  "request_count": 4,
   "accepted_windows": [
     {
       "date_from": "2026-07-01",
       "date_to": "2026-09-30",
-      "competition_rows": 37
+      "competition_rows": 41
     },
     {
       "date_from": "2026-10-01",

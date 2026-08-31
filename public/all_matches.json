@@ -19,9 +19,16 @@
     "calendar": "",
     "venue_rule": "Perwenitz",
     "event_start": "2026-07-19T13:00+02:00",
-    "event_end": "2026-07-19T16:30+02:00",
-    "checksum": "4ccd9356aaf43756a256eb5814e0273b38800db4ac0222cc65ef03777c45b555",
-    "warnings": []
+    "event_end": "2026-07-19T16:45+02:00",
+    "match_end": "2026-07-19T15:45+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "dfb-regel-7-herren-2x45+halftime-15",
+    "competition_format": "friendly",
+    "checksum": "c6cd0d8f57f2c819e877b776101443cdbc1c442fae61f04ec8d8af741206bb82",
+    "warnings": [],
+    "home_team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
+    "away_team_id": "011MIB1UTK000000VTVG0001VTR8C1K7",
+    "postponed_to": ""
   },
   {
     "external_id": "031F866OGG000000VS5489BTVUS470OH",
@@ -43,9 +50,16 @@
     "calendar": "",
     "venue_rule": "Perwenitz",
     "event_start": "2026-07-30T18:30+02:00",
-    "event_end": "2026-07-30T22:00+02:00",
-    "checksum": "aa4d124606f624cedd96c54c547465bbef234740baecaa842d592b4a5eb020e8",
-    "warnings": []
+    "event_end": "2026-07-30T22:15+02:00",
+    "match_end": "2026-07-30T21:15+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "dfb-regel-7-herren-2x45+halftime-15",
+    "competition_format": "friendly",
+    "checksum": "326818d63b789d51afc124110540c0c2fd5664b32ce82ba948d8594de3f572b1",
+    "warnings": [],
+    "home_team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
+    "away_team_id": "011MIE1QT0000000VTVG0001VTR8C1K7",
+    "postponed_to": ""
   },
   {
     "external_id": "031919FV00000000VS5489BTVSK8S3O6",
@@ -67,9 +81,16 @@
     "calendar": "",
     "venue_rule": "Perwenitz",
     "event_start": "2026-08-05T18:00+02:00",
-    "event_end": "2026-08-05T21:30+02:00",
-    "checksum": "0c72ebc02215a96f18de028e9caf6caf9102642d92cd5f3a7930379084aec127",
-    "warnings": []
+    "event_end": "2026-08-05T21:45+02:00",
+    "match_end": "2026-08-05T20:45+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "dfb-regel-7-herren-2x45+halftime-15",
+    "competition_format": "friendly",
+    "checksum": "c8c943d4275a08301f4713c9f42c0648f33c1f3bd936bbd4b13470253fd4bb86",
+    "warnings": [],
+    "home_team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
+    "away_team_id": "011MI9OSSK000000VTVG0001VTR8C1K7",
+    "postponed_to": ""
   },
   {
     "external_id": "03191A413S000000VS5489BTVSK8S3O6",
@@ -91,9 +112,16 @@
     "calendar": "",
     "venue_rule": "Paaren",
     "event_start": "2026-08-09T13:00+02:00",
-    "event_end": "2026-08-09T16:30+02:00",
-    "checksum": "02d35173562390446c6f2af486b53cb538365a609236fa2fb34c169f635e17b6",
-    "warnings": []
+    "event_end": "2026-08-09T16:45+02:00",
+    "match_end": "2026-08-09T15:45+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "dfb-regel-7-herren-2x45+halftime-15",
+    "competition_format": "friendly",
+    "checksum": "20e656b007b4ce720b2b48be96c7bcd13c5ae380f30b6108528ba74a32ef345f",
+    "warnings": [],
+    "home_team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
+    "away_team_id": "011MIAT51G000000VTVG0001VTR8C1K7",
+    "postponed_to": ""
   },
   {
     "external_id": "031NC93R54000000VS5489BUVT2M8LCU",
@@ -115,9 +143,16 @@
     "calendar": "Rasen",
     "venue_rule": "Rasen Schönwalde",
     "event_start": "2026-08-19T18:00+02:00",
-    "event_end": "2026-08-19T21:30+02:00",
-    "checksum": "1f32a56c111d2f452e3d528c5e499e22bbf6260a2d7bb0cf6c58ceae546e1146",
-    "warnings": []
+    "event_end": "2026-08-19T21:45+02:00",
+    "match_end": "2026-08-19T20:45+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "flb-jugendordnung-2025-12-13-a-2x45+halftime-15",
+    "competition_format": "friendly",
+    "checksum": "95c8a0b856df25e77cc0eb1438dd7898fb8016cd394aab5854c8be9012e24792",
+    "warnings": [],
+    "home_team_id": "02T7TD5NLG000000VS5489BSVU9LEHLB",
+    "away_team_id": "02I9L45A5K000000VS5489B1VTAQ4EE6",
+    "postponed_to": ""
   },
   {
     "external_id": "031C84AB5K000000VS5489BUVUR5FS5A",
@@ -139,9 +174,16 @@
     "calendar": "Rasen",
     "venue_rule": "Rasen Schönwalde",
     "event_start": "2026-08-21T18:00+02:00",
-    "event_end": "2026-08-21T21:30+02:00",
-    "checksum": "e9b5e279e0d08ef7a47ab878a7a6cf65a3e594c4c72b8664bf1caf3930184e22",
-    "warnings": []
+    "event_end": "2026-08-21T21:45+02:00",
+    "match_end": "2026-08-21T20:45+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "fk-havelland-ue40-2026-27-dfb-standard+halftime-15",
+    "competition_format": "cup",
+    "checksum": "7d81fb32ac0b24e46865469f6cf8154aade30e4ab28c7f9022e37bd36e8983d8",
+    "warnings": [],
+    "home_team_id": "02PKVQDTEK000000VS5489B2VT4FEOV2",
+    "away_team_id": "01H7LGR4GO000000VV0AG80NVU1T6GD1",
+    "postponed_to": ""
   },
   {
     "external_id": "031O25NTA4000000VS5489BUVT2M8LCU",
@@ -163,9 +205,16 @@
     "calendar": "",
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2026-08-23T09:00+02:00",
-    "event_end": "2026-08-23T12:30+02:00",
-    "checksum": "90036b52df65baa83e9232f235d93d2ec92b0b6f61518fe07f6994fd7fb24fbf",
-    "warnings": []
+    "event_end": "2026-08-23T12:45+02:00",
+    "match_end": "2026-08-23T11:45+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "flb-jugendordnung-2025-12-13-a-2x45+halftime-15",
+    "competition_format": "friendly",
+    "checksum": "5f54b08455b48279ca83631dfbc75aaae660905a8a1cea62df10dd1d86f138a6",
+    "warnings": [],
+    "home_team_id": "0312EE2CD0000000VS5489BRVVV10ESU",
+    "away_team_id": "02T7TD5NLG000000VS5489BSVU9LEHLB",
+    "postponed_to": ""
   },
   {
     "external_id": "031Q3AJFGG000000VS5489BTVT8K11BC",
@@ -187,9 +236,16 @@
     "calendar": "",
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2026-08-23T13:00+02:00",
-    "event_end": "2026-08-23T16:30+02:00",
-    "checksum": "e4140b8b019df0a623e68479bb39680ab99439401cf6665e3a7cb19bb0712f5f",
-    "warnings": []
+    "event_end": "2026-08-23T16:45+02:00",
+    "match_end": "2026-08-23T15:45+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "dfb-regel-7-herren-2x45+halftime-15",
+    "competition_format": "cup",
+    "checksum": "e932f8b306e58a8b5afbce6d47e0c798a09828008c2bdc476ba09f3508c9fb7a",
+    "warnings": [],
+    "home_team_id": "011MICLBT4000000VTVG0001VTR8C1K7",
+    "away_team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
+    "postponed_to": ""
   },
   {
     "external_id": "031HB5BAAS000000VS5489BTVVG7L386",
@@ -211,9 +267,16 @@
     "calendar": "Rasen",
     "venue_rule": "Rasen Schönwalde",
     "event_start": "2026-08-29T11:00+02:00",
-    "event_end": "2026-08-29T14:30+02:00",
-    "checksum": "2f892bea6abfbde832a59cf13568d1c25021a54289fb0e916a23d734782d2d7b",
-    "warnings": []
+    "event_end": "2026-08-29T14:45+02:00",
+    "match_end": "2026-08-29T13:45+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "flb-jugendordnung-2025-12-13-a-2x45+halftime-15",
+    "competition_format": "league",
+    "checksum": "93107c551087d318a39a2f654be7129310ee2db605f301825b19fe4067b8290a",
+    "warnings": [],
+    "home_team_id": "02T7TD5NLG000000VS5489BSVU9LEHLB",
+    "away_team_id": "01KQKN6M8K000000VV0AG811VSVU41QE",
+    "postponed_to": ""
   },
   {
     "external_id": "031MR9VDJ4000000VS5489BUVT2M8LCU",
@@ -235,9 +298,16 @@
     "calendar": "",
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2026-08-30T09:00+02:00",
-    "event_end": "2026-08-30T12:30+02:00",
-    "checksum": "b61c293a81c664d58b018f01531f2564ef795eb19920a947d378e45d7958ecaa",
-    "warnings": []
+    "event_end": "2026-08-30T12:25+02:00",
+    "match_end": "2026-08-30T11:25+02:00",
+    "match_duration_minutes": 85,
+    "duration_rule": "flb-jugendordnung-2025-12-13-d-2x30+halftime-15+cup-max-10",
+    "competition_format": "cup",
+    "checksum": "51462f80467b0b9bde27a27475851b5a237b52d5923aed653fc0e490a358e9c4",
+    "warnings": [],
+    "home_team_id": "02PLMQC0CO000000VS5489B1VS5DN01P",
+    "away_team_id": "01S69BH0IK000000VS548985VUL18RL3",
+    "postponed_to": ""
   },
   {
     "external_id": "031J9BDCS8000000VS5489BTVSRD0UH9",
@@ -259,9 +329,16 @@
     "calendar": "",
     "venue_rule": "Perwenitz",
     "event_start": "2026-08-30T09:30+02:00",
-    "event_end": "2026-08-30T13:00+02:00",
-    "checksum": "5e157713298e0ed963e0b28d277d942a1b6bbdcaf1352bb432c05828a157487a",
-    "warnings": []
+    "event_end": "2026-08-30T12:55+02:00",
+    "match_end": "2026-08-30T11:55+02:00",
+    "match_duration_minutes": 85,
+    "duration_rule": "flb-jugendordnung-2025-12-13-c-2x35+halftime-15",
+    "competition_format": "friendly",
+    "checksum": "9d8e514e261c1e1d775158b9776a45261f33288172f88d6a30e00040ddb5d2d6",
+    "warnings": [],
+    "home_team_id": "02TB103KFC000000VS5489BSVV9JRPRB",
+    "away_team_id": "031A57Q7PG000000VS5489BSVU0ORN69",
+    "postponed_to": ""
   },
   {
     "external_id": "031DP96H00000000VS5489BUVUR5FS5A",
@@ -283,9 +360,16 @@
     "calendar": "",
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2026-08-30T14:00+02:00",
-    "event_end": "2026-08-30T17:30+02:00",
-    "checksum": "7a5ca1dded6447e4ea25aea1255713e5947c03a2cd460e9853d9c8140a49967c",
-    "warnings": []
+    "event_end": "2026-08-30T17:45+02:00",
+    "match_end": "2026-08-30T16:45+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "dfb-regel-7-herren-2x45+halftime-15",
+    "competition_format": "league",
+    "checksum": "4606edc5737c67f976d90e1e815b11e8a730c5cc52a3921879a0fcf3699d2a54",
+    "warnings": [],
+    "home_team_id": "011MIEGI3C000000VTVG0001VTR8C1K7",
+    "away_team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
+    "postponed_to": ""
   },
   {
     "external_id": "031DB86VLC000000VS5489BUVUR5FS5A",
@@ -307,9 +391,16 @@
     "calendar": "Kunstrasen",
     "venue_rule": "Kunstrasen Schönwalde",
     "event_start": "2026-09-04T17:30+02:00",
-    "event_end": "2026-09-04T21:00+02:00",
-    "checksum": "c5ddf905678fde69d10f5d2bfb0bb04e8c978f6ae8d35f093e52e07bf1da2e41",
-    "warnings": []
+    "event_end": "2026-09-04T21:15+02:00",
+    "match_end": "2026-09-04T20:15+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "fk-havelland-ue40-2026-27-dfb-standard+halftime-15",
+    "competition_format": "league",
+    "checksum": "4e840bad7307fda917381407cb0a633433e6e5cf8fce278b0e48baaca8a21d67",
+    "warnings": [],
+    "home_team_id": "02PKVQDTEK000000VS5489B2VT4FEOV2",
+    "away_team_id": "02I8BG3NRC000000VS5489B1VTAQ4EE6",
+    "postponed_to": ""
   },
   {
     "external_id": "031DB8NSCO000000VS5489BUVUR5FS5A",
@@ -331,9 +422,16 @@
     "calendar": "",
     "venue_rule": "Perwenitz",
     "event_start": "2026-09-04T19:00+02:00",
-    "event_end": "2026-09-04T22:30+02:00",
-    "checksum": "6c29b9cfa28633af9568fac6e4be2e70da06cec9cb3f15ad61c5d78680b2d725",
-    "warnings": []
+    "event_end": "2026-09-04T22:45+02:00",
+    "match_end": "2026-09-04T21:45+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "fk-havelland-ue50-2026-27-dfb-standard+halftime-15",
+    "competition_format": "league",
+    "checksum": "65517cd92c82bf9acac3b7aaa311c1b15316a233cfc72752b540e41e786dbd61",
+    "warnings": [],
+    "home_team_id": "02PKT2MAOC000000VS5489B2VT4FEOV2",
+    "away_team_id": "02PM0L5KGK000000VS5489B1VS5DN01P",
+    "postponed_to": ""
   },
   {
     "external_id": "031DP96C58000000VS5489BUVUR5FS5A",
@@ -355,11 +453,18 @@
     "calendar": "Rasen",
     "venue_rule": "Rasen Schönwalde",
     "event_start": "2026-09-04T19:00+02:00",
-    "event_end": "2026-09-04T22:30+02:00",
-    "checksum": "6640fc77054a2856d9255b5c237bcc5e0c884757aa3f0eb2629a493d872e8ccf",
+    "event_end": "2026-09-04T22:45+02:00",
+    "match_end": "2026-09-04T21:45+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "dfb-regel-7-herren-2x45+halftime-15",
+    "competition_format": "league",
+    "checksum": "7b2a449d8c6311dbe642ebaef7e383d7adb6846bc9391a0cf6cf79780bfc7816",
     "warnings": [
-      "Terminverschiebung anhand der offiziellen Spielseite aufgelöst"
-    ]
+      "Mehrfachdarstellung im Vereinsspielplan automatisch zusammengeführt"
+    ],
+    "home_team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
+    "away_team_id": "011MI9UBJO000000VTVG0001VTR8C1K7",
+    "postponed_to": ""
   },
   {
     "external_id": "031MFGE2K8000000VS5489BUVVKNMR0J",
@@ -381,9 +486,16 @@
     "calendar": "Rasen",
     "venue_rule": "Rasen Schönwalde",
     "event_start": "2026-09-05T09:00+02:00",
-    "event_end": "2026-09-05T12:30+02:00",
-    "checksum": "720dd209d19ba17cf79f731409087c164f4c7b9d613801b58d093ecf23db5bee",
-    "warnings": []
+    "event_end": "2026-09-05T12:25+02:00",
+    "match_end": "2026-09-05T11:25+02:00",
+    "match_duration_minutes": 85,
+    "duration_rule": "flb-jugendordnung-2025-12-13-c-2x35+halftime-15",
+    "competition_format": "league",
+    "checksum": "d192c726227752a8fc18622158d8e62c3f25a09498f64f1b6be3016be89c9374",
+    "warnings": [],
+    "home_team_id": "031A57Q7PG000000VS5489BSVU0ORN69",
+    "away_team_id": "02PM07AVVS000000VS5489B1VS5DN01P",
+    "postponed_to": ""
   },
   {
     "external_id": "031MGSR39C000000VS5489BUVVKNMR0J",
@@ -405,9 +517,16 @@
     "calendar": "Kunstrasen",
     "venue_rule": "Kunstrasen Schönwalde",
     "event_start": "2026-09-05T09:00+02:00",
-    "event_end": "2026-09-05T12:30+02:00",
-    "checksum": "9e366768093eb61f9e2dfd5492b112b610082dff070270fb8d95c04a748491dc",
-    "warnings": []
+    "event_end": "2026-09-05T12:15+02:00",
+    "match_end": "2026-09-05T11:15+02:00",
+    "match_duration_minutes": 75,
+    "duration_rule": "flb-jugendordnung-2025-12-13-d-2x30+halftime-15",
+    "competition_format": "league",
+    "checksum": "5811297c5dc136718ee9cee318b6b71370f77c6d384d8104231fc6b78f6c36d9",
+    "warnings": [],
+    "home_team_id": "01S69BH0IK000000VS548985VUL18RL3",
+    "away_team_id": "02TBBEAU8S000000VS5489BRVTHNGU03",
+    "postponed_to": ""
   },
   {
     "external_id": "031HB5B9VO000000VS5489BTVVG7L386",
@@ -429,9 +548,16 @@
     "calendar": "",
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2026-09-06T10:30+02:00",
-    "event_end": "2026-09-06T14:00+02:00",
-    "checksum": "c72850308f60d10e51d2dcc5b109f8535ae82cb3f40ea2f3bb4aeb3b89605140",
-    "warnings": []
+    "event_end": "2026-09-06T14:15+02:00",
+    "match_end": "2026-09-06T13:15+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "flb-jugendordnung-2025-12-13-a-2x45+halftime-15",
+    "competition_format": "league",
+    "checksum": "66c0b793af332c4a51f2e14566d2b0466c8b67be3cd3b1857a93e079dedb016f",
+    "warnings": [],
+    "home_team_id": "011MIBO66O000000VTVG0001VTR8C1K7",
+    "away_team_id": "02T7TD5NLG000000VS5489BSVU9LEHLB",
+    "postponed_to": ""
   },
   {
     "external_id": "031DB86VFO000000VS5489BUVUR5FS5A",
@@ -453,33 +579,16 @@
     "calendar": "",
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2026-09-11T18:30+02:00",
-    "event_end": "2026-09-11T22:00+02:00",
-    "checksum": "465858e652b82d33f54942ec3e1d14015d6243a960c5c0406a448a571c82cbfa",
-    "warnings": []
-  },
-  {
-    "external_id": "031DB8NS8C000000VS5489BUVUR5FS5A",
-    "match_number": "610090010",
-    "team_id": "02PKT2MAOC000000VS5489B2VT4FEOV2",
-    "team_name": "SpG Perwenitz/​Schönwalde Ü50",
-    "team_category": "Herren Ü50 | Kreisliga",
-    "team_role": "away",
-    "kickoff": "2026-09-11T19:30+02:00",
-    "home_team": "SV Falkensee-Finkenkrug",
-    "away_team": "SpG Perwenitz/​Schönwalde Ü50",
-    "competition": "Fr, | Herren Ü50 | Kreisliga",
-    "match_type": "ME",
-    "status": "",
-    "venue_raw": "Kunstrasenplatz, Sportpark Rosenstraße, KR 1, Rosenstr., 14612 Falkensee",
-    "detail_url": "https://www.fussball.de/spiel/sv-falkensee-finkenkrug-spg-perwenitz-schoenwalde-ue50/-/spiel/031DB8NS8C000000VS5489BUVUR5FS5A",
-    "source_url": "https://www.fussball.de/ajax.club.matchplan/-/id/00ES8GNBL0000049VV0AG08LVUPGND5I/mode/PAGE/show-filter/false/show-venues/true/mime-type/HTML/datum-von/2026-07-01/datum-bis/2026-09-30/max/50",
-    "decision": "exclude",
-    "calendar": "",
-    "venue_rule": "Auswärtige Spielstätte",
-    "event_start": "2026-09-11T18:30+02:00",
-    "event_end": "2026-09-11T22:00+02:00",
-    "checksum": "5f8a2a473910f8bdb52f25e8d5547257140e6c35a9b615a3455703c2f689be7f",
-    "warnings": []
+    "event_end": "2026-09-11T22:15+02:00",
+    "match_end": "2026-09-11T21:15+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "fk-havelland-ue40-2026-27-dfb-standard+halftime-15",
+    "competition_format": "league",
+    "checksum": "834eb81568886c18a161767e6d23b60542198a4ec8988f024fa6eb3a4ef07237",
+    "warnings": [],
+    "home_team_id": "02AU1A03O4000000VS5489B1VTFE8486",
+    "away_team_id": "02PKVQDTEK000000VS5489B2VT4FEOV2",
+    "postponed_to": ""
   },
   {
     "external_id": "031MFGE2PG000000VS5489BUVVKNMR0J",
@@ -501,9 +610,16 @@
     "calendar": "",
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2026-09-12T08:00+02:00",
-    "event_end": "2026-09-12T11:30+02:00",
-    "checksum": "1d432d752d6bce3085fc657438b1e569ae6c6d20fc2c4c5aa23ad97f6f779602",
-    "warnings": []
+    "event_end": "2026-09-12T11:25+02:00",
+    "match_end": "2026-09-12T10:25+02:00",
+    "match_duration_minutes": 85,
+    "duration_rule": "flb-jugendordnung-2025-12-13-c-2x35+halftime-15",
+    "competition_format": "league",
+    "checksum": "4aab0fd03c52dcccc72bc5beee8dfdbe32e7ea2a57638b8a2fcab4f6e57145cb",
+    "warnings": [],
+    "home_team_id": "011MIA3TTO000000VTVG0001VTR8C1K7",
+    "away_team_id": "031A57Q7PG000000VS5489BSVU0ORN69",
+    "postponed_to": ""
   },
   {
     "external_id": "031MGSR33G000000VS5489BUVVKNMR0J",
@@ -525,9 +641,16 @@
     "calendar": "",
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2026-09-12T08:00+02:00",
-    "event_end": "2026-09-12T11:30+02:00",
-    "checksum": "7bcd77700f1e2a31473b6fd44e69a37bb0f48bd97fce4ca0e63596d1dc5639b7",
-    "warnings": []
+    "event_end": "2026-09-12T11:15+02:00",
+    "match_end": "2026-09-12T10:15+02:00",
+    "match_duration_minutes": 75,
+    "duration_rule": "flb-jugendordnung-2025-12-13-d-2x30+halftime-15",
+    "competition_format": "league",
+    "checksum": "b28d96c139647cf6ca2bd501954a761a4e21c145a5c9413deb6722fea75dba90",
+    "warnings": [],
+    "home_team_id": "02I8LMUI44000000VS5489B1VTAQ4EE6",
+    "away_team_id": "01S69BH0IK000000VS548985VUL18RL3",
+    "postponed_to": ""
   },
   {
     "external_id": "031HB5B9Q0000000VS5489BTVVG7L386",
@@ -549,9 +672,16 @@
     "calendar": "Rasen",
     "venue_rule": "Rasen Schönwalde",
     "event_start": "2026-09-12T10:00+02:00",
-    "event_end": "2026-09-12T13:30+02:00",
-    "checksum": "1e9e445646d31c9b3a4459cee48a739d06f91c178a0dd02afe97e4b0b41f6f8e",
-    "warnings": []
+    "event_end": "2026-09-12T13:45+02:00",
+    "match_end": "2026-09-12T12:45+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "flb-jugendordnung-2025-12-13-a-2x45+halftime-15",
+    "competition_format": "league",
+    "checksum": "11f884087aeb3e6ec7b2882530a6a85d9c48368eeb8cf113a4b5ba04725a8443",
+    "warnings": [],
+    "home_team_id": "02T7TD5NLG000000VS5489BSVU9LEHLB",
+    "away_team_id": "011MIEH5CS000000VTVG0001VTR8C1K7",
+    "postponed_to": ""
   },
   {
     "external_id": "031DP96GGC000000VS5489BUVUR5FS5A",
@@ -573,9 +703,49 @@
     "calendar": "",
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2026-09-12T14:00+02:00",
-    "event_end": "2026-09-12T17:30+02:00",
-    "checksum": "8e83ded8326a7a9884f7396300e07753b048f881a0fc0de893de3c4f9fb8a7d2",
-    "warnings": []
+    "event_end": "2026-09-12T17:45+02:00",
+    "match_end": "2026-09-12T16:45+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "dfb-regel-7-herren-2x45+halftime-15",
+    "competition_format": "league",
+    "checksum": "167428fce9fdb950ef91e0e42dd23d43f729c90da9b1046b84f7c6d327245831",
+    "warnings": [],
+    "home_team_id": "011MIEU9LG000000VTVG0001VTR8C1K7",
+    "away_team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
+    "postponed_to": ""
+  },
+  {
+    "external_id": "031DB8NS8C000000VS5489BUVUR5FS5A",
+    "match_number": "610090010",
+    "team_id": "02PKT2MAOC000000VS5489B2VT4FEOV2",
+    "team_name": "SpG Perwenitz/​Schönwalde Ü50",
+    "team_category": "Herren Ü50 | Kreisliga",
+    "team_role": "home",
+    "kickoff": "2026-09-15T19:30+02:00",
+    "home_team": "SpG Perwenitz/​Schönwalde Ü50",
+    "away_team": "SV Falkensee-Finkenkrug",
+    "competition": "Di, | Herren Ü50 | Kreisliga",
+    "match_type": "ME",
+    "status": "",
+    "venue_raw": "Rasenplatz, Sportplatz Leistikowstraße, Leistikowstr. 72, 14612 Falkensee",
+    "detail_url": "https://www.fussball.de/spiel/spg-perwenitz-schoenwalde-ue50-sv-falkensee-finkenkrug/-/spiel/031DB8NS8C000000VS5489BUVUR5FS5A",
+    "source_url": "https://www.fussball.de/ajax.club.matchplan/-/id/00ES8GNBL0000049VV0AG08LVUPGND5I/mode/PAGE/show-filter/false/show-venues/true/mime-type/HTML/datum-von/2026-07-01/datum-bis/2026-09-30/max/50",
+    "decision": "exclude",
+    "calendar": "",
+    "venue_rule": "Auswärtige Spielstätte",
+    "event_start": "2026-09-15T18:30+02:00",
+    "event_end": "2026-09-15T22:15+02:00",
+    "match_end": "2026-09-15T21:15+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "fk-havelland-ue50-2026-27-dfb-standard+halftime-15",
+    "competition_format": "league",
+    "checksum": "5672ee355f9af398eb7a13da8b46a6c210209ec2981ad4a47bcc5b7857445a0a",
+    "warnings": [
+      "Mehrfachdarstellung im Vereinsspielplan automatisch zusammengeführt"
+    ],
+    "home_team_id": "02PKT2MAOC000000VS5489B2VT4FEOV2",
+    "away_team_id": "02PJD5K8O8000000VS5489B1VUI2QQ8R",
+    "postponed_to": ""
   },
   {
     "external_id": "031HB5B9C8000000VS5489BTVVG7L386",
@@ -597,9 +767,16 @@
     "calendar": "",
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2026-09-18T18:30+02:00",
-    "event_end": "2026-09-18T22:00+02:00",
-    "checksum": "a809ca4060dc2522efc6a70f0ee174e0d217fb038e28ad3f877dd7d5a01911c7",
-    "warnings": []
+    "event_end": "2026-09-18T22:15+02:00",
+    "match_end": "2026-09-18T21:15+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "flb-jugendordnung-2025-12-13-a-2x45+halftime-15",
+    "competition_format": "league",
+    "checksum": "ddb6ab68fe56b29c6f5bc44a3c337c09d23a17bb3610cd5f836020888b5a733d",
+    "warnings": [],
+    "home_team_id": "02T94BGV6C000000VS5489BRVTHNGU03",
+    "away_team_id": "02T7TD5NLG000000VS5489BSVU9LEHLB",
+    "postponed_to": ""
   },
   {
     "external_id": "031MFGE2RO000000VS5489BUVVKNMR0J",
@@ -621,9 +798,16 @@
     "calendar": "Rasen",
     "venue_rule": "Rasen Schönwalde",
     "event_start": "2026-09-19T09:00+02:00",
-    "event_end": "2026-09-19T12:30+02:00",
-    "checksum": "586be90e13c6db61f9fad484c1867129a127a40dd8fa0a073e166e6273ac9f92",
-    "warnings": []
+    "event_end": "2026-09-19T12:25+02:00",
+    "match_end": "2026-09-19T11:25+02:00",
+    "match_duration_minutes": 85,
+    "duration_rule": "flb-jugendordnung-2025-12-13-c-2x35+halftime-15",
+    "competition_format": "league",
+    "checksum": "330f1b0f98be1687c186a3bc5e9822e201fa9b35e0e4bbacff434a8d6f9605a2",
+    "warnings": [],
+    "home_team_id": "031A57Q7PG000000VS5489BSVU0ORN69",
+    "away_team_id": "02TB103KFC000000VS5489BSVV9JRPRB",
+    "postponed_to": ""
   },
   {
     "external_id": "031MGSR2UC000000VS5489BUVVKNMR0J",
@@ -645,9 +829,47 @@
     "calendar": "Kunstrasen",
     "venue_rule": "Kunstrasen Schönwalde",
     "event_start": "2026-09-19T09:00+02:00",
-    "event_end": "2026-09-19T12:30+02:00",
-    "checksum": "1a52db7155778a3e53a5e124ac339ed9a641601ff8ca58bed625d31760de463e",
-    "warnings": []
+    "event_end": "2026-09-19T12:15+02:00",
+    "match_end": "2026-09-19T11:15+02:00",
+    "match_duration_minutes": 75,
+    "duration_rule": "flb-jugendordnung-2025-12-13-d-2x30+halftime-15",
+    "competition_format": "league",
+    "checksum": "49e254f0f43e0858edc56f12824e9b20de0e84ddaf2f1ac3716b55dc566f7373",
+    "warnings": [],
+    "home_team_id": "01S69BH0IK000000VS548985VUL18RL3",
+    "away_team_id": "011MIBNPPG000000VTVG0001VTR8C1K7",
+    "postponed_to": ""
+  },
+  {
+    "external_id": "610015371",
+    "match_number": "610015371",
+    "team_id": "011KGG85I0000000VTVG0001VSK3M9SE",
+    "team_name": "Schönwalder SV 53 I (Fussball-3, 2019)",
+    "team_category": "F-Junioren | Kinderfußball",
+    "team_role": "away",
+    "kickoff": "2026-09-19T14:00+02:00",
+    "home_team": "Schönwalder SV 53 I (Fussball-3, 2019) - Kinderfestival",
+    "away_team": "Schönwalder SV 53 I (Fussball-3, 2019)",
+    "competition": "F-Junioren | Kinderfußball",
+    "match_type": "ME",
+    "status": "",
+    "venue_raw": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+    "detail_url": "https://www.fussball.de/spieltag/schoenwalder-sv-53-i-fussball-3-2019/-/staffel/031LO5V9MC00000CVS5489BTVSRD0UH9-G",
+    "source_url": "https://www.fussball.de/ajax.club.matchplan/-/id/00ES8GNBL0000049VV0AG08LVUPGND5I/mode/PAGE/show-filter/false/show-venues/true/mime-type/HTML/datum-von/2026-07-01/datum-bis/2026-09-30/max/50",
+    "decision": "include",
+    "calendar": "Rasen",
+    "venue_rule": "Rasen Schönwalde",
+    "event_start": "2026-09-19T13:00+02:00",
+    "event_end": "2026-09-19T16:30+02:00",
+    "match_end": "2026-09-19T15:30+02:00",
+    "match_duration_minutes": 90,
+    "duration_rule": "ssv53-festival-unclear-duration-90-20260831",
+    "competition_format": "festival",
+    "checksum": "c16578b08c830ef265a314f1360dc7d7dfe8454d992b3ccc242c169565aa50ba",
+    "warnings": [],
+    "home_team_id": "",
+    "away_team_id": "011KGG85I0000000VTVG0001VSK3M9SE",
+    "postponed_to": ""
   },
   {
     "external_id": "031DP96G20000000VS5489BUVUR5FS5A",
@@ -669,9 +891,16 @@
     "calendar": "",
     "venue_rule": "Paaren",
     "event_start": "2026-09-20T13:00+02:00",
-    "event_end": "2026-09-20T16:30+02:00",
-    "checksum": "26834396b2fd68165b6975231c5f91b6217a750d627c0c4d0691721e1783820f",
-    "warnings": []
+    "event_end": "2026-09-20T16:45+02:00",
+    "match_end": "2026-09-20T15:45+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "dfb-regel-7-herren-2x45+halftime-15",
+    "competition_format": "league",
+    "checksum": "cf5542841b68fadfbad5ac756b5ff75b1e3b320fd38c9e8c22dfb0699014f708",
+    "warnings": [],
+    "home_team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
+    "away_team_id": "011MIENL9O000000VTVG0001VTR8C1K7",
+    "postponed_to": ""
   },
   {
     "external_id": "031TA4CB7G000000VS5489BUVSORQI22",
@@ -693,9 +922,16 @@
     "calendar": "",
     "venue_rule": "Auswärtsspiel ohne Spielstätte",
     "event_start": "2026-09-25T17:30+02:00",
-    "event_end": "2026-09-25T21:00+02:00",
-    "checksum": "5f0d86c1a2b1726e122cc2c58a9edf5b76e0771943286a03b53da25ba1abe486",
-    "warnings": []
+    "event_end": "2026-09-25T21:15+02:00",
+    "match_end": "2026-09-25T20:15+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "fk-havelland-ue40-2026-27-dfb-standard+halftime-15",
+    "competition_format": "cup",
+    "checksum": "e90494040ba23117463beab1ebff18f9e29d687f21420bec511da827ee4b71cf",
+    "warnings": [],
+    "home_team_id": "",
+    "away_team_id": "02PKVQDTEK000000VS5489B2VT4FEOV2",
+    "postponed_to": ""
   },
   {
     "external_id": "031TA58SV8000000VS5489BUVSORQI22",
@@ -717,9 +953,16 @@
     "calendar": "",
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2026-09-25T18:30+02:00",
-    "event_end": "2026-09-25T22:00+02:00",
-    "checksum": "082da430ddce6a5d0201d1bac57e8459ef4fecf37de3ad28f584602c9de152ac",
-    "warnings": []
+    "event_end": "2026-09-25T22:15+02:00",
+    "match_end": "2026-09-25T21:15+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "fk-havelland-ue50-2026-27-dfb-standard+halftime-15",
+    "competition_format": "cup",
+    "checksum": "d7561773e8d8d6a328fdab35bb3a9ab7ef79d87f662bb58d59a8400d81b4a831",
+    "warnings": [],
+    "home_team_id": "02PJD5K8O8000000VS5489B1VUI2QQ8R",
+    "away_team_id": "02PKT2MAOC000000VS5489B2VT4FEOV2",
+    "postponed_to": ""
   },
   {
     "external_id": "031MFGE2VC000000VS5489BUVVKNMR0J",
@@ -741,9 +984,16 @@
     "calendar": "Rasen",
     "venue_rule": "Rasen Schönwalde",
     "event_start": "2026-09-26T09:00+02:00",
-    "event_end": "2026-09-26T12:30+02:00",
-    "checksum": "783696edfd74a32c391c3560fc8c85fb3788ed17d9ed178ca2f570afef6e7fc7",
-    "warnings": []
+    "event_end": "2026-09-26T12:25+02:00",
+    "match_end": "2026-09-26T11:25+02:00",
+    "match_duration_minutes": 85,
+    "duration_rule": "flb-jugendordnung-2025-12-13-c-2x35+halftime-15",
+    "competition_format": "league",
+    "checksum": "5501b7b8d3ea8f099d07492b46e075b8c9230a4b9b65610f8c93d01aede10324",
+    "warnings": [],
+    "home_team_id": "031A57Q7PG000000VS5489BSVU0ORN69",
+    "away_team_id": "0311QE12MC000000VS5489BRVV9R0K3A",
+    "postponed_to": ""
   },
   {
     "external_id": "031MGSR2SC000000VS5489BUVVKNMR0J",
@@ -765,9 +1015,16 @@
     "calendar": "",
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2026-09-27T09:00+02:00",
-    "event_end": "2026-09-27T12:30+02:00",
-    "checksum": "2e24eb6f9b1af126e25a02c037bcc3e57ec243a8af1a775fb294722d876bb0a2",
-    "warnings": []
+    "event_end": "2026-09-27T12:15+02:00",
+    "match_end": "2026-09-27T11:15+02:00",
+    "match_duration_minutes": 75,
+    "duration_rule": "flb-jugendordnung-2025-12-13-d-2x30+halftime-15",
+    "competition_format": "league",
+    "checksum": "d5176611bbed3c8791a449757ee65d175056ae09a06f7a896c97b720d9be71a7",
+    "warnings": [],
+    "home_team_id": "02PMA3HVEC000000VS5489B2VT4FEOV2",
+    "away_team_id": "01S69BH0IK000000VS548985VUL18RL3",
+    "postponed_to": ""
   },
   {
     "external_id": "031O4JQIM4000000VS5489BUVT2M8LCU",
@@ -789,9 +1046,78 @@
     "calendar": "Rasen",
     "venue_rule": "Rasen Schönwalde",
     "event_start": "2026-09-27T09:30+02:00",
-    "event_end": "2026-09-27T13:00+02:00",
-    "checksum": "4dabd9c2ad28213ca6fbfe3f8b2b6b5efd1b6e0f484a6130f9c7519952463edd",
-    "warnings": []
+    "event_end": "2026-09-27T13:45+02:00",
+    "match_end": "2026-09-27T12:45+02:00",
+    "match_duration_minutes": 135,
+    "duration_rule": "flb-jugendordnung-2025-12-13-a-2x45+halftime-15+cup-max-30",
+    "competition_format": "cup",
+    "checksum": "4348e536dde00717a5f6d50d910af6621b634e78d0752909e133f7bc60cb7db4",
+    "warnings": [],
+    "home_team_id": "02T7TD5NLG000000VS5489BSVU9LEHLB",
+    "away_team_id": "023I6E2EDS000000VS548985VU14N0BQ",
+    "postponed_to": ""
+  },
+  {
+    "external_id": "610018452",
+    "match_number": "610018452",
+    "team_id": "01KPKBA8F8000000VV0AG811VSVU41QE",
+    "team_name": "Schönwalder SV 53 I (Fussball-5, 2016)",
+    "team_category": "E-Junioren | Kinderfußball",
+    "team_role": "away",
+    "kickoff": "2026-09-27T13:30+02:00",
+    "home_team": "Schönwalder SV 53 I (Fussball-5, 2016) - Kinderfestival",
+    "away_team": "Schönwalder SV 53 I (Fussball-5, 2016)",
+    "competition": "E-Junioren | Kinderfußball",
+    "match_type": "ME",
+    "status": "",
+    "venue_raw": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+    "detail_url": "https://www.fussball.de/spieltag/schoenwalder-sv-53-i-fussball-5-2016/-/staffel/031LOV8CUC00000JVS5489BTVSRD0UH9-G",
+    "source_url": "https://www.fussball.de/ajax.club.matchplan/-/id/00ES8GNBL0000049VV0AG08LVUPGND5I/mode/PAGE/show-filter/false/show-venues/true/mime-type/HTML/datum-von/2026-07-01/datum-bis/2026-09-30/max/50",
+    "decision": "include",
+    "calendar": "Rasen",
+    "venue_rule": "Rasen Schönwalde",
+    "event_start": "2026-09-27T12:30+02:00",
+    "event_end": "2026-09-27T16:00+02:00",
+    "match_end": "2026-09-27T15:00+02:00",
+    "match_duration_minutes": 90,
+    "duration_rule": "ssv53-e-festival-90-including-breaks-20260831",
+    "competition_format": "festival",
+    "checksum": "9dc0aab2fad9510bf8e5ae80a58c370e8f5adc34db230b70f69df0142c19e5bd",
+    "warnings": [],
+    "home_team_id": "",
+    "away_team_id": "01KPKBA8F8000000VV0AG811VSVU41QE",
+    "postponed_to": ""
+  },
+  {
+    "external_id": "610018461",
+    "match_number": "610018461",
+    "team_id": "01OFNF8544000000VV0AG80NVUUTMIT0",
+    "team_name": "Schönwalder SV 53 II (Fussball-5, 2017)",
+    "team_category": "E-Junioren | Kinderfußball",
+    "team_role": "away",
+    "kickoff": "2026-09-27T15:30+02:00",
+    "home_team": "Schönwalder SV 53 II (Fussball-5, 2017) - Kinderfestival",
+    "away_team": "Schönwalder SV 53 II (Fussball-5, 2017)",
+    "competition": "E-Junioren | Kinderfußball",
+    "match_type": "ME",
+    "status": "",
+    "venue_raw": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+    "detail_url": "https://www.fussball.de/spieltag/schoenwalder-sv-53-ii-fussball-5-2017/-/staffel/031LOV8CUC00000KVS5489BTVSRD0UH9-G",
+    "source_url": "https://www.fussball.de/ajax.club.matchplan/-/id/00ES8GNBL0000049VV0AG08LVUPGND5I/mode/PAGE/show-filter/false/show-venues/true/mime-type/HTML/datum-von/2026-07-01/datum-bis/2026-09-30/max/50",
+    "decision": "include",
+    "calendar": "Rasen",
+    "venue_rule": "Rasen Schönwalde",
+    "event_start": "2026-09-27T14:30+02:00",
+    "event_end": "2026-09-27T18:00+02:00",
+    "match_end": "2026-09-27T17:00+02:00",
+    "match_duration_minutes": 90,
+    "duration_rule": "ssv53-e-festival-90-including-breaks-20260831",
+    "competition_format": "festival",
+    "checksum": "44d7f6d1c1a93d23527d6c77406711422d348b8d1d3ba2f9ae6b4491d6fb64b6",
+    "warnings": [],
+    "home_team_id": "",
+    "away_team_id": "01OFNF8544000000VV0AG80NVUUTMIT0",
+    "postponed_to": ""
   },
   {
     "external_id": "031DB86VDS000000VS5489BUVUR5FS5A",
@@ -813,9 +1139,16 @@
     "calendar": "Rasen",
     "venue_rule": "Rasen Schönwalde",
     "event_start": "2026-10-02T18:00+02:00",
-    "event_end": "2026-10-02T21:30+02:00",
-    "checksum": "5bc69c1247a6cbbd980d62e3cd040435a00e2639da009449702c10026168999f",
-    "warnings": []
+    "event_end": "2026-10-02T21:45+02:00",
+    "match_end": "2026-10-02T20:45+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "fk-havelland-ue40-2026-27-dfb-standard+halftime-15",
+    "competition_format": "league",
+    "checksum": "385ca86307671191236f8c17dcfbe88f6eb7d1fd2e2fbb54425a8340dfa3816d",
+    "warnings": [],
+    "home_team_id": "02PKVQDTEK000000VS5489B2VT4FEOV2",
+    "away_team_id": "02PKTPROMG000000VS5489B1VS5DN01P",
+    "postponed_to": ""
   },
   {
     "external_id": "031DB8NS70000000VS5489BUVUR5FS5A",
@@ -837,9 +1170,16 @@
     "calendar": "",
     "venue_rule": "Perwenitz",
     "event_start": "2026-10-02T19:00+02:00",
-    "event_end": "2026-10-02T22:30+02:00",
-    "checksum": "d163f985d7f19264c7c94d8b86f1bf3490909160cfab8ad497ee2a3892dbe9cc",
-    "warnings": []
+    "event_end": "2026-10-02T22:45+02:00",
+    "match_end": "2026-10-02T21:45+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "fk-havelland-ue50-2026-27-dfb-standard+halftime-15",
+    "competition_format": "league",
+    "checksum": "1ae9e32deaf56b8966aa1f55c7c64b9e1409c93b62a1d5d0095b9eb9efa94b5e",
+    "warnings": [],
+    "home_team_id": "02PKT2MAOC000000VS5489B2VT4FEOV2",
+    "away_team_id": "02PL1LJHSK000000VS5489B1VS5DN01P",
+    "postponed_to": ""
   },
   {
     "external_id": "031MFGE34C000000VS5489BUVVKNMR0J",
@@ -861,9 +1201,16 @@
     "calendar": "",
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2026-10-03T10:00+02:00",
-    "event_end": "2026-10-03T13:30+02:00",
-    "checksum": "12ffc4f30930abe08b4547c14d787bb3df835cce19e7a6dba273de693a00f3d6",
-    "warnings": []
+    "event_end": "2026-10-03T13:25+02:00",
+    "match_end": "2026-10-03T12:25+02:00",
+    "match_duration_minutes": 85,
+    "duration_rule": "flb-jugendordnung-2025-12-13-c-2x35+halftime-15",
+    "competition_format": "league",
+    "checksum": "75fa166f6da2f358c4898ed2dd94c5e332ebe76d326cc6623fc06e86c479dee9",
+    "warnings": [],
+    "home_team_id": "030R4AOAE4000000VS5489BRVVPSQ1LR",
+    "away_team_id": "031A57Q7PG000000VS5489BSVU0ORN69",
+    "postponed_to": ""
   },
   {
     "external_id": "031MGSR2LC000000VS5489BUVVKNMR0J",
@@ -885,9 +1232,16 @@
     "calendar": "Kunstrasen",
     "venue_rule": "Kunstrasen Schönwalde",
     "event_start": "2026-10-04T10:00+02:00",
-    "event_end": "2026-10-04T13:30+02:00",
-    "checksum": "afed0be11b27f1dc1b5e3e5988367704cf43a723f21e367c5e3c37e74501fb32",
-    "warnings": []
+    "event_end": "2026-10-04T13:15+02:00",
+    "match_end": "2026-10-04T12:15+02:00",
+    "match_duration_minutes": 75,
+    "duration_rule": "flb-jugendordnung-2025-12-13-d-2x30+halftime-15",
+    "competition_format": "league",
+    "checksum": "79b87566f30374ef8e458e028d66f7584b2c95d30a41fa3101ffce8f8e00508d",
+    "warnings": [],
+    "home_team_id": "01S69BH0IK000000VS548985VUL18RL3",
+    "away_team_id": "02IAM2DL7S000000VS5489B2VSVC88K8",
+    "postponed_to": ""
   },
   {
     "external_id": "031HB5BAUC000000VS5489BTVVG7L386",
@@ -909,9 +1263,16 @@
     "calendar": "",
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2026-10-04T11:00+02:00",
-    "event_end": "2026-10-04T14:30+02:00",
-    "checksum": "280dc6769cf9aa5cae51a7925e0a03771965dae74f72f25e40e6760baaee0ae7",
-    "warnings": []
+    "event_end": "2026-10-04T14:45+02:00",
+    "match_end": "2026-10-04T13:45+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "flb-jugendordnung-2025-12-13-a-2x45+halftime-15",
+    "competition_format": "league",
+    "checksum": "9f3864c611b89f26d3fd85f905d62a625d889f70e5e0df9d19c61ae502ce4a2f",
+    "warnings": [],
+    "home_team_id": "02754JV4N0000000VS5489B2VVRTHQ8E",
+    "away_team_id": "02T7TD5NLG000000VS5489BSVU9LEHLB",
+    "postponed_to": ""
   },
   {
     "external_id": "031DP96F8G000000VS5489BUVUR5FS5A",
@@ -933,9 +1294,16 @@
     "calendar": "Rasen",
     "venue_rule": "Rasen Schönwalde",
     "event_start": "2026-10-04T13:00+02:00",
-    "event_end": "2026-10-04T16:30+02:00",
-    "checksum": "e6fbbf0e75e3ddc3e93775f5772018256425a75a198f0ff3f8ef6a84d4b4ec82",
-    "warnings": []
+    "event_end": "2026-10-04T16:45+02:00",
+    "match_end": "2026-10-04T15:45+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "dfb-regel-7-herren-2x45+halftime-15",
+    "competition_format": "league",
+    "checksum": "678ac2fbfe9d97c18af3ea370e7c10ed50d63cd0f8801e87201d9c4a78be1875",
+    "warnings": [],
+    "home_team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
+    "away_team_id": "011MIBP1PG000000VTVG0001VTR8C1K7",
+    "postponed_to": ""
   },
   {
     "external_id": "031DB86V9O000000VS5489BUVUR5FS5A",
@@ -957,9 +1325,16 @@
     "calendar": "",
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2026-10-09T18:00+02:00",
-    "event_end": "2026-10-09T21:30+02:00",
-    "checksum": "00c9d12c01c6231dacc93dfd69c2e63124dcf4894e6f378d6fc5a328b68f0389",
-    "warnings": []
+    "event_end": "2026-10-09T21:45+02:00",
+    "match_end": "2026-10-09T20:45+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "fk-havelland-ue40-2026-27-dfb-standard+halftime-15",
+    "competition_format": "league",
+    "checksum": "7666b2e572115915d0da37e396edf9b7d4b65d224d68882855c04bc2cc246b36",
+    "warnings": [],
+    "home_team_id": "02TINQ61UC000000VS5489BSVUALD4UK",
+    "away_team_id": "02PKVQDTEK000000VS5489B2VT4FEOV2",
+    "postponed_to": ""
   },
   {
     "external_id": "031DB8NS3G000000VS5489BUVUR5FS5A",
@@ -981,9 +1356,16 @@
     "calendar": "",
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2026-10-09T18:00+02:00",
-    "event_end": "2026-10-09T21:30+02:00",
-    "checksum": "87dbddd0ac2532faa298b8c8b4e1c0bdb90a131bfa10153ce6e257e3b7f3374f",
-    "warnings": []
+    "event_end": "2026-10-09T21:45+02:00",
+    "match_end": "2026-10-09T20:45+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "fk-havelland-ue50-2026-27-dfb-standard+halftime-15",
+    "competition_format": "league",
+    "checksum": "cdd6feb5aadd2ae04a61dfa2eb80df73ba37396e8181d9ebdb0060cb889e9372",
+    "warnings": [],
+    "home_team_id": "02Q16G28BO000000VS5489B2VT450JFN",
+    "away_team_id": "02PKT2MAOC000000VS5489B2VT4FEOV2",
+    "postponed_to": ""
   },
   {
     "external_id": "031HB5B99O000000VS5489BTVVG7L386",
@@ -1005,9 +1387,16 @@
     "calendar": "Rasen",
     "venue_rule": "Rasen Schönwalde",
     "event_start": "2026-10-10T10:00+02:00",
-    "event_end": "2026-10-10T13:30+02:00",
-    "checksum": "8dd3c28c1bee4ed1f1099c19c71be298a2b817a78c682c88c059275f468e5d8e",
-    "warnings": []
+    "event_end": "2026-10-10T13:45+02:00",
+    "match_end": "2026-10-10T12:45+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "flb-jugendordnung-2025-12-13-a-2x45+halftime-15",
+    "competition_format": "league",
+    "checksum": "266ce99a2cc2be462d78396139e6f065f643115e147f121829600c40aadb5013",
+    "warnings": [],
+    "home_team_id": "02T7TD5NLG000000VS5489BSVU9LEHLB",
+    "away_team_id": "0318S4RIF0000000VS5489BSVU0ORN69",
+    "postponed_to": ""
   },
   {
     "external_id": "031DP96EN8000000VS5489BUVUR5FS5A",
@@ -1029,9 +1418,16 @@
     "calendar": "",
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2026-10-11T14:00+02:00",
-    "event_end": "2026-10-11T17:30+02:00",
-    "checksum": "74d0815eac1bcfc8b8991ec485f16890929a7a10883e2b4e3b3d85c3128c7dc1",
-    "warnings": []
+    "event_end": "2026-10-11T17:45+02:00",
+    "match_end": "2026-10-11T16:45+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "dfb-regel-7-herren-2x45+halftime-15",
+    "competition_format": "league",
+    "checksum": "968d5ba45c4ece75fb46cca75f1a5f69782bd7e5a9601dd3d6726db99c9f9e97",
+    "warnings": [],
+    "home_team_id": "011MIAT5FC000000VTVG0001VTR8C1K7",
+    "away_team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
+    "postponed_to": ""
   },
   {
     "external_id": "031DP96EHK000000VS5489BUVUR5FS5A",
@@ -1053,9 +1449,16 @@
     "calendar": "Rasen",
     "venue_rule": "Rasen Schönwalde",
     "event_start": "2026-10-18T13:00+02:00",
-    "event_end": "2026-10-18T16:30+02:00",
-    "checksum": "2b632dc1fd9d8856375572b8c804029092d991141fa9c70865f59bdc24d35a8f",
-    "warnings": []
+    "event_end": "2026-10-18T16:45+02:00",
+    "match_end": "2026-10-18T15:45+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "dfb-regel-7-herren-2x45+halftime-15",
+    "competition_format": "league",
+    "checksum": "81e34561549d260f140b8635caf3602864b96c9a44d5f3c07aadeb2c1382a569",
+    "warnings": [],
+    "home_team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
+    "away_team_id": "01S5VKUGB0000000VS548985VUL18RL3",
+    "postponed_to": ""
   },
   {
     "external_id": "031DP96DU8000000VS5489BUVUR5FS5A",
@@ -1077,9 +1480,16 @@
     "calendar": "",
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2026-10-25T13:00+01:00",
-    "event_end": "2026-10-25T16:30+01:00",
-    "checksum": "078ea84d1f291b54e652d49ce688aadd33a05681356ff8a9c42eaebcf1ff26a8",
-    "warnings": []
+    "event_end": "2026-10-25T16:45+01:00",
+    "match_end": "2026-10-25T15:45+01:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "dfb-regel-7-herren-2x45+halftime-15",
+    "competition_format": "league",
+    "checksum": "b94f767056fc0e4077e81e9c06e20541235a2e66c3395dee63a759e5f3a1c412",
+    "warnings": [],
+    "home_team_id": "013A5H9RNG000000VV0AG80NVSRNRLT6",
+    "away_team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
+    "postponed_to": ""
   },
   {
     "external_id": "031DP96DRK000000VS5489BUVUR5FS5A",
@@ -1101,9 +1511,16 @@
     "calendar": "Rasen",
     "venue_rule": "Rasen Schönwalde",
     "event_start": "2026-11-01T13:00+01:00",
-    "event_end": "2026-11-01T16:30+01:00",
-    "checksum": "2f45ee84c8c6b250c82afac98eaab61ff76a18c853d0ea968e342cef8806a134",
-    "warnings": []
+    "event_end": "2026-11-01T16:45+01:00",
+    "match_end": "2026-11-01T15:45+01:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "dfb-regel-7-herren-2x45+halftime-15",
+    "competition_format": "league",
+    "checksum": "564ff3bf0328a80b9dc87028917e96ea80d26bab6f8e1862c01ec9f4d781e402",
+    "warnings": [],
+    "home_team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
+    "away_team_id": "011MIAJLF8000000VTVG0001VTR8C1K7",
+    "postponed_to": ""
   },
   {
     "external_id": "031DB86V6S000000VS5489BUVUR5FS5A",
@@ -1125,9 +1542,16 @@
     "calendar": "Rasen",
     "venue_rule": "Rasen Schönwalde",
     "event_start": "2026-11-06T18:00+01:00",
-    "event_end": "2026-11-06T21:30+01:00",
-    "checksum": "dfc91723abe48fb8a8ece6dbf25eb0a2a0ea6d23c5a8a09d4a0a60744c84afac",
-    "warnings": []
+    "event_end": "2026-11-06T21:45+01:00",
+    "match_end": "2026-11-06T20:45+01:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "fk-havelland-ue40-2026-27-dfb-standard+halftime-15",
+    "competition_format": "league",
+    "checksum": "f6ffd7ab5f12ab282b141af118a408037fda6137c3c9b3207e33419246a2392f",
+    "warnings": [],
+    "home_team_id": "02PKVQDTEK000000VS5489B2VT4FEOV2",
+    "away_team_id": "02EIA4DI38000000VS5489B2VS183IS6",
+    "postponed_to": ""
   },
   {
     "external_id": "031DB8NS1G000000VS5489BUVUR5FS5A",
@@ -1149,9 +1573,16 @@
     "calendar": "",
     "venue_rule": "Perwenitz",
     "event_start": "2026-11-06T19:00+01:00",
-    "event_end": "2026-11-06T22:30+01:00",
-    "checksum": "a5cc3699cc7624c393fe5eb7e54f19e180bea7df24c8e7ea3c70f258128163bb",
-    "warnings": []
+    "event_end": "2026-11-06T22:45+01:00",
+    "match_end": "2026-11-06T21:45+01:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "fk-havelland-ue50-2026-27-dfb-standard+halftime-15",
+    "competition_format": "league",
+    "checksum": "af2c1e81cdd916a825e723ed98b1e9ce4fce3c27fe511a09b25db7af3a452d49",
+    "warnings": [],
+    "home_team_id": "02PKT2MAOC000000VS5489B2VT4FEOV2",
+    "away_team_id": "02PGOOFHIO000000VS5489B2VV05N9JG",
+    "postponed_to": ""
   },
   {
     "external_id": "031MGSR2I4000000VS5489BUVVKNMR0J",
@@ -1173,9 +1604,16 @@
     "calendar": "",
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2026-11-07T08:00+01:00",
-    "event_end": "2026-11-07T11:30+01:00",
-    "checksum": "2d933917a42f428f280a77a64302637621d04b26f8a3efa41953e0d24bfc0132",
-    "warnings": []
+    "event_end": "2026-11-07T11:15+01:00",
+    "match_end": "2026-11-07T10:15+01:00",
+    "match_duration_minutes": 75,
+    "duration_rule": "flb-jugendordnung-2025-12-13-d-2x30+halftime-15",
+    "competition_format": "league",
+    "checksum": "f3fc144ed966de834325ec6372ab32e134155e26b5582b69e3f721e00f369be0",
+    "warnings": [],
+    "home_team_id": "011MIAEF18000000VTVG0001VTR8C1K7",
+    "away_team_id": "01S69BH0IK000000VS548985VUL18RL3",
+    "postponed_to": ""
   },
   {
     "external_id": "031HB5B91K000000VS5489BTVVG7L386",
@@ -1197,9 +1635,16 @@
     "calendar": "",
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2026-11-07T12:00+01:00",
-    "event_end": "2026-11-07T15:30+01:00",
-    "checksum": "2d9e4698b71ccfe18b16f4166997eeebbdb9ef760c470f4705ae9323bbdda11d",
-    "warnings": []
+    "event_end": "2026-11-07T15:45+01:00",
+    "match_end": "2026-11-07T14:45+01:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "flb-jugendordnung-2025-12-13-a-2x45+halftime-15",
+    "competition_format": "league",
+    "checksum": "ef2958e1ebd13b1d3fa6c0dc55c3de4af9cd940b84cc624007fb7daa1f367096",
+    "warnings": [],
+    "home_team_id": "02TKDISEO0000000VS5489BSVSKABKDB",
+    "away_team_id": "02T7TD5NLG000000VS5489BSVU9LEHLB",
+    "postponed_to": ""
   },
   {
     "external_id": "031DP96DFS000000VS5489BUVUR5FS5A",
@@ -1221,9 +1666,16 @@
     "calendar": "",
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2026-11-08T13:00+01:00",
-    "event_end": "2026-11-08T16:30+01:00",
-    "checksum": "1ffb4bf5720656712b7b09181d2bd251790c997fa214c705502eb2de32643f11",
-    "warnings": []
+    "event_end": "2026-11-08T16:45+01:00",
+    "match_end": "2026-11-08T15:45+01:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "dfb-regel-7-herren-2x45+halftime-15",
+    "competition_format": "league",
+    "checksum": "504ee1399ee79e825817a1740afaf9cc35b6ba2a3d31621cb9d0381578dbcdf8",
+    "warnings": [],
+    "home_team_id": "011MIC8PBG000000VTVG0001VTR8C1K7",
+    "away_team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
+    "postponed_to": ""
   },
   {
     "external_id": "031HB5B8QK000000VS5489BTVVG7L386",
@@ -1245,9 +1697,16 @@
     "calendar": "Rasen",
     "venue_rule": "Rasen Schönwalde",
     "event_start": "2026-11-14T10:00+01:00",
-    "event_end": "2026-11-14T13:30+01:00",
-    "checksum": "826cafeedbf9032c155dad61079abadc8971e1a22f9c81a3645d33ce687376d7",
-    "warnings": []
+    "event_end": "2026-11-14T13:45+01:00",
+    "match_end": "2026-11-14T12:45+01:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "flb-jugendordnung-2025-12-13-a-2x45+halftime-15",
+    "competition_format": "league",
+    "checksum": "af0abc8f3ab3831dc91b06568e620637f199c9d073b2d26c1e2f8a11958a57f9",
+    "warnings": [],
+    "home_team_id": "02T7TD5NLG000000VS5489BSVU9LEHLB",
+    "away_team_id": "01D8SC7DKK000000VV0AG80NVUGKJV47",
+    "postponed_to": ""
   },
   {
     "external_id": "031DB86V08000000VS5489BUVUR5FS5A",
@@ -1269,9 +1728,16 @@
     "calendar": "",
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2026-11-14T13:00+01:00",
-    "event_end": "2026-11-14T16:30+01:00",
-    "checksum": "451fbc30914427eeb98a262d813ca8d48a8d756bc7726c4d2d182adb674f1760",
-    "warnings": []
+    "event_end": "2026-11-14T16:45+01:00",
+    "match_end": "2026-11-14T15:45+01:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "fk-havelland-ue40-2026-27-dfb-standard+halftime-15",
+    "competition_format": "league",
+    "checksum": "2ada530ede99ada0a896777f25fd95a91d090a5d8955fe4f10235a70025e645b",
+    "warnings": [],
+    "home_team_id": "0279GSGFB8000000VS5489B2VVB7EFSC",
+    "away_team_id": "02PKVQDTEK000000VS5489B2VT4FEOV2",
+    "postponed_to": ""
   },
   {
     "external_id": "031MGSR2CG000000VS5489BUVVKNMR0J",
@@ -1293,9 +1759,16 @@
     "calendar": "",
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2026-11-14T14:00+01:00",
-    "event_end": "2026-11-14T17:30+01:00",
-    "checksum": "a12823910b0488bc9256697d156631e8353d013e967ba76203aebc0ad9ac7ba9",
-    "warnings": []
+    "event_end": "2026-11-14T17:15+01:00",
+    "match_end": "2026-11-14T16:15+01:00",
+    "match_duration_minutes": 75,
+    "duration_rule": "flb-jugendordnung-2025-12-13-d-2x30+halftime-15",
+    "competition_format": "league",
+    "checksum": "8d9481b38df2e834c358d9240ac8705c39d4242a0c615667b811a83f19b1f666",
+    "warnings": [],
+    "home_team_id": "02T5ID09BO000000VS5489BSVTHE6UUT",
+    "away_team_id": "01S69BH0IK000000VS548985VUL18RL3",
+    "postponed_to": ""
   },
   {
     "external_id": "031DP96D60000000VS5489BUVUR5FS5A",
@@ -1317,9 +1790,16 @@
     "calendar": "Rasen",
     "venue_rule": "Rasen Schönwalde",
     "event_start": "2026-11-15T13:00+01:00",
-    "event_end": "2026-11-15T16:30+01:00",
-    "checksum": "82001fade56a99f8f54c1656d84737cc2598570822920c996881f47fa3b05cbd",
-    "warnings": []
+    "event_end": "2026-11-15T16:45+01:00",
+    "match_end": "2026-11-15T15:45+01:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "dfb-regel-7-herren-2x45+halftime-15",
+    "competition_format": "league",
+    "checksum": "05a685dd7e81d16b9dab4791e705b4316bd3d959f515193706f1d5461cbfe5e4",
+    "warnings": [],
+    "home_team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
+    "away_team_id": "011MIEQFSS000000VTVG0001VTR8C1K7",
+    "postponed_to": ""
   },
   {
     "external_id": "031DB8NRSG000000VS5489BUVUR5FS5A",
@@ -1341,9 +1821,16 @@
     "calendar": "",
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2026-11-16T18:30+01:00",
-    "event_end": "2026-11-16T22:00+01:00",
-    "checksum": "1a168d2b0bc5a4d700f04f758ae66f59f221384e27c0fb7b63d4d0ae2f96ba2a",
-    "warnings": []
+    "event_end": "2026-11-16T22:15+01:00",
+    "match_end": "2026-11-16T21:15+01:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "fk-havelland-ue50-2026-27-dfb-standard+halftime-15",
+    "competition_format": "league",
+    "checksum": "4e9a7d6f81cf7586106ed168bf3143a4f36debabd79893f2e4694b0f1d87495f",
+    "warnings": [],
+    "home_team_id": "02PGDVHS1O000000VS5489B1VSCT0UPQ",
+    "away_team_id": "02PKT2MAOC000000VS5489B2VT4FEOV2",
+    "postponed_to": ""
   },
   {
     "external_id": "031MFGE3D8000000VS5489BUVVKNMR0J",
@@ -1365,9 +1852,16 @@
     "calendar": "",
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2026-11-21T09:00+01:00",
-    "event_end": "2026-11-21T12:30+01:00",
-    "checksum": "2a07db70a5b343e327ffa94ba20568f4ac0fe6b710f60e0161692b51339d9ceb",
-    "warnings": []
+    "event_end": "2026-11-21T12:25+01:00",
+    "match_end": "2026-11-21T11:25+01:00",
+    "match_duration_minutes": 85,
+    "duration_rule": "flb-jugendordnung-2025-12-13-c-2x35+halftime-15",
+    "competition_format": "league",
+    "checksum": "cb79ed0d90707413cfccf05821994303ee4c56abcf913f2589566a52798d10a9",
+    "warnings": [],
+    "home_team_id": "02T8G8J1F8000000VS5489BSVU9LEHLB",
+    "away_team_id": "031A57Q7PG000000VS5489BSVU0ORN69",
+    "postponed_to": ""
   },
   {
     "external_id": "031MGSR294000000VS5489BUVVKNMR0J",
@@ -1389,9 +1883,16 @@
     "calendar": "Kunstrasen",
     "venue_rule": "Kunstrasen Schönwalde",
     "event_start": "2026-11-21T09:00+01:00",
-    "event_end": "2026-11-21T12:30+01:00",
-    "checksum": "f6a526debc068ca2342b2b3a4c5cc7d076330ca093f18bf5d9df217cf996627a",
-    "warnings": []
+    "event_end": "2026-11-21T12:15+01:00",
+    "match_end": "2026-11-21T11:15+01:00",
+    "match_duration_minutes": 75,
+    "duration_rule": "flb-jugendordnung-2025-12-13-d-2x30+halftime-15",
+    "competition_format": "league",
+    "checksum": "e1f6cb788c10d3f24aec6df9a1a99c94b286463ce0b9c0315431a5348ac421b1",
+    "warnings": [],
+    "home_team_id": "01S69BH0IK000000VS548985VUL18RL3",
+    "away_team_id": "011MICTOLO000000VTVG0001VTR8C1K7",
+    "postponed_to": ""
   },
   {
     "external_id": "031HB5B8IC000000VS5489BTVVG7L386",
@@ -1413,9 +1914,16 @@
     "calendar": "",
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2026-11-22T11:00+01:00",
-    "event_end": "2026-11-22T14:30+01:00",
-    "checksum": "042e2683d19bdd9095ec43c703f86d392133caee0a204516f925f4bf4a9d3784",
-    "warnings": []
+    "event_end": "2026-11-22T14:45+01:00",
+    "match_end": "2026-11-22T13:45+01:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "flb-jugendordnung-2025-12-13-a-2x45+halftime-15",
+    "competition_format": "league",
+    "checksum": "dec3fb0abdac52484cba3dff136655f5f77cd81192d95c12f4c1a20ce1e0e47c",
+    "warnings": [],
+    "home_team_id": "01DAR93834000000VV0AG811VVO7G072",
+    "away_team_id": "02T7TD5NLG000000VS5489BSVU9LEHLB",
+    "postponed_to": ""
   },
   {
     "external_id": "031DP96CQS000000VS5489BUVUR5FS5A",
@@ -1437,9 +1945,16 @@
     "calendar": "",
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2026-11-22T12:00+01:00",
-    "event_end": "2026-11-22T15:30+01:00",
-    "checksum": "53a1ab3cb3b7b667c3d30ebdee4879f9d70a8adb4bd812350f631c7fea305ce2",
-    "warnings": []
+    "event_end": "2026-11-22T15:45+01:00",
+    "match_end": "2026-11-22T14:45+01:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "dfb-regel-7-herren-2x45+halftime-15",
+    "competition_format": "league",
+    "checksum": "01f28325f09f5f44f55ab5764f4c0916a5d2e6b92363c0839458c87166b9b411",
+    "warnings": [],
+    "home_team_id": "011MIBBDPS000000VTVG0001VTR8C1K7",
+    "away_team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
+    "postponed_to": ""
   },
   {
     "external_id": "031HB5BAJS000000VS5489BTVVG7L386",
@@ -1461,9 +1976,16 @@
     "calendar": "Rasen",
     "venue_rule": "Rasen Schönwalde",
     "event_start": "2026-11-28T10:00+01:00",
-    "event_end": "2026-11-28T13:30+01:00",
-    "checksum": "be9bbbf720ea8c81a717635bdae827d71f94aef9e33aed556c939cd0402ff8f7",
-    "warnings": []
+    "event_end": "2026-11-28T13:45+01:00",
+    "match_end": "2026-11-28T12:45+01:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "flb-jugendordnung-2025-12-13-a-2x45+halftime-15",
+    "competition_format": "league",
+    "checksum": "3448fc25b1eadf29841fefc2dab56499f922e1131a1b5c34970baab751869bad",
+    "warnings": [],
+    "home_team_id": "02T7TD5NLG000000VS5489BSVU9LEHLB",
+    "away_team_id": "030OTLPKMO000000VS5489BRVTOJ9IF5",
+    "postponed_to": ""
   },
   {
     "external_id": "031HB5B8DG000000VS5489BTVVG7L386",
@@ -1485,9 +2007,16 @@
     "calendar": "Rasen",
     "venue_rule": "Rasen Schönwalde",
     "event_start": "2026-12-05T10:00+01:00",
-    "event_end": "2026-12-05T13:30+01:00",
-    "checksum": "037226cc01cf42c33d3e80553cddf95165c652b20a230223408999a8075f14b3",
-    "warnings": []
+    "event_end": "2026-12-05T13:45+01:00",
+    "match_end": "2026-12-05T12:45+01:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "flb-jugendordnung-2025-12-13-a-2x45+halftime-15",
+    "competition_format": "league",
+    "checksum": "d036aba6780fbd18b65c51d215af24239287d7bc3af3b5cc60ddcc403b95d938",
+    "warnings": [],
+    "home_team_id": "02T7TD5NLG000000VS5489BSVU9LEHLB",
+    "away_team_id": "0277CFCJJ4000000VS5489B1VSBHJ1NS",
+    "postponed_to": ""
   },
   {
     "external_id": "031DP96C8O000000VS5489BUVUR5FS5A",
@@ -1509,9 +2038,16 @@
     "calendar": "",
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2026-12-06T12:00+01:00",
-    "event_end": "2026-12-06T15:30+01:00",
-    "checksum": "f66bfedea9df56c4e96faa6bd26be69bf03ececda887f16ac85e7d2761a041d1",
-    "warnings": []
+    "event_end": "2026-12-06T15:45+01:00",
+    "match_end": "2026-12-06T14:45+01:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "dfb-regel-7-herren-2x45+halftime-15",
+    "competition_format": "league",
+    "checksum": "37acdedf15666939654aaaddc6affd11ee958ee63fc447f8c6c332f33eb2c228",
+    "warnings": [],
+    "home_team_id": "011MIEVFVC000000VTVG0001VTR8C1K7",
+    "away_team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
+    "postponed_to": ""
   },
   {
     "external_id": "031DP96JCG000000VS5489BUVUR5FS5A",
@@ -1533,9 +2069,16 @@
     "calendar": "",
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2027-02-21T13:00+01:00",
-    "event_end": "2027-02-21T16:30+01:00",
-    "checksum": "ee21d2690481f02d7d660890c51a14ac029c3bb51b9e13924fa6d5dfbc1d9f07",
-    "warnings": []
+    "event_end": "2027-02-21T16:45+01:00",
+    "match_end": "2027-02-21T15:45+01:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "dfb-regel-7-herren-2x45+halftime-15",
+    "competition_format": "league",
+    "checksum": "bf68bfd70b3287ea6b89a02a5c9ca0eff40d8a89e8b5fecdd0163a8ec6bf545e",
+    "warnings": [],
+    "home_team_id": "011MIEQFSS000000VTVG0001VTR8C1K7",
+    "away_team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
+    "postponed_to": ""
   },
   {
     "external_id": "031HB5BEJS000000VS5489BTVVG7L386",
@@ -1557,9 +2100,16 @@
     "calendar": "Rasen",
     "venue_rule": "Rasen Schönwalde",
     "event_start": "2027-02-27T10:00+01:00",
-    "event_end": "2027-02-27T13:30+01:00",
-    "checksum": "1bfcd99590bbaa4770e3c227863123620c97e030f91ad86b2f23430c71588a79",
-    "warnings": []
+    "event_end": "2027-02-27T13:45+01:00",
+    "match_end": "2027-02-27T12:45+01:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "flb-jugendordnung-2025-12-13-a-2x45+halftime-15",
+    "competition_format": "league",
+    "checksum": "c2b548cb45fa425dd6e9a24b033a10a1cfb8c17cf3c18d7fdcaf3edc71a43060",
+    "warnings": [],
+    "home_team_id": "02T7TD5NLG000000VS5489BSVU9LEHLB",
+    "away_team_id": "02754JV4N0000000VS5489B2VVRTHQ8E",
+    "postponed_to": ""
   },
   {
     "external_id": "031DP96PJK000000VS5489BUVUR5FS5A",
@@ -1581,9 +2131,16 @@
     "calendar": "Rasen",
     "venue_rule": "Rasen Schönwalde",
     "event_start": "2027-02-28T13:00+01:00",
-    "event_end": "2027-02-28T16:30+01:00",
-    "checksum": "e6f8015c6886097022ad44a77f4a9a8d412486e4e0852ab4a154fc5212bb620b",
-    "warnings": []
+    "event_end": "2027-02-28T16:45+01:00",
+    "match_end": "2027-02-28T15:45+01:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "dfb-regel-7-herren-2x45+halftime-15",
+    "competition_format": "league",
+    "checksum": "60ddc4b3647728a6a8e9db98e1e8d5e976346e8e041b860ced6083f978b09f0e",
+    "warnings": [],
+    "home_team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
+    "away_team_id": "011MIEGI3C000000VTVG0001VTR8C1K7",
+    "postponed_to": ""
   },
   {
     "external_id": "031HB5BDT4000000VS5489BTVVG7L386",
@@ -1605,9 +2162,16 @@
     "calendar": "",
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2027-03-07T10:00+01:00",
-    "event_end": "2027-03-07T13:30+01:00",
-    "checksum": "301bcde532add1de10a426903746c1131df4b67fdac8022ae8ea9e1b4d6732c3",
-    "warnings": []
+    "event_end": "2027-03-07T13:45+01:00",
+    "match_end": "2027-03-07T12:45+01:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "flb-jugendordnung-2025-12-13-a-2x45+halftime-15",
+    "competition_format": "league",
+    "checksum": "cdd59ac5ba7a10fb77bb3abefc9b8ecb59ae477cda6e5693f991d0740612a3de",
+    "warnings": [],
+    "home_team_id": "01KQKN6M8K000000VV0AG811VSVU41QE",
+    "away_team_id": "02T7TD5NLG000000VS5489BSVU9LEHLB",
+    "postponed_to": ""
   },
   {
     "external_id": "031DP96ORC000000VS5489BUVUR5FS5A",
@@ -1629,9 +2193,16 @@
     "calendar": "Rasen",
     "venue_rule": "Rasen Schönwalde",
     "event_start": "2027-03-07T14:00+01:00",
-    "event_end": "2027-03-07T17:30+01:00",
-    "checksum": "227f46520343cef8498b7ff7ca612bf1d7347a6e79f3e923b1344cf4b6eef997",
-    "warnings": []
+    "event_end": "2027-03-07T17:45+01:00",
+    "match_end": "2027-03-07T16:45+01:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "dfb-regel-7-herren-2x45+halftime-15",
+    "competition_format": "league",
+    "checksum": "8342ebfe44fdbe98be7892ad362d759be67a73eaa7a9e28c629a9216f464ed24",
+    "warnings": [],
+    "home_team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
+    "away_team_id": "011MIEU9LG000000VTVG0001VTR8C1K7",
+    "postponed_to": ""
   },
   {
     "external_id": "031DB870KG000000VS5489BUVUR5FS5A",
@@ -1653,9 +2224,16 @@
     "calendar": "",
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2027-03-12T18:45+01:00",
-    "event_end": "2027-03-12T22:15+01:00",
-    "checksum": "64c85f1681602213cb3d58e373df793d3e3ff438b5c43987d9c3d674298174d7",
-    "warnings": []
+    "event_end": "2027-03-12T22:30+01:00",
+    "match_end": "2027-03-12T21:30+01:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "fk-havelland-ue40-2026-27-dfb-standard+halftime-15",
+    "competition_format": "league",
+    "checksum": "5af4a6af3d8cc9e80e35782737b6f6b7b01d306bb6d89326ed0143d9f8e137ea",
+    "warnings": [],
+    "home_team_id": "02I8BG3NRC000000VS5489B1VTAQ4EE6",
+    "away_team_id": "02PKVQDTEK000000VS5489B2VT4FEOV2",
+    "postponed_to": ""
   },
   {
     "external_id": "031HB5BDEG000000VS5489BTVVG7L386",
@@ -1677,9 +2255,16 @@
     "calendar": "Rasen",
     "venue_rule": "Rasen Schönwalde",
     "event_start": "2027-03-13T10:00+01:00",
-    "event_end": "2027-03-13T13:30+01:00",
-    "checksum": "1c48e4db63f330ec5cfd7f6da64f3e7758dc48a18a3f8a6b4a258cd59d728a28",
-    "warnings": []
+    "event_end": "2027-03-13T13:45+01:00",
+    "match_end": "2027-03-13T12:45+01:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "flb-jugendordnung-2025-12-13-a-2x45+halftime-15",
+    "competition_format": "league",
+    "checksum": "cad84402e41dbc707633699fdd44396604bddfd66028213017d4ceefd0ab1f16",
+    "warnings": [],
+    "home_team_id": "02T7TD5NLG000000VS5489BSVU9LEHLB",
+    "away_team_id": "011MIBO66O000000VTVG0001VTR8C1K7",
+    "postponed_to": ""
   },
   {
     "external_id": "031DP96O6K000000VS5489BUVUR5FS5A",
@@ -1701,9 +2286,16 @@
     "calendar": "",
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2027-03-14T14:00+01:00",
-    "event_end": "2027-03-14T17:30+01:00",
-    "checksum": "e4c87c52b830680e9135fe46e9ba92feba4a562d9f6d3f342764a010f17b7761",
-    "warnings": []
+    "event_end": "2027-03-14T17:45+01:00",
+    "match_end": "2027-03-14T16:45+01:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "dfb-regel-7-herren-2x45+halftime-15",
+    "competition_format": "league",
+    "checksum": "f07901dd0454535d282bc9e147c770598d155d61aa7a9e6157acf31782618cdf",
+    "warnings": [],
+    "home_team_id": "011MIENL9O000000VTVG0001VTR8C1K7",
+    "away_team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
+    "postponed_to": ""
   },
   {
     "external_id": "031DB8NT8G000000VS5489BUVUR5FS5A",
@@ -1725,9 +2317,16 @@
     "calendar": "",
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2027-03-15T19:00+01:00",
-    "event_end": "2027-03-15T22:30+01:00",
-    "checksum": "a4462ad68afb77b2b1c8cc19b146e544ceb398b18c3843e1375b332359b08818",
-    "warnings": []
+    "event_end": "2027-03-15T22:45+01:00",
+    "match_end": "2027-03-15T21:45+01:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "fk-havelland-ue50-2026-27-dfb-standard+halftime-15",
+    "competition_format": "league",
+    "checksum": "78319fc8070c400d9a85383490f9ad89b07b86963e6d1ece055512559aacd147",
+    "warnings": [],
+    "home_team_id": "02PM0L5KGK000000VS5489B1VS5DN01P",
+    "away_team_id": "02PKT2MAOC000000VS5489B2VT4FEOV2",
+    "postponed_to": ""
   },
   {
     "external_id": "031DP96MUG000000VS5489BUVUR5FS5A",
@@ -1749,9 +2348,16 @@
     "calendar": "",
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2027-04-04T14:00+02:00",
-    "event_end": "2027-04-04T17:30+02:00",
-    "checksum": "2717a55c63446f8a8031c8fb634acbf574f2ebd4908271dfbacc98a87590564e",
-    "warnings": []
+    "event_end": "2027-04-04T17:45+02:00",
+    "match_end": "2027-04-04T16:45+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "dfb-regel-7-herren-2x45+halftime-15",
+    "competition_format": "league",
+    "checksum": "25a037bb3043a013e44eb368960af8f1cc4181faad6ea016db60caabe366c40a",
+    "warnings": [],
+    "home_team_id": "011MIBP1PG000000VTVG0001VTR8C1K7",
+    "away_team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
+    "postponed_to": ""
   },
   {
     "external_id": "031DB870D4000000VS5489BUVUR5FS5A",
@@ -1773,9 +2379,16 @@
     "calendar": "Rasen",
     "venue_rule": "Rasen Schönwalde",
     "event_start": "2027-04-09T18:00+02:00",
-    "event_end": "2027-04-09T21:30+02:00",
-    "checksum": "6b7ac305a2af9ee71a09a622a510c79810c4df8d006df3a9eb33e2278ba6a718",
-    "warnings": []
+    "event_end": "2027-04-09T21:45+02:00",
+    "match_end": "2027-04-09T20:45+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "fk-havelland-ue40-2026-27-dfb-standard+halftime-15",
+    "competition_format": "league",
+    "checksum": "e642739c6dffeca75bdb0249c574af2af4a2b5c1432df057f723ff1b9724d23d",
+    "warnings": [],
+    "home_team_id": "02PKVQDTEK000000VS5489B2VT4FEOV2",
+    "away_team_id": "02AU1A03O4000000VS5489B1VTFE8486",
+    "postponed_to": ""
   },
   {
     "external_id": "031DB8NT0S000000VS5489BUVUR5FS5A",
@@ -1797,9 +2410,16 @@
     "calendar": "Rasen",
     "venue_rule": "Rasen Schönwalde",
     "event_start": "2027-04-09T19:00+02:00",
-    "event_end": "2027-04-09T22:30+02:00",
-    "checksum": "7c0c3112b122255077527c489eb5a940b6939f3a2743a1a80f8e98a90419246e",
-    "warnings": []
+    "event_end": "2027-04-09T22:45+02:00",
+    "match_end": "2027-04-09T21:45+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "fk-havelland-ue50-2026-27-dfb-standard+halftime-15",
+    "competition_format": "league",
+    "checksum": "ee427b8b6a8621a6d2ee05e6e5b6d0ae97128f4483feb1e43a06c72364bb4a4b",
+    "warnings": [],
+    "home_team_id": "02PKT2MAOC000000VS5489B2VT4FEOV2",
+    "away_team_id": "02PJD5K8O8000000VS5489B1VUI2QQ8R",
+    "postponed_to": ""
   },
   {
     "external_id": "031HB5BCK8000000VS5489BTVVG7L386",
@@ -1821,9 +2441,16 @@
     "calendar": "Rasen",
     "venue_rule": "Rasen Schönwalde",
     "event_start": "2027-04-10T10:00+02:00",
-    "event_end": "2027-04-10T13:30+02:00",
-    "checksum": "b3fef246ee204416ba8f8c98709f22984d45b60db09a43f9229a5f9eeadda8b2",
-    "warnings": []
+    "event_end": "2027-04-10T13:45+02:00",
+    "match_end": "2027-04-10T12:45+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "flb-jugendordnung-2025-12-13-a-2x45+halftime-15",
+    "competition_format": "league",
+    "checksum": "7dbaaebfeb1e895300975b4f7193e657cda3bd789c68540fbc0ed2a31832a8c7",
+    "warnings": [],
+    "home_team_id": "02T7TD5NLG000000VS5489BSVU9LEHLB",
+    "away_team_id": "02T94BGV6C000000VS5489BRVTHNGU03",
+    "postponed_to": ""
   },
   {
     "external_id": "031DP96M1K000000VS5489BUVUR5FS5A",
@@ -1845,9 +2472,16 @@
     "calendar": "Rasen",
     "venue_rule": "Rasen Schönwalde",
     "event_start": "2027-04-11T13:00+02:00",
-    "event_end": "2027-04-11T16:30+02:00",
-    "checksum": "0a7be813be7e66dcf58e13d05acee226ab00b878df4caf12c6f8448261aa14ee",
-    "warnings": []
+    "event_end": "2027-04-11T16:45+02:00",
+    "match_end": "2027-04-11T15:45+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "dfb-regel-7-herren-2x45+halftime-15",
+    "competition_format": "league",
+    "checksum": "4770254f84cbd8f30ccff0443d838e74adcc2e983a756984645b6c4bd2d6ba94",
+    "warnings": [],
+    "home_team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
+    "away_team_id": "011MIAT5FC000000VTVG0001VTR8C1K7",
+    "postponed_to": ""
   },
   {
     "external_id": "031DB8NSUS000000VS5489BUVUR5FS5A",
@@ -1869,9 +2503,16 @@
     "calendar": "",
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2027-04-16T18:30+02:00",
-    "event_end": "2027-04-16T22:00+02:00",
-    "checksum": "ab2de0ea7a91c3708a9a851ec90099dc2488909440f1df1355b044e0a24ad73e",
-    "warnings": []
+    "event_end": "2027-04-16T22:15+02:00",
+    "match_end": "2027-04-16T21:15+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "fk-havelland-ue50-2026-27-dfb-standard+halftime-15",
+    "competition_format": "league",
+    "checksum": "2f451e0aabea1d72454df201e824b774daaa5a0c69c7fe82eee3f046146379a1",
+    "warnings": [],
+    "home_team_id": "02PL1LJHSK000000VS5489B1VS5DN01P",
+    "away_team_id": "02PKT2MAOC000000VS5489B2VT4FEOV2",
+    "postponed_to": ""
   },
   {
     "external_id": "031DB870AK000000VS5489BUVUR5FS5A",
@@ -1893,9 +2534,16 @@
     "calendar": "",
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2027-04-16T19:00+02:00",
-    "event_end": "2027-04-16T22:30+02:00",
-    "checksum": "4a3f8ae215e7ff0bedce8057fb4c1e763ff055f8556ecae46c17bb67b5837856",
-    "warnings": []
+    "event_end": "2027-04-16T22:45+02:00",
+    "match_end": "2027-04-16T21:45+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "fk-havelland-ue40-2026-27-dfb-standard+halftime-15",
+    "competition_format": "league",
+    "checksum": "55985d79c02b680cd4ac477de57f0669333d241e21865f37803475470c95c016",
+    "warnings": [],
+    "home_team_id": "02PKTPROMG000000VS5489B1VS5DN01P",
+    "away_team_id": "02PKVQDTEK000000VS5489B2VT4FEOV2",
+    "postponed_to": ""
   },
   {
     "external_id": "031HB5BD7G000000VS5489BTVVG7L386",
@@ -1917,9 +2565,16 @@
     "calendar": "",
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2027-04-18T10:00+02:00",
-    "event_end": "2027-04-18T13:30+02:00",
-    "checksum": "1d596139ec413268df55961f7034171bc6894ff307a062f5c380a251b33a2d1d",
-    "warnings": []
+    "event_end": "2027-04-18T13:45+02:00",
+    "match_end": "2027-04-18T12:45+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "flb-jugendordnung-2025-12-13-a-2x45+halftime-15",
+    "competition_format": "league",
+    "checksum": "716395068aa3595c13957723be8be6a824b0d6e0ca37fe2c621a5377ae2cccc3",
+    "warnings": [],
+    "home_team_id": "011MIEH5CS000000VTVG0001VTR8C1K7",
+    "away_team_id": "02T7TD5NLG000000VS5489BSVU9LEHLB",
+    "postponed_to": ""
   },
   {
     "external_id": "031DP96LO4000000VS5489BUVUR5FS5A",
@@ -1941,9 +2596,16 @@
     "calendar": "",
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2027-04-18T14:00+02:00",
-    "event_end": "2027-04-18T17:30+02:00",
-    "checksum": "f67d0eed1311cc244d792fabb5222597218f9a6ceaa12a88ebf9697eee6b1aa7",
-    "warnings": []
+    "event_end": "2027-04-18T17:45+02:00",
+    "match_end": "2027-04-18T16:45+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "dfb-regel-7-herren-2x45+halftime-15",
+    "competition_format": "league",
+    "checksum": "a92e3e08869852b4233110196b556a5463fa534f6c76edb116773accbb07a67a",
+    "warnings": [],
+    "home_team_id": "01S5VKUGB0000000VS548985VUL18RL3",
+    "away_team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
+    "postponed_to": ""
   },
   {
     "external_id": "031DP96KK4000000VS5489BUVUR5FS5A",
@@ -1965,9 +2627,16 @@
     "calendar": "Rasen",
     "venue_rule": "Rasen Schönwalde",
     "event_start": "2027-04-25T13:00+02:00",
-    "event_end": "2027-04-25T16:30+02:00",
-    "checksum": "1a9c93ac50c6c569173ddafe6d2ebbec272a5fe6c16c3c8b2af0f161a7580f01",
-    "warnings": []
+    "event_end": "2027-04-25T16:45+02:00",
+    "match_end": "2027-04-25T15:45+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "dfb-regel-7-herren-2x45+halftime-15",
+    "competition_format": "league",
+    "checksum": "98b1983eff8ef00c1fd29a8165fa30c016d1f0f788f78a3926d51007691a8a49",
+    "warnings": [],
+    "home_team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
+    "away_team_id": "013A5H9RNG000000VV0AG80NVSRNRLT6",
+    "postponed_to": ""
   },
   {
     "external_id": "031HB5BE70000000VS5489BTVVG7L386",
@@ -1989,9 +2658,16 @@
     "calendar": "",
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2027-05-02T10:30+02:00",
-    "event_end": "2027-05-02T14:00+02:00",
-    "checksum": "00507a8bb84e497c6479e39024b2e865d84aeb22794449c7dc8f78ac17903ce1",
-    "warnings": []
+    "event_end": "2027-05-02T14:15+02:00",
+    "match_end": "2027-05-02T13:15+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "flb-jugendordnung-2025-12-13-a-2x45+halftime-15",
+    "competition_format": "league",
+    "checksum": "06dfa1722f82b15ca921a91ede14e2d568347f54bc5b772337d0941483dabd00",
+    "warnings": [],
+    "home_team_id": "030OTLPKMO000000VS5489BRVTOJ9IF5",
+    "away_team_id": "02T7TD5NLG000000VS5489BSVU9LEHLB",
+    "postponed_to": ""
   },
   {
     "external_id": "031DP96KFO000000VS5489BUVUR5FS5A",
@@ -2013,9 +2689,16 @@
     "calendar": "",
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2027-05-02T14:00+02:00",
-    "event_end": "2027-05-02T17:30+02:00",
-    "checksum": "c1f8a0da8a770651d6f73ceb2da9e0ed50070e3060273418943b948a6e252b51",
-    "warnings": []
+    "event_end": "2027-05-02T17:45+02:00",
+    "match_end": "2027-05-02T16:45+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "dfb-regel-7-herren-2x45+halftime-15",
+    "competition_format": "league",
+    "checksum": "fb30df045fec0ea17a1b66950bc45b4762c2fa46b60ff3f2e9197e664745a9ac",
+    "warnings": [],
+    "home_team_id": "011MIAJLF8000000VTVG0001VTR8C1K7",
+    "away_team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
+    "postponed_to": ""
   },
   {
     "external_id": "031DB87058000000VS5489BUVUR5FS5A",
@@ -2037,9 +2720,16 @@
     "calendar": "Rasen",
     "venue_rule": "Rasen Schönwalde",
     "event_start": "2027-05-07T18:00+02:00",
-    "event_end": "2027-05-07T21:30+02:00",
-    "checksum": "c8cd23a8644c816ba2d1157fccbed244e5c4cabc70f129adf40471dd14ca608e",
-    "warnings": []
+    "event_end": "2027-05-07T21:45+02:00",
+    "match_end": "2027-05-07T20:45+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "fk-havelland-ue40-2026-27-dfb-standard+halftime-15",
+    "competition_format": "league",
+    "checksum": "64fb657cd6543421d85e6c8b1f100a8c8721c43546035ec201a1eaa6c02969ac",
+    "warnings": [],
+    "home_team_id": "02PKVQDTEK000000VS5489B2VT4FEOV2",
+    "away_team_id": "02TINQ61UC000000VS5489BSVUALD4UK",
+    "postponed_to": ""
   },
   {
     "external_id": "031DB8NSPC000000VS5489BUVUR5FS5A",
@@ -2061,9 +2751,16 @@
     "calendar": "Rasen",
     "venue_rule": "Rasen Schönwalde",
     "event_start": "2027-05-07T19:00+02:00",
-    "event_end": "2027-05-07T22:30+02:00",
-    "checksum": "522b9edef4fbb0238f4e4128eabbc252a17c99391c471bb6d653d83825cdb9cd",
-    "warnings": []
+    "event_end": "2027-05-07T22:45+02:00",
+    "match_end": "2027-05-07T21:45+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "fk-havelland-ue50-2026-27-dfb-standard+halftime-15",
+    "competition_format": "league",
+    "checksum": "4bcdde36473591d5d6aa1915082c7a7f7714dd23c108d0ba3d274beaa9b94fd7",
+    "warnings": [],
+    "home_team_id": "02PKT2MAOC000000VS5489B2VT4FEOV2",
+    "away_team_id": "02Q16G28BO000000VS5489B2VT450JFN",
+    "postponed_to": ""
   },
   {
     "external_id": "031HB5BCFO000000VS5489BTVVG7L386",
@@ -2085,9 +2782,16 @@
     "calendar": "",
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2027-05-09T11:00+02:00",
-    "event_end": "2027-05-09T14:30+02:00",
-    "checksum": "b771cab94ffac2132a55074d8ad91f0ec48972f05095cf84944eece4b9ce2827",
-    "warnings": []
+    "event_end": "2027-05-09T14:45+02:00",
+    "match_end": "2027-05-09T13:45+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "flb-jugendordnung-2025-12-13-a-2x45+halftime-15",
+    "competition_format": "league",
+    "checksum": "ad52e5e8f1951d92a1f14b0146fadb59be8f1c37f51629473d7040bc8067e761",
+    "warnings": [],
+    "home_team_id": "0318S4RIF0000000VS5489BSVU0ORN69",
+    "away_team_id": "02T7TD5NLG000000VS5489BSVU9LEHLB",
+    "postponed_to": ""
   },
   {
     "external_id": "031DP96JUG000000VS5489BUVUR5FS5A",
@@ -2109,9 +2813,16 @@
     "calendar": "Rasen",
     "venue_rule": "Rasen Schönwalde",
     "event_start": "2027-05-09T13:00+02:00",
-    "event_end": "2027-05-09T16:30+02:00",
-    "checksum": "68ac265ac6b10e5d2e0faee5b566a9be7e98c4e3f5dd88c29eb3153af617b5a1",
-    "warnings": []
+    "event_end": "2027-05-09T16:45+02:00",
+    "match_end": "2027-05-09T15:45+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "dfb-regel-7-herren-2x45+halftime-15",
+    "competition_format": "league",
+    "checksum": "1f4e6b41b6fc7b8810bc59031d8893fa2a2372e8673b77d78907315e68d82d6e",
+    "warnings": [],
+    "home_team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
+    "away_team_id": "011MIC8PBG000000VTVG0001VTR8C1K7",
+    "postponed_to": ""
   },
   {
     "external_id": "031DB87020000000VS5489BUVUR5FS5A",
@@ -2133,9 +2844,16 @@
     "calendar": "",
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2027-05-21T18:30+02:00",
-    "event_end": "2027-05-21T22:00+02:00",
-    "checksum": "1739e4b685146445d1af7f787e1d35c1f732626a3e147c07203e13553b2825aa",
-    "warnings": []
+    "event_end": "2027-05-21T22:15+02:00",
+    "match_end": "2027-05-21T21:15+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "fk-havelland-ue40-2026-27-dfb-standard+halftime-15",
+    "competition_format": "league",
+    "checksum": "06661937436dc7b30307a893865a121a593632c679232a25c891e6ffdbe3a5fd",
+    "warnings": [],
+    "home_team_id": "02EIA4DI38000000VS5489B2VS183IS6",
+    "away_team_id": "02PKVQDTEK000000VS5489B2VT4FEOV2",
+    "postponed_to": ""
   },
   {
     "external_id": "031DB8NSMS000000VS5489BUVUR5FS5A",
@@ -2157,9 +2875,16 @@
     "calendar": "",
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2027-05-21T18:30+02:00",
-    "event_end": "2027-05-21T22:00+02:00",
-    "checksum": "4cc0ef1cf1dd6be1f8ac2a5de75195674a5ffd39d404ba4905fd5eb9c3780c88",
-    "warnings": []
+    "event_end": "2027-05-21T22:15+02:00",
+    "match_end": "2027-05-21T21:15+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "fk-havelland-ue50-2026-27-dfb-standard+halftime-15",
+    "competition_format": "league",
+    "checksum": "a7f8dfd1472833ba7144ba6369b278e57ea7ed819bb904c5a369672d489afdb2",
+    "warnings": [],
+    "home_team_id": "02PGOOFHIO000000VS5489B2VV05N9JG",
+    "away_team_id": "02PKT2MAOC000000VS5489B2VT4FEOV2",
+    "postponed_to": ""
   },
   {
     "external_id": "031HB5BC5G000000VS5489BTVVG7L386",
@@ -2181,9 +2906,16 @@
     "calendar": "Rasen",
     "venue_rule": "Rasen Schönwalde",
     "event_start": "2027-05-22T10:00+02:00",
-    "event_end": "2027-05-22T13:30+02:00",
-    "checksum": "fa34971151c057f4a9834b25f9e74405a91d3916a9f19075c271742a469e4cfe",
-    "warnings": []
+    "event_end": "2027-05-22T13:45+02:00",
+    "match_end": "2027-05-22T12:45+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "flb-jugendordnung-2025-12-13-a-2x45+halftime-15",
+    "competition_format": "league",
+    "checksum": "448d8adad2b8fe5f88e35437465ec6cf91b2ea6e5ab05c7b0386e80c2e3a57f4",
+    "warnings": [],
+    "home_team_id": "02T7TD5NLG000000VS5489BSVU9LEHLB",
+    "away_team_id": "02TKDISEO0000000VS5489BSVSKABKDB",
+    "postponed_to": ""
   },
   {
     "external_id": "031DP96IO0000000VS5489BUVUR5FS5A",
@@ -2205,9 +2937,16 @@
     "calendar": "Rasen",
     "venue_rule": "Rasen Schönwalde",
     "event_start": "2027-05-23T13:00+02:00",
-    "event_end": "2027-05-23T16:30+02:00",
-    "checksum": "87ffecaed3a988d1e2c5684c8301d48c7df800fab09c5611ca12fe548a9ba73b",
-    "warnings": []
+    "event_end": "2027-05-23T16:45+02:00",
+    "match_end": "2027-05-23T15:45+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "dfb-regel-7-herren-2x45+halftime-15",
+    "competition_format": "league",
+    "checksum": "fdb042e884d039c0dcd5124ea7dde52641eff865103b1e2b7f74919910a3ec6c",
+    "warnings": [],
+    "home_team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
+    "away_team_id": "011MIBBDPS000000VTVG0001VTR8C1K7",
+    "postponed_to": ""
   },
   {
     "external_id": "031DB86VQ4000000VS5489BUVUR5FS5A",
@@ -2229,9 +2968,16 @@
     "calendar": "Rasen",
     "venue_rule": "Rasen Schönwalde",
     "event_start": "2027-05-28T18:00+02:00",
-    "event_end": "2027-05-28T21:30+02:00",
-    "checksum": "fd8cd20a0b39840b6cee7d492abf93f06162eae0810fcbfc0ebb2218b21d3653",
-    "warnings": []
+    "event_end": "2027-05-28T21:45+02:00",
+    "match_end": "2027-05-28T20:45+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "fk-havelland-ue40-2026-27-dfb-standard+halftime-15",
+    "competition_format": "league",
+    "checksum": "e61b82a773862ab70ef4571303a01c7d68cbd714e3e3a68f0ecbd84d3cf5b595",
+    "warnings": [],
+    "home_team_id": "02PKVQDTEK000000VS5489B2VT4FEOV2",
+    "away_team_id": "0279GSGFB8000000VS5489B2VVB7EFSC",
+    "postponed_to": ""
   },
   {
     "external_id": "031DB8NSH4000000VS5489BUVUR5FS5A",
@@ -2253,9 +2999,16 @@
     "calendar": "Rasen",
     "venue_rule": "Rasen Schönwalde",
     "event_start": "2027-05-28T19:00+02:00",
-    "event_end": "2027-05-28T22:30+02:00",
-    "checksum": "6c1085919b36d93c47ad71088b2da05ec6ca80f5e7535642b8577ee72180dcd2",
-    "warnings": []
+    "event_end": "2027-05-28T22:45+02:00",
+    "match_end": "2027-05-28T21:45+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "fk-havelland-ue50-2026-27-dfb-standard+halftime-15",
+    "competition_format": "league",
+    "checksum": "9919fd05e48bfa74a8be9df608450483b3a3815b6272cfed5891b824b6554516",
+    "warnings": [],
+    "home_team_id": "02PKT2MAOC000000VS5489B2VT4FEOV2",
+    "away_team_id": "02PGDVHS1O000000VS5489B1VSCT0UPQ",
+    "postponed_to": ""
   },
   {
     "external_id": "031HB5BBQ0000000VS5489BTVVG7L386",
@@ -2277,9 +3030,16 @@
     "calendar": "",
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2027-05-30T12:00+02:00",
-    "event_end": "2027-05-30T15:30+02:00",
-    "checksum": "a76ce579eac9cbfaf82c360669c7daecf68e6bf52161b2bae1b53e14dd878be0",
-    "warnings": []
+    "event_end": "2027-05-30T15:45+02:00",
+    "match_end": "2027-05-30T14:45+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "flb-jugendordnung-2025-12-13-a-2x45+halftime-15",
+    "competition_format": "league",
+    "checksum": "792d09cdc0884df46c2d07107fa13426b03211226cb12ace6397ab71de94f29d",
+    "warnings": [],
+    "home_team_id": "01D8SC7DKK000000VV0AG80NVUGKJV47",
+    "away_team_id": "02T7TD5NLG000000VS5489BSVU9LEHLB",
+    "postponed_to": ""
   },
   {
     "external_id": "031HB5BBC0000000VS5489BTVVG7L386",
@@ -2301,9 +3061,16 @@
     "calendar": "Rasen",
     "venue_rule": "Rasen Schönwalde",
     "event_start": "2027-06-05T10:00+02:00",
-    "event_end": "2027-06-05T13:30+02:00",
-    "checksum": "6ecd2ff37cc3ee584133f428faa180dc1eb0285406f14c0456d8f19a153c4577",
-    "warnings": []
+    "event_end": "2027-06-05T13:45+02:00",
+    "match_end": "2027-06-05T12:45+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "flb-jugendordnung-2025-12-13-a-2x45+halftime-15",
+    "competition_format": "league",
+    "checksum": "d2b5b50e199e20e690344ea8f4e96cbc16e68532d428f47d6302097fb36cd0a3",
+    "warnings": [],
+    "home_team_id": "02T7TD5NLG000000VS5489BSVU9LEHLB",
+    "away_team_id": "01DAR93834000000VV0AG811VVO7G072",
+    "postponed_to": ""
   },
   {
     "external_id": "031DP96HKG000000VS5489BUVUR5FS5A",
@@ -2325,9 +3092,16 @@
     "calendar": "Rasen",
     "venue_rule": "Rasen Schönwalde",
     "event_start": "2027-06-06T13:00+02:00",
-    "event_end": "2027-06-06T16:30+02:00",
-    "checksum": "7440610526757a614f999099e0b244bca99733447a39474ce2fbe5a20baed2df",
-    "warnings": []
+    "event_end": "2027-06-06T16:45+02:00",
+    "match_end": "2027-06-06T15:45+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "dfb-regel-7-herren-2x45+halftime-15",
+    "competition_format": "league",
+    "checksum": "5abcaaa49910de363b1dbf087914173b178207950dd688f832b9a1e34bbd4fef",
+    "warnings": [],
+    "home_team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
+    "away_team_id": "011MIEVFVC000000VTVG0001VTR8C1K7",
+    "postponed_to": ""
   },
   {
     "external_id": "031DP96HCS000000VS5489BUVUR5FS5A",
@@ -2349,9 +3123,16 @@
     "calendar": "",
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2027-06-12T16:00+02:00",
-    "event_end": "2027-06-12T19:30+02:00",
-    "checksum": "a56a9b5b2d6271d1d18141fccc9424f0e4262a6831d9f549fe32b056d350e0bd",
-    "warnings": []
+    "event_end": "2027-06-12T19:45+02:00",
+    "match_end": "2027-06-12T18:45+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "dfb-regel-7-herren-2x45+halftime-15",
+    "competition_format": "league",
+    "checksum": "2c8dfab35ae58f92ef6f422cedb4a648a726413c0eeba384df8baa76f499f876",
+    "warnings": [],
+    "home_team_id": "011MI9UBJO000000VTVG0001VTR8C1K7",
+    "away_team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
+    "postponed_to": ""
   },
   {
     "external_id": "031HB5BB5O000000VS5489BTVVG7L386",
@@ -2373,9 +3154,16 @@
     "calendar": "",
     "venue_rule": "Auswärtige Spielstätte",
     "event_start": "2027-06-13T10:00+02:00",
-    "event_end": "2027-06-13T13:30+02:00",
-    "checksum": "eea200cf881807087d51aa998a8558c6ebd3fe19851f64909c19c33463e4a52f",
-    "warnings": []
+    "event_end": "2027-06-13T13:45+02:00",
+    "match_end": "2027-06-13T12:45+02:00",
+    "match_duration_minutes": 105,
+    "duration_rule": "flb-jugendordnung-2025-12-13-a-2x45+halftime-15",
+    "competition_format": "league",
+    "checksum": "4a25db07cbfb3320df0c9781a5386c152981297059201ee06be619f4e2034dd0",
+    "warnings": [],
+    "home_team_id": "0277CFCJJ4000000VS5489B1VSBHJ1NS",
+    "away_team_id": "02T7TD5NLG000000VS5489BSVU9LEHLB",
+    "postponed_to": ""
   },
   {
     "external_id": "610090001",
@@ -2398,10 +3186,17 @@
     "venue_rule": "Spielfrei",
     "event_start": "",
     "event_end": "",
-    "checksum": "63bd26fcb8ed6bf79df573b33cef59eb9d67b9caaa7d8a30b4571c91004ecf9a",
+    "match_end": "",
+    "match_duration_minutes": 0,
+    "duration_rule": "",
+    "competition_format": "",
+    "checksum": "381eedeb07b8c7260533c33962b11b03634da134b6bc9db0e27688597015645e",
     "warnings": [
       "Datum oder Anstoßzeit nicht eindeutig lesbar"
-    ]
+    ],
+    "home_team_id": "02PKT2MAOC000000VS5489B2VT4FEOV2",
+    "away_team_id": "02PKT2MAOC000000VS5489B2VT4FEOV2",
+    "postponed_to": ""
   },
   {
     "external_id": "610090029",
@@ -2424,10 +3219,17 @@
     "venue_rule": "Spielfrei",
     "event_start": "",
     "event_end": "",
-    "checksum": "63bd26fcb8ed6bf79df573b33cef59eb9d67b9caaa7d8a30b4571c91004ecf9a",
+    "match_end": "",
+    "match_duration_minutes": 0,
+    "duration_rule": "",
+    "competition_format": "",
+    "checksum": "381eedeb07b8c7260533c33962b11b03634da134b6bc9db0e27688597015645e",
     "warnings": [
       "Datum oder Anstoßzeit nicht eindeutig lesbar"
-    ]
+    ],
+    "home_team_id": "02PKT2MAOC000000VS5489B2VT4FEOV2",
+    "away_team_id": "02PKT2MAOC000000VS5489B2VT4FEOV2",
+    "postponed_to": ""
   },
   {
     "external_id": "610215022",
@@ -2450,10 +3252,17 @@
     "venue_rule": "Spielfrei",
     "event_start": "",
     "event_end": "",
-    "checksum": "ea1b7de74d4f7640432c703ddc83388e3762033b3735a807e6d79cdf574a9714",
+    "match_end": "",
+    "match_duration_minutes": 0,
+    "duration_rule": "",
+    "competition_format": "",
+    "checksum": "8e98c8f68a6e63a489e261bb2aefc01a4bb9d0afeced0c6b0d54800d2946b831",
     "warnings": [
       "Datum oder Anstoßzeit nicht eindeutig lesbar"
-    ]
+    ],
+    "home_team_id": "031A57Q7PG000000VS5489BSVU0ORN69",
+    "away_team_id": "031A57Q7PG000000VS5489BSVU0ORN69",
+    "postponed_to": ""
   },
   {
     "external_id": "610300044",
@@ -2476,10 +3285,17 @@
     "venue_rule": "Spielfrei",
     "event_start": "",
     "event_end": "",
-    "checksum": "9c50b67da16ceb246e3181c81666d09951b2183e2a13c72fbb2b0e9db49d39e0",
+    "match_end": "",
+    "match_duration_minutes": 0,
+    "duration_rule": "",
+    "competition_format": "",
+    "checksum": "185f29f54d4aeb84b39a2bef337c08e32501008c9b3b13ff9e2439f92b17dc8e",
     "warnings": [
       "Datum oder Anstoßzeit nicht eindeutig lesbar"
-    ]
+    ],
+    "home_team_id": "01S69BH0IK000000VS548985VUL18RL3",
+    "away_team_id": "01S69BH0IK000000VS548985VUL18RL3",
+    "postponed_to": ""
   },
   {
     "external_id": "610436001",
@@ -2502,10 +3318,17 @@
     "venue_rule": "Spielfrei",
     "event_start": "",
     "event_end": "",
-    "checksum": "a62ed9c7d253a05bcb4ff835b812dd3fd531d107fdaf30057e30f55ed4e0cd6d",
+    "match_end": "",
+    "match_duration_minutes": 0,
+    "duration_rule": "",
+    "competition_format": "",
+    "checksum": "0ca9fd121c3656924da664c251c674404c335cbaf951ade7c2ce0623152da150",
     "warnings": [
       "Datum oder Anstoßzeit nicht eindeutig lesbar"
-    ]
+    ],
+    "home_team_id": "02PKVQDTEK000000VS5489B2VT4FEOV2",
+    "away_team_id": "02PKVQDTEK000000VS5489B2VT4FEOV2",
+    "postponed_to": ""
   },
   {
     "external_id": "610436029",
@@ -2528,10 +3351,17 @@
     "venue_rule": "Spielfrei",
     "event_start": "",
     "event_end": "",
-    "checksum": "a62ed9c7d253a05bcb4ff835b812dd3fd531d107fdaf30057e30f55ed4e0cd6d",
+    "match_end": "",
+    "match_duration_minutes": 0,
+    "duration_rule": "",
+    "competition_format": "",
+    "checksum": "0ca9fd121c3656924da664c251c674404c335cbaf951ade7c2ce0623152da150",
     "warnings": [
       "Datum oder Anstoßzeit nicht eindeutig lesbar"
-    ]
+    ],
+    "home_team_id": "02PKVQDTEK000000VS5489B2VT4FEOV2",
+    "away_team_id": "02PKVQDTEK000000VS5489B2VT4FEOV2",
+    "postponed_to": ""
   },
   {
     "external_id": "610479037",
@@ -2554,10 +3384,17 @@
     "venue_rule": "Spielfrei",
     "event_start": "",
     "event_end": "",
-    "checksum": "244969278c7436ab37c5fd1cb83eb26eae07b47e506b9bf14fad1c176d93b16b",
+    "match_end": "",
+    "match_duration_minutes": 0,
+    "duration_rule": "",
+    "competition_format": "",
+    "checksum": "5a010989a6b769efa4185f12adacef3d27188c27a788907b24a5fd674874443a",
     "warnings": [
       "Datum oder Anstoßzeit nicht eindeutig lesbar"
-    ]
+    ],
+    "home_team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
+    "away_team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
+    "postponed_to": ""
   },
   {
     "external_id": "610479111",
@@ -2580,10 +3417,17 @@
     "venue_rule": "Spielfrei",
     "event_start": "",
     "event_end": "",
-    "checksum": "244969278c7436ab37c5fd1cb83eb26eae07b47e506b9bf14fad1c176d93b16b",
+    "match_end": "",
+    "match_duration_minutes": 0,
+    "duration_rule": "",
+    "competition_format": "",
+    "checksum": "5a010989a6b769efa4185f12adacef3d27188c27a788907b24a5fd674874443a",
     "warnings": [
       "Datum oder Anstoßzeit nicht eindeutig lesbar"
-    ]
+    ],
+    "home_team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
+    "away_team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
+    "postponed_to": ""
   },
   {
     "external_id": "610479157",
@@ -2606,10 +3450,17 @@
     "venue_rule": "Spielfrei",
     "event_start": "",
     "event_end": "",
-    "checksum": "244969278c7436ab37c5fd1cb83eb26eae07b47e506b9bf14fad1c176d93b16b",
+    "match_end": "",
+    "match_duration_minutes": 0,
+    "duration_rule": "",
+    "competition_format": "",
+    "checksum": "5a010989a6b769efa4185f12adacef3d27188c27a788907b24a5fd674874443a",
     "warnings": [
       "Datum oder Anstoßzeit nicht eindeutig lesbar"
-    ]
+    ],
+    "home_team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
+    "away_team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
+    "postponed_to": ""
   },
   {
     "external_id": "610479223",
@@ -2632,9 +3483,16 @@
     "venue_rule": "Spielfrei",
     "event_start": "",
     "event_end": "",
-    "checksum": "244969278c7436ab37c5fd1cb83eb26eae07b47e506b9bf14fad1c176d93b16b",
+    "match_end": "",
+    "match_duration_minutes": 0,
+    "duration_rule": "",
+    "competition_format": "",
+    "checksum": "5a010989a6b769efa4185f12adacef3d27188c27a788907b24a5fd674874443a",
     "warnings": [
       "Datum oder Anstoßzeit nicht eindeutig lesbar"
-    ]
+    ],
+    "home_team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
+    "away_team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
+    "postponed_to": ""
   }
 ]

@@ -3,20 +3,35 @@
   "errors": [],
   "invalid_included": [],
   "by_calendar": {
-    "Rasen": 37,
+    "Rasen": 40,
     "Kunstrasen": 5
   },
   "event_timing": {
     "before_minutes": 60,
     "after_minutes": 60,
-    "default_match_duration_minutes": 90
+    "configured_age_classes": [
+      "A",
+      "B",
+      "C",
+      "D",
+      "E",
+      "F",
+      "G",
+      "HERREN",
+      "UE40",
+      "UE50"
+    ],
+    "configured_format_rules": [
+      "ssv53-e-festival-90-including-breaks-20260831",
+      "ssv53-festival-unclear-duration-90-20260831"
+    ]
   },
-  "request_count": 5,
+  "request_count": 4,
   "accepted_windows": [
     {
       "date_from": "2026-07-01",
       "date_to": "2026-09-30",
-      "competition_rows": 37
+      "competition_rows": 41
     },
     {
       "date_from": "2026-10-01",
@@ -41,58 +56,60 @@
       "depth": 0,
       "source_url": "https://www.fussball.de/ajax.club.matchplan/-/id/00ES8GNBL0000049VV0AG08LVUPGND5I/mode/PAGE/show-filter/false/show-venues/true/mime-type/HTML/datum-von/2026-07-01/datum-bis/2026-09-30/max/50",
       "source_scope": "all club teams; inclusion decided only by venue",
-      "competition_rows": 37,
+      "competition_rows": 41,
       "source_detail_ids": 33,
-      "parsed_matches_before_duplicate_merge": 37,
-      "parsed_matches": 36,
+      "parsed_matches_before_duplicate_merge": 41,
+      "parsed_matches": 39,
       "parsed_detail_ids": 33,
       "missing_detail_ids": [],
+      "source_festival_groups": 3,
+      "missing_festival_groups": [],
       "duplicate_detail_ids": [],
       "collapsed_duplicate_detail_ids": [
+        "031DB8NS8C000000VS5489BUVUR5FS5A",
         "031DP96C58000000VS5489BUVUR5FS5A"
       ],
       "duplicate_conflicts": [],
       "duplicate_resolutions": [
         {
+          "detail_id": "031DB8NS8C000000VS5489BUVUR5FS5A",
+          "occurrences": 2,
+          "conflicts": {},
+          "resolved": true,
+          "resolution_attempt": {
+            "method": "explicit_postponement_chain",
+            "relocations": [
+              {
+                "from": "2026-09-11T19:30+02:00",
+                "to": "2026-09-15T19:30+02:00"
+              }
+            ],
+            "selected_kickoff": "2026-09-15T19:30+02:00",
+            "resolved": true
+          },
+          "merged_external_id": "031DB8NS8C000000VS5489BUVUR5FS5A"
+        },
+        {
           "detail_id": "031DP96C58000000VS5489BUVUR5FS5A",
           "occurrences": 2,
-          "conflicts": {
-            "kickoff": [
-              "2026-09-04T20:00+02:00",
-              "2026-09-06T14:00+02:00"
-            ]
-          },
+          "conflicts": {},
+          "resolved": true,
           "resolution_attempt": {
-            "method": "detail_date",
-            "reference": {
-              "exact_kickoffs": [
-                "2024-07-16T10:20+02:00",
-                "2024-09-22T12:30+02:00"
-              ],
-              "dates": [
-                "2024-07-16",
-                "2024-09-22",
-                "2026-09-04"
-              ],
-              "sources": {
-                "2024-09-22T12:30+02:00": "visible",
-                "2024-07-16T10:20+02:00": "visible"
-              },
-              "title": "Spielgemeinschaft Schönwalde-Perwenitz-Paaren - VfL Nauen II Ergebnis: Kreisliga - Herren - 04.09.2026"
-            },
-            "candidate_kickoffs": [
-              "2026-09-04T20:00+02:00",
-              "2026-09-06T14:00+02:00"
+            "method": "explicit_postponement_chain",
+            "relocations": [
+              {
+                "from": "2026-09-06T14:00+02:00",
+                "to": "2026-09-04T20:00+02:00"
+              }
             ],
             "selected_kickoff": "2026-09-04T20:00+02:00",
             "resolved": true
           },
-          "resolved": true,
           "merged_external_id": "031DP96C58000000VS5489BUVUR5FS5A"
         }
       ],
       "has_more": false,
-      "request_count_after_parse": 2,
+      "request_count_after_parse": 1,
       "truncated": false,
       "accepted": true
     },
@@ -108,12 +125,14 @@
       "parsed_matches": 33,
       "parsed_detail_ids": 30,
       "missing_detail_ids": [],
+      "source_festival_groups": 0,
+      "missing_festival_groups": [],
       "duplicate_detail_ids": [],
       "collapsed_duplicate_detail_ids": [],
       "duplicate_conflicts": [],
       "duplicate_resolutions": [],
       "has_more": false,
-      "request_count_after_parse": 3,
+      "request_count_after_parse": 2,
       "truncated": false,
       "accepted": true
     },
@@ -129,12 +148,14 @@
       "parsed_matches": 12,
       "parsed_detail_ids": 9,
       "missing_detail_ids": [],
+      "source_festival_groups": 0,
+      "missing_festival_groups": [],
       "duplicate_detail_ids": [],
       "collapsed_duplicate_detail_ids": [],
       "duplicate_conflicts": [],
       "duplicate_resolutions": [],
       "has_more": false,
-      "request_count_after_parse": 4,
+      "request_count_after_parse": 3,
       "truncated": false,
       "accepted": true
     },
@@ -150,12 +171,14 @@
       "parsed_matches": 28,
       "parsed_detail_ids": 27,
       "missing_detail_ids": [],
+      "source_festival_groups": 0,
+      "missing_festival_groups": [],
       "duplicate_detail_ids": [],
       "collapsed_duplicate_detail_ids": [],
       "duplicate_conflicts": [],
       "duplicate_resolutions": [],
       "has_more": false,
-      "request_count_after_parse": 5,
+      "request_count_after_parse": 4,
       "truncated": false,
       "accepted": true
     }
