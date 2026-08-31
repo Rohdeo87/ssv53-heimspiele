@@ -11,11 +11,18 @@
     "after_minutes": 60,
     "format_rules": [
       {
-        "id": "dfb-kinderfussball-g-festival-max-7x7",
+        "id": "ssv53-e-festival-90-including-breaks-20260831",
         "competition_format": "festival",
-        "age_class": "G",
-        "minutes": 49,
-        "source": "https://www.dfb.de/mehr-fussball/kinderfussball"
+        "age_class": "E",
+        "minutes": 90,
+        "source": "Vereinsvorgabe vom 31.08.2026: E-Festivals 90 Minuten einschließlich Pausen; Vor-/Nachlauf separat."
+      },
+      {
+        "id": "ssv53-festival-unclear-duration-90-20260831",
+        "competition_format": "festival",
+        "age_class": "",
+        "minutes": 90,
+        "source": "Vereinsvorgabe vom 31.08.2026: bei unklarer Festivaldauer 90 Minuten einschließlich Pausen; Vor-/Nachlauf separat."
       }
     ],
     "age_class_rules": {

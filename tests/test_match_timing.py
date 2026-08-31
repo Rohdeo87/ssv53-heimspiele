@@ -80,15 +80,15 @@ class MatchTimingRulesTest(unittest.TestCase):
                 self.assertEqual(minutes, result.minutes)
                 self.assertIn("cup-max", result.duration_rule)
 
-    def test_g_youth_festival_uses_current_dfb_maximum(self) -> None:
+    def test_g_youth_festival_uses_club_approved_duration_including_breaks(self) -> None:
         result = decision(
             "G-Junioren | Kinderfußball-Festival",
             competition="Kinderfußball-Festival",
             match_type="TU",
         )
-        self.assertEqual(49, result.minutes)
+        self.assertEqual(90, result.minutes)
         self.assertEqual("festival", result.competition_format)
-        self.assertEqual("dfb-kinderfussball-g-festival-max-7x7", result.duration_rule)
+        self.assertEqual("ssv53-festival-unclear-duration-90-20260831", result.duration_rule)
 
     def test_unverified_twin_format_fails_closed(self) -> None:
         with self.assertRaisesRegex(MatchTimingError, "Sonderformat 'twin'"):
@@ -99,11 +99,20 @@ class MatchTimingRulesTest(unittest.TestCase):
 
     def test_f_festival_without_concrete_round_format_fails_closed(self) -> None:
         with self.assertRaisesRegex(MatchTimingError, "Sonderformat 'festival'"):
-            decision(
-                "F-Junioren | Kinderfußball-Festival",
+            resolve_match_timing(
+                team_category="F-Junioren | Kinderfußball-Festival",
+                team_name="Schönwalder SV F",
                 competition="Kinderfußball-Festival",
                 match_type="TU",
+                timing_config={"age_class_rules": timing_config()["age_class_rules"]},
             )
+
+    def test_approved_festival_rules_include_breaks(self):
+        for age in ("G", "F", "E", "D"):
+            result = decision(f"{age}-Junioren | Kinderfußball-Festival")
+            self.assertEqual(90, result.minutes)
+            self.assertEqual("festival", result.competition_format)
+            self.assertIn("ssv53-e-festival" if age == "E" else "ssv53-festival-unclear", result.duration_rule)
 
     def test_recalculation_keeps_public_and_occupancy_times_separate(self) -> None:
         match = Match(

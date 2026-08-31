@@ -15,6 +15,29 @@ from scripts.build_runtime_config_bundle import (
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def test_real_festivals_pass_scraper_runtime_bundle_and_app_feed():
+    from dataclasses import asdict
+    from poc_scraper import parse_club_matchplan, apply_venue_rules, VenueRule
+    from scripts.build_runtime_config_bundle import _retime_matches, _structured_matches_payload
+    config = json.loads((ROOT / "config.json").read_text(encoding="utf-8"))
+    fixture = (ROOT / "tests/fixture_relocation_festivals_20260831.html").read_text(encoding="utf-8")
+    matches = parse_club_matchplan(fixture, "fixture://20260831", config)
+    for match in matches:
+        apply_venue_rules(match, [VenueRule(**r) for r in config["venue_rules"]],
+                          config["default_decision"], config["local_venue_pattern"])
+    included = [asdict(m) for m in matches if m.decision == "include"]
+    all_matches, rasen, by_age, by_rule = _retime_matches(included, config)
+    assert len(all_matches) == len(rasen) == 3
+    assert by_age == {"F": 1, "E": 2}
+    assert sum(by_rule.values()) == 3
+    payload = _structured_matches_payload(
+        all_matches, generated_at=datetime.fromisoformat("2026-08-31T19:00:00+00:00")
+    )
+    assert len(payload["matches"]) == 3
+    assert {item["matchDurationMinutes"] for item in payload["matches"]} == {90}
+    assert all(item["occupancyStart"] < item["kickoff"] < item["occupancyEnd"] for item in payload["matches"])
+
+
 def _match(
     external_id: str,
     *,

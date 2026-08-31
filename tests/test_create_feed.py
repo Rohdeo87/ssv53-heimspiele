@@ -25,12 +25,13 @@ class StructuredFeedTests(unittest.TestCase):
                 "team_category": "D-Junioren | 1. Kreisklasse",
                 "team_role": "home",
                 "kickoff": "2026-09-12T10:00+02:00",
-                "match_end": "2026-09-12T11:00+02:00",
+                "match_end": "2026-09-12T11:15+02:00",
                 "event_start": "2026-09-12T09:00+02:00",
-                "event_end": "2026-09-12T12:00+02:00",
-                "match_duration_minutes": 60,
-                "duration_rule": "flb-jugendordnung-2025-12-13-d-2x30",
+                "event_end": "2026-09-12T12:15+02:00",
+                "match_duration_minutes": 75,
+                "duration_rule": "flb-jugendordnung-2025-12-13-d-2x30+halftime-15",
                 "competition_format": "league",
+                "match_type": "ME",
                 "home_team": "Schönwalder SV",
                 "away_team": "Gast",
                 "competition": "Sa, | D-Junioren | 1. Kreisklasse",
@@ -75,7 +76,7 @@ class StructuredFeedTests(unittest.TestCase):
             self.assertEqual("kunstrasen", match["place"])
             self.assertEqual("Schönwalder SV – Gast", match["title"])
             self.assertEqual("D-Junioren · 1. Kreisklasse", match["description"])
-            self.assertEqual(60, match["matchDurationMinutes"])
+            self.assertEqual(75, match["matchDurationMinutes"])
 
 
 if __name__ == "__main__":

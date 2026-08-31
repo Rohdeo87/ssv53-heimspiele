@@ -279,8 +279,8 @@ class ClubParserTest(unittest.TestCase):
         apply_venue_rules(item, rules(), "exclude", config()["local_venue_pattern"])
         self.assertEqual("Kinderfußball-Festival", item.away_team)
         self.assertEqual("festival", item.competition_format)
-        self.assertEqual(49, item.match_duration_minutes)
-        self.assertEqual("2026-09-12T10:49+02:00", item.match_end)
+        self.assertEqual(90, item.match_duration_minutes)
+        self.assertEqual("2026-09-12T11:30+02:00", item.match_end)
         self.assertEqual(("include", "Kunstrasen"), (item.decision, item.calendar))
         quality = evaluate_quality(
             [item],
