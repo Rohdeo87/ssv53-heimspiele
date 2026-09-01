@@ -66,6 +66,48 @@ class ClubParserTest(unittest.TestCase):
     def fixture(self) -> str:
         return (ROOT / "tests" / "fixture_club_matchplan.html").read_text(encoding="utf-8")
 
+    def festival_fixture(self) -> str:
+        return """
+        <table class="club-matchplan-table">
+          <tr class="row-headline"><td>Sonntag, 27.09.2026 - 13:30 Uhr</td></tr>
+          <tr class="row-competition">
+            <td class="column-date">13:30</td>
+            <td class="column-team">E-Junioren | Kinderfußball</td>
+            <td>ME | 610018452</td>
+          </tr>
+          <tr>
+            <td><a class="club-wrapper inactive" href="#"><span class="club-name">
+              Schönwalder SV 53 I (Fussball-5, 2016) - Kinderfestival
+            </span></a></td>
+            <td><a class="club-wrapper" href="/mannschaft/ssv-2016/-/saison/2627/team-id/TEAM2016">
+              <span class="club-name">Schönwalder SV 53 I (Fussball-5, 2016)</span>
+            </a></td>
+            <td><a href="/spieltag/ssv-2016/-/staffel/GROUP2016-G">Zur Gruppe</a></td>
+          </tr>
+          <tr class="row-venue"><td class="venue">
+            Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1
+          </td></tr>
+          <tr class="row-headline"><td>Sonntag, 27.09.2026 - 15:30 Uhr</td></tr>
+          <tr class="row-competition">
+            <td class="column-date">15:30</td>
+            <td class="column-team">E-Junioren | Kinderfußball</td>
+            <td>ME | 610018461</td>
+          </tr>
+          <tr>
+            <td><a class="club-wrapper inactive" href="#"><span class="club-name">
+              Schönwalder SV 53 II (Fussball-5, 2017) - Kinderfestival
+            </span></a></td>
+            <td><a class="club-wrapper" href="/mannschaft/ssv-2017/-/saison/2627/team-id/TEAM2017">
+              <span class="club-name">Schönwalder SV 53 II (Fussball-5, 2017)</span>
+            </a></td>
+            <td><a href="/spieltag/ssv-2017/-/staffel/GROUP2017-G">Zur Gruppe</a></td>
+          </tr>
+          <tr class="row-venue"><td class="venue">
+            Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1
+          </td></tr>
+        </table>
+        """
+
     def test_all_club_teams_are_parsed_without_fixed_team_list(self):
         matches = parse_club_matchplan(self.fixture(), "fixture://club", config())
         self.assertEqual(5, len(matches))
@@ -85,6 +127,86 @@ class ClubParserTest(unittest.TestCase):
         self.assertEqual("away", item.team_role)
         apply_venue_rules(item, rules(), "exclude", config()["local_venue_pattern"])
         self.assertEqual(("include", "Rasen"), (item.decision, item.calendar))
+
+    def test_younger_festival_team_is_assigned_to_earlier_round(self):
+        audit = {}
+        matches = parse_club_matchplan(
+            self.festival_fixture(), "fixture://festival-rounds", config(), audit
+        )
+        self.assertEqual(2, len(matches))
+        by_team = {item.team_id: item for item in matches}
+        self.assertEqual("2026-09-27T13:30+02:00", by_team["TEAM2017"].kickoff)
+        self.assertEqual("2026-09-27T15:30+02:00", by_team["TEAM2016"].kickoff)
+        self.assertEqual("2026-09-27T12:30+02:00", by_team["TEAM2017"].event_start)
+        self.assertEqual("2026-09-27T16:00+02:00", by_team["TEAM2017"].event_end)
+        self.assertEqual("2026-09-27T14:30+02:00", by_team["TEAM2016"].event_start)
+        self.assertEqual("2026-09-27T18:00+02:00", by_team["TEAM2016"].event_end)
+        self.assertEqual(2, audit["source_festival_groups"])
+        self.assertEqual([], audit["missing_festival_groups"])
+        assignment = audit["festival_round_assignments"][0]
+        self.assertTrue(assignment["changed"])
+        self.assertEqual("younger_birth_year_first", assignment["method"])
+
+    def test_partial_festival_override_fails_closed(self):
+        selected = config()
+        selected["festival_round_assignment"]["explicit_kickoffs"] = {
+            "610018452": "2026-09-27T13:30+02:00"
+        }
+        with self.assertRaisesRegex(ScrapeError, "alle Runden"):
+            parse_club_matchplan(
+                self.festival_fixture(), "fixture://festival-rounds", selected
+            )
+
+    def test_unattached_festival_group_fails_closed(self):
+        html = self.festival_fixture().replace(
+            "</table>",
+            '<a href="/spieltag/unbekannt/-/staffel/UNKNOWN-G">Festival</a></table>',
+        )
+        with self.assertRaisesRegex(ScrapeError, "Festival-Links"):
+            parse_club_matchplan(html, "fixture://festival-rounds", config())
+
+    def test_real_relocation_and_festival_source_is_resolved_without_request(self):
+        html = (ROOT / "tests" / "fixture_relocation_festivals_20260831.html").read_text(
+            encoding="utf-8"
+        )
+        audit = {}
+        matches = parse_club_matchplan(html, "fixture://20260831", config(), audit)
+        self.assertEqual(4, len(matches))
+        relocated = next(
+            item for item in matches
+            if item.external_id == "031DB8NS8C000000VS5489BUVUR5FS5A"
+        )
+        self.assertEqual("2026-09-15T19:30+02:00", relocated.kickoff)
+        resolution = audit["duplicate_resolutions"][0]["resolution_attempt"]
+        self.assertEqual("explicit_postponement_chain", resolution["method"])
+        by_team = {item.team_id: item for item in matches}
+        self.assertEqual(
+            "2026-09-27T13:30+02:00",
+            by_team["01OFNF8544000000VV0AG80NVUUTMIT0"].kickoff,
+        )
+        self.assertEqual(
+            "2026-09-27T15:30+02:00",
+            by_team["01KPKBA8F8000000VV0AG811VSVU41QE"].kickoff,
+        )
+        self.assertEqual([], audit["missing_festival_groups"])
+
+    def test_unsafe_relocation_variants_still_fail_closed(self):
+        original = (
+            ROOT / "tests" / "fixture_relocation_festivals_20260831.html"
+        ).read_text(encoding="utf-8")
+        mutations = {
+            "missing_pointer": original.replace(
+                'class="info-text"', 'class="ignored-text"', 1
+            ),
+            "wrong_team_id": original.replace(
+                "02PJD5K8O8000000VS5489B1VUI2QQ8R",
+                "OTHERTEAM000000000000000000000",
+                1,
+            ),
+        }
+        for name, html in mutations.items():
+            with self.subTest(name=name), self.assertRaises(ScrapeError):
+                parse_club_matchplan(html, "fixture://unsafe-relocation", config())
 
     def test_away_game_without_published_venue_does_not_block_feed(self):
         item = Match(
