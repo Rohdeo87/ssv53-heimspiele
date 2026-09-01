@@ -6,6 +6,11 @@
   "date_to": "2027-06-30",
   "default_decision": "exclude",
   "club_team_pattern": "(?:sch[oö]nwalder|sch[oö]nwalde)",
+  "festival_round_assignment": {
+    "strategy": "younger_birth_year_first",
+    "max_round_gap_minutes": 180,
+    "explicit_kickoffs": {}
+  },
   "event_timing": {
     "before_minutes": 60,
     "after_minutes": 60,

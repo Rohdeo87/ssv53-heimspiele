@@ -27,12 +27,19 @@ def fixture():
     return FIXTURE.read_text(encoding="utf-8")
 
 
-def parse(html=None):
+def parse(html=None, cfg=None):
     audit = {}
-    matches = parse_club_matchplan(html or fixture(), "fixture://20260831", config(), audit)
+    selected_config = cfg or config()
+    matches = parse_club_matchplan(
+        html or fixture(), "fixture://20260831", selected_config, audit
+    )
     for match in matches:
-        apply_venue_rules(match, [VenueRule(**r) for r in config()["venue_rules"]],
-                          config()["default_decision"], config()["local_venue_pattern"])
+        apply_venue_rules(
+            match,
+            [VenueRule(**r) for r in selected_config["venue_rules"]],
+            selected_config["default_decision"],
+            selected_config["local_venue_pattern"],
+        )
     return matches, audit
 
 
@@ -78,6 +85,15 @@ def test_festival_times_links_and_own_team_survive(calendar, venue):
     assert {m.kickoff for m in festivals} == {
         "2026-09-19T14:00+02:00", "2026-09-27T13:30+02:00", "2026-09-27T15:30+02:00",
     }
+    by_team = {m.team_id: m for m in festivals}
+    assert (
+        by_team["01OFNF8544000000VV0AG80NVUUTMIT0"].kickoff
+        == "2026-09-27T13:30+02:00"
+    )
+    assert (
+        by_team["01KPKBA8F8000000VV0AG811VSVU41QE"].kickoff
+        == "2026-09-27T15:30+02:00"
+    )
     for m in festivals:
         assert m.decision == "include"
         assert m.calendar == calendar
@@ -90,6 +106,53 @@ def test_festival_times_links_and_own_team_survive(calendar, venue):
         assert datetime.fromisoformat(m.match_end) == kickoff + timedelta(minutes=90)
         assert datetime.fromisoformat(m.event_start) == kickoff - timedelta(minutes=60)
         assert datetime.fromisoformat(m.event_end) == kickoff + timedelta(minutes=150)
+
+
+def test_festival_round_assignment_is_audited_and_recalculates_occupancy():
+    matches, audit = parse()
+    assignments = audit["festival_round_assignments"]
+    changed = next(item for item in assignments if item["changed"])
+    assert changed["method"] == "younger_birth_year_first"
+    assert {(item["birth_year"], item["after"]) for item in changed["assignments"]} == {
+        (2017, "2026-09-27T13:30+02:00"),
+        (2016, "2026-09-27T15:30+02:00"),
+    }
+    younger = next(
+        m for m in matches if m.team_id == "01OFNF8544000000VV0AG80NVUUTMIT0"
+    )
+    older = next(
+        m for m in matches if m.team_id == "01KPKBA8F8000000VV0AG811VSVU41QE"
+    )
+    assert younger.event_start == "2026-09-27T12:30+02:00"
+    assert younger.event_end == "2026-09-27T16:00+02:00"
+    assert older.event_start == "2026-09-27T14:30+02:00"
+    assert older.event_end == "2026-09-27T18:00+02:00"
+
+
+def test_explicit_complete_festival_assignment_overrides_default_order():
+    cfg = config()
+    cfg["festival_round_assignment"]["explicit_kickoffs"] = {
+        "610018452": "2026-09-27T13:30+02:00",
+        "610018461": "2026-09-27T15:30+02:00",
+    }
+    matches, audit = parse(cfg=cfg)
+    by_external_id = {m.external_id: m for m in matches}
+    assert by_external_id["610018452"].kickoff == "2026-09-27T13:30+02:00"
+    assert by_external_id["610018461"].kickoff == "2026-09-27T15:30+02:00"
+    explicit = next(
+        item for item in audit["festival_round_assignments"]
+        if item["method"] == "explicit_kickoffs"
+    )
+    assert explicit["changed"] is False
+
+
+def test_partial_explicit_festival_assignment_fails_closed():
+    cfg = config()
+    cfg["festival_round_assignment"]["explicit_kickoffs"] = {
+        "610018452": "2026-09-27T13:30+02:00",
+    }
+    with pytest.raises(ScrapeError, match="alle Runden"):
+        parse(cfg=cfg)
 
 
 def test_festival_participant_must_belong_to_our_club():
