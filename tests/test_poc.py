@@ -417,6 +417,78 @@ class WindowAndQualityTest(unittest.TestCase):
         report = evaluate_quality([], audits, cfg, 2)
         self.assertTrue(report["publishable"])
 
+    def test_quality_accepts_official_festival_group_as_source_identity(self):
+        item = Match(
+            external_id="610018461",
+            match_number="610018461",
+            team_id="01OFNF8544000000VV0AG80NVUUTMIT0",
+            team_name="Schönwalder SV 53 II (Fussball-5, 2017)",
+            team_category="E-Junioren",
+            team_role="participant",
+            kickoff="2026-09-27T13:30+02:00",
+            home_team="Schönwalder SV 53 II (Fussball-5, 2017)",
+            away_team="Kinderfestival",
+            competition="Kinderfestival",
+            match_type="Festival",
+            status="",
+            venue_raw="Rasenplatz Sportplatz Schönwalde Strandbad",
+            detail_url="https://www.fussball.de/spieltagsuebersicht/-/staffel/031LOV8CUC00000KVS5489BTVSRD0UH9-G",
+            source_url="fixture://festival",
+            decision="include",
+            calendar="Rasen",
+            event_start="2026-09-27T12:30+02:00",
+            event_end="2026-09-27T16:00+02:00",
+        )
+        audits = [{
+            "date_from": "2026-07-01",
+            "date_to": "2027-06-30",
+            "accepted": True,
+            "truncated": False,
+            "missing_detail_ids": [],
+            "missing_festival_groups": [],
+            "duplicate_detail_ids": [],
+        }]
+        report = evaluate_quality([item], audits, config(), 1)
+        self.assertTrue(report["publishable"])
+
+    def test_quality_rejects_included_event_without_official_source_identity(self):
+        item = Match(
+            external_id="610018461",
+            match_number="610018461",
+            team_id="01OFNF8544000000VV0AG80NVUUTMIT0",
+            team_name="Schönwalder SV 53 II (Fussball-5, 2017)",
+            team_category="E-Junioren",
+            team_role="participant",
+            kickoff="2026-09-27T13:30+02:00",
+            home_team="Schönwalder SV 53 II (Fussball-5, 2017)",
+            away_team="Kinderfestival",
+            competition="Kinderfestival",
+            match_type="Festival",
+            status="",
+            venue_raw="Rasenplatz Sportplatz Schönwalde Strandbad",
+            detail_url="https://www.fussball.de/ohne-offizielle-id",
+            source_url="fixture://festival",
+            decision="include",
+            calendar="Rasen",
+            event_start="2026-09-27T12:30+02:00",
+            event_end="2026-09-27T16:00+02:00",
+        )
+        audits = [{
+            "date_from": "2026-07-01",
+            "date_to": "2027-06-30",
+            "accepted": True,
+            "truncated": False,
+            "missing_detail_ids": [],
+            "missing_festival_groups": [],
+            "duplicate_detail_ids": [],
+        }]
+        report = evaluate_quality([item], audits, config(), 1)
+        self.assertFalse(report["publishable"])
+        self.assertEqual(
+            ["official_source_id"],
+            report["invalid_included"][0]["missing"],
+        )
+
     def test_quality_rejects_a_gap_in_window_coverage(self):
         audits = [
             {"date_from": "2026-07-01", "date_to": "2026-12-30", "accepted": True, "truncated": False, "missing_detail_ids": [], "duplicate_detail_ids": []},

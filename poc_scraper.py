@@ -1884,8 +1884,19 @@ def evaluate_quality(
         for field_name in ("kickoff", "event_start", "event_end", "home_team", "away_team", "venue_raw", "team_name"):
             if not getattr(match, field_name):
                 missing.append(field_name)
-        if not match.detail_url or not extract_detail_id(match.detail_url):
-            missing.append("detail_id")
+        # Regular fixtures are identified by their official match detail ID.
+        # Festival rows intentionally link to an official group/stage page
+        # instead.  The parser audits both source identifier types separately,
+        # so either one is a complete, traceable source identity here.
+        has_official_source_id = bool(
+            match.detail_url
+            and (
+                extract_detail_id(match.detail_url)
+                or extract_festival_group_id(match.detail_url)
+            )
+        )
+        if not has_official_source_id:
+            missing.append("official_source_id")
         if missing:
             invalid_included.append({
                 "external_id": match.external_id,
