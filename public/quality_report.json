@@ -64,6 +64,32 @@
       "missing_detail_ids": [],
       "source_festival_groups": 3,
       "missing_festival_groups": [],
+      "festival_round_assignments": [
+        {
+          "method": "younger_birth_year_first",
+          "group": {
+            "date": "2026-09-27",
+            "venue": "rasenplatz sportplatz schoenwalde strandbad platz 1 kurmaerkische str 2 14621 schoenwalde glien"
+          },
+          "assignments": [
+            {
+              "external_id": "610018461",
+              "team_id": "01OFNF8544000000VV0AG80NVUUTMIT0",
+              "birth_year": 2017,
+              "before": "2026-09-27T15:30+02:00",
+              "after": "2026-09-27T13:30+02:00"
+            },
+            {
+              "external_id": "610018452",
+              "team_id": "01KPKBA8F8000000VV0AG811VSVU41QE",
+              "birth_year": 2016,
+              "before": "2026-09-27T13:30+02:00",
+              "after": "2026-09-27T15:30+02:00"
+            }
+          ],
+          "changed": true
+        }
+      ],
       "duplicate_detail_ids": [],
       "collapsed_duplicate_detail_ids": [
         "031DB8NS8C000000VS5489BUVUR5FS5A",
@@ -127,6 +153,7 @@
       "missing_detail_ids": [],
       "source_festival_groups": 0,
       "missing_festival_groups": [],
+      "festival_round_assignments": [],
       "duplicate_detail_ids": [],
       "collapsed_duplicate_detail_ids": [],
       "duplicate_conflicts": [],
@@ -150,6 +177,7 @@
       "missing_detail_ids": [],
       "source_festival_groups": 0,
       "missing_festival_groups": [],
+      "festival_round_assignments": [],
       "duplicate_detail_ids": [],
       "collapsed_duplicate_detail_ids": [],
       "duplicate_conflicts": [],
@@ -173,6 +201,7 @@
       "missing_detail_ids": [],
       "source_festival_groups": 0,
       "missing_festival_groups": [],
+      "festival_round_assignments": [],
       "duplicate_detail_ids": [],
       "collapsed_duplicate_detail_ids": [],
       "duplicate_conflicts": [],
