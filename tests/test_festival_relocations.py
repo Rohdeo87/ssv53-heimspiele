@@ -1,5 +1,5 @@
 """Regression fixtures from the failed 2026-08-31 source response; no network."""
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import datetime, timedelta
 import json
 from pathlib import Path
@@ -9,7 +9,7 @@ import pytest
 
 from poc_scraper import (
     ScrapeError, VenueRule, apply_venue_rules, block_rows,
-    collapse_duplicate_detail_ids, parse_club_matchplan,
+    collapse_duplicate_detail_ids, evaluate_quality, parse_club_matchplan,
 )
 from create_feed import validate_timing
 
@@ -78,6 +78,9 @@ def test_festival_times_links_and_own_team_survive(calendar, venue):
     assert {m.kickoff for m in festivals} == {
         "2026-09-19T14:00+02:00", "2026-09-27T13:30+02:00", "2026-09-27T15:30+02:00",
     }
+    by_team = {m.team_id: m for m in festivals}
+    assert by_team["01OFNF8544000000VV0AG80NVUUTMIT0"].kickoff == "2026-09-27T13:30+02:00"
+    assert by_team["01KPKBA8F8000000VV0AG811VSVU41QE"].kickoff == "2026-09-27T15:30+02:00"
     for m in festivals:
         assert m.decision == "include"
         assert m.calendar == calendar
@@ -90,6 +93,57 @@ def test_festival_times_links_and_own_team_survive(calendar, venue):
         assert datetime.fromisoformat(m.match_end) == kickoff + timedelta(minutes=90)
         assert datetime.fromisoformat(m.event_start) == kickoff - timedelta(minutes=60)
         assert datetime.fromisoformat(m.event_end) == kickoff + timedelta(minutes=150)
+
+
+def test_round_assignment_is_audited_and_recalculates_safety_buffers():
+    matches, audit = parse()
+    assignment = audit["festival_round_assignments"][0]
+    assert assignment["method"] == "younger_birth_year_first"
+    assert assignment["changed"] is True
+    by_team = {m.team_id: m for m in matches}
+    younger = by_team["01OFNF8544000000VV0AG80NVUUTMIT0"]
+    older = by_team["01KPKBA8F8000000VV0AG811VSVU41QE"]
+    assert (younger.event_start, younger.match_end, younger.event_end) == (
+        "2026-09-27T12:30+02:00",
+        "2026-09-27T15:00+02:00",
+        "2026-09-27T16:00+02:00",
+    )
+    assert (older.event_start, older.match_end, older.event_end) == (
+        "2026-09-27T14:30+02:00",
+        "2026-09-27T17:00+02:00",
+        "2026-09-27T18:00+02:00",
+    )
+
+
+def test_partial_manual_round_override_fails_closed():
+    selected = config()
+    selected["festival_round_assignment"]["explicit_kickoffs"] = {
+        "610018452": "2026-09-27T13:30+02:00"
+    }
+    with pytest.raises(ScrapeError, match="alle Runden"):
+        parse_club_matchplan(fixture(), "fixture://20260831", selected)
+
+
+def test_quality_requires_an_official_festival_group_identity():
+    matches, _ = parse()
+    audits = [{
+        "date_from": "2026-07-01",
+        "date_to": "2027-06-30",
+        "accepted": True,
+        "truncated": False,
+        "missing_detail_ids": [],
+        "missing_festival_groups": [],
+        "duplicate_detail_ids": [],
+    }]
+    assert evaluate_quality(matches, audits, config(), 1)["publishable"] is True
+    broken = [
+        replace(item, detail_url="https://www.fussball.de/ohne-offizielle-id")
+        if item.external_id == "610018461" else item
+        for item in matches
+    ]
+    report = evaluate_quality(broken, audits, config(), 1)
+    assert report["publishable"] is False
+    assert report["invalid_included"][0]["missing"] == ["official_source_id"]
 
 
 def test_festival_participant_must_belong_to_our_club():

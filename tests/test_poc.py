@@ -266,6 +266,7 @@ class ClubParserTest(unittest.TestCase):
             <td><a href="/mannschaft/test/-/saison/2627/team-id/FESTIVALTEAM000000000000000001">
               <span class="club-name">Schönwalder SV G</span>
             </a></td>
+            <td><a href="/spieltag/test/-/staffel/031LO5V9MC00000CVS5489BTVSRD0UH9-G">Festival</a></td>
           </tr>
           <tr class="row-venue"><td>
             <div class="venue">Kunstrasenplatz, Sportplatz Schönwalde Strandbad, Platz 2, KR</div>

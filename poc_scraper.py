@@ -1034,6 +1034,163 @@ def recalculate_event_times(match: Match, config: dict[str, Any]) -> None:
     match.event_end = (kickoff + timedelta(minutes=duration + after)).isoformat(timespec="minutes")
 
 
+def _festival_birth_year(match: Match) -> int | None:
+    """Return one unambiguous birth year from official team-facing fields."""
+    for text in (match.team_name, match.detail_url, match.home_team, match.away_team):
+        years = {
+            int(value)
+            for value in re.findall(r"(?<!\d)(20\d{2})(?!\d)", str(text or ""))
+        }
+        if len(years) == 1:
+            return next(iter(years))
+        if len(years) > 1:
+            return None
+    return None
+
+
+def _is_festival_match(match: Match) -> bool:
+    combined = normalize_match_text(
+        " ".join((match.team_name, match.team_category, match.competition,
+                  match.home_team, match.away_team))
+    )
+    return bool(
+        re.search(
+            r"\b(?:kinderfussball|festival|spielfest|spielenachmittag)\b",
+            combined,
+        )
+    )
+
+
+def apply_festival_round_assignment_rules(
+    matches: list[Match], config: dict[str, Any]
+) -> list[dict[str, Any]]:
+    """Assign official round slots to birth years without inventing times."""
+    settings = config.get("festival_round_assignment")
+    if not isinstance(settings, dict):
+        return []
+    if str(settings.get("strategy") or "").strip() != "younger_birth_year_first":
+        return []
+    try:
+        max_gap_minutes = int(settings.get("max_round_gap_minutes", 180))
+    except (TypeError, ValueError) as exc:
+        raise ScrapeError(
+            "festival_round_assignment.max_round_gap_minutes ist ungültig"
+        ) from exc
+    if max_gap_minutes < 1 or max_gap_minutes > 360:
+        raise ScrapeError(
+            "festival_round_assignment.max_round_gap_minutes muss zwischen 1 und 360 liegen"
+        )
+    raw_overrides = settings.get("explicit_kickoffs") or {}
+    if not isinstance(raw_overrides, dict):
+        raise ScrapeError(
+            "festival_round_assignment.explicit_kickoffs muss ein Objekt sein"
+        )
+    overrides = {str(key): str(value) for key, value in raw_overrides.items()}
+
+    grouped: dict[tuple[str, str, str, str], list[tuple[datetime, Match, int]]] = {}
+    for match in matches:
+        if not _is_festival_match(match) or not match.kickoff:
+            continue
+        year = _festival_birth_year(match)
+        if year is None:
+            continue
+        try:
+            kickoff = datetime.fromisoformat(match.kickoff)
+        except ValueError:
+            continue
+        key = (
+            kickoff.date().isoformat(),
+            normalize_match_text(match.venue_raw),
+            normalize_match_text(match.team_category),
+            normalize_match_text(match.competition),
+        )
+        grouped.setdefault(key, []).append((kickoff, match, year))
+
+    audit: list[dict[str, Any]] = []
+    max_gap = timedelta(minutes=max_gap_minutes)
+    for key, candidates in grouped.items():
+        ordered = sorted(
+            candidates, key=lambda item: (item[0], item[2], item[1].external_id)
+        )
+        clusters: list[list[tuple[datetime, Match, int]]] = []
+        for candidate in ordered:
+            if not clusters or candidate[0] - clusters[-1][-1][0] > max_gap:
+                clusters.append([candidate])
+            else:
+                clusters[-1].append(candidate)
+
+        for cluster in clusters:
+            years = [item[2] for item in cluster]
+            slots = sorted({item[0] for item in cluster})
+            if (
+                len(cluster) < 2
+                or len(set(years)) != len(cluster)
+                or len(slots) != len(cluster)
+            ):
+                continue
+
+            override_members = [
+                item for item in cluster if item[1].external_id in overrides
+            ]
+            method = "younger_birth_year_first"
+            assigned: dict[str, datetime] = {}
+            if override_members:
+                if len(override_members) != len(cluster):
+                    raise ScrapeError(
+                        "Eine Festival-Sonderzuordnung muss alle Runden des Blocks enthalten"
+                    )
+                method = "explicit_kickoffs"
+                for _, match, _ in cluster:
+                    try:
+                        value = datetime.fromisoformat(overrides[match.external_id])
+                    except ValueError as exc:
+                        raise ScrapeError(
+                            f"Ungültige Festival-Sonderzeit für {match.external_id}"
+                        ) from exc
+                    if value.tzinfo is None or value.utcoffset() is None:
+                        raise ScrapeError(
+                            f"Festival-Sonderzeit für {match.external_id} benötigt eine Zeitzone"
+                        )
+                    assigned[match.external_id] = value
+                if set(assigned.values()) != set(slots):
+                    raise ScrapeError(
+                        "Festival-Sonderzeiten müssen den offiziellen Rundenzeiten entsprechen"
+                    )
+            else:
+                # A larger birth year is the younger team and receives the
+                # earlier official slot.  No kickoff is created or guessed.
+                for (_, match, _), slot in zip(
+                    sorted(cluster, key=lambda item: item[2], reverse=True), slots
+                ):
+                    assigned[match.external_id] = slot
+
+            before = {item[1].external_id: item[1].kickoff for item in cluster}
+            for _, match, _ in cluster:
+                target = assigned[match.external_id].isoformat(timespec="minutes")
+                if match.kickoff != target:
+                    match.kickoff = target
+                    recalculate_event_times(match, config)
+            after = {item[1].external_id: item[1].kickoff for item in cluster}
+            audit.append({
+                "method": method,
+                "group": {"date": key[0], "venue": key[1]},
+                "assignments": [
+                    {
+                        "external_id": match.external_id,
+                        "team_id": match.team_id,
+                        "birth_year": year,
+                        "before": before[match.external_id],
+                        "after": after[match.external_id],
+                    }
+                    for _, match, year in sorted(
+                        cluster, key=lambda item: item[2], reverse=True
+                    )
+                ],
+                "changed": before != after,
+            })
+    return audit
+
+
 def build_duplicate_detail_resolver(
     client: Client,
     config: dict[str, Any],
@@ -1441,6 +1598,9 @@ def parse_club_matchplan(
         duplicate_conflicts,
         duplicate_resolutions,
     ) = collapse_duplicate_detail_ids(matches, duplicate_resolver)
+    festival_round_assignments = apply_festival_round_assignment_rules(
+        merged_matches, config
+    )
     conflicting_duplicate_ids = sorted(
         str(item.get("detail_id") or "")
         for item in duplicate_conflicts
@@ -1463,6 +1623,7 @@ def parse_club_matchplan(
             "missing_detail_ids": missing_ids,
             "source_festival_groups": len(source_festivals),
             "missing_festival_groups": missing_festivals,
+            "festival_round_assignments": festival_round_assignments,
             "duplicate_detail_ids": conflicting_duplicate_ids,
             "collapsed_duplicate_detail_ids": collapsed_duplicate_ids,
             "duplicate_conflicts": duplicate_conflicts,
@@ -1784,11 +1945,15 @@ def evaluate_quality(
         ):
             if not getattr(match, field_name):
                 missing.append(field_name)
-        if (
-            match.competition_format != "festival"
-            and (not match.detail_url or not extract_detail_id(match.detail_url))
-        ):
-            missing.append("detail_id")
+        has_official_source_id = bool(
+            match.detail_url
+            and (
+                extract_detail_id(match.detail_url)
+                or extract_festival_group_id(match.detail_url)
+            )
+        )
+        if not has_official_source_id:
+            missing.append("official_source_id")
         if missing:
             invalid_included.append({
                 "external_id": match.external_id,
