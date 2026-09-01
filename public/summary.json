@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-31T19:48:08+00:00",
+  "generated_at": "2026-09-01T05:29:20+00:00",
   "selection_mode": "club-wide venue",
   "event_timing": {
     "before_minutes": 60,
@@ -97,13 +97,12 @@
     "Spielgemeinschaft Schönwalde-Perwenitz-Paaren"
   ],
   "team_registry_changes": {
-    "new": [
-      "Schönwalder SV 53 I (Fussball-3, 2019)",
-      "Schönwalder SV 53 I (Fussball-5, 2016)",
-      "Schönwalder SV 53 II (Fussball-5, 2017)"
-    ],
+    "new": [],
     "known": [
+      "Schönwalder SV 53 I (Fussball-3, 2019)",
       "Spielgemeinschaft Schönwalde-Perwenitz-Paaren",
+      "Schönwalder SV 53 I (Fussball-5, 2016)",
+      "Schönwalder SV 53 II (Fussball-5, 2017)",
       "Schönwalder SV",
       "SpG Perwenitz/​Schönwalde Ü50",
       "Schönwalder SV (Ü40)",
