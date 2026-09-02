@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-02T09:48:51+00:00",
+  "generated_at": "2026-09-02T14:37:20+00:00",
   "selection_mode": "club-wide venue",
   "event_timing": {
     "before_minutes": 60,
@@ -21,19 +21,19 @@
       "ssv53-festival-unclear-duration-90-20260831"
     ]
   },
-  "total": 112,
+  "total": 113,
   "included": 45,
   "review": 0,
-  "excluded": 67,
+  "excluded": 68,
   "by_calendar": {
     "Rasen": 40,
     "Kunstrasen": 5
   },
   "by_team": {
     "Schönwalder SV": {
-      "total": 34,
+      "total": 35,
       "included": 16,
-      "excluded": 18,
+      "excluded": 19,
       "review": 0
     },
     "Schönwalder SV (9er)": {
@@ -123,7 +123,7 @@
     {
       "date_from": "2026-10-01",
       "date_to": "2026-12-31",
-      "competition_rows": 33
+      "competition_rows": 34
     },
     {
       "date_from": "2027-01-01",

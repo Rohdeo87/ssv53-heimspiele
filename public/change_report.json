@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-02T09:48:51+00:00",
+  "generatedAt": "2026-09-02T14:37:20+00:00",
   "status": "ok",
   "counts": {
     "before": 45,
     "after": 45,
     "added": 0,
-    "changed": 0,
+    "changed": 1,
     "removed": 0
   },
   "guard": {
@@ -16,6 +16,73 @@
     "reasons": []
   },
   "added": [],
-  "changed": [],
+  "changed": [
+    {
+      "id": "dfb:031HB5B99O000000VS5489BTVVG7L386",
+      "label": "Schönwalder SV · Schönwalder SV – SG Grün-Weiß Rehfelde · 10.10.2026 11:00 · Rasen",
+      "before": {
+        "id": "dfb:031HB5B99O000000VS5489BTVVG7L386",
+        "title": "Schönwalder SV – SG Grün-Weiß Rehfelde",
+        "start": "2026-10-10T11:00+02:00",
+        "end": "2026-10-10T12:45+02:00",
+        "occupancyStart": "2026-10-10T10:00+02:00",
+        "occupancyEnd": "2026-10-10T13:45+02:00",
+        "kickoff": "2026-10-10T11:00+02:00",
+        "matchDurationMinutes": 105,
+        "durationRule": "flb-jugendordnung-2025-12-13-a-2x45+halftime-15",
+        "competitionFormat": "league",
+        "matchType": "ME",
+        "place": "rasen",
+        "calendar": "Rasen",
+        "team": "Schönwalder SV",
+        "teamCategory": "A-Junioren | Landesklasse",
+        "teamRole": "home",
+        "homeTeam": "Schönwalder SV",
+        "awayTeam": "SG Grün-Weiß Rehfelde",
+        "competition": "Sa, | A-Junioren | Landesklasse",
+        "description": "A-Junioren · Landesklasse",
+        "status": "",
+        "detailLink": "https://www.fussball.de/spiel/schoenwalder-sv-sg-gruen-weiss-rehfelde/-/spiel/031HB5B99O000000VS5489BTVVG7L386",
+        "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+        "source": "fussball.de",
+        "checksum": "266ce99a2cc2be462d78396139e6f065f643115e147f121829600c40aadb5013"
+      },
+      "after": {
+        "id": "dfb:031HB5B99O000000VS5489BTVVG7L386",
+        "title": "Schönwalder SV – SG Grün-Weiß Rehfelde",
+        "start": "2026-10-10T11:00+02:00",
+        "end": "2026-10-10T12:45+02:00",
+        "occupancyStart": "2026-10-10T10:00+02:00",
+        "occupancyEnd": "2026-10-10T13:45+02:00",
+        "kickoff": "2026-10-10T11:00+02:00",
+        "matchDurationMinutes": 105,
+        "durationRule": "flb-jugendordnung-2025-12-13-a-2x45+halftime-15",
+        "competitionFormat": "league",
+        "matchType": "ME",
+        "place": "rasen",
+        "calendar": "Rasen",
+        "team": "Schönwalder SV",
+        "teamCategory": "A-Junioren | Landesklasse",
+        "teamRole": "home",
+        "homeTeam": "Schönwalder SV",
+        "awayTeam": "SG Grün-Weiß Rehfelde",
+        "competition": "A-Junioren | Landesklasse",
+        "description": "A-Junioren · Landesklasse",
+        "status": "",
+        "detailLink": "https://www.fussball.de/spiel/schoenwalder-sv-sg-gruen-weiss-rehfelde/-/spiel/031HB5B99O000000VS5489BTVVG7L386",
+        "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+        "source": "fussball.de",
+        "checksum": "266ce99a2cc2be462d78396139e6f065f643115e147f121829600c40aadb5013"
+      },
+      "changes": [
+        {
+          "field": "competition",
+          "label": "Wettbewerb",
+          "before": "Sa, | A-Junioren | Landesklasse",
+          "after": "A-Junioren | Landesklasse"
+        }
+      ]
+    }
+  ],
   "removed": []
 }
