@@ -235,6 +235,64 @@ def test_irrigation_statistics_never_promotes_incomplete_external_run():
     assert value["attention"]["summary"] == "6 von 7 Zonen bestätigt."
 
 
+def test_later_confirmed_run_clears_older_incomplete_run_attention():
+    rows = [
+        {
+            "timestamp": "2026-08-29T06:32:01Z",
+            "decision_code": "IRRIGATION_FAILED_HOLD",
+            "active_relay_ids": "[]",
+            "irrigation_plan_id": "old-failed-plan",
+            "irrigation_phase": "FAILED",
+            "irrigation_completed_utc": "",
+            "completed_relay_ids": "[1,2,3]",
+        },
+        {
+            "timestamp": "2026-09-01T05:00:01Z",
+            "decision_code": "IRRIGATION_ALL_ZONES_CONFIRMED_COMPLETE",
+            "active_relay_ids": "[]",
+            "irrigation_plan_id": "new-complete-plan",
+            "irrigation_phase": "COMPLETE_HOLD",
+            "irrigation_completed_utc": "2026-09-01T05:00:00Z",
+            "completed_relay_ids": "[1,2,3,4,5,6,7]",
+        },
+    ]
+
+    value = summarize_irrigation_statistics(rows)
+
+    assert value["completedRuns7d"] == 1
+    assert value["lastCompletedAt"] == "2026-09-01T05:00:00+00:00"
+    assert value["attention"] is None
+
+
+def test_incomplete_run_after_last_completion_remains_visible():
+    rows = [
+        {
+            "timestamp": "2026-09-01T05:00:01Z",
+            "decision_code": "IRRIGATION_ALL_ZONES_CONFIRMED_COMPLETE",
+            "active_relay_ids": "[]",
+            "irrigation_plan_id": "complete-plan",
+            "irrigation_phase": "COMPLETE_HOLD",
+            "irrigation_completed_utc": "2026-09-01T05:00:00Z",
+            "completed_relay_ids": "[1,2,3,4,5,6,7]",
+        },
+        {
+            "timestamp": "2026-09-02T06:32:01Z",
+            "decision_code": "IRRIGATION_FAILED_HOLD",
+            "active_relay_ids": "[]",
+            "irrigation_plan_id": "new-failed-plan",
+            "irrigation_phase": "FAILED",
+            "irrigation_completed_utc": "",
+            "completed_relay_ids": "[1,2,3]",
+        },
+    ]
+
+    value = summarize_irrigation_statistics(rows)
+
+    assert value["completedRuns7d"] == 1
+    assert value["attention"]["summary"] == "3 von 7 Zonen bestätigt."
+    assert value["attention"]["affectedRuns"][0]["planId"] == "new-failed-plan"
+
+
 def test_dashboard_irrigation_statistics_queries_eight_day_window():
     class DashboardQueries:
         def execute(self, query, *, timespan):

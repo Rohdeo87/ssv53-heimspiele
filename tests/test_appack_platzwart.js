@@ -103,10 +103,10 @@ test("Platzwart-Seite ist syntaktisch gültig und enthält keine Zugangsdaten", 
   assert.match(html, /function renderIrrigationAttention\(stats\)/);
   assert.match(html, /\.attention-btn\{width:30px;height:30px/);
   assert.match(html, /Fehler bei Beregnungsdaten anzeigen/);
-  assert.match(html, /Beregnung unvollständig/);
-  assert.match(html, /Nicht alle Zonen bestätigt/);
-  assert.match(html, /Zeitweise keine Daten/);
-  assert.match(html, /Fehlende Daten zählen nicht als Beregnung/);
+  assert.match(html, /Der letzte Beregnungslauf war unvollständig/);
+  assert.match(html, /Letzter Lauf unvollständig/);
+  assert.match(html, /Daten fehlen/);
+  assert.match(html, /Es werden nur vollständig erkannte Beregnungen gezählt/);
   assert.match(html, /id="water-plan-open"/);
   assert.match(html, /Beregnungsplan anpassen/);
   assert.match(html, /Nächste Beregnung aussetzen/);

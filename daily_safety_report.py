@@ -937,6 +937,7 @@ def summarize_irrigation_statistics(
         key=lambda value: value["completed_at"],
     )
     last_record = ordered_completed[-1] if ordered_completed else None
+    latest_completed_at = last_record["completed_at"] if last_record else None
 
     # Unsichere oder nur teilweise ausgeführte Läufe werden nicht in die
     # normalen Statistik-Kacheln gemischt. Sie werden separat für ein
@@ -986,6 +987,11 @@ def summarize_irrigation_statistics(
         evidence = plan_evidence.get(plan) if plan else None
         if not evidence or evidence["complete"]:
             continue
+        # Ein spaeter sicher bestaetigter Komplettlauf ersetzt den alten
+        # Warnzustand. Historische Datenluecken bleiben Teil der Statistik,
+        # duerfen im Dashboard aber nicht mehr als aktueller Fehler erscheinen.
+        if latest_completed_at is not None and current["timestamp"] <= latest_completed_at:
+            continue
         if not (evidence["confirmed"] or evidence["active"] or evidence["failed"]):
             continue
         gaps.append(
@@ -1001,6 +1007,8 @@ def summarize_irrigation_statistics(
     for plan, evidence in plan_evidence.items():
         confirmed = sorted(evidence["confirmed"] | evidence["active"])
         if evidence["complete"] or not evidence["failed"]:
+            continue
+        if latest_completed_at is not None and evidence["last"] <= latest_completed_at:
             continue
         affected_runs.append(
             {
