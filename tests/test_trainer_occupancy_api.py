@@ -69,7 +69,12 @@ class TrainerOccupancyApiTests(unittest.TestCase):
             "resourceId": resource_id,
             "area": "vorne & hinten",
             "description": "Trainerbelegung",
-            "creator": {"id": "appack-42", "name": "Juliane Beispiel", "email": "juliane@example.de"},
+            "creator": {
+                "id": "appack-42",
+                "name": "Juliane Beispiel",
+                "email": "juliane@example.de",
+                "contactRef": "ans-juliane-42",
+            },
             "confirmation": "TRAINER_BELEGUNG_SPEICHERN",
         }
 
@@ -85,6 +90,11 @@ class TrainerOccupancyApiTests(unittest.TestCase):
         self.assertEqual(block.end.isoformat(), "2026-08-20T04:00:00+02:00")
         self.assertFalse(event.suppress_training)
         self.assertEqual(event.creator_name, "Juliane Beispiel")
+        self.assertEqual(event.creator_contact_ref, "ans-juliane-42")
+        self.assertEqual(
+            event.to_public_event()["creator"]["contactRef"],
+            "ans-juliane-42",
+        )
 
     def test_kunstrasen_is_visible_in_both_seasons_without_mower_block(self) -> None:
         response = function_app.ssv53_trainer_occupancies(
@@ -274,6 +284,7 @@ class TrainerOccupancyApiTests(unittest.TestCase):
                 "id": "admin-7",
                 "name": "App Administrator",
                 "mobile": "+49 170 1234567",
+                "contactRef": "ans-admin-7",
             },
             "confirmation": "TRAINER_BELEGUNG_VERSCHIEBEN",
         }
@@ -282,11 +293,17 @@ class TrainerOccupancyApiTests(unittest.TestCase):
         moved = self.store.events["trainer-test-001"]
         self.assertEqual(moved.creator_name, "Juliane Beispiel")
         self.assertEqual(moved.creator_email, "")
+        self.assertEqual(moved.creator_contact_ref, "ans-juliane-42")
         self.assertEqual(moved.moved_by_name, "App Administrator")
         self.assertEqual(moved.moved_by_mobile, "")
+        self.assertEqual(moved.moved_by_contact_ref, "ans-admin-7")
         public_event = moved.to_public_event()
         self.assertEqual(public_event["creator"]["name"], "Juliane Beispiel")
         self.assertEqual(public_event["movedBy"]["name"], "App Administrator")
+        self.assertEqual(
+            public_event["movedBy"]["contactRef"],
+            "ans-admin-7",
+        )
         self.assertEqual(
             set(public_event["creator"]),
             {"id", "name", "role", "contactRef"},
@@ -431,6 +448,16 @@ class TrainerOccupancyApiTests(unittest.TestCase):
         public = event.to_public_event()
         self.assertNotIn("image", public["creator"])
         self.assertNotIn("email", public["creator"])
+
+    def test_contact_reference_must_be_an_opaque_technical_id(self) -> None:
+        payload = self.payload()
+        payload["creator"]["contactRef"] = "private@example.invalid"
+        response = function_app.ssv53_trainer_occupancies(request(payload))
+        self.assertEqual(response.status_code, 200)
+        event = self.store.events["trainer-test-001"]
+        self.assertEqual(event.creator_contact_ref, "")
+        self.assertNotIn("private@example.invalid", str(event.to_entity()))
+        self.assertNotIn("private@example.invalid", str(event.to_public_event()))
 
 if __name__ == "__main__":
     unittest.main()

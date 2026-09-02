@@ -963,6 +963,7 @@ def _trainer_move_source(
         "website": existing.creator_website,
         "facebook": existing.creator_facebook,
         "role": existing.creator_role,
+        "contactRef": existing.creator_contact_ref,
         "infoHtml": existing.creator_info_html,
     }
     submitted_creator = (
@@ -986,7 +987,7 @@ def _trainer_move_source(
             existing_creator["name"] = submitted_name
         for key in (
             "phone", "mobile", "email", "chatId", "image", "instagram",
-            "website", "facebook", "role", "infoHtml",
+            "website", "facebook", "role", "contactRef", "infoHtml",
         ):
             if not existing_creator.get(key) and submitted_creator.get(key):
                 existing_creator[key] = submitted_creator[key]
@@ -1016,6 +1017,7 @@ def _trainer_move_source(
                 "website": existing.moved_by_website,
                 "facebook": existing.moved_by_facebook,
                 "role": existing.moved_by_role,
+                "contactRef": existing.moved_by_contact_ref,
                 "infoHtml": existing.moved_by_info_html,
             }
         ),

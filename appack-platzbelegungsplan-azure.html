@@ -1907,6 +1907,7 @@ module: DEFAULT_SETTINGS.module,
 calendars: {},
 resources: [],
 trainerContacts: [],
+creatorContacts: [],
 trainerContactsReady: false,
 trainerContactsError: false,
 trainerContactsPromise: null,
@@ -3089,6 +3090,10 @@ return Array.from(new Set(result));
 }
 
 function getContactIdentity(row, name) {
+const stableReference = getFirstContactText(row && row.ansID);
+if (stableReference) {
+return "ref:" + stableReference.trim().toLowerCase();
+}
 const normalizedName = normalizeMatchText(name);
 
 return normalizedName ? "name:" + normalizedName : "";
@@ -3296,6 +3301,15 @@ image: getAppackProfileImage(profile)
 function mergeCreatorContact(profileCreator, workbookContact) {
 const profile = profileCreator || {};
 const workbook = workbookContact || {};
+const workbookReferences = workbook.contactRefs instanceof Set
+? Array.from(workbook.contactRefs)
+: [];
+const workbookReference = String(workbook.contactRef || "").trim() ||
+workbookReferences.map(function (value) {
+return String(value || "").trim();
+}).find(function (value) {
+return value && !value.startsWith("name:") && !value.startsWith("ref:");
+}) || "";
 return {
 id: profile.id || "",
 name: workbook.name || profile.name || "",
@@ -3308,7 +3322,7 @@ instagram: workbook.instagram || "",
 website: workbook.website || "",
 facebook: workbook.facebook || "",
 role: workbook.role || profile.role || "",
-contactRef: profile.contactRef || "",
+contactRef: profile.contactRef || workbookReference,
 infoHtml: workbook.infoHtml || ""
 };
 }
@@ -3351,7 +3365,10 @@ const profileEmail = String(profile.email || "").trim().toLowerCase();
 const profileChat = String(profile.chatId || "").trim().toLowerCase();
 const profileId = String(profile.id || "").trim().toLowerCase();
 const profileContactRef = String(profile.contactRef || "").trim().toLowerCase();
-const exact = state.trainerContacts.find(function (contact) {
+const creatorContacts = Array.isArray(state.creatorContacts) && state.creatorContacts.length
+? state.creatorContacts
+: state.trainerContacts;
+const exact = creatorContacts.find(function (contact) {
 const contactRefs = contact.contactRefs instanceof Set
 ? contact.contactRefs
 : new Set([contact.contactRef]);
@@ -3361,12 +3378,12 @@ return String(value || "").trim().toLowerCase();
 return (profileContactRef && normalizedContactRefs.includes(profileContactRef)) ||
 (profileEmail && String(contact.email || "").trim().toLowerCase() === profileEmail) ||
 (profileChat && String(contact.chatId || "").trim().toLowerCase() === profileChat) ||
-(profileId && String(contact.chatId || "").trim().toLowerCase() === profileId) ||
+(profileId && normalizedContactRefs.includes(profileId)) ||
 (profileName && normalizeMatchText(contact.name) === profileName);
 });
 if (exact) return exact;
 if (!profileName) return null;
-const nameMatches = state.trainerContacts.filter(function (contact) {
+const nameMatches = creatorContacts.filter(function (contact) {
 return normalizeMatchText(contact.name).split(/\s+/).includes(profileName);
 });
 return nameMatches.length === 1 ? nameMatches[0] : null;
@@ -3447,14 +3464,14 @@ result.add(functionKey);
 return result;
 }
 
-function parseTrainerContacts(rows) {
+function parseWorkbookContacts(rows, requireFootballTeams) {
 const contactsByIdentity = new Map();
 
 (Array.isArray(rows) ? rows : []).forEach(function (row) {
 const categoryProfile = getContactCategoryProfile(row.ansKat);
 
 
-if (!isFootballContactCategory(row.ansKat)) return;
+if (requireFootballTeams && !isFootballContactCategory(row.ansKat)) return;
 
 const categoryKeys = extractContactCategoryTeamKeys(row.ansKat);
 
@@ -3478,7 +3495,7 @@ if (key.startsWith("team:") || key.startsWith("year:")) {
 teamKeys.add(key);
 }
 });
-if (!teamKeys.size) return;
+if (requireFootballTeams && !teamKeys.size) return;
 
 const name = getFirstContactText(row.ansName);
 if (!name) return;
@@ -3496,6 +3513,7 @@ contact = {
 identity: identity,
 name: name,
 contactRefs: new Set([identity]),
+contactRef: "",
 roles: new Set(),
 infoHtmlParts: new Set(),
 infoTextParts: new Set(),
@@ -3532,7 +3550,10 @@ contact.website = firstContactValue(contact.website, getFirstContactText(row.ans
 contact.facebook = firstContactValue(contact.facebook, getFirstContactText(row.ansFace));
 contact.chatId = firstContactValue(contact.chatId, getFirstContactText(row.ansID));
 const rowContactRef = getFirstContactText(row.ansID);
-if (rowContactRef) contact.contactRefs.add(rowContactRef);
+if (rowContactRef) {
+contact.contactRefs.add(rowContactRef);
+contact.contactRef = firstContactValue(contact.contactRef, rowContactRef);
+}
 
 const sortNumber = Number.parseInt(getFirstContactText(row.ansSortNumber), 10);
 if (Number.isFinite(sortNumber)) {
@@ -3550,6 +3571,7 @@ return {
 identity: contact.identity,
 name: contact.name,
 contactRefs: contact.contactRefs,
+contactRef: contact.contactRef,
 role: Array.from(contact.roles).join("; "),
 infoHtml: Array.from(contact.infoHtmlParts).join("<br>"),
 infoText: Array.from(contact.infoTextParts).join(" "),
@@ -3568,12 +3590,20 @@ sort: contact.sort
 };
 })
 .filter(function (contact) {
-return contact.keys.size > 0;
+return !requireFootballTeams || contact.keys.size > 0;
 })
 .sort(function (a, b) {
 if (a.sort !== b.sort) return a.sort - b.sort;
 return a.name.localeCompare(b.name, "de");
 });
+}
+
+function parseTrainerContacts(rows) {
+return parseWorkbookContacts(rows, true);
+}
+
+function parseCreatorContacts(rows) {
+return parseWorkbookContacts(rows, false);
 }
 
 function withContactTimeout(promise, message) {
@@ -3687,6 +3717,7 @@ mergedRows.set(getContactRowSignature(row), row);
 
 const combinedRows = Array.from(mergedRows.values());
 const parsed = parseTrainerContacts(combinedRows);
+const creatorContacts = parseCreatorContacts(combinedRows);
 if (!parsed.length) {
 throw new Error("Keine verwertbaren Ansprechpartner geliefert");
 }
@@ -3698,7 +3729,8 @@ snapshotSignature === previousSnapshotSignature
 ) {
 return {
 rows: combinedRows,
-contacts: parsed
+contacts: parsed,
+creatorContacts: creatorContacts
 };
 }
 previousSnapshotSignature = snapshotSignature;
@@ -3715,10 +3747,12 @@ window.setTimeout(resolve, 180 * Math.pow(2, attempt));
 
 const combinedRows = Array.from(mergedRows.values());
 const parsed = parseTrainerContacts(combinedRows);
+const creatorContacts = parseCreatorContacts(combinedRows);
 if (combinedRows.length && parsed.length) {
 return {
 rows: combinedRows,
-contacts: parsed
+contacts: parsed,
+creatorContacts: creatorContacts
 };
 }
 
@@ -3743,6 +3777,7 @@ state.trainerContactsError = false;
 state.trainerContactsPromise = fetchTrainerContactRows()
 .then(function (result) {
 state.trainerContacts = result.contacts;
+state.creatorContacts = result.creatorContacts || result.contacts;
 state.trainerContactsReady = true;
 state.trainerContactsError = false;
 state.trainerContactsLoadedAt = Date.now();
@@ -3757,6 +3792,7 @@ return state.trainerContacts;
 state.trainerContactsError = true;
 state.trainerContactsReady = false;
 state.trainerContacts = [];
+state.creatorContacts = [];
 state.trainerContactsPromise = null;
 if (window.console && typeof window.console.error === "function") {
 console.error("[SSV53] Ansprechpartner konnten nicht geladen werden:", error);

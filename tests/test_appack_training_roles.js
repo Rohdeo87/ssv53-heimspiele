@@ -59,7 +59,7 @@ function createContactResolutionApi(state) {
       extractFunction("isSameCreator"),
       extractFunction("findCreatorWorkbookContact"),
       extractFunction("resolveProfileContact"),
-      "return { normalizeOccupancyPerson, isSameCreator, resolveProfileContact };"
+      "return { mergeCreatorContact, normalizeOccupancyPerson, isSameCreator, findCreatorWorkbookContact, resolveProfileContact };"
     ].join("\n\n")
   )(state);
 }
@@ -146,6 +146,68 @@ test("fremde öffentliche Erstellerdaten liefern nur Identität und Workbook-Kon
   assert.notEqual(resolved.email, "private@example.de");
   assert.notEqual(resolved.mobile, "+49 170 999999");
   assert.notEqual(resolved.image, "data:image/jpeg;base64,private");
+});
+
+test("Neuanlage übernimmt die stabile Workbook-Referenz statt nur der Profil-ID", () => {
+  const workbookContact = {
+    name: "Julius Beispiel",
+    role: "Organisation",
+    contactRef: "workbook-julius",
+    contactRefs: new Set(["ref:workbook-julius", "workbook-julius"]),
+    email: "julius@example.invalid"
+  };
+  const currentCreator = {
+    id: "profile-julius",
+    name: "Julius",
+    email: "julius@example.invalid"
+  };
+  const contactApi = createContactResolutionApi({
+    currentCreator,
+    trainerContacts: [],
+    creatorContacts: [workbookContact]
+  });
+
+  const matched = contactApi.findCreatorWorkbookContact(currentCreator);
+  const stored = contactApi.normalizeOccupancyPerson(
+    contactApi.mergeCreatorContact(currentCreator, matched)
+  );
+
+  assert.equal(stored.id, "profile-julius");
+  assert.equal(stored.name, "Julius Beispiel");
+  assert.equal(stored.role, "Organisation");
+  assert.equal(stored.contactRef, "workbook-julius");
+  assert.equal(Object.hasOwn(stored, "email"), false);
+});
+
+test("bestehende Ü40-Buchung findet Ersteller über jede bekannte Workbook-ID", () => {
+  const workbookContact = {
+    name: "Julius Beispiel",
+    role: "Trainer Ü40",
+    contactRef: "primary-workbook-id",
+    contactRefs: new Set([
+      "ref:primary-workbook-id",
+      "primary-workbook-id",
+      "69930689120a589bc451d1f6"
+    ]),
+    chatId: "primary-workbook-id",
+    mobile: "+49 170 000000"
+  };
+  const contactApi = createContactResolutionApi({
+    currentCreator: {id: "another-user", name: "Andere Person"},
+    trainerContacts: [],
+    creatorContacts: [workbookContact]
+  });
+
+  const resolved = contactApi.resolveProfileContact({
+    id: "69930689120a589bc451d1f6",
+    name: "Julius",
+    role: "",
+    contactRef: "69930689120a589bc451d1f6"
+  });
+
+  assert.equal(resolved.name, "Julius Beispiel");
+  assert.equal(resolved.role, "Trainer Ü40");
+  assert.equal(resolved.mobile, "+49 170 000000");
 });
 
 test("fremde Person ohne Workbook-Kontakt bleibt als sauberer Name ohne Kontaktdaten sichtbar", () => {

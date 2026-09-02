@@ -27,6 +27,7 @@ VALID_RESOURCES = frozenset({"rasen", "kunstrasen"})
 VALID_AREAS = frozenset({"vorne", "hinten", "vorne & hinten"})
 EVENT_ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9._-]{2,100}$")
 COMMAND_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{5,140}$")
+CONTACT_REFERENCE_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,239}$")
 TZ = ZoneInfo("Europe/Berlin")
 DEFAULT_EVENT_RETENTION_DAYS = 90
 DEFAULT_METADATA_RETENTION_DAYS = 180
@@ -155,6 +156,13 @@ def _buffer(value: Any, field: str, default: int = 30) -> int:
     return parsed
 
 
+def _contact_reference(value: Any) -> str:
+    """Übernimmt ausschließlich eine technische, nicht sprechende Referenz."""
+
+    reference = str(value or "").strip()
+    return reference if CONTACT_REFERENCE_PATTERN.fullmatch(reference) else ""
+
+
 @dataclass(frozen=True)
 class SpecialOccupancyEvent:
     event_id: str
@@ -176,6 +184,7 @@ class SpecialOccupancyEvent:
     creator_website: str
     creator_facebook: str
     creator_role: str
+    creator_contact_ref: str
     creator_info_html: str
     moved_by_id: str
     moved_by_name: str
@@ -188,6 +197,7 @@ class SpecialOccupancyEvent:
     moved_by_website: str
     moved_by_facebook: str
     moved_by_role: str
+    moved_by_contact_ref: str
     moved_by_info_html: str
     replaced_training_event_id: str
     suppress_training: bool
@@ -281,6 +291,18 @@ class SpecialOccupancyEvent:
             creator_website="",
             creator_facebook="",
             creator_role=_bounded_text(creator.get("role"), field="creator.role", maximum=180),
+            creator_contact_ref=(
+                _contact_reference(creator.get("contactRef"))
+                or (
+                    existing.creator_contact_ref
+                    if existing
+                    and _bounded_text(
+                        creator.get("id"), field="creator.id", maximum=180
+                    )
+                    == existing.creator_id
+                    else ""
+                )
+            ),
             creator_info_html="",
             moved_by_id=_bounded_text(moved_by.get("id"), field="movedBy.id", maximum=180),
             moved_by_name=_bounded_text(moved_by.get("name"), field="movedBy.name", maximum=120),
@@ -293,6 +315,18 @@ class SpecialOccupancyEvent:
             moved_by_website="",
             moved_by_facebook="",
             moved_by_role=_bounded_text(moved_by.get("role"), field="movedBy.role", maximum=180),
+            moved_by_contact_ref=(
+                _contact_reference(moved_by.get("contactRef"))
+                or (
+                    existing.moved_by_contact_ref
+                    if existing
+                    and _bounded_text(
+                        moved_by.get("id"), field="movedBy.id", maximum=180
+                    )
+                    == existing.moved_by_id
+                    else ""
+                )
+            ),
             moved_by_info_html="",
             replaced_training_event_id=replaced_training_event_id,
             suppress_training=suppress_training,
@@ -330,6 +364,7 @@ class SpecialOccupancyEvent:
             creator_website=str(entity.get("CreatorWebsite", "")),
             creator_facebook=str(entity.get("CreatorFacebook", "")),
             creator_role=str(entity.get("CreatorRole", "")),
+            creator_contact_ref=str(entity.get("CreatorContactRef", "")),
             creator_info_html=str(entity.get("CreatorInfoHtml", "")),
             moved_by_id=str(entity.get("MovedById", "")),
             moved_by_name=str(entity.get("MovedByName", "")),
@@ -342,6 +377,7 @@ class SpecialOccupancyEvent:
             moved_by_website=str(entity.get("MovedByWebsite", "")),
             moved_by_facebook=str(entity.get("MovedByFacebook", "")),
             moved_by_role=str(entity.get("MovedByRole", "")),
+            moved_by_contact_ref=str(entity.get("MovedByContactRef", "")),
             moved_by_info_html=str(entity.get("MovedByInfoHtml", "")),
             replaced_training_event_id=str(entity.get("ReplacedTrainingEventId", "")),
             suppress_training=bool(entity.get("SuppressTraining", True)),
@@ -371,9 +407,11 @@ class SpecialOccupancyEvent:
             "CreatorId": self.creator_id,
             "CreatorName": self.creator_name,
             "CreatorRole": self.creator_role,
+            "CreatorContactRef": self.creator_contact_ref,
             "MovedById": self.moved_by_id,
             "MovedByName": self.moved_by_name,
             "MovedByRole": self.moved_by_role,
+            "MovedByContactRef": self.moved_by_contact_ref,
             "ReplacedTrainingEventId": self.replaced_training_event_id,
             "SuppressTraining": self.suppress_training,
             "MowerBufferBeforeMinutes": self.mower_buffer_before_minutes,
@@ -400,15 +438,17 @@ class SpecialOccupancyEvent:
                 "id": self.creator_id,
                 "name": self.creator_name,
                 "role": self.creator_role,
-                "contactRef": self.creator_id,
+                "contactRef": self.creator_contact_ref or self.creator_id,
             },
             "movedBy": {
                 # Alte Verlegungen speicherten die ausführende Person als Creator.
                 "id": self.moved_by_id or (self.creator_id if self.replaced_training_event_id else ""),
                 "name": self.moved_by_name or (self.creator_name if self.replaced_training_event_id else ""),
                 "role": self.moved_by_role or (self.creator_role if self.replaced_training_event_id else ""),
-                "contactRef": self.moved_by_id or (
-                    self.creator_id if self.replaced_training_event_id else ""
+                "contactRef": self.moved_by_contact_ref or self.moved_by_id or (
+                    self.creator_contact_ref or self.creator_id
+                    if self.replaced_training_event_id
+                    else ""
                 ),
             },
         }
@@ -1084,6 +1124,7 @@ def fail_closed_public_events(
             creator_website="",
             creator_facebook="",
             creator_role="",
+            creator_contact_ref="",
             creator_info_html="",
             moved_by_id="",
             moved_by_name="",
@@ -1096,6 +1137,7 @@ def fail_closed_public_events(
             moved_by_website="",
             moved_by_facebook="",
             moved_by_role="",
+            moved_by_contact_ref="",
             moved_by_info_html="",
             replaced_training_event_id="",
             suppress_training=True,

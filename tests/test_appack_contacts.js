@@ -60,7 +60,9 @@ function createHarness(contacts) {
     "reconcileContactTeamKeys",
     "getContactIdentity",
     "firstContactValue",
+    "parseWorkbookContacts",
     "parseTrainerContacts",
+    "parseCreatorContacts",
     "getEventContactProfile",
     "findTrainerContacts"
   ];
@@ -70,7 +72,7 @@ function createHarness(contacts) {
     "}",
     ...functionNames.map(extractFunction),
     "function sanitizeDescription(value) { return String(value || ''); }",
-    "return { parseTrainerContacts, getEventContactProfile, findTrainerContacts };"
+    "return { parseTrainerContacts, parseCreatorContacts, getEventContactProfile, findTrainerContacts };"
   ].join("\n\n");
   return new Function("state", source)(state);
 }
@@ -217,6 +219,39 @@ test("D-Junioren finden Kontakt über D-Kategorie und Jahrgänge", () => {
     harness.findTrainerContacts(match).map((item) => item.name),
     ["Kontakt D"]
   );
+});
+
+test("Erstellerkontakt wird auch ohne Fußball-Mannschaft vollständig aufgelöst", () => {
+  const parser = createHarness([]);
+  const rows = [
+    {
+      ansKat: ["Fussball", "Herren", "Ü40"],
+      ansFunc: "Trainer Ü40",
+      ansName: "Kontakt Ü40"
+    },
+    {
+      ansKat: ["Verein", "Organisation"],
+      ansFunc: "Organisation",
+      ansID: "69930689120a589bc451d1f6",
+      ansName: "Julius Beispiel",
+      ansMail: "julius@example.invalid",
+      ansHandy: "+49 170 000000",
+      ansImg: "https://cdn.appack.de/verein/julius.jpg"
+    }
+  ];
+
+  const trainerContacts = parser.parseTrainerContacts(rows);
+  const creatorContacts = parser.parseCreatorContacts(rows);
+  const creator = creatorContacts.find((item) => item.name === "Julius Beispiel");
+
+  assert.deepEqual(trainerContacts.map((item) => item.name), ["Kontakt Ü40"]);
+  assert.ok(creator);
+  assert.equal(creator.contactRef, "69930689120a589bc451d1f6");
+  assert.ok(creator.contactRefs.has("69930689120a589bc451d1f6"));
+  assert.equal(creator.role, "Organisation");
+  assert.equal(creator.email, "julius@example.invalid");
+  assert.equal(creator.mobile, "+49 170 000000");
+  assert.equal(creator.image, "https://cdn.appack.de/verein/julius.jpg");
 });
 
 test("Match-Erkennung hängt nicht am reservierten FullCalendar-source-Feld", () => {

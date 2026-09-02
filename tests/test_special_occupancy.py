@@ -157,6 +157,7 @@ class SpecialOccupancyTests(unittest.TestCase):
             "id": "trainer-17",
             "name": "Trainer Beispiel",
             "email": "trainer@example.de",
+            "contactRef": "ans-trainer-17",
         }
         self.store.apply(command, now_utc=self.now)
         special = self.store.events["trainer-move-c"]
@@ -184,9 +185,11 @@ class SpecialOccupancyTests(unittest.TestCase):
         public_event = special.to_public_event()
         self.assertEqual(public_event["team"], "C-Junioren")
         self.assertEqual(public_event["movedBy"]["name"], "Trainer Beispiel")
+        self.assertEqual(public_event["movedBy"]["contactRef"], "ans-trainer-17")
         restored = type(special).from_entity(special.to_entity())
         self.assertEqual(restored.team, "C-Junioren")
         self.assertEqual(restored.moved_by_email, "")
+        self.assertEqual(restored.moved_by_contact_ref, "ans-trainer-17")
         self.assertEqual(
             set(public_event["movedBy"]),
             {"id", "name", "role", "contactRef"},
