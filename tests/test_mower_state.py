@@ -23,6 +23,8 @@ class AutomationStateTests(unittest.TestCase):
             irrigation_suspension_until_utc=(NOW + timedelta(hours=4)).isoformat(),
             irrigation_change_candidate_hash="candidate",
             irrigation_change_candidate_since_utc=NOW.isoformat(),
+            irrigation_suspension_revalidation_last_seen_utc=NOW.isoformat(),
+            irrigation_suspension_revalidation_observations=1,
             irrigation_cancelled_without_run_utc=NOW.isoformat(),
         ).record_cycle(
             started_utc=NOW,

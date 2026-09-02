@@ -48,6 +48,14 @@ class FullFailsafePackageTests(unittest.TestCase):
             self.assertFalse(manifest["weather_paid_calls_supported"])
             self.assertEqual(manifest["irrigation_plan_lease_minutes"], 3)
             self.assertEqual(
+                manifest["irrigation_suspension_revalidation_cycles"],
+                2,
+            )
+            self.assertEqual(
+                manifest["irrigation_suspension_revalidation_max_gap_seconds"],
+                90,
+            )
+            self.assertEqual(
                 manifest["irrigation_plan_change_confirmation_minutes"],
                 2,
             )

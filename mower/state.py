@@ -73,6 +73,8 @@ class AutomationState:
     irrigation_failed_reason: str | None = None
     irrigation_change_candidate_hash: str | None = None
     irrigation_change_candidate_since_utc: str | None = None
+    irrigation_suspension_revalidation_last_seen_utc: str | None = None
+    irrigation_suspension_revalidation_observations: int = 0
     irrigation_cancelled_without_run_utc: str | None = None
     last_command_fingerprint: str | None = None
     last_command_utc: str | None = None
@@ -102,6 +104,10 @@ class AutomationState:
             raise ValueError("revision darf nicht negativ sein.")
         if self.park_confirmed_observations < 0:
             raise ValueError("park_confirmed_observations darf nicht negativ sein.")
+        if self.irrigation_suspension_revalidation_observations < 0:
+            raise ValueError(
+                "irrigation_suspension_revalidation_observations darf nicht negativ sein."
+            )
         if self.hydrawise_clear_origin not in {
             None,
             "DATA_GAP",
@@ -129,6 +135,7 @@ class AutomationState:
             "irrigation_zone_clear_since_utc",
             "irrigation_completed_utc",
             "irrigation_change_candidate_since_utc",
+            "irrigation_suspension_revalidation_last_seen_utc",
             "irrigation_cancelled_without_run_utc",
             "last_command_utc",
             "operator_requested_utc",
@@ -296,6 +303,15 @@ class AutomationState:
                     values.get("irrigation_change_candidate_since_utc")
                 ),
                 "irrigation_change_candidate_since_utc",
+            ),
+            irrigation_suspension_revalidation_last_seen_utc=_require_utc_iso(
+                _normalize_optional_text(
+                    values.get("irrigation_suspension_revalidation_last_seen_utc")
+                ),
+                "irrigation_suspension_revalidation_last_seen_utc",
+            ),
+            irrigation_suspension_revalidation_observations=int(
+                values.get("irrigation_suspension_revalidation_observations", 0) or 0
             ),
             irrigation_cancelled_without_run_utc=_require_utc_iso(
                 _normalize_optional_text(

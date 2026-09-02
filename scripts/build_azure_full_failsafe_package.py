@@ -172,6 +172,8 @@ def build_package(repository_root: Path, output_path: Path) -> dict[str, object]
         "weather_paid_calls_supported": False,
         "weather_monthly_call_hard_limit": 900,
         "irrigation_plan_lease_minutes": 3,
+        "irrigation_suspension_revalidation_cycles": 2,
+        "irrigation_suspension_revalidation_max_gap_seconds": 90,
         "irrigation_plan_change_confirmation_minutes": 2,
         "hydrawise_app_suspension_releases_unused_window": True,
         "hydrawise_future_zone_duration_changes_supported": True,

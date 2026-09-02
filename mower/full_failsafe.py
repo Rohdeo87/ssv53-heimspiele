@@ -674,6 +674,34 @@ def _clear_change_candidate(state: AutomationState) -> AutomationState:
     )
 
 
+def _record_suspension_revalidation_observation(
+    state: AutomationState,
+    *,
+    now_utc: datetime,
+    max_gap_seconds: int,
+    required_observations: int,
+) -> tuple[AutomationState, bool]:
+    """Bestätigt eine weiterhin wirksame Suspendierung über getrennte Zyklen."""
+
+    last_seen = _parse_time(state.irrigation_suspension_revalidation_last_seen_utc)
+    consecutive = (
+        last_seen is not None
+        and timedelta(0) < now_utc - last_seen <= timedelta(seconds=max_gap_seconds)
+    )
+    observations = (
+        int(state.irrigation_suspension_revalidation_observations or 0) + 1
+        if consecutive
+        else 1
+    )
+    updated = replace(
+        state,
+        revision=state.revision + 1,
+        irrigation_suspension_revalidation_last_seen_utc=now_utc.isoformat(),
+        irrigation_suspension_revalidation_observations=observations,
+    )
+    return updated, observations >= required_observations
+
+
 def _reconcile_prestart_plan(
     *,
     plan: list[dict[str, Any]],
@@ -1035,6 +1063,12 @@ def _state_details(state: AutomationState, *, persisted: bool, error: str | None
         "irrigation_change_candidate_since_utc": (
             state.irrigation_change_candidate_since_utc
         ),
+        "irrigation_suspension_revalidation_last_seen_utc": (
+            state.irrigation_suspension_revalidation_last_seen_utc
+        ),
+        "irrigation_suspension_revalidation_observations": (
+            state.irrigation_suspension_revalidation_observations
+        ),
         "irrigation_cancelled_without_run_utc": (
             state.irrigation_cancelled_without_run_utc
         ),
@@ -1149,6 +1183,8 @@ def _clear_irrigation(state: AutomationState) -> AutomationState:
         irrigation_failed_reason=None,
         irrigation_change_candidate_hash=None,
         irrigation_change_candidate_since_utc=None,
+        irrigation_suspension_revalidation_last_seen_utc=None,
+        irrigation_suspension_revalidation_observations=0,
         irrigation_cancelled_without_run_utc=None,
     )
 
@@ -1178,6 +1214,8 @@ def _cancel_irrigation_without_run(
         irrigation_failed_reason=None,
         irrigation_change_candidate_hash=None,
         irrigation_change_candidate_since_utc=None,
+        irrigation_suspension_revalidation_last_seen_utc=None,
+        irrigation_suspension_revalidation_observations=0,
         irrigation_cancelled_without_run_utc=now_utc.isoformat(),
     )
 
@@ -1992,6 +2030,8 @@ def run_full_failsafe_cycle(
                         irrigation_current_relay_id=None,
                         irrigation_zone_start_reserved_utc=None,
                         irrigation_zone_started_utc=None,
+                        irrigation_suspension_revalidation_last_seen_utc=None,
+                        irrigation_suspension_revalidation_observations=0,
                         irrigation_zone_clear_since_utc=None,
                         irrigation_completed_utc=None,
                         irrigation_failed_reason=None,
@@ -2380,6 +2420,8 @@ def run_full_failsafe_cycle(
                 irrigation_failed_reason=None,
                 irrigation_change_candidate_hash=None,
                 irrigation_change_candidate_since_utc=None,
+                irrigation_suspension_revalidation_last_seen_utc=None,
+                irrigation_suspension_revalidation_observations=0,
                 irrigation_cancelled_without_run_utc=None,
             )
             if operator_action in {"START_IRRIGATION", "START_IRRIGATION_ZONE"}:
@@ -2669,97 +2711,119 @@ def run_full_failsafe_cycle(
                 decision_code="FULL_FAILSAFE_PARK_LOCKED",
                 message="Der notwendige Parkbefehl bleibt durch ENABLE_PARK_COMMANDS=false gesperrt.",
             )
-        if (
+        mower_cannot_receive_park_command = (
             not mower_id
             or error_code != 0
             or mower_state in ERROR_STATES
             or activity not in PARK_COMMAND_ACTIVITIES
-        ):
+        )
+        if mower_cannot_receive_park_command:
+            details["park_command_unavailable"] = {
+                "mower_id_available": bool(mower_id),
+                "activity": activity,
+                "state": mower_state,
+                "error_code": error_code,
+                "irrigation_schedule_capture_continues": (
+                    state.irrigation_phase in {"PLANNED", "SUSPENDING"}
+                ),
+            }
+            # Ein lokaler Hydrawise-Zeitplan darf nicht allein deshalb anlaufen,
+            # weil ein fehlerhafter oder nicht erreichbarer Mäher keinen
+            # Parkbefehl annehmen kann. In der Vorbereitungsphase lassen wir
+            # deshalb die darunterliegende, separat abgesicherte Suspendierung
+            # der sieben Zonen weiterlaufen. Sie darf weiterhin nur mit
+            # vollständigem Relay-Allowlist- und Frischenachweis schreiben.
+            # Jeder spätere Wasserstart bleibt unverändert durch eigenen
+            # Parkbesitz und die fortlaufende Dockbestätigung gesperrt.
+            if state.irrigation_phase in {"PLANNED", "SUSPENDING"}:
+                pass
+            else:
+                return _persist_result(
+                    store=store,
+                    original=original,
+                    state=state,
+                    result=result,
+                    details=details,
+                    settings=settings,
+                    decision_code="MOWER_NOT_SAFE_FOR_PARK_COMMAND",
+                    message="Der aktuelle Mäherzustand erlaubt keinen sicheren Parkbefehl.",
+                )
+        else:
+            intent = CommandIntent(
+                action="PARK",
+                target=mower_id,
+                reason=(
+                    f"reassert|{park_source}|{effective_parking_block.get('start', '')}|"
+                    f"{effective_parking_block.get('end', '')}|{state.irrigation_phase or ''}"
+                    if park_reassert_due
+                    else f"{park_source}|{effective_parking_block.get('start', '')}|{effective_parking_block.get('end', '')}"
+                ),
+                valid_until_utc=block_end,
+            )
+            gate = evaluate_command_gate(
+                state=original,
+                intent=intent,
+                now_utc=now,
+                dedupe_minutes=(
+                    park_reassert_grace_minutes if park_reassert_due else 10
+                ),
+            )
+            details["park_gate"] = {
+                "allowed": gate.allowed,
+                "code": gate.code,
+                "reason": gate.reason,
+                "source": park_source,
+                "fingerprint": intent.fingerprint,
+                "reasserted": park_reassert_due,
+            }
+            if not gate.allowed:
+                return _persist_result(
+                    store=store,
+                    original=original,
+                    state=state,
+                    result=result,
+                    details=details,
+                    settings=settings,
+                    decision_code=gate.code,
+                    message=gate.reason,
+                )
+            client_id = str(environment.get("HUSQVARNA_CLIENT_ID", "")).strip()
+            client_secret = str(environment.get("HUSQVARNA_CLIENT_SECRET", "")).strip()
+            response = park_sender(client_id, client_secret, mower_id)
+            command_state = state.record_command(
+                fingerprint=intent.fingerprint,
+                sent_utc=now,
+                action="PARK",
+                park_until_utc=block_end,
+                park_source=park_source,
+                restart_allowed=_restart_allowed(park_source),
+            )
+            if operator_action == "PARK_MOWER":
+                command_state = _finish_operator_request(
+                    command_state,
+                    "Der sichere Parkbefehl wurde gesendet.",
+                )
+            details["park_action"] = {
+                "type": "ParkUntilFurtherNotice",
+                "response": response,
+                "source": park_source,
+                "reasserted": park_reassert_due,
+            }
             return _persist_result(
                 store=store,
                 original=original,
-                state=state,
+                state=command_state,
                 result=result,
                 details=details,
                 settings=settings,
-                decision_code="MOWER_NOT_SAFE_FOR_PARK_COMMAND",
-                message="Der aktuelle Mäherzustand erlaubt keinen sicheren Parkbefehl.",
+                decision_code=("PARK_COMMAND_REASSERTED" if park_reassert_due else "PARK_COMMAND_SENT"),
+                message=(
+                    "Der automatische Parkbefehl wurde wegen erneuter Platzfahrt sicher wiederholt."
+                    if park_reassert_due
+                    else "ParkUntilFurtherNotice wurde sicher gesendet."
+                ),
+                command_sent=True,
             )
-        intent = CommandIntent(
-            action="PARK",
-            target=mower_id,
-            reason=(
-                f"reassert|{park_source}|{effective_parking_block.get('start', '')}|"
-                f"{effective_parking_block.get('end', '')}|{state.irrigation_phase or ''}"
-                if park_reassert_due
-                else f"{park_source}|{effective_parking_block.get('start', '')}|{effective_parking_block.get('end', '')}"
-            ),
-            valid_until_utc=block_end,
-        )
-        gate = evaluate_command_gate(
-            state=original,
-            intent=intent,
-            now_utc=now,
-            dedupe_minutes=(
-                park_reassert_grace_minutes if park_reassert_due else 10
-            ),
-        )
-        details["park_gate"] = {
-            "allowed": gate.allowed,
-            "code": gate.code,
-            "reason": gate.reason,
-            "source": park_source,
-            "fingerprint": intent.fingerprint,
-            "reasserted": park_reassert_due,
-        }
-        if not gate.allowed:
-            return _persist_result(
-                store=store,
-                original=original,
-                state=state,
-                result=result,
-                details=details,
-                settings=settings,
-                decision_code=gate.code,
-                message=gate.reason,
-            )
-        client_id = str(environment.get("HUSQVARNA_CLIENT_ID", "")).strip()
-        client_secret = str(environment.get("HUSQVARNA_CLIENT_SECRET", "")).strip()
-        response = park_sender(client_id, client_secret, mower_id)
-        command_state = state.record_command(
-            fingerprint=intent.fingerprint,
-            sent_utc=now,
-            action="PARK",
-            park_until_utc=block_end,
-            park_source=park_source,
-            restart_allowed=_restart_allowed(park_source),
-        )
-        if operator_action == "PARK_MOWER":
-            command_state = _finish_operator_request(
-                command_state,
-                "Der sichere Parkbefehl wurde gesendet.",
-            )
-        details["park_action"] = {
-            "type": "ParkUntilFurtherNotice",
-            "response": response,
-            "source": park_source,
-            "reasserted": park_reassert_due,
-        }
-        return _persist_result(
-            store=store,
-            original=original,
-            state=command_state,
-            result=result,
-            details=details,
-            settings=settings,
-            decision_code=("PARK_COMMAND_REASSERTED" if park_reassert_due else "PARK_COMMAND_SENT"),
-            message=(
-                "Der automatische Parkbefehl wurde wegen erneuter Platzfahrt sicher wiederholt."
-                if park_reassert_due
-                else "ParkUntilFurtherNotice wurde sicher gesendet."
-            ),
-            command_sent=True,
-        )
 
     if state.irrigation_phase == "FAILED":
         failed_clear_since = _parse_time(state.hydrawise_clear_since_utc)
@@ -2824,17 +2888,6 @@ def run_full_failsafe_cycle(
             minimum=2,
             maximum=10,
         )
-        if not state.parked_by_automation:
-            return _persist_result(
-                store=store,
-                original=original,
-                state=state,
-                result=result,
-                details=details,
-                settings=settings,
-                decision_code="IRRIGATION_WAIT_FOR_CONFIRMED_PARK",
-                message="Beregnung wartet zunächst auf den eigenen sicheren Parkbefehl.",
-            )
         if not settings.full_failsafe_write_gate_enabled:
             return _persist_result(
                 store=store,
@@ -3052,6 +3105,8 @@ def run_full_failsafe_cycle(
                         ),
                         irrigation_change_candidate_hash=None,
                         irrigation_change_candidate_since_utc=None,
+                        irrigation_suspension_revalidation_last_seen_utc=None,
+                        irrigation_suspension_revalidation_observations=0,
                     )
                     return _persist_result(
                         store=store,
@@ -3148,6 +3203,8 @@ def run_full_failsafe_cycle(
                 irrigation_suspension_completed_utc=(
                     now.isoformat() if len(set(suspended)) == expected_zones else None
                 ),
+                irrigation_suspension_revalidation_last_seen_utc=None,
+                irrigation_suspension_revalidation_observations=0,
             )
             details["irrigation_action"] = {
                 "type": "SuspendScheduledZone",
@@ -3165,6 +3222,18 @@ def run_full_failsafe_cycle(
                 decision_code="IRRIGATION_ZONE_SUSPENDED",
                 message=f"Planstart für Zone {pending['zone']} wurde sicher suspendiert.",
                 command_sent=True,
+            )
+
+        if not state.parked_by_automation:
+            return _persist_result(
+                store=store,
+                original=original,
+                state=state,
+                result=result,
+                details=details,
+                settings=settings,
+                decision_code="IRRIGATION_WAIT_FOR_CONFIRMED_PARK",
+                message="Beregnung wartet zunächst auf den eigenen sicheren Parkbefehl.",
             )
 
         if (
@@ -3384,6 +3453,8 @@ def run_full_failsafe_cycle(
                     irrigation_plan_json=canonical,
                     irrigation_change_candidate_hash=None,
                     irrigation_change_candidate_since_utc=None,
+                    irrigation_suspension_revalidation_last_seen_utc=None,
+                    irrigation_suspension_revalidation_observations=0,
                     irrigation_zone_clear_since_utc=(
                         None
                         if state.irrigation_phase == "RUNNING"
@@ -3527,6 +3598,8 @@ def run_full_failsafe_cycle(
                             irrigation_plan_json=canonical,
                             irrigation_change_candidate_hash=None,
                             irrigation_change_candidate_since_utc=None,
+                            irrigation_suspension_revalidation_last_seen_utc=None,
+                            irrigation_suspension_revalidation_observations=0,
                         )
                         return _persist_result(
                             store=store,
@@ -3627,10 +3700,100 @@ def run_full_failsafe_cycle(
                         for observation in observations.values()
                     )
                 )
+                ordinary_live_suspension_proof_valid = (
+                    not schedule_override_plan
+                    and set(suspended) == expected_relay_ids
+                    and stored_suspend_until is not None
+                    and stored_suspend_until > now
+                    and set(observations) == expected_relay_ids
+                    and all(
+                        observation.get("valid") is True
+                        for observation in observations.values()
+                    )
+                    and not active_ids
+                    and all(
+                        (
+                            (start := _parse_time(observation.get("scheduled_start_utc")))
+                            is None
+                            or start > stored_suspend_until
+                        )
+                        for observation in observations.values()
+                    )
+                )
                 suspension_proof_valid = (
                     ordinary_suspension_proof_valid
                     or schedule_override_suspension_proof_valid
                 )
+                if (
+                    not suspension_proof_valid
+                    and ordinary_live_suspension_proof_valid
+                ):
+                    required_revalidation_observations = _env_int(
+                        environment,
+                        "IRRIGATION_SUSPENSION_REVALIDATION_CYCLES",
+                        2,
+                        minimum=2,
+                        maximum=10,
+                    )
+                    revalidation_gap_seconds = _env_int(
+                        environment,
+                        "IRRIGATION_SUSPENSION_REVALIDATION_MAX_GAP_SECONDS",
+                        90,
+                        minimum=60,
+                        maximum=300,
+                    )
+                    observed_state, revalidated = (
+                        _record_suspension_revalidation_observation(
+                            state,
+                            now_utc=now,
+                            max_gap_seconds=revalidation_gap_seconds,
+                            required_observations=required_revalidation_observations,
+                        )
+                    )
+                    details["irrigation_suspension_revalidation"] = {
+                        "valid_live_proof": True,
+                        "observations": (
+                            observed_state.irrigation_suspension_revalidation_observations
+                        ),
+                        "required_observations": required_revalidation_observations,
+                        "max_gap_seconds": revalidation_gap_seconds,
+                        "suspend_until_utc": stored_suspend_until.isoformat(),
+                    }
+                    if not revalidated:
+                        return _persist_result(
+                            store=store,
+                            original=original,
+                            state=observed_state,
+                            result=result,
+                            details=details,
+                            settings=settings,
+                            decision_code="IRRIGATION_SUSPENSION_REVALIDATING",
+                            message=(
+                                "Der weiterhin gesperrte Hydrawise-Plan wird vor "
+                                "einem verspäteten Wasserstart erneut bestätigt."
+                            ),
+                        )
+                    renewed = replace(
+                        observed_state,
+                        revision=observed_state.revision + 1,
+                        irrigation_suspension_completed_utc=now.isoformat(),
+                        irrigation_suspension_revalidation_last_seen_utc=None,
+                        irrigation_suspension_revalidation_observations=0,
+                    )
+                    details["irrigation_suspension_revalidation"]["renewed"] = True
+                    return _persist_result(
+                        store=store,
+                        original=original,
+                        state=renewed,
+                        result=result,
+                        details=details,
+                        settings=settings,
+                        decision_code="IRRIGATION_SUSPENSION_REVALIDATED",
+                        message=(
+                            "Alle sieben Hydrawise-Zonen sind weiterhin sicher "
+                            "suspendiert; die kurzlebige Startfreigabe wurde erneuert."
+                        ),
+                    )
                 if not suspension_proof_valid:
                     failed = _failed_irrigation(
                         state,
