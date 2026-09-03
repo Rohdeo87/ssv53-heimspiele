@@ -5,7 +5,10 @@ import unittest
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 
-from mower.full_failsafe import run_full_failsafe_cycle
+from mower.full_failsafe import (
+    EXPIRED_IRRIGATION_PLAN_LEASE_FAILURE,
+    run_full_failsafe_cycle,
+)
 from mower.hydrawise import HydrawiseError
 from mower.runtime import CycleResult, RuntimeSettings
 from mower.safety import CommandIntent
@@ -2243,6 +2246,116 @@ class FullFailsafeTests(unittest.TestCase):
                     "IRRIGATION_EXPIRED_READY_CONFIRMING",
                 )
                 self.assertEqual(store.load().irrigation_phase, "READY")
+                self.assertIsNone(
+                    store.load().irrigation_cancelled_without_run_utc
+                )
+
+    def test_expired_lease_failure_without_water_recovers_then_mows(self) -> None:
+        expired_plan = zones(start_utc=NOW - timedelta(hours=4))
+        initial = irrigation_state(phase="FAILED")
+        initial = AutomationState.from_mapping(
+            {
+                **initial.to_dict(),
+                "irrigation_plan_json": json.dumps(expired_plan),
+                "irrigation_failed_reason": EXPIRED_IRRIGATION_PLAN_LEASE_FAILURE,
+                "irrigation_suspension_until_utc": (
+                    NOW - timedelta(minutes=10)
+                ).isoformat(),
+                "hydrawise_clear_since_utc": (
+                    NOW - timedelta(minutes=10)
+                ).isoformat(),
+                "hydrawise_clear_origin": "DATA_GAP",
+                "last_hydrawise_success_utc": (
+                    NOW - timedelta(minutes=1)
+                ).isoformat(),
+                "last_hydrawise_active_count": 0,
+            }
+        )
+        cycle = result(activity="PARKED_IN_CS")
+        park_calls = []
+        start_calls = []
+        zone_calls = []
+
+        first, store = self._run(
+            initial,
+            cycle,
+            park=lambda *args: park_calls.append(args),
+            start=lambda *args: start_calls.append(args) or {"accepted": True},
+            zone=lambda *args: zone_calls.append(args),
+        )
+        self.assertEqual(
+            first.decision_code,
+            "IRRIGATION_EXPIRED_FAILED_CONFIRMING",
+        )
+        self.assertEqual(store.load().irrigation_phase, "FAILED")
+
+        released, _ = self._continue(
+            store,
+            cycle,
+            now=NOW + timedelta(minutes=2),
+            park=lambda *args: park_calls.append(args),
+            start=lambda *args: start_calls.append(args) or {"accepted": True},
+            zone=lambda *args: zone_calls.append(args),
+        )
+        self.assertEqual(
+            released.decision_code,
+            "IRRIGATION_EXPIRED_FAILED_RELEASED",
+        )
+        self.assertIsNone(store.load().irrigation_phase)
+        self.assertIsNotNone(store.load().irrigation_cancelled_without_run_utc)
+        self.assertEqual(park_calls, [])
+        self.assertEqual(start_calls, [])
+        self.assertEqual(zone_calls, [])
+
+        resumed, _ = self._continue(
+            store,
+            cycle,
+            now=NOW + timedelta(minutes=3),
+            start=lambda *args: start_calls.append(args) or {"accepted": True},
+        )
+        self.assertEqual(resumed.decision_code, "CONTINUOUS_MOWING_START_SENT")
+        self.assertEqual(len(start_calls), 1)
+
+    def test_expired_lease_failure_with_start_evidence_never_auto_recovers(self) -> None:
+        expired_plan = zones(start_utc=NOW - timedelta(hours=4))
+        for evidence in (
+            {"irrigation_zone_start_reserved_utc": (NOW - timedelta(hours=3)).isoformat()},
+            {"irrigation_completed_relay_ids_json": json.dumps([RELAYS[0]])},
+            {
+                "hydrawise_clear_origin": "IRRIGATION_END",
+                "hydrawise_clear_since_utc": (NOW - timedelta(hours=3)).isoformat(),
+            },
+        ):
+            with self.subTest(evidence=evidence):
+                initial = irrigation_state(phase="FAILED")
+                initial = AutomationState.from_mapping(
+                    {
+                        **initial.to_dict(),
+                        "irrigation_plan_json": json.dumps(expired_plan),
+                        "irrigation_failed_reason": (
+                            EXPIRED_IRRIGATION_PLAN_LEASE_FAILURE
+                        ),
+                        "irrigation_suspension_until_utc": (
+                            NOW - timedelta(minutes=10)
+                        ).isoformat(),
+                        "hydrawise_clear_since_utc": (
+                            NOW - timedelta(minutes=10)
+                        ).isoformat(),
+                        "hydrawise_clear_origin": "DATA_GAP",
+                        "last_hydrawise_success_utc": (
+                            NOW - timedelta(minutes=1)
+                        ).isoformat(),
+                        **evidence,
+                    }
+                )
+
+                output, store = self._run(
+                    initial,
+                    result(activity="PARKED_IN_CS"),
+                )
+
+                self.assertEqual(output.decision_code, "IRRIGATION_FAILED_HOLD")
+                self.assertEqual(store.load().irrigation_phase, "FAILED")
                 self.assertIsNone(
                     store.load().irrigation_cancelled_without_run_utc
                 )

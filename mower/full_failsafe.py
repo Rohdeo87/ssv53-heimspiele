@@ -69,6 +69,10 @@ ACTIVE_IRRIGATION_PHASES = frozenset(
 RECOVERABLE_EXTERNAL_PLAN_FAILURE = (
     "RuntimeError: Hydrawise-Zonenplan enthält ungültige Werte."
 )
+EXPIRED_IRRIGATION_PLAN_LEASE_FAILURE = (
+    "Der bestätigte Suspendierungsnachweis ist unvollständig, abgelaufen "
+    "oder der ursprüngliche Beregnungsstart ist bereits erreicht."
+)
 PARK_GUARD_BLOCK_SOURCES = frozenset({"training", "match", "special", "irrigation"})
 
 
@@ -1227,6 +1231,111 @@ def _cancel_irrigation_without_run(
         irrigation_suspension_revalidation_observations=0,
         irrigation_cancelled_without_run_utc=now_utc.isoformat(),
     )
+
+
+def _expired_unused_irrigation_proof(
+    state: AutomationState,
+    previous_state: AutomationState,
+    details: dict[str, Any],
+    *,
+    now_utc: datetime,
+    expected_relay_ids: frozenset[int],
+    relay_allowlist_valid: bool,
+    confirmation_minutes: int,
+) -> dict[str, Any]:
+    """Belegt konservativ, dass ein abgelaufener Lauf nie Wasser gestartet hat."""
+
+    plan = _plan_from_state(state)
+    stored_plan_end = max(
+        (
+            end
+            for zone in plan
+            if (end := _parse_time(zone.get("scheduled_end_utc"))) is not None
+        ),
+        default=None,
+    )
+    stored_suspend_until = _parse_time(state.irrigation_suspension_until_utc)
+    hydrawise_clear_since = _parse_time(state.hydrawise_clear_since_utc)
+    observations = _zone_observation_by_relay(details)
+    active_ids = _active_relay_ids(details)
+    safety = _as_dict(_as_dict(details.get("hydrawise")).get("safety"))
+    completed = _json_ints(state.irrigation_completed_relay_ids_json)
+    suspended = _json_ints(state.irrigation_suspended_relay_ids_json)
+    live_schedule_is_later_or_absent = (
+        stored_suspend_until is not None
+        and set(observations) == expected_relay_ids
+        and all(
+            (
+                (start := _parse_time(observation.get("scheduled_start_utc")))
+                is None
+                or start > stored_suspend_until
+            )
+            for observation in observations.values()
+        )
+    )
+    no_start_evidence = (
+        not completed
+        and state.irrigation_completed_utc is None
+        and state.irrigation_current_relay_id is None
+        and state.irrigation_zone_start_reserved_utc is None
+        and state.irrigation_zone_started_utc is None
+        and int(previous_state.last_hydrawise_active_count or 0) == 0
+        and not active_ids
+    )
+    eligible = (
+        stored_suspend_until is not None
+        and stored_plan_end is not None
+        and now_utc >= max(stored_suspend_until, stored_plan_end)
+        and set(suspended) == expected_relay_ids
+        and safety.get("available") is True
+        and safety.get("fresh") is True
+        and safety.get("clear_now") is True
+        and relay_allowlist_valid
+        and int(safety.get("active_zone_count") or 0) == 0
+        and int(safety.get("imminent_zone_count") or 0) == 0
+        and set(observations) == expected_relay_ids
+        and all(
+            observation.get("valid") is True
+            for observation in observations.values()
+        )
+        and live_schedule_is_later_or_absent
+        and hydrawise_clear_since is not None
+        and now_utc - hydrawise_clear_since
+        >= timedelta(minutes=confirmation_minutes)
+        and state.hydrawise_clear_origin == "DATA_GAP"
+        and no_start_evidence
+    )
+    return {
+        "eligible": eligible,
+        "stored_plan_end_utc": (
+            stored_plan_end.isoformat() if stored_plan_end is not None else None
+        ),
+        "suspend_until_utc": (
+            stored_suspend_until.isoformat()
+            if stored_suspend_until is not None
+            else None
+        ),
+        "hydrawise_clear_since_utc": (
+            hydrawise_clear_since.isoformat()
+            if hydrawise_clear_since is not None
+            else None
+        ),
+        "clear_origin": state.hydrawise_clear_origin,
+        "previous_active_zone_count": int(
+            previous_state.last_hydrawise_active_count or 0
+        ),
+        "completed_relay_ids": sorted(set(completed)),
+        "suspended_relay_ids": sorted(set(suspended)),
+        "has_zone_start_reservation": (
+            state.irrigation_zone_start_reserved_utc is not None
+        ),
+        "has_zone_start_observation": state.irrigation_zone_started_utc is not None,
+        "live_schedule_is_later_or_absent": live_schedule_is_later_or_absent,
+        "requires_fresh_clear_zones": True,
+        "requires_no_active_or_imminent_zone": True,
+        "requires_no_zone_start_record": True,
+        "confirmation_minutes": confirmation_minutes,
+    }
 
 
 def run_full_failsafe_cycle(
@@ -2844,6 +2953,81 @@ def run_full_failsafe_cycle(
             minimum=150,
             maximum=1440,
         )
+        expired_confirmation_minutes = _env_int(
+            environment,
+            "IRRIGATION_PLAN_CHANGE_CONFIRMATION_MINUTES",
+            2,
+            minimum=1,
+            maximum=10,
+        )
+        expired_unused_proof = _expired_unused_irrigation_proof(
+            state,
+            original,
+            details,
+            now_utc=now,
+            expected_relay_ids=expected_relay_ids,
+            relay_allowlist_valid=relay_allowlist_valid,
+            confirmation_minutes=expired_confirmation_minutes,
+        )
+        expired_lease_without_run = (
+            state.irrigation_failed_reason
+            == EXPIRED_IRRIGATION_PLAN_LEASE_FAILURE
+            and expired_unused_proof["eligible"] is True
+        )
+        if expired_lease_without_run:
+            fingerprint = _plan_change_fingerprint(
+                "FAILED_WINDOW_EXPIRED_WITHOUT_RUN",
+                {
+                    "plan_id": state.irrigation_plan_id,
+                    "stored_plan_end_utc": expired_unused_proof[
+                        "stored_plan_end_utc"
+                    ],
+                    "suspend_until_utc": expired_unused_proof[
+                        "suspend_until_utc"
+                    ],
+                },
+            )
+            candidate_state, confirmed = _candidate_confirmation(
+                state,
+                fingerprint=fingerprint,
+                now_utc=now,
+                required_minutes=expired_confirmation_minutes,
+            )
+            details["irrigation_expired_failed_gate"] = {
+                **expired_unused_proof,
+                "confirmed": confirmed,
+            }
+            if not confirmed:
+                return _persist_result(
+                    store=store,
+                    original=original,
+                    state=candidate_state,
+                    result=result,
+                    details=details,
+                    settings=settings,
+                    decision_code="IRRIGATION_EXPIRED_FAILED_CONFIRMING",
+                    message=(
+                        "Der ausgefallene Beregnungslauf wird nochmals mit "
+                        "allen sieben Hydrawise-Zonen abgeglichen."
+                    ),
+                )
+            cancelled = _cancel_irrigation_without_run(
+                candidate_state,
+                now_utc=now,
+            )
+            return _persist_result(
+                store=store,
+                original=original,
+                state=cancelled,
+                result=result,
+                details=details,
+                settings=settings,
+                decision_code="IRRIGATION_EXPIRED_FAILED_RELEASED",
+                message=(
+                    "Der ausgefallene Lauf hat nachweislich kein Wasser gestartet; "
+                    "die Beregnungssperre ist sicher beendet."
+                ),
+            )
         recoverable_external_plan_failure = (
             state.irrigation_failed_reason == RECOVERABLE_EXTERNAL_PLAN_FAILURE
             and mower.get("connected") is True
@@ -3234,95 +3418,44 @@ def run_full_failsafe_cycle(
                 command_sent=True,
             )
 
-        if (
-            state.irrigation_phase == "READY"
-            and not completed
-            and state.irrigation_current_relay_id is None
-            and state.irrigation_zone_start_reserved_utc is None
-            and state.irrigation_zone_started_utc is None
-            and not active_ids
-        ):
-            stored_suspend_until = _parse_time(
-                state.irrigation_suspension_until_utc
+        if state.irrigation_phase == "READY":
+            expired_confirmation_minutes = _env_int(
+                environment,
+                "IRRIGATION_PLAN_CHANGE_CONFIRMATION_MINUTES",
+                2,
+                minimum=1,
+                maximum=10,
             )
-            stored_plan_end = max(
-                (
-                    end
-                    for zone in zones
-                    if (end := _parse_time(zone.get("scheduled_end_utc")))
-                    is not None
-                ),
-                default=None,
+            expired_unused_proof = _expired_unused_irrigation_proof(
+                state,
+                original,
+                details,
+                now_utc=now,
+                expected_relay_ids=expected_relay_ids,
+                relay_allowlist_valid=relay_allowlist_valid,
+                confirmation_minutes=expired_confirmation_minutes,
             )
-            hydrawise_clear_since = _parse_time(
-                state.hydrawise_clear_since_utc
-            )
-            observations = _zone_observation_by_relay(details)
-            expired_without_run_proven = (
-                stored_suspend_until is not None
-                and stored_plan_end is not None
-                and now >= max(stored_suspend_until, stored_plan_end)
-                and hydra_safety.get("available") is True
-                and hydra_safety.get("fresh") is True
-                and hydra_safety.get("clear_now") is True
-                and relay_allowlist_valid
-                and int(hydra_safety.get("active_zone_count") or 0) == 0
-                and int(hydra_safety.get("imminent_zone_count") or 0) == 0
-                and set(observations) == expected_relay_ids
-                and all(
-                    observation.get("valid") is True
-                    for observation in observations.values()
-                )
-                and hydrawise_clear_since is not None
-                and now - hydrawise_clear_since
-                >= timedelta(minutes=confirmation_minutes)
-                and state.hydrawise_clear_origin == "DATA_GAP"
-                and int(original.last_hydrawise_active_count or 0) == 0
-            )
-            details["irrigation_expired_ready_gate"] = {
-                "eligible": expired_without_run_proven,
-                "stored_plan_end_utc": (
-                    stored_plan_end.isoformat()
-                    if stored_plan_end is not None
-                    else None
-                ),
-                "suspend_until_utc": (
-                    stored_suspend_until.isoformat()
-                    if stored_suspend_until is not None
-                    else None
-                ),
-                "hydrawise_clear_since_utc": (
-                    hydrawise_clear_since.isoformat()
-                    if hydrawise_clear_since is not None
-                    else None
-                ),
-                "requires_fresh_clear_zones": True,
-                "requires_no_active_or_imminent_zone": True,
-                "requires_no_zone_start_record": True,
-                "clear_origin": state.hydrawise_clear_origin,
-                "previous_active_zone_count": int(
-                    original.last_hydrawise_active_count or 0
-                ),
-            }
-            if expired_without_run_proven:
+            details["irrigation_expired_ready_gate"] = expired_unused_proof
+            if expired_unused_proof["eligible"] is True:
                 fingerprint = _plan_change_fingerprint(
                     "READY_WINDOW_EXPIRED_WITHOUT_RUN",
                     {
                         "plan_id": state.irrigation_plan_id,
-                        "stored_plan_end_utc": stored_plan_end.isoformat(),
-                        "suspend_until_utc": stored_suspend_until.isoformat(),
+                        "stored_plan_end_utc": expired_unused_proof[
+                            "stored_plan_end_utc"
+                        ],
+                        "suspend_until_utc": expired_unused_proof[
+                            "suspend_until_utc"
+                        ],
                     },
                 )
                 candidate_state, confirmed = _candidate_confirmation(
                     state,
                     fingerprint=fingerprint,
                     now_utc=now,
-                    required_minutes=confirmation_minutes,
+                    required_minutes=expired_confirmation_minutes,
                 )
                 details["irrigation_expired_ready_gate"]["confirmed"] = confirmed
-                details["irrigation_expired_ready_gate"][
-                    "confirmation_minutes"
-                ] = confirmation_minutes
                 if not confirmed:
                     return _persist_result(
                         store=store,
@@ -3929,8 +4062,7 @@ def run_full_failsafe_cycle(
                 if not suspension_proof_valid:
                     failed = _failed_irrigation(
                         state,
-                        "Der bestätigte Suspendierungsnachweis ist unvollständig, abgelaufen "
-                        "oder der ursprüngliche Beregnungsstart ist bereits erreicht.",
+                        EXPIRED_IRRIGATION_PLAN_LEASE_FAILURE,
                     )
                     details["irrigation_plan_lease"] = {
                         "valid": False,
