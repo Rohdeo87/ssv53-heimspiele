@@ -88,6 +88,74 @@ class AutomationStateTests(unittest.TestCase):
         self.assertIsNone(departed.park_confirmed_utc)
         self.assertEqual(departed.park_confirmed_observations, 0)
 
+    def test_pause_after_observed_dock_preserves_station_confirmation(self) -> None:
+        parked = AutomationState().record_command(
+            fingerprint="park-paused",
+            sent_utc=NOW - timedelta(minutes=2),
+            action="PARK",
+        )
+        first = parked.record_cycle(
+            started_utc=NOW,
+            success=True,
+            decision_code="PARKED",
+            mower_activity="PARKED_IN_CS",
+            mower_state="RESTRICTED",
+            error_code=0,
+        )
+        paused = first.record_cycle(
+            started_utc=NOW + timedelta(minutes=1),
+            success=True,
+            decision_code="PAUSED_IN_STATION",
+            mower_activity="NOT_APPLICABLE",
+            mower_state="PAUSED",
+            error_code=0,
+        )
+        still_paused = paused.record_cycle(
+            started_utc=NOW + timedelta(minutes=2),
+            success=True,
+            decision_code="PAUSED_IN_STATION",
+            mower_activity="NOT_APPLICABLE",
+            mower_state="PAUSED",
+            error_code=0,
+        )
+
+        self.assertEqual(paused.park_confirmed_utc, NOW.isoformat())
+        self.assertEqual(paused.park_confirmed_observations, 2)
+        self.assertEqual(still_paused.park_confirmed_observations, 3)
+
+    def test_pause_without_observed_dock_never_creates_station_confirmation(self) -> None:
+        paused = AutomationState(parked_by_automation=True).record_cycle(
+            started_utc=NOW,
+            success=True,
+            decision_code="PAUSED_UNKNOWN_POSITION",
+            mower_activity="NOT_APPLICABLE",
+            mower_state="PAUSED",
+            error_code=0,
+        )
+
+        self.assertIsNone(paused.park_confirmed_utc)
+        self.assertEqual(paused.park_confirmed_observations, 0)
+
+    def test_pause_with_error_invalidates_prior_station_confirmation(self) -> None:
+        confirmed = AutomationState(
+            parked_by_automation=True,
+            park_confirmed_utc=NOW.isoformat(),
+            park_confirmed_observations=2,
+            last_mower_activity="PARKED_IN_CS",
+            last_mower_state="RESTRICTED",
+        )
+        failed = confirmed.record_cycle(
+            started_utc=NOW + timedelta(minutes=1),
+            success=True,
+            decision_code="PAUSED_WITH_ERROR",
+            mower_activity="NOT_APPLICABLE",
+            mower_state="PAUSED",
+            error_code=93,
+        )
+
+        self.assertIsNone(failed.park_confirmed_utc)
+        self.assertEqual(failed.park_confirmed_observations, 0)
+
     def test_hydrawise_clear_confirmation_starts_at_poll_time(self) -> None:
         state = AutomationState().record_cycle(
             started_utc=NOW,

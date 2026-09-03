@@ -159,13 +159,22 @@ def _park_confirmation_ready(
     *,
     now_utc: datetime,
     activity: str,
+    mower_state: str,
     confirmation_minutes: int,
     required_observations: int,
 ) -> bool:
     confirmed = _parse_time(state.park_confirmed_utc)
+    normalized_activity = str(activity or "").strip().upper()
+    normalized_state = str(mower_state or "").strip().upper()
+    safe_station_status = normalized_activity in PARKED_ACTIVITIES or (
+        normalized_activity == "NOT_APPLICABLE"
+        and normalized_state == "PAUSED"
+        and confirmed is not None
+        and int(state.park_confirmed_observations or 0) >= required_observations
+    )
     return (
         state.parked_by_automation
-        and activity in PARKED_ACTIVITIES
+        and safe_station_status
         and confirmed is not None
         and now_utc - confirmed >= timedelta(minutes=confirmation_minutes)
         and int(state.park_confirmed_observations or 0) >= required_observations
@@ -1572,6 +1581,7 @@ def run_full_failsafe_cycle(
                     state,
                     now_utc=now,
                     activity=activity,
+                    mower_state=mower_state,
                     confirmation_minutes=1,
                     required_observations=required_park_observations,
                 )
@@ -3224,6 +3234,127 @@ def run_full_failsafe_cycle(
                 command_sent=True,
             )
 
+        if (
+            state.irrigation_phase == "READY"
+            and not completed
+            and state.irrigation_current_relay_id is None
+            and state.irrigation_zone_start_reserved_utc is None
+            and state.irrigation_zone_started_utc is None
+            and not active_ids
+        ):
+            stored_suspend_until = _parse_time(
+                state.irrigation_suspension_until_utc
+            )
+            stored_plan_end = max(
+                (
+                    end
+                    for zone in zones
+                    if (end := _parse_time(zone.get("scheduled_end_utc")))
+                    is not None
+                ),
+                default=None,
+            )
+            hydrawise_clear_since = _parse_time(
+                state.hydrawise_clear_since_utc
+            )
+            observations = _zone_observation_by_relay(details)
+            expired_without_run_proven = (
+                stored_suspend_until is not None
+                and stored_plan_end is not None
+                and now >= max(stored_suspend_until, stored_plan_end)
+                and hydra_safety.get("available") is True
+                and hydra_safety.get("fresh") is True
+                and hydra_safety.get("clear_now") is True
+                and relay_allowlist_valid
+                and int(hydra_safety.get("active_zone_count") or 0) == 0
+                and int(hydra_safety.get("imminent_zone_count") or 0) == 0
+                and set(observations) == expected_relay_ids
+                and all(
+                    observation.get("valid") is True
+                    for observation in observations.values()
+                )
+                and hydrawise_clear_since is not None
+                and now - hydrawise_clear_since
+                >= timedelta(minutes=confirmation_minutes)
+                and state.hydrawise_clear_origin == "DATA_GAP"
+                and int(original.last_hydrawise_active_count or 0) == 0
+            )
+            details["irrigation_expired_ready_gate"] = {
+                "eligible": expired_without_run_proven,
+                "stored_plan_end_utc": (
+                    stored_plan_end.isoformat()
+                    if stored_plan_end is not None
+                    else None
+                ),
+                "suspend_until_utc": (
+                    stored_suspend_until.isoformat()
+                    if stored_suspend_until is not None
+                    else None
+                ),
+                "hydrawise_clear_since_utc": (
+                    hydrawise_clear_since.isoformat()
+                    if hydrawise_clear_since is not None
+                    else None
+                ),
+                "requires_fresh_clear_zones": True,
+                "requires_no_active_or_imminent_zone": True,
+                "requires_no_zone_start_record": True,
+                "clear_origin": state.hydrawise_clear_origin,
+                "previous_active_zone_count": int(
+                    original.last_hydrawise_active_count or 0
+                ),
+            }
+            if expired_without_run_proven:
+                fingerprint = _plan_change_fingerprint(
+                    "READY_WINDOW_EXPIRED_WITHOUT_RUN",
+                    {
+                        "plan_id": state.irrigation_plan_id,
+                        "stored_plan_end_utc": stored_plan_end.isoformat(),
+                        "suspend_until_utc": stored_suspend_until.isoformat(),
+                    },
+                )
+                candidate_state, confirmed = _candidate_confirmation(
+                    state,
+                    fingerprint=fingerprint,
+                    now_utc=now,
+                    required_minutes=confirmation_minutes,
+                )
+                details["irrigation_expired_ready_gate"]["confirmed"] = confirmed
+                details["irrigation_expired_ready_gate"][
+                    "confirmation_minutes"
+                ] = confirmation_minutes
+                if not confirmed:
+                    return _persist_result(
+                        store=store,
+                        original=original,
+                        state=candidate_state,
+                        result=result,
+                        details=details,
+                        settings=settings,
+                        decision_code="IRRIGATION_EXPIRED_READY_CONFIRMING",
+                        message=(
+                            "Der verpasste Beregnungslauf wird vor der Freigabe "
+                            "nochmals mit Hydrawise abgeglichen."
+                        ),
+                    )
+                cancelled = _cancel_irrigation_without_run(
+                    candidate_state,
+                    now_utc=now,
+                )
+                return _persist_result(
+                    store=store,
+                    original=original,
+                    state=cancelled,
+                    result=result,
+                    details=details,
+                    settings=settings,
+                    decision_code="IRRIGATION_EXPIRED_READY_RELEASED",
+                    message=(
+                        "Der nicht gestartete Beregnungslauf ist sicher beendet; "
+                        "die freie Zeit kann wieder zum Mähen genutzt werden."
+                    ),
+                )
+
         if not state.parked_by_automation:
             return _persist_result(
                 store=store,
@@ -3241,6 +3372,7 @@ def run_full_failsafe_cycle(
                 state,
                 now_utc=now,
                 activity=activity,
+                mower_state=mower_state,
                 confirmation_minutes=confirmation_minutes,
                 required_observations=required_park_observations,
             )
@@ -4491,6 +4623,12 @@ def run_full_failsafe_cycle(
         )
 
     manual_lock = activity in MANUAL_ACTIVITIES or mower_state in MANUAL_STATES
+    confirmed_operator_paused_start = (
+        operator_action == "START_MOWING"
+        and mower_state == "PAUSED"
+        and activity == "NOT_APPLICABLE"
+        and (state.parked_by_automation or state.continuous_mowing_owned)
+    )
     park_override_is_ours = (
         state.parked_by_automation
         and override_action in PARK_OVERRIDE_ACTIONS
@@ -4508,7 +4646,7 @@ def run_full_failsafe_cycle(
         and not state.continuous_mowing_owned
     )
     if (
-        manual_lock
+        (manual_lock and not confirmed_operator_paused_start)
         or error_code != 0
         or mower_state in ERROR_STATES
         or (external_override and operator_action != "START_MOWING")
@@ -4602,6 +4740,7 @@ def run_full_failsafe_cycle(
         activity not in PARKED_ACTIVITIES
         and not turnaround_before_dock
         and not mowing_now
+        and not confirmed_operator_paused_start
     ):
         return _persist_result(
             store=store,

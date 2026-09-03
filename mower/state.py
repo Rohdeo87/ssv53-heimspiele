@@ -473,15 +473,40 @@ class AutomationState:
                 clear_origin = "DATA_GAP"
 
         parked_activity = str(mower_activity or "").strip().upper()
+        current_mower_state = str(mower_state or "").strip().upper()
         previous_parked_activity = str(self.last_mower_activity or "").strip().upper()
+        previous_mower_state = str(self.last_mower_state or "").strip().upper()
         park_confirmed = self.park_confirmed_utc
         park_observations = int(self.park_confirmed_observations or 0)
-        if self.parked_by_automation and parked_activity in {
-            "PARKED_IN_CS",
-            "CHARGING",
-        }:
+        parked_activities = {"PARKED_IN_CS", "CHARGING"}
+        paused_after_confirmed_dock = (
+            self.parked_by_automation
+            and parked_activity == "NOT_APPLICABLE"
+            and current_mower_state == "PAUSED"
+            and int(error_code or 0) == 0
+            and park_confirmed is not None
+            and park_observations > 0
+            and (
+                previous_parked_activity in parked_activities
+                or (
+                    previous_parked_activity == "NOT_APPLICABLE"
+                    and previous_mower_state == "PAUSED"
+                )
+            )
+        )
+        if self.parked_by_automation and (
+            parked_activity in parked_activities
+            or paused_after_confirmed_dock
+        ):
             continuity = (
-                previous_parked_activity in {"PARKED_IN_CS", "CHARGING"}
+                (
+                    previous_parked_activity in parked_activities
+                    or (
+                        previous_parked_activity == "NOT_APPLICABLE"
+                        and previous_mower_state == "PAUSED"
+                        and park_observations > 0
+                    )
+                )
                 and park_confirmed is not None
                 and park_observations > 0
             )

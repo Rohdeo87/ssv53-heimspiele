@@ -266,7 +266,11 @@ test("Pausierter Mäher wird auch im Gesamtzustand eindeutig angezeigt", () => {
   assert.equal(status.isMowerPaused(paused.mower), true);
   assert.equal(
     status.simpleStatus(paused),
-    "Der Mäher wurde pausiert. Die Automatik startet ihn deshalb nicht selbstständig. Die Schutzregeln bleiben aktiv."
+    "Der Mäher wurde pausiert. Er startet nicht automatisch. Über „Mäher starten“ kann der Platzwart ihn nach Sicherheitsprüfung wieder freigeben."
+  );
+  assert.equal(
+    status.simpleStatus({ ...paused, automation: { irrigationPhase: "READY" } }),
+    "Der Mäher ist pausiert. Die Beregnung wird noch sicher geprüft; ein Start ist erst danach möglich."
   );
   assert.match(html, /mowerPaused\?"Mäher pausiert"/);
   assert.match(html, /manualOutside\|\|mowerPaused\?"warn":"good"/);
@@ -357,10 +361,12 @@ test("heutige Platzbelegung wird als Heute mit Uhrzeit dargestellt", () => {
 
 test("Mäheraktionen sind für Fahren, Laden, Sperren und manuelle Bedienung eindeutig", () => {
   const searchingFunction = html.split("\n").find((line) => line.includes("function isSearching(m)"));
+  const pausedFunction = html.split("\n").find((line) => line.includes("function isMowerPaused(m)"));
   const actionsFunction = html.split("\n").find((line) => line.includes("function mowerActions(s)"));
   assert.ok(searchingFunction);
+  assert.ok(pausedFunction);
   assert.ok(actionsFunction);
-  const actions = new Function(`${searchingFunction}\n${actionsFunction}\nreturn mowerActions;`)();
+  const actions = new Function(`${searchingFunction}\n${pausedFunction}\n${actionsFunction}\nreturn mowerActions;`)();
   const safe = { available: true, fresh: true, clear_now: true };
 
   assert.deepEqual(
@@ -392,6 +398,17 @@ test("Mäheraktionen sind für Fahren, Laden, Sperren und manuelle Bedienung ein
   assert.equal(manual.showStart, true);
   assert.equal(manual.startLabel, "Mäher starten");
   assert.ok(manual.occupancyOverrideKey);
+
+  const pausedOwned = actions({ mower: { activity: "NOT_APPLICABLE", state: "PAUSED", connected: true, errorCode: 0 }, irrigation: { safety: safe }, automation: { parkedByAutomation: true }, occupancy: {} });
+  assert.equal(pausedOwned.showStart, true);
+  assert.equal(pausedOwned.startLabel, "Mäher starten");
+  assert.match(pausedOwned.startQuestion, /manuell pausiert/);
+
+  const pausedUnowned = actions({ mower: { activity: "NOT_APPLICABLE", state: "PAUSED", connected: true, errorCode: 0 }, irrigation: { safety: safe }, automation: {}, occupancy: {} });
+  assert.equal(pausedUnowned.showStart, false);
+
+  const pausedDuringIrrigation = actions({ mower: { activity: "NOT_APPLICABLE", state: "PAUSED", connected: true, errorCode: 0 }, irrigation: { safety: safe }, automation: { parkedByAutomation: true, irrigationPhase: "READY" }, occupancy: {} });
+  assert.equal(pausedDuringIrrigation.showStart, false);
 
   const irrigationBlock = actions({ mower: { activity: "PARKED_IN_CS", connected: true, errorCode: 0 }, irrigation: { safety: safe }, automation: {}, occupancy: { current: { title: "Mischblock", start: "a", end: "b", source: "training+irrigation" } } });
   assert.equal(irrigationBlock.showStart, false);
