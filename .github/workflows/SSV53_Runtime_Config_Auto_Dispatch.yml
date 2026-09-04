@@ -28,7 +28,7 @@ jobs:
 
     steps:
       - name: Runtime-Config-Workflow sicher starten
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           SOURCE_SHA: ${{ github.event_name == 'push' && github.sha || '' }}
         with:
