@@ -9,11 +9,12 @@ inhaltlich unvollständiger Abruf den letzten guten Stand nicht überschreibt.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import os
 import shutil
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -21,6 +22,8 @@ TRACKED_FIELDS: tuple[tuple[str, str], ...] = (
     ("kickoff", "Anstoß"),
     ("start", "Belegungsbeginn"),
     ("end", "Belegungsende"),
+    ("occupancyStart", "Sperrbeginn"),
+    ("occupancyEnd", "Sperrende"),
     ("calendar", "Platz"),
     ("place", "Platzschlüssel"),
     ("team", "Mannschaft"),
@@ -31,6 +34,15 @@ TRACKED_FIELDS: tuple[tuple[str, str], ...] = (
     ("competition", "Wettbewerb"),
     ("status", "Status"),
     ("detailLink", "Detail-Link"),
+)
+SAFETY_FIELDS = (
+    "kickoff",
+    "start",
+    "end",
+    "occupancyStart",
+    "occupancyEnd",
+    "calendar",
+    "place",
 )
 
 
@@ -155,6 +167,177 @@ def destructive_guard(
     return reasons
 
 
+def parse_datetime(value: Any) -> datetime | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        return None
+    return parsed.astimezone(timezone.utc)
+
+
+def occupancy_bounds(match: dict[str, Any]) -> tuple[datetime | None, datetime | None]:
+    start = parse_datetime(match.get("occupancyStart") or match.get("start"))
+    end = parse_datetime(match.get("occupancyEnd") or match.get("end"))
+    return start, end
+
+
+def is_active_or_future(match: dict[str, Any], now: datetime) -> bool:
+    _, end = occupancy_bounds(match)
+    # An unparseable external timestamp is never treated as permission to
+    # remove an existing safety block.
+    return end is None or end >= now.astimezone(timezone.utc)
+
+
+def safety_decreasing_changes(
+    changed: list[dict[str, Any]],
+    removed: list[dict[str, Any]],
+    *,
+    now: datetime,
+) -> list[dict[str, Any]]:
+    """Return changes that could free previously protected occupancy time."""
+    result: list[dict[str, Any]] = []
+    for old in removed:
+        if is_active_or_future(old, now):
+            result.append({
+                "kind": "removed",
+                "id": str(old.get("id") or ""),
+                "before": {field: old.get(field, "") for field in SAFETY_FIELDS},
+                "after": None,
+            })
+
+    for item in changed:
+        old = item["before"]
+        new = item["after"]
+        if not is_active_or_future(old, now):
+            continue
+        old_start, old_end = occupancy_bounds(old)
+        new_start, new_end = occupancy_bounds(new)
+        calendar_changed = (
+            str(old.get("calendar") or "") != str(new.get("calendar") or "")
+            or str(old.get("place") or "") != str(new.get("place") or "")
+        )
+        interval_no_longer_covers_old = (
+            old_start is None
+            or old_end is None
+            or new_start is None
+            or new_end is None
+            or new_start > old_start
+            or new_end < old_end
+        )
+        if calendar_changed or interval_no_longer_covers_old:
+            result.append({
+                "kind": "changed",
+                "id": str(item.get("id") or ""),
+                "before": {field: old.get(field, "") for field in SAFETY_FIELDS},
+                "after": {field: new.get(field, "") for field in SAFETY_FIELDS},
+            })
+    return sorted(result, key=lambda item: (item["id"], item["kind"]))
+
+
+def _empty_confirmation_state() -> dict[str, Any]:
+    return {
+        "schemaVersion": 1,
+        "pendingFingerprint": "",
+        "firstSeenAt": "",
+        "lastCountedAt": "",
+        "confirmations": 0,
+        "items": [],
+    }
+
+
+def load_confirmation_state(path: Path | None) -> dict[str, Any]:
+    if path is None or not path.exists():
+        return _empty_confirmation_state()
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return _empty_confirmation_state()
+    if not isinstance(value, dict):
+        return _empty_confirmation_state()
+    return {**_empty_confirmation_state(), **value}
+
+
+def write_confirmation_state(path: Path | None, state: dict[str, Any]) -> None:
+    if path is None:
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary.write_text(
+        json.dumps(state, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    temporary.replace(path)
+
+
+def confirm_safety_decrease(
+    items: list[dict[str, Any]],
+    *,
+    state_path: Path | None,
+    now: datetime,
+    required_confirmations: int,
+    minimum_interval: timedelta,
+) -> dict[str, Any]:
+    if not items:
+        write_confirmation_state(state_path, _empty_confirmation_state())
+        return {
+            "required": False,
+            "confirmed": True,
+            "confirmations": 0,
+            "requiredConfirmations": required_confirmations,
+            "fingerprint": "",
+            "items": [],
+        }
+
+    fingerprint = hashlib.sha256(
+        json.dumps(items, ensure_ascii=False, sort_keys=True).encode("utf-8")
+    ).hexdigest()
+    previous = load_confirmation_state(state_path)
+    now_utc = now.astimezone(timezone.utc)
+    confirmations = 1
+    first_seen = now_utc
+    last_counted = now_utc
+
+    if previous.get("pendingFingerprint") == fingerprint:
+        confirmations = max(int(previous.get("confirmations") or 0), 1)
+        first_seen = parse_datetime(previous.get("firstSeenAt")) or now_utc
+        last_counted = parse_datetime(previous.get("lastCountedAt")) or first_seen
+        if now_utc - last_counted >= minimum_interval:
+            confirmations += 1
+            last_counted = now_utc
+
+    confirmed = confirmations >= required_confirmations
+    if confirmed:
+        state = {
+            **_empty_confirmation_state(),
+            "lastConfirmedFingerprint": fingerprint,
+            "lastConfirmedAt": now_utc.isoformat(timespec="seconds"),
+        }
+    else:
+        state = {
+            "schemaVersion": 1,
+            "pendingFingerprint": fingerprint,
+            "firstSeenAt": first_seen.isoformat(timespec="seconds"),
+            "lastCountedAt": last_counted.isoformat(timespec="seconds"),
+            "confirmations": confirmations,
+            "items": items,
+        }
+    write_confirmation_state(state_path, state)
+    return {
+        "required": True,
+        "confirmed": confirmed,
+        "confirmations": confirmations,
+        "requiredConfirmations": required_confirmations,
+        "minimumIntervalMinutes": int(minimum_interval.total_seconds() // 60),
+        "fingerprint": fingerprint,
+        "items": items,
+    }
+
+
 def markdown_report(report: dict[str, Any], *, max_items: int = 50) -> str:
     counts = report["counts"]
     status = report["status"]
@@ -188,10 +371,19 @@ def markdown_report(report: dict[str, Any], *, max_items: int = 50) -> str:
         for reason in guard["reasons"]:
             lines.append(f"- {reason}")
         if status == "blocked":
-            lines.append(
-                "- Der bisher veröffentlichte Stand bleibt unverändert. "
-                "Eine Übernahme ist nur über einen manuell gestarteten Lauf mit ausdrücklicher Freigabe möglich."
-            )
+            safety = guard.get("safetyConfirmation", {})
+            if safety.get("required") and not safety.get("confirmed"):
+                lines.append(
+                    "- Der bisher veröffentlichte Stand bleibt unverändert. "
+                    "Eine identische Beobachtung nach dem Sicherheitsabstand kann "
+                    "die Einzeländerung automatisch bestätigen."
+                )
+            else:
+                lines.append(
+                    "- Der bisher veröffentlichte Stand bleibt unverändert. "
+                    "Die ungewöhnlich große Änderung benötigt eine ausdrückliche "
+                    "manuelle Freigabe."
+                )
         lines.append("")
 
     def add_match_section(title: str, items: list[dict[str, Any]], kind: str) -> None:
@@ -204,7 +396,9 @@ def markdown_report(report: dict[str, Any], *, max_items: int = 50) -> str:
                 for change in item["changes"]:
                     before_value = change["before"]
                     after_value = change["after"]
-                    if change["field"] in {"kickoff", "start", "end"}:
+                    if change["field"] in {
+                        "kickoff", "start", "end", "occupancyStart", "occupancyEnd"
+                    }:
                         before_value = display_datetime(before_value)
                         after_value = display_datetime(after_value)
                     lines.append(
@@ -255,10 +449,17 @@ def main() -> int:
     parser.add_argument("--max-removal-ratio", type=float, default=0.60)
     parser.add_argument("--min-previous-for-ratio", type=int, default=10)
     parser.add_argument("--min-removed-for-ratio", type=int, default=5)
+    parser.add_argument("--confirmation-state", type=Path)
+    parser.add_argument("--required-confirmations", type=int, default=2)
+    parser.add_argument("--minimum-confirmation-minutes", type=int, default=60)
     args = parser.parse_args()
 
     if not 0.0 <= args.max_removal_ratio <= 1.0:
         parser.error("--max-removal-ratio muss zwischen 0 und 1 liegen")
+    if args.required_confirmations < 2:
+        parser.error("--required-confirmations muss mindestens 2 sein")
+    if args.minimum_confirmation_minutes < 1:
+        parser.error("--minimum-confirmation-minutes muss mindestens 1 sein")
 
     try:
         before_feed = load_feed(args.before, missing_ok=True)
@@ -269,6 +470,7 @@ def main() -> int:
     except ValueError as exc:
         parser.error(str(exc))
 
+    generated_at = datetime.now(timezone.utc)
     guard_reasons = destructive_guard(
         before_count=len(before),
         after_count=len(after),
@@ -277,6 +479,20 @@ def main() -> int:
         min_previous_for_ratio=args.min_previous_for_ratio,
         min_removed_for_ratio=args.min_removed_for_ratio,
     )
+    risky_changes = safety_decreasing_changes(changed, removed, now=generated_at)
+    safety_confirmation = confirm_safety_decrease(
+        risky_changes,
+        state_path=args.confirmation_state,
+        now=generated_at,
+        required_confirmations=args.required_confirmations,
+        minimum_interval=timedelta(minutes=args.minimum_confirmation_minutes),
+    )
+    if safety_confirmation["required"] and not safety_confirmation["confirmed"]:
+        guard_reasons.append(
+            f"{len(risky_changes)} sicherheitsrelevante Änderung(en) würden bisherige "
+            "Sperrzeit freigeben. Erforderlich sind zwei identische, zeitlich "
+            "getrennte Abrufe."
+        )
 
     if not args.before.exists():
         status = "baseline"
@@ -289,7 +505,7 @@ def main() -> int:
 
     report: dict[str, Any] = {
         "schemaVersion": 1,
-        "generatedAt": utc_now_iso(),
+        "generatedAt": generated_at.isoformat(timespec="seconds"),
         "status": status,
         "counts": {
             "before": len(before),
@@ -303,6 +519,7 @@ def main() -> int:
             "overrideUsed": bool(guard_reasons and args.allow_destructive),
             "maxRemovalRatio": args.max_removal_ratio,
             "reasons": guard_reasons,
+            "safetyConfirmation": safety_confirmation,
         },
         "added": added,
         "changed": changed,

@@ -24,7 +24,7 @@ from zoneinfo import ZoneInfo
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import Any, Callable, Iterable
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlsplit
 
 import requests
 from bs4 import BeautifulSoup, Tag
@@ -52,7 +52,34 @@ STATUS_TERMS = (
     "Abbruch",
     "vorläufiges Spiel",
 )
+NON_OCCUPANCY_STATUS_TERMS = (
+    "Absetzung",
+    "Spielabsetzung",
+    "Ausfall",
+    "Spielausfall",
+    "Nichtantritt HEIM",
+    "Nichtantritt GAST",
+    "Nichtantritt BEIDE",
+    "Annullierung",
+    "Annuliert",
+)
 MATCH_ROW_CLASSES = {"row-competition", "row-festival", "row-tournament"}
+ALLOWED_SOURCE_HOST = "www.fussball.de"
+MAX_SOURCE_FIELD_LENGTHS: dict[str, int] = {
+    "external_id": 128,
+    "match_number": 32,
+    "team_id": 128,
+    "team_name": 200,
+    "team_category": 200,
+    "home_team": 200,
+    "away_team": 200,
+    "competition": 300,
+    "match_type": 32,
+    "status": 80,
+    "venue_raw": 500,
+    "detail_url": 2048,
+    "source_url": 2048,
+}
 
 
 class ScrapeError(RuntimeError):
@@ -119,11 +146,57 @@ class Match:
     postponed_to: str = ""
 
 
+def validate_fussball_url(url: str) -> str:
+    """Accept only the intended HTTPS origin, including redirected URLs.
+
+    Source HTML is untrusted.  In particular, an absolute ``/spiel/`` link
+    must never turn the GitHub runner into a client for an arbitrary host.
+    """
+    raw = str(url or "").strip()
+    try:
+        parsed = urlsplit(raw)
+        port = parsed.port
+    except ValueError as exc:
+        raise ScrapeError(f"Ungültige FUSSBALL.DE-Adresse: {raw!r}") from exc
+    if (
+        parsed.scheme.casefold() != "https"
+        or (parsed.hostname or "").casefold() != ALLOWED_SOURCE_HOST
+        or parsed.username is not None
+        or parsed.password is not None
+        or port not in (None, 443)
+        or bool(parsed.fragment)
+    ):
+        raise ScrapeError(
+            "Externe oder unsichere Adresse im Spielplan abgelehnt: " + raw
+        )
+    return raw
+
+
+def validate_match_source_fields(match: Match) -> None:
+    """Reject implausibly large upstream fields instead of truncating them."""
+    for field_name, maximum in MAX_SOURCE_FIELD_LENGTHS.items():
+        value = str(getattr(match, field_name, "") or "")
+        if len(value) > maximum:
+            raise ScrapeError(
+                f"Quelldatenfeld {field_name} überschreitet {maximum} Zeichen"
+            )
+
+
+def is_non_occupancy_status(status: str) -> bool:
+    normalized = normalize_match_text(status)
+    return normalized in {
+        normalize_match_text(value) for value in NON_OCCUPANCY_STATUS_TERMS
+    }
+
+
 class Client:
     """Zurückhaltender HTTP-Client mit fest eingebauten Schutzgrenzen."""
 
     ABSOLUTE_MAX_REQUESTS = 10
     ABSOLUTE_MAX_RETRIES = 1
+    ABSOLUTE_MAX_REDIRECTS = 2
+    ABSOLUTE_MAX_RESPONSE_BYTES = 4 * 1024 * 1024
+    DEFAULT_MAX_RESPONSE_BYTES = 2 * 1024 * 1024
     MIN_DELAY_SECONDS = 3.0
     DEFAULT_RATE_LIMIT_BLOCK_SECONDS = 6 * 60 * 60
     RETRYABLE_STATUS_CODES = {502, 503, 504}
@@ -163,6 +236,21 @@ class Client:
         )
         self.max_requests = min(
             max(configured_limit, 1), self.ABSOLUTE_MAX_REQUESTS
+        )
+        self.max_redirects = min(
+            max(int(request_cfg.get("max_redirects", 2)), 0),
+            self.ABSOLUTE_MAX_REDIRECTS,
+        )
+        self.max_response_bytes = min(
+            max(
+                int(
+                    request_cfg.get(
+                        "max_response_bytes", self.DEFAULT_MAX_RESPONSE_BYTES
+                    )
+                ),
+                1024,
+            ),
+            self.ABSOLUTE_MAX_RESPONSE_BYTES,
         )
         self.state_path = state_path
         self.state = self._load_state()
@@ -394,41 +482,109 @@ class Client:
             return
         time.sleep(5.0)
 
+    def _request_without_unsafe_redirects(
+        self, url: str
+    ) -> tuple[requests.Response, str]:
+        current_url = validate_fussball_url(url)
+        for redirect_count in range(self.max_redirects + 1):
+            self._reserve_request()
+            self._throttle()
+            response = self.session.get(
+                current_url,
+                timeout=self.timeout,
+                allow_redirects=False,
+                stream=True,
+            )
+            self._last_request = time.monotonic()
+            self._record_http_status(response.status_code)
+
+            response_url = str(getattr(response, "url", "") or current_url)
+            validate_fussball_url(response_url)
+            if response.status_code not in {301, 302, 303, 307, 308}:
+                return response, current_url
+
+            location = str(response.headers.get("Location") or "").strip()
+            if not location:
+                raise ScrapeError(
+                    f"Weiterleitung ohne Zieladresse bei {current_url}"
+                )
+            if redirect_count >= self.max_redirects:
+                raise ScrapeError(
+                    f"Zu viele Weiterleitungen beim Abruf von {url}"
+                )
+            current_url = validate_fussball_url(urljoin(current_url, location))
+        raise ScrapeError(f"Zu viele Weiterleitungen beim Abruf von {url}")
+
+    def _read_limited_html(self, response: requests.Response, url: str) -> str:
+        content_type = str(response.headers.get("Content-Type") or "").casefold()
+        if content_type and not any(
+            allowed in content_type
+            for allowed in ("text/html", "application/xhtml+xml")
+        ):
+            raise ScrapeError(
+                f"Unerwarteter Inhaltstyp bei {url}: {content_type}"
+            )
+
+        raw_length = str(response.headers.get("Content-Length") or "").strip()
+        if raw_length.isdigit() and int(raw_length) > self.max_response_bytes:
+            raise ScrapeError(
+                f"Antwort von {url} ist größer als die erlaubten "
+                f"{self.max_response_bytes} Bytes"
+            )
+
+        buffered = getattr(response, "_content", False)
+        if isinstance(buffered, (bytes, bytearray)):
+            payload = bytes(buffered)
+            if len(payload) > self.max_response_bytes:
+                raise ScrapeError(
+                    f"Antwort von {url} überschreitet die erlaubten "
+                    f"{self.max_response_bytes} Bytes"
+                )
+        else:
+            chunks: list[bytes] = []
+            total = 0
+            for chunk in response.iter_content(chunk_size=64 * 1024):
+                if not chunk:
+                    continue
+                total += len(chunk)
+                if total > self.max_response_bytes:
+                    raise ScrapeError(
+                        f"Antwort von {url} überschreitet die erlaubten "
+                        f"{self.max_response_bytes} Bytes"
+                    )
+                chunks.append(chunk)
+            payload = b"".join(chunks)
+        response._content = payload
+        response._content_consumed = True
+        encoding = response.encoding or "utf-8"
+        return payload.decode(encoding, errors="replace")
+
     def get_text(self, url: str) -> str:
         """Maximal ein Retry, ausschließlich bei Timeout oder 502/503/504."""
+        validated_url = validate_fussball_url(url)
         last_error: Exception | None = None
         attempts = self.max_retries + 1
 
         for attempt in range(attempts):
             response: requests.Response | None = None
             try:
-                self._reserve_request()
-                self._throttle()
-                response = self.session.get(url, timeout=self.timeout)
-                self._last_request = time.monotonic()
-                self._record_http_status(response.status_code)
+                response, final_url = self._request_without_unsafe_redirects(
+                    validated_url
+                )
 
                 if response.status_code == 429:
-                    self._handle_rate_limit(response, url)
+                    self._handle_rate_limit(response, final_url)
 
                 if response.status_code in self.SECURITY_STATUS_CODES:
                     self._activate_security_lock(
                         reason=f"HTTP {response.status_code}",
-                        url=url,
-                        status_code=response.status_code,
-                    )
-
-                challenge_reason = self._detect_challenge(response)
-                if challenge_reason:
-                    self._activate_security_lock(
-                        reason=challenge_reason,
-                        url=url,
+                        url=final_url,
                         status_code=response.status_code,
                     )
 
                 if response.status_code in self.RETRYABLE_STATUS_CODES:
                     last_error = ScrapeError(
-                        f"Vorübergehender HTTP-Fehler {response.status_code} bei {url}"
+                        f"Vorübergehender HTTP-Fehler {response.status_code} bei {final_url}"
                     )
                     if attempt + 1 < attempts:
                         self._wait_before_retry(response)
@@ -439,12 +595,20 @@ class Client:
                     # 403/406 wurden bereits global gesperrt; andere 4xx
                     # werden ebenfalls niemals wiederholt.
                     raise ScrapeError(
-                        f"Nicht wiederholbarer HTTP-Fehler {response.status_code} bei {url}"
+                        f"Nicht wiederholbarer HTTP-Fehler {response.status_code} bei {final_url}"
                     )
 
-                if not response.text.strip():
-                    raise ScrapeError(f"Leere Antwort von {url}")
-                return response.text
+                text = self._read_limited_html(response, final_url)
+                challenge_reason = self._detect_challenge(response)
+                if challenge_reason:
+                    self._activate_security_lock(
+                        reason=challenge_reason,
+                        url=final_url,
+                        status_code=response.status_code,
+                    )
+                if not text.strip():
+                    raise ScrapeError(f"Leere Antwort von {final_url}")
+                return text
 
             except requests.Timeout as exc:
                 last_error = exc
@@ -828,7 +992,10 @@ def team_id_for_club_element(element: Tag | None) -> str:
     link = element if element.name == "a" else element.find_parent("a") or element.find("a")
     if not isinstance(link, Tag):
         return ""
-    return extract_team_id(urljoin(BASE_URL, str(link.get("href") or "")))
+    href = str(link.get("href") or "").strip()
+    if not href:
+        return ""
+    return extract_team_id(validate_fussball_url(urljoin(BASE_URL, href)))
 
 
 def determine_club_team(
@@ -1514,12 +1681,14 @@ def parse_club_matchplan(
         for link in links:
             href = str(link.get("href") or "")
             if href:
-                detail_url = urljoin(BASE_URL, href)
+                detail_url = validate_fussball_url(urljoin(BASE_URL, href))
                 break
 
         if not detail_url and is_festival:
             for link in select_from_rows(rows, 'a[href*="/staffel/"]'):
-                candidate = urljoin(BASE_URL, str(link.get("href") or ""))
+                candidate = validate_fussball_url(
+                    urljoin(BASE_URL, str(link.get("href") or ""))
+                )
                 if extract_festival_group_id(candidate):
                     detail_url = candidate
                     break
@@ -1577,6 +1746,7 @@ def parse_club_matchplan(
                 recalculate_event_times(match, config)
             except MatchTimingError as exc:
                 match.warnings.append(str(exc))
+        validate_match_source_fields(match)
         matches.append(match)
 
     source_ids = source_detail_ids(soup)
@@ -1655,7 +1825,20 @@ def apply_venue_rules(
     default_decision: str,
     local_venue_pattern: str = "",
 ) -> None:
-    if "spielfrei" in normalize_match_text(match.home_team + " " + match.away_team):
+    if is_non_occupancy_status(match.status):
+        match.decision = "exclude"
+        match.calendar = ""
+        match.venue_rule = f"Nicht stattfindend: {match.status}"
+        match.warnings = [
+            warning
+            for warning in match.warnings
+            if warning
+            not in {
+                "Spielstätte fehlt",
+                "Keine automatische Platzzuordnung möglich",
+            }
+        ]
+    elif "spielfrei" in normalize_match_text(match.home_team + " " + match.away_team):
         match.decision = "exclude"
         match.calendar = ""
         match.venue_rule = "Spielfrei"

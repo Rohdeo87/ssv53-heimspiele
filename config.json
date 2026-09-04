@@ -111,6 +111,8 @@
     "delay_seconds": 3.0,
     "jitter_seconds": 1.0,
     "max_requests_per_run": 10,
+    "max_redirects": 2,
+    "max_response_bytes": 2097152,
     "max_rows_per_response": 50,
     "club_matchplan_endpoint_template": "https://www.fussball.de/ajax.club.matchplan/-/id/{club_id}/mode/PAGE/show-filter/false/show-venues/true/mime-type/HTML/datum-von/{date_from}/datum-bis/{date_to}/max/{max_rows}",
     "user_agent": "SSV53-Belegungsplan-PoC/12.3 (+https://www.ssv53.de; mailto:thomas.rohde@ssv53.de)"

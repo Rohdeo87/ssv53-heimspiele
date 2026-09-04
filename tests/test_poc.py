@@ -29,6 +29,7 @@ from poc_scraper import (
     parse_detail_page_reference,
     run,
     split_window,
+    validate_fussball_url,
 )
 
 
@@ -71,6 +72,13 @@ class ClubParserTest(unittest.TestCase):
         self.assertEqual(5, len(matches))
         self.assertIn("Schönwalder SV 53 I", {m.team_name for m in matches})
         self.assertIn("Spielgemeinschaft Schönwalde-Perwenitz-Paaren", {m.team_name for m in matches})
+
+    def test_external_match_link_in_source_html_is_rejected(self):
+        fixture = self.fixture().replace(
+            'href="/spiel/', 'href="https://evil.example/spiel/', 1
+        )
+        with self.assertRaisesRegex(ScrapeError, "unsichere Adresse"):
+            parse_club_matchplan(fixture, "fixture://hostile-link", config())
 
     def test_new_team_id_and_category_are_extracted(self):
         matches = parse_club_matchplan(self.fixture(), "fixture://club", config())
@@ -132,6 +140,55 @@ class ClubParserTest(unittest.TestCase):
         apply_venue_rules(item, rules(), "exclude", config()["local_venue_pattern"])
         self.assertEqual("review", item.decision)
         self.assertEqual("Spielstätte fehlt", item.venue_rule)
+
+    def test_new_cancelled_home_game_without_venue_is_safely_excluded(self):
+        item = Match(
+            external_id="CANCELLED-HOME-WITHOUT-VENUE",
+            match_number="610090008",
+            team_id="TEAM-UE50",
+            team_name="SpG Perwenitz/Schönwalde Ü50",
+            team_category="Herren Ü50 | Kreisliga",
+            team_role="home",
+            kickoff="2026-09-04T20:00+02:00",
+            home_team="SpG Perwenitz/Schönwalde Ü50",
+            away_team="SV Grün-Weiss Brieselang Ü50",
+            competition="Herren Ü50 | Kreisliga",
+            match_type="ME",
+            status="Absetzung",
+            venue_raw="",
+            detail_url=(
+                "https://www.fussball.de/spiel/example/-/spiel/"
+                "CANCELLED-HOME-WITHOUT-VENUE"
+            ),
+            source_url="fixture://club",
+            warnings=["Spielstätte fehlt"],
+        )
+        apply_venue_rules(item, rules(), "exclude", config()["local_venue_pattern"])
+        self.assertEqual("exclude", item.decision)
+        self.assertEqual("", item.calendar)
+        self.assertEqual("Nicht stattfindend: Absetzung", item.venue_rule)
+        self.assertNotIn("Spielstätte fehlt", item.warnings)
+
+    def test_cancelled_game_with_local_venue_does_not_create_occupancy(self):
+        item = Match(
+            external_id="CANCELLED-LOCAL",
+            match_number="610090009",
+            team_id="TEAM-A",
+            team_name="Schönwalder SV",
+            team_category="A-Junioren",
+            team_role="home",
+            kickoff="2026-09-05T12:00+02:00",
+            home_team="Schönwalder SV",
+            away_team="Gastverein",
+            competition="A-Junioren",
+            match_type="ME",
+            status="Spielausfall",
+            venue_raw="Sportplatz Schönwalde Strandbad, Platz 1",
+            detail_url="https://www.fussball.de/spiel/example/-/spiel/CANCELLED-LOCAL",
+            source_url="fixture://club",
+        )
+        apply_venue_rules(item, rules(), "exclude", config()["local_venue_pattern"])
+        self.assertEqual(("exclude", ""), (item.decision, item.calendar))
 
     def test_venue_rules_include_both_local_pitches_and_exclude_deetz(self):
         matches = parse_club_matchplan(self.fixture(), "fixture://club", config())
@@ -418,10 +475,82 @@ class RequestProtectionTest(unittest.TestCase):
         return client
 
     def test_hard_safety_limits_cannot_be_raised_by_config(self):
-        client = self.make_client(client_config(max_retries=99, max_requests_per_run=999, delay_seconds=0))
+        client = self.make_client(client_config(
+            max_retries=99,
+            max_requests_per_run=999,
+            delay_seconds=0,
+            max_redirects=99,
+            max_response_bytes=99_999_999,
+        ))
         self.assertEqual(1, client.max_retries)
         self.assertEqual(10, client.max_requests)
+        self.assertEqual(2, client.max_redirects)
+        self.assertEqual(4 * 1024 * 1024, client.max_response_bytes)
         self.assertGreaterEqual(client.delay, 3.0)
+
+    def test_only_exact_fussball_https_origin_is_allowed(self):
+        self.assertEqual(
+            "https://www.fussball.de/spiel/test",
+            validate_fussball_url("https://www.fussball.de/spiel/test"),
+        )
+        for url in (
+            "http://www.fussball.de/spiel/test",
+            "https://evil.example/spiel/test",
+            "https://www.fussball.de.evil.example/spiel/test",
+            "https://www.fussball.de@evil.example/spiel/test",
+            "https://www.fussball.de:444/spiel/test",
+            "https://www.fussball.de/spiel/test#fragment",
+        ):
+            with self.subTest(url=url), self.assertRaises(ScrapeError):
+                validate_fussball_url(url)
+
+    def test_external_url_is_rejected_before_network_request(self):
+        client = self.make_client()
+        client.session = Mock()
+        with self.assertRaises(ScrapeError):
+            client.get_text("https://evil.example/spiel/test")
+        client.session.get.assert_not_called()
+
+    def test_external_redirect_is_rejected_without_following_it(self):
+        client = self.make_client()
+        client.session = Mock()
+        client.session.get.return_value = response(
+            302, "", {"Location": "https://evil.example/spiel/test"}
+        )
+        with self.assertRaises(ScrapeError):
+            client.get_text("https://www.fussball.de/spiel/test")
+        self.assertEqual(1, client.session.get.call_count)
+
+    def test_same_origin_redirect_is_followed_within_hard_limit(self):
+        client = self.make_client()
+        client.session = Mock()
+        client.session.get.side_effect = [
+            response(302, "", {"Location": "/spiel/final"}),
+            response(200, "club-matchplan-table", {"Content-Type": "text/html"}),
+        ]
+        result = client.get_text("https://www.fussball.de/spiel/test")
+        self.assertIn("club-matchplan-table", result)
+        self.assertEqual(2, client.session.get.call_count)
+
+    def test_oversized_response_is_rejected(self):
+        client = self.make_client(client_config(max_response_bytes=1024))
+        client.session = Mock()
+        client.session.get.return_value = response(
+            200,
+            "x" * 1025,
+            {"Content-Type": "text/html", "Content-Length": "1025"},
+        )
+        with self.assertRaisesRegex(ScrapeError, "größer als"):
+            client.get_text("https://www.fussball.de/spiel/test")
+
+    def test_unexpected_content_type_is_rejected(self):
+        client = self.make_client()
+        client.session = Mock()
+        client.session.get.return_value = response(
+            200, '{"not":"html"}', {"Content-Type": "application/json"}
+        )
+        with self.assertRaisesRegex(ScrapeError, "Inhaltstyp"):
+            client.get_text("https://www.fussball.de/spiel/test")
 
     def test_403_sets_permanent_global_security_lock(self):
         with tempfile.TemporaryDirectory() as folder:

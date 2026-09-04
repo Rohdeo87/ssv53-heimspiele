@@ -47,7 +47,7 @@ jobs:
 
     steps:
       - name: Dateien laden
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
 
@@ -60,7 +60,7 @@ jobs:
           git reset --hard "origin/${{ github.event.repository.default_branch }}"
 
       - name: Python einrichten
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: "3.12"
           cache: "pip"
@@ -153,6 +153,9 @@ jobs:
             --json generated/change_report.json
             --markdown generated/change_report.md
             --public-json public/change_report.json
+            --confirmation-state state/change_guard_state.json
+            --required-confirmations 2
+            --minimum-confirmation-minutes 60
           )
           if [ "$ALLOW_DESTRUCTIVE_CHANGE" = "true" ]; then
             ARGS+=(--allow-destructive)
@@ -175,7 +178,7 @@ jobs:
 
       - name: Diagnoseergebnis bereitstellen
         if: ${{ always() && steps.timing_confirm.outputs.should_run == 'true' }}
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: dfbnet-diagnose-${{ github.run_number }}
           path: generated
@@ -192,6 +195,9 @@ jobs:
           TEMP_DIR="$(mktemp -d)"
           mkdir -p "$TEMP_DIR/state"
           cp state/request_state.json "$TEMP_DIR/state/request_state.json"
+          if [ -f state/change_guard_state.json ]; then
+            cp state/change_guard_state.json "$TEMP_DIR/state/change_guard_state.json"
+          fi
 
           SAVE_PUBLIC=false
           SAVE_REGISTRY=false
@@ -213,6 +219,11 @@ jobs:
           mkdir -p state
           cp "$TEMP_DIR/state/request_state.json" state/request_state.json
           git add state/request_state.json
+
+          if [ -f "$TEMP_DIR/state/change_guard_state.json" ]; then
+            cp "$TEMP_DIR/state/change_guard_state.json" state/change_guard_state.json
+            git add state/change_guard_state.json
+          fi
 
           if [ "$SAVE_REGISTRY" = "true" ]; then
             cp "$TEMP_DIR/state/team_registry.json" state/team_registry.json
