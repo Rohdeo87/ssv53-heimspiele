@@ -1696,6 +1696,84 @@ class FullFailsafeTests(unittest.TestCase):
                 )
                 self.assertEqual(calls, [])
 
+    def test_started_zone_tracking_continues_with_unchanged_park_event_timestamp(self) -> None:
+        cases = (
+            ("START_RESERVED", "IRRIGATION_ZONE_CONFIRMED_RUNNING"),
+            ("RUNNING", "IRRIGATION_ZONE_RUNNING"),
+        )
+        for phase, expected_decision in cases:
+            with self.subTest(phase=phase):
+                state = irrigation_state(phase=phase, current=RELAYS[0])
+                cycle = result(
+                    block_source="irrigation",
+                    active_ids=[RELAYS[0]],
+                    clear=False,
+                )
+                cycle.details["mower"]["status_timestamp_ms"] = int(
+                    (NOW - timedelta(minutes=10)).timestamp() * 1000
+                )
+                store = InMemoryStateStore(state)
+
+                output = run_full_failsafe_cycle(
+                    now_utc=NOW,
+                    settings=settings(),
+                    environment=ENV,
+                    past_due=False,
+                    source="test",
+                    read_only_runner=lambda **_: cycle,
+                    state_store_factory=lambda _env: store,
+                    park_sender=lambda *_: {"accepted": True},
+                    start_sender=lambda *_: {"accepted": True},
+                    suspend_zone_sender=lambda *_: {"message_type": "info"},
+                    start_zone_sender=lambda *_: {"message_type": "info"},
+                )
+
+                self.assertEqual(output.decision_code, expected_decision)
+                self.assertNotEqual(
+                    output.decision_code,
+                    "IRRIGATION_WAIT_FOR_CONFIRMED_PARK",
+                )
+
+    def test_zone_end_is_recorded_with_unchanged_park_event_timestamp(self) -> None:
+        state = irrigation_state(phase="RUNNING", current=RELAYS[0])
+        state = AutomationState.from_mapping(
+            {
+                **state.to_dict(),
+                "irrigation_zone_started_utc": (
+                    NOW - timedelta(minutes=25)
+                ).isoformat(),
+                "irrigation_zone_clear_since_utc": (
+                    NOW - timedelta(minutes=3)
+                ).isoformat(),
+            }
+        )
+        cycle = result(block_source="irrigation")
+        cycle.details["mower"]["status_timestamp_ms"] = int(
+            (NOW - timedelta(minutes=10)).timestamp() * 1000
+        )
+        store = InMemoryStateStore(state)
+
+        output = run_full_failsafe_cycle(
+            now_utc=NOW,
+            settings=settings(),
+            environment=ENV,
+            past_due=False,
+            source="test",
+            read_only_runner=lambda **_: cycle,
+            state_store_factory=lambda _env: store,
+            park_sender=lambda *_: {"accepted": True},
+            start_sender=lambda *_: {"accepted": True},
+            suspend_zone_sender=lambda *_: {"message_type": "info"},
+            start_zone_sender=lambda *_: {"message_type": "info"},
+        )
+
+        self.assertEqual(output.decision_code, "IRRIGATION_ZONE_CONFIRMED_COMPLETE")
+        self.assertEqual(store.load().irrigation_phase, "READY")
+        self.assertEqual(
+            json.loads(store.load().irrigation_completed_relay_ids_json),
+            [RELAYS[0]],
+        )
+
     def test_water_start_requires_two_distinct_parked_cycles(self) -> None:
         initial = irrigation_state(phase="READY")
         initial = AutomationState.from_mapping(

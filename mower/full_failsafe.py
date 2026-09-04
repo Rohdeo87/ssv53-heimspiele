@@ -3633,6 +3633,22 @@ def run_full_failsafe_cycle(
                 message="Beregnung wartet zunächst auf den eigenen sicheren Parkbefehl.",
             )
 
+        # ``status_timestamp_ms`` is Husqvarnas Zeitpunkt der letzten
+        # Zustandsaenderung, nicht der Zeitpunkt unseres erfolgreichen
+        # Live-Abrufs. Vor einem Wasserstart bleibt ein frischer Eventnachweis
+        # zwingend. Nach einem bereits gesendeten Zonenstart muss die
+        # Hydrawise-Enderkennung aber weiterlaufen koennen, solange der aktuelle
+        # Live-Abruf den Maeher weiterhin verbunden, fehlerfrei und im Dock
+        # meldet. Die naechste READY-Zone erfordert danach wieder einen frischen
+        # Parknachweis.
+        fresh_park_event_required = state.irrigation_phase in {
+            "PLANNED",
+            "SUSPENDING",
+            "READY",
+        }
+        fresh_park_event_accepted = (
+            mower_status_fresh or not fresh_park_event_required
+        )
         if (
             not _park_confirmation_ready(
                 state,
@@ -3643,13 +3659,15 @@ def run_full_failsafe_cycle(
                 required_observations=required_park_observations,
             )
             or mower.get("connected") is not True
-            or not mower_status_fresh
+            or not fresh_park_event_accepted
             or error_code != 0
             or mower_state in ERROR_STATES
         ):
             details["irrigation_park_gate"] = {
                 "connected": mower.get("connected") is True,
                 "status_fresh": mower_status_fresh,
+                "fresh_event_required": fresh_park_event_required,
+                "fresh_event_accepted": fresh_park_event_accepted,
                 "activity": activity,
                 "observations": int(state.park_confirmed_observations or 0),
                 "required_observations": required_park_observations,

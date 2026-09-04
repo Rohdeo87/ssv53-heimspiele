@@ -182,6 +182,8 @@ def build_package(repository_root: Path, output_path: Path) -> dict[str, object]
         "partial_irrigation_safe_completion_implemented": True,
         "partial_irrigation_keeps_full_drying_hold": True,
         "partial_irrigation_requires_complete_fresh_relay_proof": True,
+        "fresh_park_event_required_before_every_zone_start": True,
+        "started_zone_tracking_uses_current_live_mower_snapshot": True,
         "irrigation_schedule_dashboard_controls_implemented": True,
         "irrigation_schedule_skip_next_implemented": True,
         "irrigation_schedule_pause_until_implemented": True,

@@ -82,6 +82,14 @@ class FullFailsafePackageTests(unittest.TestCase):
                     "partial_irrigation_requires_complete_fresh_relay_proof"
                 ]
             )
+            self.assertTrue(
+                manifest["fresh_park_event_required_before_every_zone_start"]
+            )
+            self.assertTrue(
+                manifest[
+                    "started_zone_tracking_uses_current_live_mower_snapshot"
+                ]
+            )
             self.assertTrue(manifest["manual_failed_irrigation_reset_implemented"])
             self.assertTrue(manifest["manual_reset_requires_function_auth"])
             self.assertFalse(manifest["manual_reset_sends_device_commands"])
