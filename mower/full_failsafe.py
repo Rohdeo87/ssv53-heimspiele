@@ -69,6 +69,10 @@ ACTIVE_IRRIGATION_PHASES = frozenset(
 RECOVERABLE_EXTERNAL_PLAN_FAILURE = (
     "RuntimeError: Hydrawise-Zonenplan enthält ungültige Werte."
 )
+PARTIAL_IRRIGATION_WINDOW_FAILURE = (
+    "Die verbleibende Zonenfolge passt nicht vollständig in den bestätigten "
+    "Suspendierungszeitraum."
+)
 EXPIRED_IRRIGATION_PLAN_LEASE_FAILURE = (
     "Der bestätigte Suspendierungsnachweis ist unvollständig, abgelaufen "
     "oder der ursprüngliche Beregnungsstart ist bereits erreicht."
@@ -1174,6 +1178,98 @@ def _failed_irrigation(state: AutomationState, reason: str) -> AutomationState:
         revision=state.revision + 1,
         irrigation_phase="FAILED",
         irrigation_failed_reason=reason,
+    )
+
+
+def _partial_irrigation_end_proof(
+    state: AutomationState,
+    details: dict[str, Any],
+    *,
+    expected_relay_ids: frozenset[int],
+    relay_allowlist_valid: bool,
+) -> dict[str, Any]:
+    """Belegt konservativ das sichere Ende eines nur teilweise gelaufenen Plans."""
+
+    plan = _plan_from_state(state)
+    plan_relay_ids = {
+        int(zone["relay_id"])
+        for zone in plan
+        if zone.get("relay_id") is not None
+    }
+    completed = set(_json_ints(state.irrigation_completed_relay_ids_json))
+    suspended = set(_json_ints(state.irrigation_suspended_relay_ids_json))
+    observations = _zone_observation_by_relay(details)
+    safety = _as_dict(_as_dict(details.get("hydrawise")).get("safety"))
+    active_ids = _active_relay_ids(details)
+    clear_since = _parse_time(state.hydrawise_clear_since_utc)
+    observed_relay_ids = set(observations)
+    pending_zone_state = any(
+        value is not None
+        for value in (
+            state.irrigation_current_relay_id,
+            state.irrigation_zone_start_reserved_utc,
+            state.irrigation_zone_started_utc,
+            state.irrigation_zone_clear_since_utc,
+        )
+    )
+    eligible = (
+        bool(plan_relay_ids)
+        and 0 < len(completed) < len(plan_relay_ids)
+        and completed < plan_relay_ids
+        and plan_relay_ids.issubset(expected_relay_ids)
+        and suspended == expected_relay_ids
+        and state.irrigation_suspension_completed_utc is not None
+        and not pending_zone_state
+        and safety.get("available") is True
+        and safety.get("fresh") is True
+        and safety.get("clear_now") is True
+        and relay_allowlist_valid
+        and int(safety.get("active_zone_count") or 0) == 0
+        and int(safety.get("imminent_zone_count") or 0) == 0
+        and not active_ids
+        and observed_relay_ids == expected_relay_ids
+        and all(
+            observation.get("valid") is True
+            for observation in observations.values()
+        )
+        and clear_since is not None
+        and state.hydrawise_clear_origin == "IRRIGATION_END"
+    )
+    return {
+        "eligible": eligible,
+        "completed_relay_ids": sorted(completed),
+        "remaining_relay_ids": sorted(plan_relay_ids - completed),
+        "suspended_relay_ids": sorted(suspended),
+        "observed_relay_ids": sorted(observed_relay_ids),
+        "clear_since_utc": clear_since.isoformat() if clear_since is not None else None,
+        "clear_origin": state.hydrawise_clear_origin,
+        "pending_zone_state": pending_zone_state,
+        "active_relay_ids": sorted(active_ids),
+        "imminent_zone_count": int(safety.get("imminent_zone_count") or 0),
+        "requires_complete_fresh_relay_set": True,
+        "requires_confirmed_irrigation_end": True,
+    }
+
+
+def _complete_partial_irrigation(
+    state: AutomationState,
+    *,
+    now_utc: datetime,
+) -> AutomationState:
+    """Beendet nur die Restfolge; der volle Nachlauf bleibt unverändert aktiv."""
+
+    return replace(
+        state,
+        revision=state.revision + 1,
+        irrigation_phase="COMPLETE_HOLD",
+        irrigation_current_relay_id=None,
+        irrigation_zone_start_reserved_utc=None,
+        irrigation_zone_started_utc=None,
+        irrigation_zone_clear_since_utc=None,
+        irrigation_completed_utc=state.irrigation_completed_utc or now_utc.isoformat(),
+        irrigation_failed_reason=None,
+        irrigation_change_candidate_hash=None,
+        irrigation_change_candidate_since_utc=None,
     )
 
 
@@ -3028,6 +3124,41 @@ def run_full_failsafe_cycle(
                     "die Beregnungssperre ist sicher beendet."
                 ),
             )
+        partial_end_proof: dict[str, Any] = {"eligible": False}
+        if state.irrigation_failed_reason == PARTIAL_IRRIGATION_WINDOW_FAILURE:
+            try:
+                partial_end_proof = _partial_irrigation_end_proof(
+                    state,
+                    details,
+                    expected_relay_ids=expected_relay_ids,
+                    relay_allowlist_valid=relay_allowlist_valid,
+                )
+            except RuntimeError as exc:
+                details["irrigation_partial_end_recovery"] = {
+                    "eligible": False,
+                    "recovered": False,
+                    "reason": f"{type(exc).__name__}: {exc}",
+                    "command_sent": False,
+                }
+        safely_ended_partial_run = (
+            state.irrigation_failed_reason == PARTIAL_IRRIGATION_WINDOW_FAILURE
+            and mower.get("connected") is True
+            and activity in PARKED_ACTIVITIES
+            and error_code == 0
+            and mower_state not in ERROR_STATES
+            and partial_end_proof["eligible"] is True
+        )
+        if safely_ended_partial_run:
+            details["irrigation_partial_end_recovery"] = {
+                **partial_end_proof,
+                "recovered": True,
+                "command_sent": False,
+                "reason": (
+                    "Der teilweise gelaufene Beregnungsplan ist physisch sicher "
+                    "beendet; die volle Trocknungssperre bleibt bestehen."
+                ),
+            }
+            state = _complete_partial_irrigation(state, now_utc=now)
         recoverable_external_plan_failure = (
             state.irrigation_failed_reason == RECOVERABLE_EXTERNAL_PLAN_FAILURE
             and mower.get("connected") is True
@@ -3044,7 +3175,9 @@ def run_full_failsafe_cycle(
             and now - failed_clear_since
             >= timedelta(minutes=failed_release_minutes)
         )
-        if recoverable_external_plan_failure:
+        if safely_ended_partial_run:
+            pass
+        elif recoverable_external_plan_failure:
             details["irrigation_failure_recovery"] = {
                 "recovered": True,
                 "reason": (
@@ -4107,9 +4240,41 @@ def run_full_failsafe_cycle(
                 ),
             }
             if suspension_until is None or projected_end > suspension_until:
+                partial_end_proof = _partial_irrigation_end_proof(
+                    state,
+                    details,
+                    expected_relay_ids=expected_relay_ids,
+                    relay_allowlist_valid=relay_allowlist_valid,
+                )
+                if partial_end_proof["eligible"] is True:
+                    complete = _complete_partial_irrigation(state, now_utc=now)
+                    details["irrigation_partial_end"] = {
+                        **partial_end_proof,
+                        "projected_end_utc": projected_end.isoformat(),
+                        "suspension_until_utc": (
+                            suspension_until.isoformat()
+                            if suspension_until is not None
+                            else None
+                        ),
+                        "command_sent": False,
+                    }
+                    return _persist_result(
+                        store=store,
+                        original=original,
+                        state=complete,
+                        result=result,
+                        details=details,
+                        settings=settings,
+                        decision_code="IRRIGATION_PARTIAL_RUN_COMPLETE_HOLD",
+                        message=(
+                            "Die restlichen Zonen passen nicht mehr sicher in das "
+                            "Beregnungsfenster. Die Beregnung ist beendet und die "
+                            "Trocknungssperre läuft."
+                        ),
+                    )
                 failed = _failed_irrigation(
                     state,
-                    "Die verbleibende Zonenfolge passt nicht vollständig in den bestätigten Suspendierungszeitraum.",
+                    PARTIAL_IRRIGATION_WINDOW_FAILURE,
                 )
                 return _persist_result(
                     store=store,

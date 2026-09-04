@@ -73,6 +73,15 @@ class FullFailsafePackageTests(unittest.TestCase):
                     "hydrawise_confirmed_early_stop_cancels_remaining_zones"
                 ]
             )
+            self.assertTrue(
+                manifest["partial_irrigation_safe_completion_implemented"]
+            )
+            self.assertTrue(manifest["partial_irrigation_keeps_full_drying_hold"])
+            self.assertTrue(
+                manifest[
+                    "partial_irrigation_requires_complete_fresh_relay_proof"
+                ]
+            )
             self.assertTrue(manifest["manual_failed_irrigation_reset_implemented"])
             self.assertTrue(manifest["manual_reset_requires_function_auth"])
             self.assertFalse(manifest["manual_reset_sends_device_commands"])

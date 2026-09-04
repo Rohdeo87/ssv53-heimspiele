@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 
 from mower.full_failsafe import (
     EXPIRED_IRRIGATION_PLAN_LEASE_FAILURE,
+    PARTIAL_IRRIGATION_WINDOW_FAILURE,
     run_full_failsafe_cycle,
 )
 from mower.hydrawise import HydrawiseError
@@ -3014,6 +3015,259 @@ class FullFailsafeTests(unittest.TestCase):
         self.assertIsNone(store.load().irrigation_phase)
         self.assertIsNone(store.load().irrigation_failed_reason)
         self.assertTrue(output.details["irrigation_failure_recovery"]["recovered"])
+
+    def test_partial_run_that_no_longer_fits_enters_drying_hold_and_then_restarts(self) -> None:
+        state = irrigation_state(phase="READY")
+        state = AutomationState.from_mapping(
+            {
+                **state.to_dict(),
+                "irrigation_completed_relay_ids_json": json.dumps(RELAYS[:3]),
+                "irrigation_suspension_until_utc": (
+                    NOW + timedelta(minutes=10)
+                ).isoformat(),
+                "hydrawise_clear_since_utc": (
+                    NOW - timedelta(minutes=2)
+                ).isoformat(),
+                "hydrawise_clear_origin": "IRRIGATION_END",
+                "last_hydrawise_success_utc": (
+                    NOW - timedelta(minutes=1)
+                ).isoformat(),
+            }
+        )
+        start_calls = []
+        zone_calls = []
+
+        stopped, store = self._run(
+            state,
+            result(activity="PARKED_IN_CS"),
+            start=lambda *args: start_calls.append(args) or {"accepted": True},
+            zone=lambda *args: zone_calls.append(args),
+        )
+
+        self.assertEqual(
+            stopped.decision_code,
+            "IRRIGATION_PARTIAL_RUN_COMPLETE_HOLD",
+        )
+        self.assertEqual(store.load().irrigation_phase, "COMPLETE_HOLD")
+        self.assertIsNone(store.load().irrigation_failed_reason)
+        self.assertEqual(start_calls, [])
+        self.assertEqual(zone_calls, [])
+        self.assertEqual(
+            stopped.details["irrigation_partial_end"]["remaining_relay_ids"],
+            RELAYS[3:],
+        )
+
+        held_state = AutomationState.from_mapping(
+            {
+                **store.load().to_dict(),
+                "hydrawise_clear_since_utc": (
+                    NOW - timedelta(minutes=149)
+                ).isoformat(),
+                "last_hydrawise_success_utc": (
+                    NOW - timedelta(minutes=1)
+                ).isoformat(),
+            }
+        )
+        held, _ = self._run(
+            held_state,
+            result(activity="PARKED_IN_CS"),
+            start=lambda *args: start_calls.append(args) or {"accepted": True},
+        )
+        self.assertEqual(held.decision_code, "HYDRAWISE_CLEAR_CONFIRMATION_HOLD")
+        self.assertEqual(start_calls, [])
+
+        resumable_state = AutomationState.from_mapping(
+            {
+                **store.load().to_dict(),
+                "hydrawise_clear_since_utc": (
+                    NOW - timedelta(minutes=150)
+                ).isoformat(),
+                "last_hydrawise_success_utc": (
+                    NOW - timedelta(minutes=1)
+                ).isoformat(),
+            }
+        )
+        resumed, resumed_store = self._run(
+            resumable_state,
+            result(activity="PARKED_IN_CS"),
+            start=lambda *args: start_calls.append(args) or {"accepted": True},
+        )
+        self.assertEqual(resumed.decision_code, "CONTINUOUS_MOWING_START_SENT")
+        self.assertEqual(len(start_calls), 1)
+        self.assertIsNone(resumed_store.load().irrigation_phase)
+
+    def test_partial_run_end_never_releases_on_incomplete_safety_proof(self) -> None:
+        base = irrigation_state(phase="READY")
+        base = AutomationState.from_mapping(
+            {
+                **base.to_dict(),
+                "irrigation_completed_relay_ids_json": json.dumps(RELAYS[:3]),
+                "irrigation_suspension_until_utc": (
+                    NOW + timedelta(minutes=10)
+                ).isoformat(),
+                "hydrawise_clear_since_utc": (
+                    NOW - timedelta(minutes=5)
+                ).isoformat(),
+                "hydrawise_clear_origin": "IRRIGATION_END",
+                "last_hydrawise_success_utc": (
+                    NOW - timedelta(minutes=1)
+                ).isoformat(),
+            }
+        )
+        cases = {
+            "no completed zone": {
+                "state": {"irrigation_completed_relay_ids_json": "[]"},
+                "cycle": {},
+            },
+            "active zone": {
+                "state": {},
+                "cycle": {"active_ids": [RELAYS[3]], "clear": False},
+            },
+            "imminent zone": {
+                "state": {},
+                "cycle": {"imminent": True},
+            },
+            "relay set incomplete": {"state": {}, "cycle": {"incomplete": True}},
+            "clear origin uncertain": {
+                "state": {"hydrawise_clear_origin": "DATA_GAP"},
+                "cycle": {},
+            },
+            "pending zone state": {
+                "state": {
+                    "irrigation_current_relay_id": RELAYS[3],
+                    "irrigation_zone_start_reserved_utc": NOW.isoformat(),
+                },
+                "cycle": {},
+            },
+        }
+        for label, case in cases.items():
+            with self.subTest(label=label):
+                state = AutomationState.from_mapping(
+                    {**base.to_dict(), **case["state"]}
+                )
+                cycle_options = {
+                    key: value
+                    for key, value in case["cycle"].items()
+                    if key not in {"imminent", "incomplete"}
+                }
+                cycle = result(activity="PARKED_IN_CS", **cycle_options)
+                if case["cycle"].get("imminent"):
+                    cycle.details["hydrawise"]["safety"].update(
+                        {
+                            "imminent_zone_count": 1,
+                            "imminent_relay_ids": [RELAYS[3]],
+                        }
+                    )
+                if case["cycle"].get("incomplete"):
+                    cycle.details["hydrawise"]["zones"] = cycle.details[
+                        "hydrawise"
+                    ]["zones"][:-1]
+                    cycle.details["hydrawise"]["zone_observations"] = cycle.details[
+                        "hydrawise"
+                    ]["zone_observations"][:-1]
+                    cycle.details["hydrawise"]["safety"].update(
+                        {
+                            "selected_zone_count": 6,
+                            "observed_relay_ids": RELAYS[:-1],
+                            "relay_set_valid": False,
+                        }
+                    )
+                start_calls = []
+                zone_calls = []
+                output, store = self._run(
+                    state,
+                    cycle,
+                    start=lambda *args: start_calls.append(args),
+                    zone=lambda *args: zone_calls.append(args),
+                )
+                self.assertNotEqual(
+                    output.decision_code,
+                    "IRRIGATION_PARTIAL_RUN_COMPLETE_HOLD",
+                )
+                self.assertNotEqual(store.load().irrigation_phase, "COMPLETE_HOLD")
+                self.assertEqual(start_calls, [])
+                self.assertEqual(zone_calls, [])
+
+    def test_existing_partial_window_failure_recovers_through_full_drying_gate(self) -> None:
+        state = irrigation_state(phase="FAILED")
+        state = AutomationState.from_mapping(
+            {
+                **state.to_dict(),
+                "irrigation_failed_reason": PARTIAL_IRRIGATION_WINDOW_FAILURE,
+                "irrigation_plan_json": json.dumps(zones()),
+                "irrigation_completed_relay_ids_json": json.dumps(RELAYS[:3]),
+                "irrigation_suspended_relay_ids_json": json.dumps(RELAYS),
+                "irrigation_suspension_completed_utc": (
+                    NOW - timedelta(hours=3)
+                ).isoformat(),
+                "irrigation_suspension_until_utc": (
+                    NOW - timedelta(hours=1)
+                ).isoformat(),
+                "hydrawise_clear_since_utc": (
+                    NOW - timedelta(minutes=151)
+                ).isoformat(),
+                "hydrawise_clear_origin": "IRRIGATION_END",
+                "last_hydrawise_success_utc": (
+                    NOW - timedelta(minutes=1)
+                ).isoformat(),
+            }
+        )
+        start_calls = []
+
+        output, store = self._run(
+            state,
+            result(activity="PARKED_IN_CS"),
+            start=lambda *args: start_calls.append(args) or {"accepted": True},
+        )
+
+        self.assertEqual(output.decision_code, "CONTINUOUS_MOWING_START_SENT")
+        self.assertTrue(
+            output.details["irrigation_partial_end_recovery"]["recovered"]
+        )
+        self.assertEqual(len(start_calls), 1)
+        self.assertIsNone(store.load().irrigation_phase)
+
+    def test_occupancy_still_blocks_after_safe_partial_run_end(self) -> None:
+        state = irrigation_state(phase="READY")
+        state = AutomationState.from_mapping(
+            {
+                **state.to_dict(),
+                "irrigation_completed_relay_ids_json": json.dumps(RELAYS[:3]),
+                "irrigation_suspension_until_utc": (
+                    NOW + timedelta(minutes=10)
+                ).isoformat(),
+                "hydrawise_clear_since_utc": (
+                    NOW - timedelta(minutes=2)
+                ).isoformat(),
+                "hydrawise_clear_origin": "IRRIGATION_END",
+                "last_hydrawise_success_utc": (
+                    NOW - timedelta(minutes=1)
+                ).isoformat(),
+            }
+        )
+        _, store = self._run(state, result(activity="PARKED_IN_CS"))
+        blocked_state = AutomationState.from_mapping(
+            {
+                **store.load().to_dict(),
+                "hydrawise_clear_since_utc": (
+                    NOW - timedelta(minutes=150)
+                ).isoformat(),
+                "last_hydrawise_success_utc": (
+                    NOW - timedelta(minutes=1)
+                ).isoformat(),
+            }
+        )
+        start_calls = []
+
+        output, blocked_store = self._run(
+            blocked_state,
+            result(activity="PARKED_IN_CS", block_source="training"),
+            start=lambda *args: start_calls.append(args),
+        )
+
+        self.assertNotEqual(output.decision_code, "CONTINUOUS_MOWING_START_SENT")
+        self.assertEqual(blocked_store.load().irrigation_phase, "COMPLETE_HOLD")
+        self.assertEqual(start_calls, [])
 
     def test_unknown_irrigation_failure_never_recovers_automatically(self) -> None:
         state = AutomationState(
