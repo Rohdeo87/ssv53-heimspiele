@@ -38,6 +38,7 @@ from mower.state_store import AzureTableStateStore, StateConflictError
 from mower.irrigation_schedule import (
     IrrigationScheduleValidationError,
     SCHEDULE_ACTIONS,
+    START_BLOCKING_SCHEDULE_STATUSES,
     dump_object as dump_irrigation_schedule_object,
     load_history as load_irrigation_schedule_history,
     load_object as load_irrigation_schedule_object,
@@ -1352,6 +1353,31 @@ def request_action(
         return {"accepted": True, "requestId": request_id, "status": original.operator_request_status}
     if original.operator_request_status == "PENDING":
         raise PlatzwartError("ACTION_PENDING", "Eine andere Bedienaktion wird bereits sicher verarbeitet.", 409)
+    if normalized == "START_MOWING":
+        try:
+            schedule_override = load_irrigation_schedule_object(
+                original.irrigation_schedule_override_json,
+                "Beregnungsplan-Anpassung",
+            )
+        except RuntimeError as exc:
+            raise PlatzwartError(
+                "IRRIGATION_SCHEDULE_STATE_INVALID",
+                "Der Beregnungsplan-Zustand ist nicht eindeutig. Der Mäher bleibt sicher geparkt.",
+                409,
+            ) from exc
+        schedule_status = str(
+            (schedule_override or {}).get("status") or ""
+        ).strip().upper()
+        if schedule_status in START_BLOCKING_SCHEDULE_STATUSES:
+            raise PlatzwartError(
+                "IRRIGATION_SCHEDULE_CHANGE_PENDING",
+                (
+                    "Die Beregnungsänderung wird noch für alle sieben Zonen "
+                    "bestätigt. Bitte warten Sie bis zum Abschluss und starten "
+                    "Sie den Mäher danach erneut."
+                ),
+                409,
+            )
     if normalized in {"START_IRRIGATION", "START_IRRIGATION_ZONE"} and original.irrigation_phase is not None:
         raise PlatzwartError(
             "IRRIGATION_ALREADY_ACTIVE",

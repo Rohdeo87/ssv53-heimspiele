@@ -13,6 +13,20 @@ SCHEDULE_ACTIONS = frozenset(
         "CUSTOMIZE_NEXT_IRRIGATION",
     }
 )
+# In these phases the requested Hydrawise change has not reached a stable
+# state yet.  A mower start must not be accepted in parallel: applying and
+# confirming all seven relays can legitimately take longer than the normal
+# operator-request lifetime.
+START_BLOCKING_SCHEDULE_STATUSES = frozenset(
+    {
+        "PARKING",
+        "VERIFYING",
+        "APPLYING",
+        "CONFIRMING",
+        "EXECUTING",
+        "POST_RUN",
+    }
+)
 MINIMUM_CUSTOM_LEAD_MINUTES = 45
 MAXIMUM_CUSTOM_DAYS = 14
 MAXIMUM_PAUSE_DAYS = 30

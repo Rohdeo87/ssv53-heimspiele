@@ -193,6 +193,7 @@ def build_package(repository_root: Path, output_path: Path) -> dict[str, object]
         "irrigation_schedule_per_zone_duration_implemented": True,
         "irrigation_schedule_two_cycle_confirmation_required": True,
         "irrigation_schedule_mower_park_precedence_required": True,
+        "irrigation_schedule_blocks_mower_start_until_stable": True,
         "park_write_gate_required": True,
         "start_write_gate_required": True,
         "irrigation_write_gate_required": True,

@@ -34,6 +34,7 @@ from mower.irrigation_schedule import (
     dump_object as dump_irrigation_schedule_object,
     load_object as load_irrigation_schedule_object,
     parse_utc as parse_irrigation_schedule_utc,
+    START_BLOCKING_SCHEDULE_STATUSES,
 )
 from mower.runtime import ControlMode, CycleResult, RuntimeSettings
 from mower.safety import CommandIntent, evaluate_command_gate
@@ -1571,6 +1572,31 @@ def run_full_failsafe_cycle(
         maximum=120,
     )
     schedule_override = _schedule_override(state)
+    schedule_override_status = str(
+        (schedule_override or {}).get("status") or ""
+    ).strip().upper()
+    if (
+        operator_action == "START_MOWING"
+        and schedule_override_status in START_BLOCKING_SCHEDULE_STATUSES
+    ):
+        # Defence in depth for requests accepted by an older client/version or
+        # in the narrow handover around a deployment.  Never let a start wish
+        # silently age out behind the multi-cycle seven-zone transaction.
+        state = _finish_operator_request(
+            state,
+            (
+                "Der Mäherstart wurde nicht ausgeführt, weil die Änderung des "
+                "Beregnungsplans noch bestätigt wird. Nach Abschluss ist eine "
+                "neue Startbestätigung erforderlich."
+            ),
+            status="REJECTED",
+        )
+        operator_action = None
+        details["operator_start_blocked_by_schedule_change"] = {
+            "kind": str((schedule_override or {}).get("kind") or ""),
+            "status": schedule_override_status,
+            "start_command_sent": False,
+        }
     irrigation_failsafe_lead_minutes = _env_int(
         environment,
         "IRRIGATION_FAILSAFE_DOCK_LEAD_MINUTES",

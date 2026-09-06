@@ -2693,6 +2693,41 @@ class FullFailsafeTests(unittest.TestCase):
                 self.assertIn(output.decision_code, {"PARK_COMMAND_SENT", "IRRIGATION_FAILED_HOLD"})
                 self.assertEqual(start_calls, [])
 
+    def test_accepted_start_is_rejected_if_schedule_change_is_still_applying(self) -> None:
+        override = {
+            "version": 1,
+            "kind": "PAUSE",
+            "status": "APPLYING",
+            "suspend_until_utc": (NOW + timedelta(days=2)).isoformat(),
+            "commanded_relay_ids": [],
+        }
+        initial = AutomationState(
+            operator_request_id="racing-start",
+            operator_request_action="START_MOWING",
+            operator_requested_utc=(NOW - timedelta(seconds=10)).isoformat(),
+            operator_request_expires_utc=(NOW + timedelta(minutes=10)).isoformat(),
+            operator_request_status="PENDING",
+            irrigation_schedule_override_json=json.dumps(override),
+        )
+        start_calls = []
+        output, store = self._run(
+            initial,
+            result(activity="CHARGING"),
+            start=lambda *args: start_calls.append(args) or {"accepted": True},
+        )
+        saved = store.load()
+        self.assertEqual(start_calls, [])
+        self.assertEqual(saved.operator_request_status, "REJECTED")
+        self.assertIn("Beregnungsplans", saved.operator_request_result or "")
+        self.assertEqual(
+            output.details["operator_start_blocked_by_schedule_change"],
+            {
+                "kind": "PAUSE",
+                "status": "APPLYING",
+                "start_command_sent": False,
+            },
+        )
+
     def test_pause_is_sent_once_per_zone_and_only_active_after_two_fresh_confirmations(self) -> None:
         initial = AutomationState(
             operator_request_id="pause-1",

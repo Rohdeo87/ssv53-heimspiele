@@ -362,11 +362,15 @@ test("heutige Platzbelegung wird als Heute mit Uhrzeit dargestellt", () => {
 test("Mäheraktionen sind für Fahren, Laden, Sperren und manuelle Bedienung eindeutig", () => {
   const searchingFunction = html.split("\n").find((line) => line.includes("function isSearching(m)"));
   const pausedFunction = html.split("\n").find((line) => line.includes("function isMowerPaused(m)"));
+  const schedulePendingFunction = html.split("\n").find((line) => line.includes("function irrigationScheduleChangePending(s)"));
   const actionsFunction = html.split("\n").find((line) => line.includes("function mowerActions(s)"));
+  const effectiveActionsFunction = html.split("\n").find((line) => line.includes("function effectiveMowerActions(s)"));
   assert.ok(searchingFunction);
   assert.ok(pausedFunction);
+  assert.ok(schedulePendingFunction);
   assert.ok(actionsFunction);
-  const actions = new Function(`${searchingFunction}\n${pausedFunction}\n${actionsFunction}\nreturn mowerActions;`)();
+  assert.ok(effectiveActionsFunction);
+  const actions = new Function(`${searchingFunction}\n${pausedFunction}\n${schedulePendingFunction}\n${actionsFunction}\n${effectiveActionsFunction}\nreturn effectiveMowerActions;`)();
   const safe = { available: true, fresh: true, clear_now: true };
 
   assert.deepEqual(
@@ -409,6 +413,16 @@ test("Mäheraktionen sind für Fahren, Laden, Sperren und manuelle Bedienung ein
 
   const pausedDuringIrrigation = actions({ mower: { activity: "NOT_APPLICABLE", state: "PAUSED", connected: true, errorCode: 0 }, irrigation: { safety: safe }, automation: { parkedByAutomation: true, irrigationPhase: "READY" }, occupancy: {} });
   assert.equal(pausedDuringIrrigation.showStart, false);
+
+  const scheduleChange = actions({ mower: { activity: "PARKED_IN_CS", connected: true, errorCode: 0 }, irrigation: { safety: safe }, irrigationSchedule: { override: { kind: "SKIP_NEXT", status: "APPLYING" } }, automation: { parkedByAutomation: true }, occupancy: {} });
+  assert.equal(scheduleChange.showStart, false);
+
+  const movingDuringScheduleChange = actions({ mower: { activity: "MOWING", connected: true, errorCode: 0 }, irrigation: { safety: safe }, irrigationSchedule: { override: { kind: "PAUSE", status: "CONFIRMING" } }, automation: { continuousMowingOwned: true }, occupancy: {} });
+  assert.equal(movingDuringScheduleChange.showPark, true);
+  assert.equal(movingDuringScheduleChange.showStart, false);
+
+  const activeSkip = actions({ mower: { activity: "PARKED_IN_CS", connected: true, errorCode: 0 }, irrigation: { safety: safe }, irrigationSchedule: { override: { kind: "SKIP_NEXT", status: "ACTIVE" } }, automation: { parkedByAutomation: true }, occupancy: {} });
+  assert.equal(activeSkip.showStart, true);
 
   const irrigationBlock = actions({ mower: { activity: "PARKED_IN_CS", connected: true, errorCode: 0 }, irrigation: { safety: safe }, automation: {}, occupancy: { current: { title: "Mischblock", start: "a", end: "b", source: "training+irrigation" } } });
   assert.equal(irrigationBlock.showStart, false);

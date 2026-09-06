@@ -108,6 +108,9 @@ class FullFailsafePackageTests(unittest.TestCase):
             self.assertTrue(manifest["irrigation_schedule_per_zone_duration_implemented"])
             self.assertTrue(manifest["irrigation_schedule_two_cycle_confirmation_required"])
             self.assertTrue(manifest["irrigation_schedule_mower_park_precedence_required"])
+            self.assertTrue(
+                manifest["irrigation_schedule_blocks_mower_start_until_stable"]
+            )
             self.assertIn("occupancy_notifications.py", names)
             self.assertIn("mower/full_failsafe.py", names)
             self.assertIn("mower/irrigation_recovery.py", names)

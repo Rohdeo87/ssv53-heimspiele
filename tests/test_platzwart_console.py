@@ -605,6 +605,148 @@ class PlatzwartSafetyIntegrationTests(unittest.TestCase):
             )
         self.assertEqual(context.exception.code, "IRRIGATION_SEQUENCE_ACTIVE")
 
+    def test_mower_start_is_rejected_until_schedule_change_is_stable(self) -> None:
+        class AuditStore:
+            def audit(self, *_args, **_kwargs):
+                return None
+
+        for status in (
+            "PARKING",
+            "VERIFYING",
+            "APPLYING",
+            "CONFIRMING",
+            "EXECUTING",
+            "POST_RUN",
+        ):
+            with self.subTest(status=status):
+                store = InMemoryStateStore(
+                    AutomationState(
+                        irrigation_schedule_override_json=json.dumps(
+                            {"kind": "SKIP_NEXT", "status": status}
+                        )
+                    )
+                )
+                with patch(
+                    "platzwart_console.AzureTableStateStore.from_environment",
+                    return_value=store,
+                ), patch(
+                    "platzwart_console.ConsoleTableStore.from_environment",
+                    return_value=AuditStore(),
+                ), patch(
+                    "platzwart_console.RuntimeSettings.from_mapping",
+                    return_value=settings(),
+                ), self.assertRaises(PlatzwartError) as context:
+                    request_action(
+                        "START_MOWING",
+                        f"start-{status.lower()}",
+                        "START_MOWING",
+                        ENV,
+                        NOW,
+                    )
+                self.assertEqual(
+                    context.exception.code,
+                    "IRRIGATION_SCHEDULE_CHANGE_PENDING",
+                )
+                self.assertIsNone(store.load().operator_request_id)
+
+    def test_stable_schedule_change_allows_a_fresh_mower_start(self) -> None:
+        store = InMemoryStateStore(
+            AutomationState(
+                irrigation_schedule_override_json=json.dumps(
+                    {"kind": "SKIP_NEXT", "status": "ACTIVE"}
+                )
+            )
+        )
+
+        class AuditStore:
+            def audit(self, *_args, **_kwargs):
+                return None
+
+        with patch(
+            "platzwart_console.AzureTableStateStore.from_environment",
+            return_value=store,
+        ), patch(
+            "platzwart_console.ConsoleTableStore.from_environment",
+            return_value=AuditStore(),
+        ), patch(
+            "platzwart_console.RuntimeSettings.from_mapping",
+            return_value=settings(),
+        ):
+            accepted = request_action(
+                "START_MOWING",
+                "start-after-skip",
+                "START_MOWING",
+                ENV,
+                NOW,
+            )
+        self.assertEqual(accepted["status"], "PENDING")
+        self.assertEqual(store.load().operator_request_action, "START_MOWING")
+
+    def test_schedule_change_does_not_block_an_operator_park_request(self) -> None:
+        store = InMemoryStateStore(
+            AutomationState(
+                irrigation_schedule_override_json=json.dumps(
+                    {"kind": "SKIP_NEXT", "status": "CONFIRMING"}
+                )
+            )
+        )
+
+        class AuditStore:
+            def audit(self, *_args, **_kwargs):
+                return None
+
+        with patch(
+            "platzwart_console.AzureTableStateStore.from_environment",
+            return_value=store,
+        ), patch(
+            "platzwart_console.ConsoleTableStore.from_environment",
+            return_value=AuditStore(),
+        ), patch(
+            "platzwart_console.RuntimeSettings.from_mapping",
+            return_value=settings(),
+        ):
+            accepted = request_action(
+                "PARK_MOWER",
+                "park-during-schedule-change",
+                "PARK_MOWER",
+                ENV,
+                NOW,
+            )
+        self.assertEqual(accepted["status"], "PENDING")
+        self.assertEqual(store.load().operator_request_action, "PARK_MOWER")
+
+    def test_invalid_schedule_state_fails_closed_for_mower_start(self) -> None:
+        store = InMemoryStateStore(
+            AutomationState(irrigation_schedule_override_json="not-json")
+        )
+
+        class AuditStore:
+            def audit(self, *_args, **_kwargs):
+                return None
+
+        with patch(
+            "platzwart_console.AzureTableStateStore.from_environment",
+            return_value=store,
+        ), patch(
+            "platzwart_console.ConsoleTableStore.from_environment",
+            return_value=AuditStore(),
+        ), patch(
+            "platzwart_console.RuntimeSettings.from_mapping",
+            return_value=settings(),
+        ), self.assertRaises(PlatzwartError) as context:
+            request_action(
+                "START_MOWING",
+                "start-with-invalid-schedule-state",
+                "START_MOWING",
+                ENV,
+                NOW,
+            )
+        self.assertEqual(
+            context.exception.code,
+            "IRRIGATION_SCHEDULE_STATE_INVALID",
+        )
+        self.assertIsNone(store.load().operator_request_id)
+
     def test_cutting_height_request_is_validated_and_persisted_in_mm(self) -> None:
         for invalid in (19, 61):
             with self.subTest(invalid=invalid), self.assertRaises(PlatzwartError) as context:
