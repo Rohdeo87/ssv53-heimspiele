@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-06T06:05:53+00:00",
+  "generatedAt": "2026-09-06T14:16:30+00:00",
   "status": "ok",
   "counts": {
     "before": 45,
     "after": 45,
     "added": 0,
-    "changed": 0,
+    "changed": 1,
     "removed": 0
   },
   "guard": {
@@ -15,15 +15,136 @@
     "maxRemovalRatio": 0.6,
     "reasons": [],
     "safetyConfirmation": {
-      "required": false,
+      "required": true,
       "confirmed": true,
-      "confirmations": 0,
+      "confirmations": 2,
       "requiredConfirmations": 2,
-      "fingerprint": "",
-      "items": []
+      "minimumIntervalMinutes": 60,
+      "fingerprint": "4235a9082a8f67be2076d411e6a1864c1ce1a51ef90b5de060190c3bfede31ba",
+      "items": [
+        {
+          "kind": "changed",
+          "id": "dfb:031DP96F8G000000VS5489BUVUR5FS5A",
+          "before": {
+            "kickoff": "2026-10-04T14:00+02:00",
+            "start": "2026-10-04T14:00+02:00",
+            "end": "2026-10-04T15:45+02:00",
+            "occupancyStart": "2026-10-04T13:00+02:00",
+            "occupancyEnd": "2026-10-04T16:45+02:00",
+            "calendar": "Rasen",
+            "place": "rasen"
+          },
+          "after": {
+            "kickoff": "2026-12-13T13:00+01:00",
+            "start": "2026-12-13T13:00+01:00",
+            "end": "2026-12-13T14:45+01:00",
+            "occupancyStart": "2026-12-13T12:00+01:00",
+            "occupancyEnd": "2026-12-13T15:45+01:00",
+            "calendar": "Rasen",
+            "place": "rasen"
+          }
+        }
+      ]
     }
   },
   "added": [],
-  "changed": [],
+  "changed": [
+    {
+      "id": "dfb:031DP96F8G000000VS5489BUVUR5FS5A",
+      "label": "Spielgemeinschaft Schönwalde-Perwenitz-Paaren · Spielgemeinschaft Schönwalde-Perwenitz-Paaren – SV Hohennauen · 13.12.2026 13:00 · Rasen",
+      "before": {
+        "id": "dfb:031DP96F8G000000VS5489BUVUR5FS5A",
+        "title": "Spielgemeinschaft Schönwalde-Perwenitz-Paaren – SV Hohennauen",
+        "start": "2026-10-04T14:00+02:00",
+        "end": "2026-10-04T15:45+02:00",
+        "occupancyStart": "2026-10-04T13:00+02:00",
+        "occupancyEnd": "2026-10-04T16:45+02:00",
+        "kickoff": "2026-10-04T14:00+02:00",
+        "matchDurationMinutes": 105,
+        "durationRule": "dfb-regel-7-herren-2x45+halftime-15",
+        "competitionFormat": "league",
+        "matchType": "ME",
+        "place": "rasen",
+        "calendar": "Rasen",
+        "team": "Spielgemeinschaft Schönwalde-Perwenitz-Paaren",
+        "teamCategory": "Herren | Kreisliga",
+        "teamRole": "home",
+        "homeTeam": "Spielgemeinschaft Schönwalde-Perwenitz-Paaren",
+        "awayTeam": "SV Hohennauen",
+        "competition": "Herren | Kreisliga",
+        "description": "Herren · Kreisliga",
+        "status": "",
+        "detailLink": "https://www.fussball.de/spiel/spielgemeinschaft-schoenwalde-perwenitz-paaren-sv-hohennauen/-/spiel/031DP96F8G000000VS5489BUVUR5FS5A",
+        "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+        "source": "fussball.de",
+        "checksum": "678ac2fbfe9d97c18af3ea370e7c10ed50d63cd0f8801e87201d9c4a78be1875"
+      },
+      "after": {
+        "id": "dfb:031DP96F8G000000VS5489BUVUR5FS5A",
+        "title": "Spielgemeinschaft Schönwalde-Perwenitz-Paaren – SV Hohennauen",
+        "start": "2026-12-13T13:00+01:00",
+        "end": "2026-12-13T14:45+01:00",
+        "occupancyStart": "2026-12-13T12:00+01:00",
+        "occupancyEnd": "2026-12-13T15:45+01:00",
+        "kickoff": "2026-12-13T13:00+01:00",
+        "matchDurationMinutes": 105,
+        "durationRule": "dfb-regel-7-herren-2x45+halftime-15",
+        "competitionFormat": "league",
+        "matchType": "ME",
+        "place": "rasen",
+        "calendar": "Rasen",
+        "team": "Spielgemeinschaft Schönwalde-Perwenitz-Paaren",
+        "teamCategory": "Herren | Kreisliga",
+        "teamRole": "home",
+        "homeTeam": "Spielgemeinschaft Schönwalde-Perwenitz-Paaren",
+        "awayTeam": "SV Hohennauen",
+        "competition": "So, | Herren | Kreisliga",
+        "description": "Herren · Kreisliga",
+        "status": "",
+        "detailLink": "https://www.fussball.de/spiel/spielgemeinschaft-schoenwalde-perwenitz-paaren-sv-hohennauen/-/spiel/031DP96F8G000000VS5489BUVUR5FS5A",
+        "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+        "source": "fussball.de",
+        "checksum": "3392f8ef1146b3549360a4976dca4f142f39abb4dcc5ca46d66e9968e28872e3"
+      },
+      "changes": [
+        {
+          "field": "kickoff",
+          "label": "Anstoß",
+          "before": "2026-10-04T14:00+02:00",
+          "after": "2026-12-13T13:00+01:00"
+        },
+        {
+          "field": "start",
+          "label": "Belegungsbeginn",
+          "before": "2026-10-04T14:00+02:00",
+          "after": "2026-12-13T13:00+01:00"
+        },
+        {
+          "field": "end",
+          "label": "Belegungsende",
+          "before": "2026-10-04T15:45+02:00",
+          "after": "2026-12-13T14:45+01:00"
+        },
+        {
+          "field": "occupancyStart",
+          "label": "Sperrbeginn",
+          "before": "2026-10-04T13:00+02:00",
+          "after": "2026-12-13T12:00+01:00"
+        },
+        {
+          "field": "occupancyEnd",
+          "label": "Sperrende",
+          "before": "2026-10-04T16:45+02:00",
+          "after": "2026-12-13T15:45+01:00"
+        },
+        {
+          "field": "competition",
+          "label": "Wettbewerb",
+          "before": "Herren | Kreisliga",
+          "after": "So, | Herren | Kreisliga"
+        }
+      ]
+    }
+  ],
   "removed": []
 }
