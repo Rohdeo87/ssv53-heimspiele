@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "generated_at_utc": "2026-09-09T15:29:27.8146127Z",
+  "base_sha": "d67e9d3fef24117f504a192c9ecaee998612ddd7",
+  "head_sha": "efe932cbaf5186f050847a29347566782e891c20",
+  "current_main_sha": "456d1bcd25bd32d143f3e6463d0d616c791802ba",
+  "remote_pr_merge_ref_sha": "5ccf1a2afe44988ce71b59ea79ce88afea3aeb15",
+  "computed_merge_tree_sha": "8922ee1095c63339ec31bda2eb7c931853ea775c",
+  "merge_tree_exit_code": 0,
+  "changed_files_main_since_old_base": [
+    "state/request_state.json"
+  ],
+  "working_tree_mutation": false,
+  "mergeable_false_source": {
+    "reported_by": "external connector status supplied for PR 46",
+    "value": false,
+    "verified_in_git": false
+  },
+  "conclusion": "Local merge-tree against current origin/main has no file conflicts. A stale API/merge-ref explanation is an inference only; GitHub internal mergeability cause is not proven.",
+  "operations": {
+    "merge_performed": false,
+    "push_performed": false,
+    "workflow_dispatch": false
+  }
+}

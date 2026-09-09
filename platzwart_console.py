@@ -37,6 +37,7 @@ from mower.state import AutomationState
 from mower.state_store import AzureTableStateStore, StateConflictError
 from mower.safety import occupancy_override_allowed
 from mower.irrigation_schedule import (
+    IrrigationOperatingWindowError,
     IrrigationScheduleValidationError,
     SCHEDULE_ACTIONS,
     START_BLOCKING_SCHEDULE_STATUSES,
@@ -45,6 +46,7 @@ from mower.irrigation_schedule import (
     load_object as load_irrigation_schedule_object,
     validate_schedule_request,
 )
+from mower.irrigation_operating_window import validate_fresh_start
 from daily_safety_report import dashboard_irrigation_statistics, dashboard_statistics, estimate_charging_end
 from mower.statistics_cache import (
     get_dashboard_statistics,
@@ -52,6 +54,15 @@ from mower.statistics_cache import (
     _STATISTICS_CACHE_LOCK,
 )
 from occupancy.runtime_source import resolve_occupancy_match_source
+from occupancy.training_control import (
+    TrainingControlChanged,
+    TrainingControlSnapshot,
+    control_enabled as training_control_enabled,
+    next_local_midnight,
+    resolve_training_control,
+    schedule_winter_training,
+    snapshot_from_state as training_control_from_state,
+)
 
 
 PIN_ITERATIONS_MINIMUM = 200_000
@@ -66,6 +77,7 @@ ALLOWED_ACTIONS = frozenset(
         "STOP_IRRIGATION_NOW",
         "SET_CUTTING_HEIGHT",
         "RESET_BLADE_USAGE",
+        "SET_WINTER_TRAINING",
         *SCHEDULE_ACTIONS,
     }
 )
@@ -1064,11 +1076,48 @@ def _clubhouse_events(environment: Mapping[str, str], now_utc: datetime) -> dict
 
 def live_status(environment: Mapping[str, str], now_utc: datetime) -> dict[str, Any]:
     controls_available = True
+    dashboard_snapshot_only = str(environment.get("HYDRAWISE_DASHBOARD_OBSERVATION_MODE") or "OFF").strip().upper() != "OFF"
     data_quality = {
         "code": "LIVE",
         "displayOnly": False,
         "message": None,
     }
+    state_available = True
+    try:
+        state = AzureTableStateStore.from_environment(environment).load()
+    except Exception:
+        state = AutomationState()
+        state_available = False
+        controls_available = False
+        data_quality = {
+            "code": "STATE_UNAVAILABLE",
+            "displayOnly": True,
+            "message": (
+                "Der Automatikzustand ist gerade nicht erreichbar. Live-Daten "
+                "werden weiter angezeigt; alle Bedienaktionen bleiben gesperrt."
+            ),
+        }
+    if not training_control_enabled(environment):
+        training_control = resolve_training_control(
+            environment, now_utc=now_utc
+        )
+    elif state_available and str(
+        environment.get("SHARED_TRAINING_MODE", "OFF")
+    ).strip().upper() == "ACTIVE":
+        training_control = training_control_from_state(
+            state, now_utc=now_utc
+        )
+    else:
+        training_control = TrainingControlSnapshot(
+            False, None, None, None, None, "automation_state",
+            (
+                "TRAINING_CONTROL_UNAVAILABLE"
+                if not state_available
+                else "TRAINING_CONTROL_REQUIRES_ACTIVE_RUNTIME"
+            ),
+            None,
+            next_local_midnight(now_utc).isoformat(),
+        )
     try:
         settings = RuntimeSettings.from_mapping(environment)
         result = run_read_only_cycle(
@@ -1078,6 +1127,8 @@ def live_status(environment: Mapping[str, str], now_utc: datetime) -> dict[str, 
             past_due=False,
             source="platzwart-status",
             persist_observations=False,
+            dashboard_snapshot_only=dashboard_snapshot_only,
+            training_control_snapshot=training_control,
         )
     except RuntimeError as exc:
         # Die Steuerung muss bei einer abgelaufenen dynamischen Konfiguration
@@ -1096,32 +1147,31 @@ def live_status(environment: Mapping[str, str], now_utc: datetime) -> dict[str, 
             past_due=False,
             source="platzwart-status-display-only",
             persist_observations=False,
+            dashboard_snapshot_only=dashboard_snapshot_only,
+            training_control_snapshot=training_control,
         )
         controls_available = False
-        data_quality = {
-            "code": "CONFIG_STALE",
-            "displayOnly": True,
-            "message": (
-                "Der geprüfte Sicherheitsplan ist veraltet. Live-Daten werden "
-                "weiter angezeigt; Mäher und Beregnung bleiben sicher gesperrt."
-            ),
-        }
-    try:
-        state = AzureTableStateStore.from_environment(environment).load()
-    except Exception:
-        state = AutomationState()
-        controls_available = False
-        data_quality = {
-            "code": "STATE_UNAVAILABLE",
-            "displayOnly": True,
-            "message": (
-                "Der Automatikzustand ist gerade nicht erreichbar. Live-Daten "
-                "werden weiter angezeigt; alle Bedienaktionen bleiben gesperrt."
-            ),
-        }
+        if state_available:
+            data_quality = {
+                "code": "CONFIG_STALE",
+                "displayOnly": True,
+                "message": (
+                    "Der Belegungsplan ist nicht aktuell. Bitte den Mäher vor Ort "
+                    "prüfen und den Platzwart informieren. Keine Geräte starten."
+                ),
+            }
     details = result.details
     mower = dict(details.get("mower") or {})
     hydrawise = dict(details.get("hydrawise") or {})
+    if dashboard_snapshot_only and not (
+        (hydrawise.get("safety") or {}).get("available") is True
+        and (hydrawise.get("safety") or {}).get("fresh") is True
+        and (hydrawise.get("safety") or {}).get("relay_set_valid") is True
+    ):
+        controls_available = False
+        if data_quality["code"] == "LIVE":
+            data_quality = {"code": "IRRIGATION_STATUS_UNAVAILABLE", "displayOnly": True,
+                            "message": "Bewässerungsstand fehlt. Bitte aktualisieren und die Anlage prüfen. Keine Geräte starten."}
     current_plan = _display_current_plan(
         dict(details.get("current_plan") or {}),
         environment,
@@ -1258,6 +1308,7 @@ def live_status(environment: Mapping[str, str], now_utc: datetime) -> dict[str, 
             "zones": zones, "releaseConfirmation": hydrawise.get("release_confirmation"),
         },
         "occupancy": {
+            "available": data_quality["code"] != "CONFIG_STALE",
             "overrideAllowed": occupancy_override_allowed(current_plan.get("blocked_now")),
             "current": current_plan.get("blocked_now"), "next": current_plan.get("next_block"),
             "parking": current_plan.get("parking_block"),
@@ -1265,6 +1316,7 @@ def live_status(environment: Mapping[str, str], now_utc: datetime) -> dict[str, 
             "safeWindows": current_plan.get("safe_mowing_windows") or [],
         },
         "automation": _state_payload(state),
+        "trainingControl": training_control.public_payload(),
         "coordination": _coordination_payload(details, state, current_plan, environment, now_utc, data_quality,
                                               charging_end_estimate=charging_end_estimate),
         "statistics": statistics,
@@ -1314,6 +1366,7 @@ def unavailable_live_status(now_utc: datetime) -> dict[str, Any]:
             "releaseConfirmation": None,
         },
         "occupancy": {
+            "available": False,
             "current": None,
             "next": None,
             "parking": None,
@@ -1321,6 +1374,15 @@ def unavailable_live_status(now_utc: datetime) -> dict[str, Any]:
             "safeWindows": [],
         },
         "automation": {},
+        "trainingControl": {
+            "available": False,
+            "active": None,
+            "pending": None,
+            "effectiveAt": None,
+            "nextEffectiveAt": next_local_midnight(now_utc).isoformat(),
+            "stateRevision": None,
+            "trainingRevision": None,
+        },
         "statistics": {"available": False, "message": "Statistiken sind gerade nicht erreichbar."},
         "irrigationStatistics": {"available": False, "message": "Beregnungsstatistiken sind gerade nicht erreichbar."},
         "irrigationSchedule": {"available": False, "override": None, "nextRun": None, "history": []},
@@ -1340,6 +1402,9 @@ def request_action(
     cutting_height_mm: int | None = None,
     occupancy_override_key: str | None = None,
     irrigation_schedule: Mapping[str, Any] | None = None,
+    winter_training_enabled: bool | None = None,
+    training_revision: str | None = None,
+    state_store_factory=AzureTableStateStore.from_environment,
 ) -> dict[str, Any]:
     normalized = action.strip().upper()
     if normalized not in ALLOWED_ACTIONS:
@@ -1373,6 +1438,65 @@ def request_action(
         parts = normalized_override_key.rsplit("|", 1)
         if len(parts) != 2 or not occupancy_override_allowed({"source": parts[-1]}):
             raise PlatzwartError("OCCUPANCY_OVERRIDE_FORBIDDEN", "Verbindliche oder unbekannte Platzsperren können nicht übersteuert werden.", 409)
+    if normalized == "SET_WINTER_TRAINING":
+        if type(winter_training_enabled) is not bool:
+            raise PlatzwartError(
+                "WINTER_TRAINING_VALUE_INVALID",
+                "Der Wintertrainingsschalter benötigt einen eindeutigen Wert.",
+            )
+        try:
+            snapshot = schedule_winter_training(
+                environment,
+                enabled=winter_training_enabled,
+                request_id=request_id,
+                expected_training_revision=str(training_revision or ""),
+                now_utc=now_utc,
+                state_store_factory=state_store_factory,
+            )
+        except TrainingControlChanged as exc:
+            raise PlatzwartError(
+                "TRAINING_CONTROL_CHANGED",
+                "Der Trainingsschalter wurde zwischenzeitlich geändert. Bitte neu laden.",
+                409,
+            ) from exc
+        except StateConflictError as exc:
+            raise PlatzwartError(
+                "TRAINING_CONTROL_CHANGED",
+                "Der Zustand wurde zwischenzeitlich geändert. Bitte neu laden.",
+                409,
+            ) from exc
+        except ValueError as exc:
+            raise PlatzwartError(
+                "TRAINING_REVISION_INVALID",
+                "Der Trainingsschalter-Stand ist ungültig. Bitte neu laden.",
+                400,
+            ) from exc
+        except RuntimeError as exc:
+            if str(exc) == "TRAINING_CONTROL_REQUIRES_ACTIVE_RUNTIME":
+                raise PlatzwartError(
+                    "TRAINING_CONTROL_UNAVAILABLE",
+                    "Der Trainingsschalter ist erst mit dem aktiven gemeinsamen Trainingskalender verfügbar.",
+                    409,
+                ) from exc
+            raise PlatzwartError(
+                "TRAINING_CONTROL_LOCKED",
+                "Der Wintertrainingsschalter ist serverseitig noch nicht freigegeben.",
+                409,
+            ) from exc
+        ConsoleTableStore.from_environment(environment).audit(
+            now_utc, normalized, "ACCEPTED", request_id
+        )
+        return {
+            "accepted": True,
+            "requestId": request_id,
+            "status": "SCHEDULED",
+            "trainingControl": snapshot.public_payload(),
+        }
+    if winter_training_enabled is not None or training_revision is not None:
+        raise PlatzwartError(
+            "WINTER_TRAINING_VALUE_INVALID",
+            "Trainingsschalter-Angaben sind nur für SET_WINTER_TRAINING erlaubt.",
+        )
     schedule_json: str | None = None
     if normalized in SCHEDULE_ACTIONS:
         try:
@@ -1385,6 +1509,8 @@ def request_action(
                 now_utc=now_utc,
                 expected_zone_count=expected_zones,
             )
+        except IrrigationOperatingWindowError as exc:
+            raise PlatzwartError(exc.code, str(exc), 409) from exc
         except (TypeError, ValueError, IrrigationScheduleValidationError) as exc:
             raise PlatzwartError("IRRIGATION_SCHEDULE_INVALID", str(exc)) from exc
         schedule_json = dump_irrigation_schedule_object(schedule_payload)
@@ -1397,9 +1523,9 @@ def request_action(
             "Beregnungsplan-Angaben sind bei dieser Aktion nicht erlaubt.",
         )
     elif normalized == "START_IRRIGATION_ZONE":
-        if zone is None or not 1 <= int(zone) <= 99:
+        if type(zone) is not int or not 1 <= zone <= 99:
             raise PlatzwartError("ZONE_INVALID", "Bitte eine gültige Beregnungszone wählen.")
-        if run_seconds is None or not 60 <= int(run_seconds) <= 7200:
+        if type(run_seconds) is not int or not 60 <= run_seconds <= 7200:
             raise PlatzwartError("DURATION_INVALID", "Die Laufzeit muss zwischen 1 und 120 Minuten liegen.")
         cutting_height_mm = None
     elif normalized == "SET_CUTTING_HEIGHT":
@@ -1460,6 +1586,28 @@ def request_action(
             "Ein Beregnungsablauf oder Sicherheitsnachlauf ist bereits aktiv.",
             409,
         )
+    if normalized in {"START_IRRIGATION", "START_IRRIGATION_ZONE"}:
+        # This is request admission, not permission to start a valve. The
+        # controller re-reads all seven zones and checks the entire remaining
+        # sequence, including pauses, immediately before every actual START.
+        # Avoid an extra vendor poll merely to queue a manual request.
+        try:
+            confirmation_minutes = int(environment.get("IRRIGATION_ZONE_END_CONFIRMATION_MINUTES", "2"))
+        except (TypeError, ValueError):
+            confirmation_minutes = 2
+        confirmation_minutes = max(1, min(10, confirmation_minutes))
+        window = validate_fresh_start(
+            now_utc,
+            duration_seconds=run_seconds if normalized == "START_IRRIGATION_ZONE" else 60,
+            validation_margin_seconds=confirmation_minutes * 60,
+        )
+        if window.code != "OK":
+            code = "IRRIGATION_OPERATING_WINDOW" if window.code == "TOO_EARLY" else "IRRIGATION_WINDOW_CANNOT_FIT"
+            raise PlatzwartError(
+                code,
+                "Bewässerung ist ab 03:30 möglich. Alle Zonen müssen bis 08:00 fertig sein. Bitte einen passenden Start wählen.",
+                409,
+            )
     if normalized in SCHEDULE_ACTIONS and original.irrigation_phase is not None:
         raise PlatzwartError(
             "IRRIGATION_SEQUENCE_ACTIVE",

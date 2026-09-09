@@ -21,6 +21,26 @@ on:
         required: false
         type: string
         default: ""
+      manual_training_control:
+        description: "Freigegebenen gemeinsamen Kalender mit Winter-Schalter einbinden"
+        required: false
+        type: boolean
+        default: false
+      training_content_sha256:
+        description: "Nur mit Kalender: exakt freigegebener Kalender-Inhaltshash"
+        required: false
+        type: string
+        default: ""
+      training_approval_reference:
+        description: "Nur mit Kalender: Beleg der tatsächlichen fachlichen Freigabe"
+        required: false
+        type: string
+        default: ""
+      training_approved_at:
+        description: "Nur mit Kalender: tatsächlicher Freigabezeitpunkt mit Zeitzone"
+        required: false
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -56,7 +76,7 @@ jobs:
       - name: Migrationsstand laden
         uses: actions/checkout@v7
         with:
-          ref: feature/azure-mower-migration
+          ref: ${{ github.sha }}
           fetch-depth: 1
 
       - name: Python 3.12 einrichten
@@ -114,6 +134,12 @@ jobs:
         env:
           SOURCE_DIR: ${{ steps.source.outputs.source_dir }}
           SOURCE_SHA: ${{ steps.source.outputs.source_sha }}
+          # Persistent values are also used by the existing six-hour auto-
+          # dispatcher. A later refresh must not silently omit the calendar.
+          MANUAL_TRAINING_CONTROL: ${{ inputs.manual_training_control || vars.SSV53_MANUAL_TRAINING_CONTROL_ENABLED == 'true' }}
+          TRAINING_CONTENT_SHA256: ${{ inputs.training_content_sha256 || vars.SSV53_TRAINING_CONTENT_SHA256 }}
+          TRAINING_APPROVAL_REFERENCE: ${{ inputs.training_approval_reference || vars.SSV53_TRAINING_APPROVAL_REFERENCE }}
+          TRAINING_APPROVED_AT: ${{ inputs.training_approved_at || vars.SSV53_TRAINING_APPROVED_AT }}
         run: |
           set -euo pipefail
           VERSION="$(date -u +%Y%m%dT%H%M%SZ)-${GITHUB_SHA:0:12}-${GITHUB_RUN_ID}"
@@ -122,6 +148,23 @@ jobs:
 
           rm -rf "$BUNDLE_DIR"
           mkdir -p "$BUNDLE_DIR"
+
+          TRAINING_ARGS=()
+          if [ "$MANUAL_TRAINING_CONTROL" = "true" ]; then
+            APPROVED_CALENDAR="$RUNNER_TEMP/training-calendar-approved.json"
+            python scripts/prepare_training_calendar_approval.py \
+              --calendar occupancy/training_calendar.manual-control.candidate.json \
+              --mower-config mower/config.json \
+              --occupancy-config occupancy/config.json \
+              --expected-content-sha256 "$TRAINING_CONTENT_SHA256" \
+              --approval-reference "$TRAINING_APPROVAL_REFERENCE" \
+              --approved-at "$TRAINING_APPROVED_AT" \
+              --output "$APPROVED_CALENDAR"
+            TRAINING_ARGS=(--shared-training-calendar "$APPROVED_CALENDAR" --occupancy-config occupancy/config.json --manual-training-control)
+          elif [ -n "$TRAINING_CONTENT_SHA256$TRAINING_APPROVAL_REFERENCE$TRAINING_APPROVED_AT" ]; then
+            echo "Kalenderfreigabe ohne aktivierten Kalender-Bundlepfad ist ungültig." >&2
+            exit 1
+          fi
 
           python scripts/build_runtime_config_bundle.py \
             --mower-config mower/config.json \
@@ -133,7 +176,8 @@ jobs:
             --version "$VERSION" \
             --published-at "$PUBLISHED_AT" \
             --source-commit "$SOURCE_SHA" \
-            --max-source-age-minutes "$MAX_SOURCE_AGE_MINUTES"
+            --max-source-age-minutes "$MAX_SOURCE_AGE_MINUTES" \
+            "${TRAINING_ARGS[@]}"
 
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "bundle_dir=$BUNDLE_DIR" >> "$GITHUB_OUTPUT"

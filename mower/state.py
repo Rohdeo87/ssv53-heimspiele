@@ -21,6 +21,22 @@ def _normalize_optional_int(value: Any) -> int | None:
     return int(value)
 
 
+def _normalize_optional_bool(value: Any) -> bool | None:
+    if value in (None, ""):
+        return None
+    if type(value) is not bool:
+        raise ValueError("Optionaler Schalterwert muss boolesch sein.")
+    return value
+
+
+def _normalize_bool(value: Any, *, default: bool = False) -> bool:
+    if value is None:
+        return default
+    if type(value) is not bool:
+        raise ValueError("Schalterwert muss boolesch sein.")
+    return value
+
+
 def _require_utc_iso(value: str | None, field_name: str) -> str | None:
     if value is None:
         return None
@@ -103,6 +119,16 @@ class AutomationState:
     irrigation_schedule_history_json: str | None = None
     coordination_execution_reservations_json: str | None = None
     coordination_execution_request_json: str | None = None
+    winter_training_enabled: bool = False
+    winter_training_pending_enabled: bool | None = None
+    winter_training_effective_utc: str | None = None
+    winter_training_transitions_json: str | None = None
+    winter_training_history_valid_from_utc: str | None = None
+    winter_training_history_approval_reference: str | None = None
+    winter_training_request_id: str | None = None
+    winter_training_request_enabled: bool | None = None
+    winter_training_requested_utc: str | None = None
+    winter_training_control_revision: int = 0
 
     def __post_init__(self) -> None:
         if self.schema_version != 1:
@@ -117,6 +143,15 @@ class AutomationState:
             raise ValueError(
                 "irrigation_suspension_revalidation_observations darf nicht negativ sein."
             )
+        if self.winter_training_control_revision < 0:
+            raise ValueError("winter_training_control_revision darf nicht negativ sein.")
+        if type(self.winter_training_enabled) is not bool:
+            raise ValueError("winter_training_enabled muss boolesch sein.")
+        if (
+            self.winter_training_pending_enabled is not None
+            and type(self.winter_training_pending_enabled) is not bool
+        ):
+            raise ValueError("winter_training_pending_enabled muss boolesch sein.")
         if self.hydrawise_clear_origin not in {
             None,
             "DATA_GAP",
@@ -157,6 +192,9 @@ class AutomationState:
             "operator_requested_utc",
             "operator_request_expires_utc",
             "operator_occupancy_override_until_utc",
+            "winter_training_effective_utc",
+            "winter_training_history_valid_from_utc",
+            "winter_training_requested_utc",
         ):
             _require_utc_iso(getattr(self, field_name), field_name)
 
@@ -422,6 +460,45 @@ class AutomationState:
             ),
             coordination_execution_request_json=_normalize_optional_text(
                 values.get("coordination_execution_request_json")
+            ),
+            winter_training_enabled=_normalize_bool(
+                values.get("winter_training_enabled"), default=False
+            ),
+            winter_training_pending_enabled=_normalize_optional_bool(
+                values.get("winter_training_pending_enabled")
+            ),
+            winter_training_effective_utc=_require_utc_iso(
+                _normalize_optional_text(
+                    values.get("winter_training_effective_utc")
+                ),
+                "winter_training_effective_utc",
+            ),
+            winter_training_request_id=_normalize_optional_text(
+                values.get("winter_training_request_id")
+            ),
+            winter_training_request_enabled=_normalize_optional_bool(
+                values.get("winter_training_request_enabled")
+            ),
+            winter_training_transitions_json=_normalize_optional_text(
+                values.get("winter_training_transitions_json")
+            ),
+            winter_training_history_valid_from_utc=_require_utc_iso(
+                _normalize_optional_text(
+                    values.get("winter_training_history_valid_from_utc")
+                ),
+                "winter_training_history_valid_from_utc",
+            ),
+            winter_training_history_approval_reference=_normalize_optional_text(
+                values.get("winter_training_history_approval_reference")
+            ),
+            winter_training_requested_utc=_require_utc_iso(
+                _normalize_optional_text(
+                    values.get("winter_training_requested_utc")
+                ),
+                "winter_training_requested_utc",
+            ),
+            winter_training_control_revision=int(
+                values.get("winter_training_control_revision", 0) or 0
             ),
         )
 

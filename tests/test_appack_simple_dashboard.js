@@ -4,6 +4,72 @@ const {spawnSync} = require("node:child_process");
 const {html, sourceOf, viewModel, snapshot} = require("./helpers/platzwart_template");
 const view = viewModel();
 
+test("Winter-Schalter trennt heutigen Plan und bestätigte Änderung ab morgen", () => {
+  const s = snapshot();
+  s.trainingControl = {available:true, active:false, pending:null, effectiveAt:null, nextEffectiveAt:"2026-09-09T22:00:00Z", trainingRevision:"a".repeat(64)};
+  let t = view.trainingControlView(s);
+  assert.equal(t.selected, false); assert.equal(t.choice, "Aus"); assert.equal(t.disabled, false);
+  assert.equal(t.current, "Heute gilt der Sommertrainingsplan."); assert.equal(t.pending, "");
+  assert.equal(t.changeDate, "10.09.2026");
+  s.trainingControl.pending = true; s.trainingControl.effectiveAt = "2026-09-09T22:00:00Z";
+  t = view.trainingControlView(s);
+  assert.equal(t.selected, true); assert.equal(t.current, "Heute gilt der Sommertrainingsplan.");
+  assert.equal(t.pending, "Ab 10.09.2026: Wintertrainingsplan.");
+  s.trainingControl.active = true; s.trainingControl.pending = false;
+  assert.equal(view.trainingControlView(s).pending, "Ab 10.09.2026: Sommertrainingsplan.");
+});
+
+test("Fehlender Trainingsstand erlaubt keine Änderung und behauptet keinen Sommerplan", () => {
+  const s=snapshot();
+  assert.equal(view.trainingControlView(s).disabled, true);
+  assert.equal(view.trainingControlView(s).current, "Trainingsplan fehlt. Bitte aktualisieren.");
+  s.trainingControl={available:true,active:false,pending:true,effectiveAt:"invalid",nextEffectiveAt:"invalid"};
+  assert.equal(view.trainingControlView(s).available, false);
+  assert.match(view.friendlyError({code:"TRAINING_CONTROL_CHANGED",status:409},"action"),/aktualisieren und erneut wählen/);
+  assert.match(view.friendlyError({code:"IRRIGATION_WINDOW_CANNOT_FIT",status:400},"action"),/03:30 Uhr.*08:00 Uhr/);
+});
+
+test("Unpassende Bewässerungszeit zeigt Handlung statt einer alten Startzusage", () => {
+  const s=snapshot(); s.overall.code="IRRIGATION_WINDOW_CANNOT_FIT";
+  assert.equal(view.dashboardMessage(s).title,"Bewässerung passt nicht mehr");
+  assert.match(view.dashboardMessage(s).text,/bis 08:00 Uhr fertig/);
+  assert.equal(view.nextWaterStart(s),"Bitte Plan prüfen");
+  s.overall.code="IRRIGATION_OPERATING_WINDOW";
+  assert.match(view.dashboardMessage(s).text,/03:30 Uhr.*08:00 Uhr/);
+  assert.equal(view.nextWaterStart(s),"Noch offen");
+});
+
+test("Laufendes Wasser außerhalb der erlaubten Zeit verlangt eine klare Handlung", () => {
+  const s=snapshot();s.automation.irrigationPhase="RUNNING";s.irrigation.safety.active_zone_count=1;
+  for(const at of ["2026-09-09T01:29:00Z","2026-09-09T06:00:00Z"]){
+    s.generatedAt=at;
+    assert.equal(view.dashboardMessage(s).title,"Bewässerung bitte beenden");
+    assert.match(view.dashboardMessage(s).text,/vor Ort prüfen und beenden/);
+  }
+  s.generatedAt="2026-09-09T01:30:00Z";
+  assert.equal(view.dashboardMessage(s).title,"Bewässerung läuft");
+  s.mower.activity="MOWING";
+  assert.equal(view.dashboardMessage(s).title,"Mäher bitte stoppen");
+  s.mower.activity="CHARGING";s.overall.code="IRRIGATION_ACTIVE_OUTSIDE_OPERATING_WINDOW";
+  s.automation.irrigationPhase="FAILED";s.generatedAt="2026-09-09T06:05:00Z";
+  assert.equal(view.dashboardMessage(s).title,"Bewässerung bitte beenden");
+  s.irrigation.safety.active_zone_count=0;
+  assert.equal(view.dashboardMessage(s).title,"Bewässerung bitte prüfen");
+});
+
+test("Veralteter Belegungsplan verspricht keinen sicheren physischen Mäherstopp", () => {
+  const s = snapshot(); s.controlsAvailable = false; s.dataQuality = {code: "CONFIG_STALE"};
+  s.mower.activity = "MOWING";
+  const message = view.dashboardMessage(s);
+  assert.equal(message.title, "Belegungsplan nicht aktuell");
+  assert.match(message.text, /vor Ort prüfen/);
+  assert.match(message.text, /erst nach bestätigtem Mäherstopp/);
+  assert.equal(view.nextMowerStart(s), "Noch offen");
+  s.dataQuality.code = "IRRIGATION_STATUS_UNAVAILABLE";
+  assert.equal(view.dashboardMessage(s).title, "Bewässerungsstand fehlt");
+  assert.match(view.dashboardMessage(s).text, /Keine Geräte starten/);
+});
+
 test("Startzeit berücksichtigt Laden, Wartezeit und das nächste ausreichend lange Fenster", () => {
   const s = snapshot();
   assert.equal(view.nextMowerStart(s), "Heute, 14:30 Uhr");
@@ -85,7 +151,7 @@ test("Fehler und Sicherheitskonflikte erhalten eine klare Handlung ohne Rohmeldu
 });
 
 test("Bewässerung von geräteeigenen Zeitplänen erscheint als laufend und bei Ausfällen unbekannt", () => {
-  const s = snapshot(); s.automation.irrigationPhase = null;
+  const s = snapshot(); s.generatedAt="2026-09-09T04:00:00Z"; s.automation.irrigationPhase = null;
   s.irrigation.safety.active_zone_count = 1; s.irrigation.safety.clear_now = false;
   assert.equal(view.waterTitle(s), "Läuft");
   assert.equal(view.dashboardMessage(s).title, "Bewässerung läuft");
@@ -111,6 +177,14 @@ test("Planänderungen werden erst nach Bestätigung als gültig angezeigt", () =
   s.irrigationSchedule.override = null;
   s.irrigationSchedule.nextRun.start = s.generatedAt;
   assert.equal(view.nextWaterStart(s), "Noch offen");
+});
+
+test("Unzulässige künftige Wasserzeiten werden nicht als nächster Start versprochen", () => {
+  for (const start of ["2026-09-10T01:29:00Z", "2026-09-10T06:00:00Z", "2026-09-10T10:00:00Z"]) {
+    const s = snapshot();
+    s.irrigationSchedule.nextRun.start = start;
+    assert.equal(view.nextWaterStart(s), "Bitte Plan prüfen");
+  }
 });
 
 test("Fehlermeldungen und Fortschritt unterscheiden Anfrage und tatsächliche Ausführung", () => {
@@ -169,7 +243,7 @@ test("Planfehler und laufendes Wasser bleiben vor allgemeinen Pausehinweisen sic
   const s=snapshot(); s.irrigationSchedule.override={kind:"PAUSE",status:"REJECTED"};s.coordination.blockers.push({code:"MANUAL_STOP"});
   assert.equal(view.dashboardMessage(s).title,"Bewässerungsplan bitte prüfen");
   assert.equal(view.dashboardMessage(s).tone,"bad");
-  const running=snapshot(); running.irrigationSchedule.override={kind:"CUSTOM_NEXT",status:"EXECUTING"};running.irrigation.safety.active_zone_count=1;running.automation.irrigationPhase="RUNNING";
+  const running=snapshot(); running.generatedAt="2026-09-09T04:00:00Z"; running.irrigationSchedule.override={kind:"CUSTOM_NEXT",status:"EXECUTING"};running.irrigation.safety.active_zone_count=1;running.automation.irrigationPhase="RUNNING";
   assert.equal(view.dashboardMessage(running).title,"Bewässerung läuft");
   assert.equal(view.nextWaterStart(running),"Noch offen");
 });

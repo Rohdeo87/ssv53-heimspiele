@@ -5,6 +5,7 @@ const view = viewModel();
 
 function ready(code) {
   const s = snapshot();
+  s.generatedAt = '2026-09-09T04:00:00Z';
   s.overall.code = code;
   s.automation.irrigationPhase = null;
   s.coordination.dryUntil = null;
@@ -42,10 +43,10 @@ test('Bestätigte Zonenpause zeigt die nächste vorgesehene Uhrzeit als Schätzu
   const s = ready('COORDINATION_EXECUTION_ZONE_GAP_WAIT');
   s.automation.irrigationPhase = 'READY';
   s.irrigationSchedule.override = { kind: 'CUSTOM_NEXT', status: 'EXECUTING', zones: [
-    { start: '2026-09-09T09:45:00Z', selected: true },
-    { start: '2026-09-09T10:20:00Z', selected: true },
+    { start: '2026-09-09T03:45:00Z', selected: true },
+    { start: '2026-09-09T04:20:00Z', selected: true },
   ] };
-  assert.equal(view.nextWaterStart(s), 'Voraussichtlich Heute, 12:20 Uhr');
+  assert.equal(view.nextWaterStart(s), 'Voraussichtlich Heute, 06:20 Uhr');
   assert.equal(view.dashboardMessage(s).title, 'Bewässerung macht Pause');
   assert.equal(view.irrigationActions(s).showStart, false);
   s.irrigation.safety.fresh = false;

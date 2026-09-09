@@ -20,12 +20,13 @@ EXECUTION_ENV = {
 
 
 def _original_zones() -> list[dict]:
-    """Seven real relays with the source program's intentional 20 minute gap."""
-    cursor = NOW + timedelta(minutes=90)
+    """Measured seven-zone source occurrence: no invented inter-zone pause."""
+    # The modeled 04:55 Berlin occurrence contains no invented native pause
+    # and still completes before the mandatory 08:00 boundary. The prior
+    # 05:30 fixture ended after 08:00 and is rightly rejected.
+    cursor = NOW + timedelta(minutes=55)
     zones = []
     for index, (relay_id, run_seconds) in enumerate(zip(RELAYS, RUN_SECONDS, strict=True)):
-        if index == 1:
-            cursor += timedelta(minutes=20)
         end = cursor + timedelta(seconds=run_seconds)
         zones.append({
             "relay_id": relay_id,
@@ -60,8 +61,10 @@ class ReplayPlant:
             "timing_window_approved": True,
             "station_and_paths_checked": True,
             "source_plan_id": canonical_schedule_id(self.original_zones),
+            # Ten minutes ahead of the unchanged source satisfies the
+            # execution pilot's minimum field-gain criterion.
             "earliest_start_utc": (NOW + timedelta(minutes=45)).isoformat(),
-            "original_start_utc": (NOW + timedelta(minutes=90)).isoformat(),
+            "original_start_utc": self.original_zones[0]["scheduled_start_utc"],
             "latest_start_utc": (NOW + timedelta(minutes=120)).isoformat(),
             # Authorization remains current for the whole approved occurrence;
             # start_authorized still rechecks that this exact need is present.
@@ -269,6 +272,7 @@ class Replay:
                 stop_zone_sender=self.plant.unexpected_sender,
                 cutting_height_sender=self.plant.unexpected_sender,
                 blade_usage_reset_sender=self.plant.unexpected_sender,
+                command_clock=lambda: self.plant.now,
             )
         except TimeoutError:
             if not expect_timeout:
@@ -310,12 +314,13 @@ def _assert_successful_physical_run(plant: ReplayPlant, replay: Replay) -> None:
     assert len({call["relay_id"] for call in plant.start_calls}) == len(RELAYS)
     assert len(plant.park_calls) == 1
     first, second = plant.physical_runs[:2]
-    assert second["at"] - first["until"] >= timedelta(minutes=20)
+    # No synthetic native pause belongs in this measured source fixture; the
+    # controller must still wait its configured end confirmation.
+    assert second["at"] - first["until"] >= timedelta(minutes=2)
     assert first["at"] == NOW + timedelta(minutes=45)
-    assert first["at"] == datetime.fromisoformat(plant.need["original_start_utc"]) - timedelta(minutes=45)
+    assert first["at"] == datetime.fromisoformat(plant.need["original_start_utc"]) - timedelta(minutes=10)
     assert "PARK_COMMAND_SENT" in decisions
     assert "IRRIGATION_ZONE_CONFIRMED_RUNNING" in decisions
-    assert "COORDINATION_EXECUTION_ZONE_GAP_WAIT" in decisions
     assert decisions[-1] == "IRRIGATION_ALL_ZONES_CONFIRMED_COMPLETE"
     final_state = replay.store.load()
     assert final_state.irrigation_phase == "COMPLETE_HOLD"
@@ -335,7 +340,9 @@ def test_actual_fsm_replays_coordinated_seven_zone_occurrence_across_restarts():
     plant = ReplayPlant()
     replay = Replay(plant)
 
-    reserved = replay.minute()
+    reserved = replay.run_until(
+        lambda output, _state: output.decision_code == "COORDINATION_EXECUTION_RESERVED"
+    )
     assert reserved.decision_code == "COORDINATION_EXECUTION_RESERVED"
     assert not plant.park_calls and not plant.suspend_calls and not plant.start_calls
     replay.restart()
@@ -396,7 +403,7 @@ def test_revoked_need_before_zone_two_blocks_every_new_start():
     assert [call["relay_id"] for call in plant.start_calls] == [RELAYS[0]]
 
 
-def test_delayed_first_start_preserves_physical_gap_across_between_zone_restart():
+def test_delayed_first_start_preserves_end_confirmation_across_between_zone_restart():
     plant = ReplayPlant(safe_mower_delay_minutes=3)
     replay = Replay(plant)
     replay.run_until(lambda _out, _state: len(plant.start_calls) == 1)
@@ -410,4 +417,4 @@ def test_delayed_first_start_preserves_physical_gap_across_between_zone_restart(
     replay.run_until(lambda _out, _state: len(plant.start_calls) == 2)
 
     second = plant.physical_runs[1]
-    assert second["at"] - first["until"] >= timedelta(minutes=20)
+    assert second["at"] - first["until"] >= timedelta(minutes=2)

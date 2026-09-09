@@ -413,6 +413,7 @@ def build_runtime_bundle(
     max_source_age_minutes: int = 720,
     shared_training_calendar_path: Path | None = None,
     occupancy_config_path: Path | None = None,
+    manual_training_control: bool = False,
 ) -> dict[str, Any]:
     if published_at.tzinfo is None or published_at.utcoffset() is None:
         raise RuntimeBundleError("published_at muss eine Zeitzone enthalten.")
@@ -456,6 +457,8 @@ def build_runtime_bundle(
     training_envelope = None
     if (shared_training_calendar_path is None) != (occupancy_config_path is None):
         raise RuntimeBundleError("Gemeinsamer Trainingskalender und bisherige App-Konfiguration müssen zusammen angegeben werden.")
+    if manual_training_control and shared_training_calendar_path is None:
+        raise RuntimeBundleError("Der Wintertrainingsschalter benötigt einen freigegebenen gemeinsamen Trainingskalender.")
     if shared_training_calendar_path is not None:
         from occupancy.training_calendar import load_calendar
         from occupancy.training_runtime import ENVELOPE_KEY, make_training_envelope
@@ -464,6 +467,7 @@ def build_runtime_bundle(
             training_envelope = make_training_envelope(
                 load_calendar(shared_training_calendar_path),
                 occupancy_config=_load_object(occupancy_config_path, "occupancy/config.json"),
+                manual_season_control=manual_training_control,
                 mower_config=mower_config, now_utc=published_at,
             )
         except ValueError as exc:
@@ -563,6 +567,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--source-commit", required=True)
     parser.add_argument("--max-source-age-minutes", type=int, default=720)
     parser.add_argument("--shared-training-calendar", type=Path)
+    parser.add_argument("--manual-training-control", action="store_true")
     parser.add_argument("--occupancy-config", type=Path)
     return parser
 
@@ -582,6 +587,7 @@ def main() -> int:
         max_source_age_minutes=args.max_source_age_minutes,
         shared_training_calendar_path=args.shared_training_calendar,
         occupancy_config_path=args.occupancy_config,
+        manual_training_control=args.manual_training_control,
     )
     print(json.dumps(summary, ensure_ascii=False, indent=2, sort_keys=True))
     return 0

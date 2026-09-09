@@ -14,6 +14,10 @@ from azure.identity import ManagedIdentityCredential
 from azure.storage.blob import BlobServiceClient
 
 
+class InputUnavailable(RuntimeError):
+    """No fresh, validated runtime input snapshot can be supplied."""
+
+
 @dataclass(frozen=True)
 class RuntimeInputPaths:
     config_path: str
@@ -259,4 +263,7 @@ def resolve_runtime_inputs(
     cached = _load_valid_cache(cache_dir=cache_dir, now_utc=now_utc, max_age_minutes=max_age_minutes)
     if cached is not None:
         return cached
-    raise RuntimeError("Keine frische, validierte Laufzeitkonfiguration verfügbar; fail-closed. " + " | ".join(errors))
+    raise InputUnavailable(
+        "Keine frische, validierte Laufzeitkonfiguration verfügbar; fail-closed. "
+        + " | ".join(errors)
+    )

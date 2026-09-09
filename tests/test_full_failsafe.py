@@ -282,6 +282,7 @@ class FullFailsafeTests(unittest.TestCase):
             stop_zone_sender=senders.get("stop_zone", lambda *_: {"message_type": "info"}),
             cutting_height_sender=senders.get("height", lambda *_: {"accepted": True}),
             blade_usage_reset_sender=senders.get("blade_reset", lambda *_: {"accepted": True}),
+            command_clock=lambda: now,
         )
         return output, store
 
@@ -306,6 +307,7 @@ class FullFailsafeTests(unittest.TestCase):
             stop_zone_sender=senders.get(
                 "stop_zone", lambda *_: {"message_type": "info"}
             ),
+            command_clock=lambda: now,
         )
         return output, store
 
@@ -1180,11 +1182,18 @@ class FullFailsafeTests(unittest.TestCase):
                     now=NOW + timedelta(minutes=3),
                     zone=lambda *args: zone_calls.append(args) or {},
                 )
-                self.assertEqual(started.decision_code, "IRRIGATION_ZONE_START_SENT")
-                self.assertEqual(
-                    zone_calls[0][1:3],
-                    (RELAYS[1], RUN_SECONDS[1] + delta_seconds),
-                )
+                if delta_seconds > 0:
+                    # The longer zone overlaps the next persisted native
+                    # start.  The controller must not shorten that pause or
+                    # dispatch water from a malformed sequence.
+                    self.assertEqual(started.decision_code, "IRRIGATION_OPERATING_WINDOW")
+                    self.assertEqual(zone_calls, [])
+                else:
+                    self.assertEqual(started.decision_code, "IRRIGATION_ZONE_START_SENT")
+                    self.assertEqual(
+                        zone_calls[0][1:3],
+                        (RELAYS[1], RUN_SECONDS[1] + delta_seconds),
+                    )
 
     def test_confirmed_early_manual_stop_cancels_remaining_zones_and_starts_hold(self) -> None:
         state = irrigation_state(phase="RUNNING", current=RELAYS[0])
@@ -1805,6 +1814,7 @@ class FullFailsafeTests(unittest.TestCase):
                 suspend_zone_sender=lambda *_: {"message_type": "info"},
                 start_zone_sender=lambda *args: zone_calls.append(args)
                 or {"message_type": "info"},
+                command_clock=lambda: at,
             )
 
         first = run(NOW)

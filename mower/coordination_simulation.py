@@ -591,17 +591,19 @@ def example_scenario() -> tuple[Scenario, datetime, SafetyEvidence]:
     need = WaterNeed(
         need_id="SIMULATION:rasen:2026-09-15:required-program-1",
         demand_reference="SIMULATED approved daily need, unchanged seven zone durations",
-        earliest_start=at("03:00"), original_start=at("04:30"), latest_start=at("07:30"),
+        earliest_start=at("03:30"), original_start=at("04:30"), latest_start=at("05:20"),
         zones=tuple(ZoneNeed(f"SIMULATED_ZONE_{index}", minutes)
                     for index, minutes in enumerate((20, 20, 20, 20, 20, 30, 30), 1)),
         required=True, timing_window_approved=True,
     )
     scenario = Scenario(at("00:00"), local_instant("2026-09-16T00:00:00"), need,
                         (Interval(at("16:30"), at("20:30"), "Training including existing buffers"),))
-    now = at("03:05")
+    # Planning begins at the policy boundary; the 03:05 dock/suppression
+    # evidence is retained as an explicit precondition, not a start time.
+    now = at("03:30")
     evidence = SafetyEvidence(
         mower_observed_at=now, irrigation_observed_at=now, occupancy_observed_at=now,
-        dock_observations=(at("03:04"), now),
+        dock_observations=(at("03:29"), now),
         occupancy_complete_from=scenario.start, occupancy_complete_until=scenario.end,
         activity="CHARGING", connected=True, own_park_confirmed=True,
         station_and_paths_safe=True, need_still_current=True,

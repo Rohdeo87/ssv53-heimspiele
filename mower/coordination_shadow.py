@@ -11,6 +11,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Iterable, Mapping
 
 from mower.adaptive_planner import _occupancy_blocks
+from mower.irrigation_operating_window import operating_bounds, validate_zone_sequence
 
 
 UTC = timezone.utc
@@ -83,7 +84,8 @@ def compare_charging_window(*, cycle: Mapping[str, Any], need: Mapping[str, Any]
                             previous_cycle: Mapping[str, Any] | None = None,
                             minimum_gain_minutes: int = 10, drying_minutes: int = 150,
                             minimum_lead_minutes: int = 0,
-                            fixed_start_utc: str | None = None) -> dict[str, Any]:
+                            fixed_start_utc: str | None = None,
+                            end_confirmation_minutes: int = 2) -> dict[str, Any]:
     """Compare the unchanged occurrence with one charging-event proposal.
 
     The charge estimate must come from the existing empirical estimator. Fresh
@@ -101,7 +103,8 @@ def compare_charging_window(*, cycle: Mapping[str, Any], need: Mapping[str, Any]
     try:
         if (type(drying_minutes) is not int or drying_minutes < 150
                 or type(minimum_gain_minutes) is not int or minimum_gain_minutes < 1
-                or type(minimum_lead_minutes) is not int or not 0 <= minimum_lead_minutes <= 120):
+                or type(minimum_lead_minutes) is not int or not 0 <= minimum_lead_minutes <= 120
+                or type(end_confirmation_minutes) is not int or not 1 <= end_confirmation_minutes <= 10):
             raise ValueError("Conservative timing required")
         now = _instant(cycle["executed_at_utc"])
         details = cycle["details"]
@@ -167,6 +170,13 @@ def compare_charging_window(*, cycle: Mapping[str, Any], need: Mapping[str, Any]
         observed = [(z.get("relay_id"), z.get("run_seconds"), _instant(z["scheduled_start_utc"])) for z in actual]
         if expected != observed or min(start for _, _, start in expected) != original:
             blockers.append("ORIGINAL_SCHEDULE_CHANGED")
+        source_window = validate_zone_sequence(
+            [start for _, _, start in expected],
+            [seconds for _, seconds, _ in expected],
+            validation_margin_seconds=len(expected) * end_confirmation_minutes * 60,
+        )
+        if source_window.code != "OK":
+            blockers.append("IRRIGATION_OPERATING_WINDOW")
         estimate = charging_end_estimate or {}
         if (estimate.get("estimated") is not True or estimate.get("source") != "OBSERVED_COMPLETED_CHARGING_SECTIONS"
                 or type(estimate.get("sampleCount")) is not int or estimate["sampleCount"] < 3
@@ -182,8 +192,19 @@ def compare_charging_window(*, cycle: Mapping[str, Any], need: Mapping[str, Any]
                 candidate += timedelta(minutes=1)
         else:
             # A persisted reservation must be checked at its exact timestamp;
-            # validating a newly shifted slot cannot release the old one.
+            # validating a newly shifted or clamped slot cannot release the
+            # old one, even when that different slot would fit 03:30--08:00.
             candidate = _instant(fixed_start_utc)
+        bounds = operating_bounds(candidate)
+        if bounds is None:
+            blockers.append("IRRIGATION_OPERATING_WINDOW")
+            return result
+        earliest_operating_start, operating_deadline = bounds
+        if fixed_start_utc is None:
+            candidate = max(candidate, earliest_operating_start)
+        elif candidate < earliest_operating_start:
+            blockers.append("IRRIGATION_OPERATING_WINDOW")
+            return result
         if (not now < charge_end or candidate < available_start or candidate >= charge_end
                 or candidate >= original or not earliest <= candidate <= latest):
             blockers.append("NO_UPCOMING_WINDOW_DURING_CHARGING")
@@ -198,6 +219,14 @@ def compare_charging_window(*, cycle: Mapping[str, Any], need: Mapping[str, Any]
             blockers.append("UNEXPECTED_ZONE_OVERLAP")
             return result
         span = max(end for _, end in ordered) - original
+        # This is not new watering time: it is the controller's existing
+        # per-zone end-confirmation wait, carried into the shadow boundary.
+        controlled_span = span + timedelta(
+            minutes=len(expected) * end_confirmation_minutes
+        )
+        if candidate + controlled_span > operating_deadline:
+            blockers.append("IRRIGATION_WINDOW_CANNOT_FIT")
+            return result
         old_release = original + span + timedelta(minutes=drying_minutes)
         new_release = candidate + span + timedelta(minutes=drying_minutes)
         blocks = [(_instant(b["start"]), _instant(b["end"])) for b in captured["occupancy"]]

@@ -1,5 +1,19 @@
 # Gesamtbewertung der SSV53-Platzpflegeplattform
 
+**Aktueller Abschlussstand:** [Entwicklungsprüfung und Produktionsbefunde](final-preflight.md),
+[verbindliche neue Betriebsregeln](user-operating-rules.md) und
+[konkreter Freigabeablauf](final-activation-runbook.md). Der Liefernachweis steht
+in [final-preflight-delivery.json](final-preflight-delivery.json). Der neue
+[Winter-Schalter](../ui-2026-09-09/final-preflight/winter-switch-390.png) ist lokal
+mit Beispieldaten geprüft; es erfolgte keine Veröffentlichung.
+
+Die folgenden Abschnitte sind der **zeitgebundene Erstaudit**. Seine Testzahlen,
+Pakete und damaligen Restarbeiten sind historisch. Der neue Bewässerungsbeginn
+ab 03:30 ersetzt insbesondere den früheren 03:05-Modellstart und dessen Gewinn;
+der neu gerechnete [Tagesvergleich](coordination-simulation.md) ist maßgeblich.
+Die Feiertags- und Winterregel wurde inzwischen durch den Nutzer festgelegt.
+
+
 **Neueste Erweiterung:** [Koordinierte Bewässerung während des Ladens](coordination-execution-update.md)
 verbindet die Planung mit dem persistenten Ausführungsablauf. Sie enthält die
 zusätzlichen Fehlernachweise, einfache App-Anzeigen, isolierte Ablaufprüfungen

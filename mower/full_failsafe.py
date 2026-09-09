@@ -15,6 +15,8 @@ from mower.decision import (
     PARK_OVERRIDE_ACTIONS,
 )
 from mower.dry_run import run_read_only_cycle
+from mower.config_source import InputUnavailable
+from mower.input_failure_guard import run_input_failure_guard
 from mower.coordination_request import canonical_schedule_id as coordination_source_plan_id
 from mower.coordination_execution import (
     consume_request as consume_coordination_request,
@@ -31,6 +33,7 @@ from mower.husqvarna_actions import park_until_further_notice
 from mower.husqvarna_cutting_height_actions import set_work_area_cutting_height
 from mower.husqvarna_statistics_actions import reset_cutting_blade_usage_time
 from mower.husqvarna_start_actions import start_in_work_area
+from mower.start_dispatch_guard import StartDispatchBlocked, prepare_start_dispatch
 from mower.hydrawise import (
     evaluate_continuous_clear_confirmation,
     parse_relay_id_allowlist,
@@ -43,6 +46,12 @@ from mower.irrigation_schedule import (
     load_object as load_irrigation_schedule_object,
     parse_utc as parse_irrigation_schedule_utc,
     START_BLOCKING_SCHEDULE_STATUSES,
+)
+from mower.irrigation_operating_window import (
+    OperatingWindowResult,
+    operating_bounds,
+    validate_fresh_start,
+    validate_zone_sequence,
 )
 from mower.runtime import ControlMode, CycleResult, RuntimeSettings
 from mower.safety import CommandIntent, evaluate_command_gate, occupancy_override_allowed
@@ -59,6 +68,8 @@ StartZoneSender = Callable[[str, int, int, str | int | None], dict[str, Any]]
 StopZoneSender = Callable[[str, int, str | int | None], dict[str, Any]]
 CuttingHeightSender = Callable[[str, str, str, int, int], dict[str, Any]]
 BladeUsageResetSender = Callable[[str, str, str], dict[str, Any]]
+InputFailureRunner = Callable[..., CycleResult]
+Clock = Callable[[], datetime]
 
 PARKABLE_ACTIVITIES = frozenset({"MOWING", "LEAVING"})
 PARK_COMMAND_ACTIVITIES = frozenset(
@@ -1066,24 +1077,9 @@ def _projected_irrigation_end(
 ) -> datetime:
     """Berechnet konservativ das Ende der bereits übernommenen manuellen Folge."""
 
-    if not any(zone.get("coordination_execution") is True for zone in plan):
-        seconds = 0
-        remaining_zone_count = 0
-        for zone in plan:
-            relay_id = int(zone["relay_id"])
-            if relay_id in completed_relay_ids:
-                continue
-            duration = int(zone["run_seconds"])
-            if relay_id == current_relay_id and current_started_utc is not None:
-                elapsed = max(0, int((now_utc - current_started_utc).total_seconds()))
-                duration = max(0, duration - elapsed)
-            seconds += duration
-            remaining_zone_count += 1
-        return now_utc + timedelta(seconds=seconds + remaining_zone_count * end_confirmation_minutes * 60)
-
-    # A simple sum loses deliberate inter-zone pauses.  Advance a cursor over
-    # persisted timestamps instead, preserving a future scheduled gap while
-    # carrying any real delay of a preceding zone forward conservatively.
+    # A simple sum loses deliberate native inter-zone pauses.  Advance a
+    # cursor over persisted timestamps for every plan, carrying a real delay
+    # of a preceding zone and each confirmed-end wait forward conservatively.
     cursor = now_utc.astimezone(timezone.utc)
     previous_physical_end: datetime | None = None
     previous_planned_end: datetime | None = None
@@ -1098,7 +1094,7 @@ def _projected_irrigation_end(
         if relay_id == current_relay_id and current_started_utc is not None:
             elapsed = max(0, int((cursor - current_started_utc).total_seconds()))
             duration = max(0, duration - elapsed)
-        earliest = max(cursor, scheduled_start)
+        earliest = cursor
         if previous_physical_end is not None and previous_planned_end is not None:
             gap = max(timedelta(0), scheduled_start - previous_planned_end)
             earliest = max(earliest, previous_physical_end + gap)
@@ -1106,6 +1102,113 @@ def _projected_irrigation_end(
         previous_planned_end = scheduled_start + timedelta(seconds=int(zone["run_seconds"]))
         cursor = previous_physical_end + timedelta(minutes=end_confirmation_minutes)
     return cursor
+
+
+def _irrigation_operating_window(
+    *,
+    plan: list[dict[str, Any]],
+    completed_relay_ids: set[int],
+    now_utc: datetime,
+    end_confirmation_minutes: int,
+) -> OperatingWindowResult:
+    """Check the unchanged remaining manual sequence against 03:30--08:00.
+
+    The first manually dispatched zone would start at ``now``. Before the
+    local earliest bound, project from 03:30 so callers can wait without
+    shortening a zone or allowing the suppressed native plan to resume.
+    Persisted absolute starts provide every native pause; confirmation waits
+    are carried by ``_projected_irrigation_end`` as existing control time.
+    """
+
+    if (
+        not isinstance(end_confirmation_minutes, int)
+        or isinstance(end_confirmation_minutes, bool)
+        or not 1 <= end_confirmation_minutes <= 10
+    ):
+        return OperatingWindowResult("INVALID", reason="invalid end confirmation")
+    if any(
+        not isinstance(relay_id, int) or isinstance(relay_id, bool)
+        for relay_id in completed_relay_ids
+    ):
+        return OperatingWindowResult("INVALID", reason="invalid completed relay identity")
+    try:
+        remaining = []
+        for zone in plan:
+            if not isinstance(zone, dict):
+                return OperatingWindowResult("INVALID", reason="invalid persisted zone")
+            relay_id = zone.get("relay_id")
+            run_seconds = zone.get("run_seconds")
+            if (
+                not isinstance(relay_id, int) or isinstance(relay_id, bool) or relay_id <= 0
+                or not isinstance(run_seconds, int) or isinstance(run_seconds, bool)
+                or not 1 <= run_seconds <= 7200
+            ):
+                return OperatingWindowResult("INVALID", reason="invalid persisted zone values")
+            if relay_id not in completed_relay_ids:
+                remaining.append(zone)
+    except (TypeError, ValueError, AttributeError, OverflowError):
+        return OperatingWindowResult("INVALID", reason="invalid persisted zone sequence")
+    if not remaining:
+        return OperatingWindowResult("INVALID", reason="no remaining zones")
+    try:
+        ordered = sorted(
+            remaining,
+            key=lambda zone: _parse_time(zone["scheduled_start_utc"]),
+        )
+        starts = [_parse_time(zone["scheduled_start_utc"]) for zone in ordered]
+        durations = [int(zone["run_seconds"]) for zone in ordered]
+    except (KeyError, TypeError, ValueError, AttributeError, OverflowError):
+        return OperatingWindowResult("INVALID", reason="invalid persisted zone sequence")
+    if any(start is None for start in starts):
+        return OperatingWindowResult("INVALID", reason="missing persisted zone start")
+    assert all(start is not None for start in starts)
+    try:
+        bounds = operating_bounds(now_utc)
+    except (TypeError, ValueError, AttributeError, OverflowError):
+        return OperatingWindowResult("INVALID", reason="invalid operating window time")
+    if bounds is None:
+        return OperatingWindowResult("INVALID", reason="operating timezone unavailable")
+    earliest, deadline = bounds
+    try:
+        normalized_now = now_utc.astimezone(timezone.utc)
+    except (TypeError, ValueError, AttributeError, OverflowError):
+        return OperatingWindowResult("INVALID", reason="invalid operating window time")
+    effective_start = max(normalized_now, earliest)
+    first_planned = starts[0]
+    try:
+        shifted_starts = [effective_start + (start - first_planned) for start in starts]
+        sequence = validate_zone_sequence(shifted_starts, durations)
+    except (TypeError, ValueError, AttributeError, OverflowError):
+        return OperatingWindowResult("INVALID", reason="invalid persisted zone sequence")
+    if sequence.code == "INVALID":
+        return sequence
+    try:
+        projected_end = _projected_irrigation_end(
+            plan=ordered,
+            completed_relay_ids=set(),
+            current_relay_id=None,
+            current_started_utc=None,
+            now_utc=effective_start,
+            end_confirmation_minutes=end_confirmation_minutes,
+        )
+    except (KeyError, TypeError, ValueError, AttributeError):
+        return OperatingWindowResult("INVALID", reason="invalid projected zone sequence")
+    span_seconds = max(0, int((projected_end - effective_start).total_seconds()))
+    projected = validate_fresh_start(
+        effective_start,
+        duration_seconds=span_seconds,
+    )
+    if projected.code != "OK":
+        return projected
+    if normalized_now < earliest:
+        return OperatingWindowResult(
+            "TOO_EARLY", earliest, deadline, projected_end,
+            projected.latest_start_utc,
+            "earliest local start is 03:30 Europe/Berlin",
+        )
+    return OperatingWindowResult(
+        "OK", earliest, deadline, projected_end, projected.latest_start_utc,
+    )
 
 
 def _delay_coordinated_remaining_zones(
@@ -1742,6 +1845,8 @@ def run_full_failsafe_cycle(
     stop_zone_sender: StopZoneSender = stop_zone_now,
     cutting_height_sender: CuttingHeightSender = set_work_area_cutting_height,
     blade_usage_reset_sender: BladeUsageResetSender = reset_cutting_blade_usage_time,
+    input_failure_runner: InputFailureRunner = run_input_failure_guard,
+    command_clock: Clock = lambda: datetime.now(timezone.utc),
 ) -> CycleResult:
     """Fail-closed Gesamtsteuerung für Mäher, Belegung und sieben Zonen."""
 
@@ -1771,13 +1876,31 @@ def run_full_failsafe_cycle(
     if str(environment.get("HYDRAWISE_STATUS_CACHE_MODE") or "OFF").strip().upper() != "OFF":
         raise RuntimeError("Der gemeinsame Statuscache ist für Gerätebetriebsarten noch nicht freigegeben.")
 
-    result = read_only_runner(
-        now_utc=now,
-        settings=settings,
-        environment=environment,
-        past_due=past_due,
-        source=source,
-    )
+    read_only_kwargs = {
+        "now_utc": now,
+        "settings": settings,
+        "environment": environment,
+        "past_due": past_due,
+        "source": source,
+    }
+    if read_only_runner is run_read_only_cycle:
+        # The controller uses direct device reads. Publishing this independent
+        # dashboard snapshot is best-effort inside the canonical reader and
+        # never changes control decisions or specialized injected runners.
+        read_only_kwargs["publish_dashboard_snapshot"] = True
+    try:
+        result = read_only_runner(**read_only_kwargs)
+    except InputUnavailable as exc:
+        return input_failure_runner(
+            now_utc=now,
+            settings=settings,
+            environment=environment,
+            past_due=past_due,
+            source=source,
+            cause=exc,
+            state_store_factory=state_store_factory,
+            park_sender=park_sender,
+        )
     details = dict(result.details)
     current_plan = _as_dict(details.get("current_plan"))
     parking_block = _as_dict(current_plan.get("parking_block"))
@@ -1795,6 +1918,13 @@ def run_full_failsafe_cycle(
     mower_status_max_age_seconds = _env_int(
         environment,
         "MOWER_STATUS_MAX_AGE_SECONDS",
+        180,
+        minimum=30,
+        maximum=900,
+    )
+    hydrawise_status_max_age_seconds = _env_int(
+        environment,
+        "HYDRAWISE_STATUS_MAX_AGE_SECONDS",
         180,
         minimum=30,
         maximum=900,
@@ -3321,6 +3451,38 @@ def run_full_failsafe_cycle(
         ),
         "does_not_override_irrigation": True,
     }
+
+    # This covers water that the controller did not initiate too.  Do not
+    # transmit an unowned stop; freeze automation and surface an on-site
+    # controller check when fresh Hydrawise evidence says it is outside the
+    # mandatory local operating window.
+    operating_bounds_now = operating_bounds(now)
+    actual_active_ids = _active_relay_ids(details)
+    if (
+        operating_bounds_now is not None
+        and actual_active_ids
+        and hydra_safety.get("available") is True
+        and hydra_safety.get("fresh") is True
+        and not (operating_bounds_now[0] <= now < operating_bounds_now[1])
+    ):
+        outside_hold = _failed_irrigation(
+            state,
+            "Frische Hydrawise-Beobachtung meldet Wasser außerhalb 03:30--08:00 Europe/Berlin.",
+        )
+        details["irrigation_operating_window"] = {
+            "code": "ACTIVE_OUTSIDE_WINDOW",
+            "earliest_start_utc": operating_bounds_now[0].isoformat(),
+            "latest_end_utc": operating_bounds_now[1].isoformat(),
+            "active_relay_ids": sorted(actual_active_ids),
+            "automatic_stop_sent": False,
+            "required_action": "ON_SITE_CONTROLLER_CHECK",
+        }
+        return _persist_result(
+            store=store, original=original, state=outside_hold, result=result,
+            details=details, settings=settings,
+            decision_code="IRRIGATION_ACTIVE_OUTSIDE_OPERATING_WINDOW",
+            message="Bewässerung bitte beenden und den Controller vor Ort prüfen.",
+        )
 
     occupancy_sources = _source_parts(
         effective_parking_block.get("source")
@@ -4946,6 +5108,50 @@ def run_full_failsafe_cycle(
                         decision_code="COORDINATION_EXECUTION_START_BLOCKED",
                         message="Der koordinierte Zonenstart bleibt wegen geänderter Freigabe oder Belegung gesperrt.",
                     )
+            operating_window = _irrigation_operating_window(
+                plan=execution_zones,
+                completed_relay_ids=set(completed),
+                now_utc=now,
+                end_confirmation_minutes=end_confirmation_minutes,
+            )
+            details["irrigation_operating_window"] = {
+                "code": operating_window.code,
+                "earliest_start_utc": (
+                    operating_window.earliest_start_utc.isoformat()
+                    if operating_window.earliest_start_utc else None
+                ),
+                "latest_end_utc": (
+                    operating_window.latest_end_utc.isoformat()
+                    if operating_window.latest_end_utc else None
+                ),
+                "projected_end_utc": (
+                    operating_window.projected_end_utc.isoformat()
+                    if operating_window.projected_end_utc else None
+                ),
+                "latest_start_utc": (
+                    operating_window.latest_start_utc.isoformat()
+                    if operating_window.latest_start_utc else None
+                ),
+                "reason": operating_window.reason,
+            }
+            if operating_window.code == "TOO_EARLY":
+                return _persist_result(
+                    store=store, original=original, state=state, result=result,
+                    details=details, settings=settings,
+                    decision_code="IRRIGATION_OPERATING_WINDOW",
+                    message="Die Beregnung wartet bis 03:30 Europe/Berlin; der gesicherte native Plan bleibt unterdrückt.",
+                )
+            if operating_window.code != "OK":
+                return _persist_result(
+                    store=store, original=original, state=state, result=result,
+                    details=details, settings=settings,
+                    decision_code=(
+                        "IRRIGATION_WINDOW_CANNOT_FIT"
+                        if operating_window.code == "TOO_LATE"
+                        else "IRRIGATION_OPERATING_WINDOW"
+                    ),
+                    message="Bewässerung ist nur ab 03:30 möglich und muss bis 08:00 beendet sein. Bitte früheren Start wählen.",
+                )
             reserved = replace(
                 state,
                 revision=state.revision + 1,
@@ -4974,6 +5180,131 @@ def run_full_failsafe_cycle(
                 )
             api_key = str(environment.get("HYDRAWISE_API_KEY", "")).strip()
             controller_id = str(environment.get("HYDRAWISE_CONTROLLER_ID", "")).strip() or None
+            # Read persisted ownership before sampling the dispatch clock: a
+            # slow remote state read must not make an old clock look current.
+            try:
+                latest = store.load()
+                dispatch_now = command_clock()
+                if dispatch_now.tzinfo is None or dispatch_now.utcoffset() is None:
+                    raise ValueError("command clock is not timezone-aware")
+                dispatch_now = dispatch_now.astimezone(timezone.utc)
+            except Exception as exc:
+                details["irrigation_action"] = {
+                    "type": "StartZone", "outcome": "PRE_SEND_BLOCKED",
+                    "reason_code": "IRRIGATION_OPERATING_WINDOW",
+                    "error_type": type(exc).__name__,
+                }
+                return replace(
+                    result, decision_code="IRRIGATION_OPERATING_WINDOW", command_sent=False,
+                    message="Die Startvorbereitung ist nicht aktuell nachweisbar; es wurde kein Zonenbefehl gesendet.",
+                    details=_decorate(details, state=reserved, settings=settings, persisted=True, command_sent=False),
+                )
+            if (
+                latest.revision != reserved.revision
+                or latest.irrigation_phase != "START_RESERVED"
+                or latest.irrigation_current_relay_id != int(next_zone["relay_id"])
+                or latest.irrigation_zone_start_reserved_utc
+                != reserved.irrigation_zone_start_reserved_utc
+            ):
+                details["irrigation_action"] = {
+                    "type": "StartZone", "outcome": "PRE_SEND_BLOCKED",
+                    "reason_code": "IRRIGATION_START_RESERVATION_CHANGED",
+                }
+                return replace(
+                    result, decision_code="IRRIGATION_OPERATING_WINDOW", command_sent=False,
+                    message="Die Zonenstart-Reservierung wurde vor dem Versand verändert; es wurde kein Zonenbefehl gesendet.",
+                    details=_decorate(details, state=latest, settings=settings, persisted=True, command_sent=False),
+                )
+            # The state reread is deliberately the final remote operation.
+            # Reassess every proof whose age can expire while it was in
+            # flight; a cached cycle result is never a licence to POST later.
+            dispatch_window = _irrigation_operating_window(
+                plan=execution_zones,
+                completed_relay_ids=set(completed),
+                now_utc=dispatch_now,
+                end_confirmation_minutes=end_confirmation_minutes,
+            )
+            dispatch_code: str | None = None
+            dispatch_reason: str | None = None
+            if dispatch_window.code == "TOO_LATE":
+                dispatch_code, dispatch_reason = "IRRIGATION_WINDOW_CANNOT_FIT", "IRRIGATION_WINDOW_CANNOT_FIT"
+            elif latest.maintenance_mode:
+                dispatch_code, dispatch_reason = "IRRIGATION_OPERATING_WINDOW", "MAINTENANCE_MODE"
+            elif _operator_action(latest, dispatch_now) is not None:
+                dispatch_code, dispatch_reason = "IRRIGATION_OPERATING_WINDOW", "OPERATOR_ACTION_PENDING"
+            elif latest.mower_start_pending_since_utc is not None:
+                dispatch_code, dispatch_reason = "IRRIGATION_OPERATING_WINDOW", "MOWER_START_PENDING"
+            elif not _mower_status_is_fresh(
+                mower, now_utc=dispatch_now,
+                max_age_seconds=mower_status_max_age_seconds,
+            ):
+                dispatch_code, dispatch_reason = "IRRIGATION_OPERATING_WINDOW", "MOWER_STATUS_STALE"
+            else:
+                dispatch_observed = _hydrawise_source_observation(
+                    details, now_utc=dispatch_now,
+                )
+                dispatch_hydra_fresh = (
+                    dispatch_observed is not None
+                    and -60 <= (dispatch_now - dispatch_observed).total_seconds()
+                    <= hydrawise_status_max_age_seconds
+                )
+                if (
+                    not dispatch_hydra_fresh
+                    or hydra_safety.get("clear_now") is not True
+                    or bool(_active_relay_ids(details))
+                ):
+                    dispatch_code, dispatch_reason = "IRRIGATION_OPERATING_WINDOW", "HYDRAWISE_STATUS_STALE_OR_ACTIVE"
+                elif (
+                    (_source_parts(effective_blocked_now.get("source"))
+                     | _source_parts(effective_parking_block.get("source")))
+                    - frozenset({"irrigation"})
+                ):
+                    # These are the cycle's already-read occupancy proofs.
+                    # Do not initiate another source burst here; without a
+                    # fresh positive read they remain a conservative block.
+                    dispatch_code, dispatch_reason = "IRRIGATION_OPERATING_WINDOW", "OCCUPANCY_OR_PARKING_BLOCK"
+                elif dispatch_window.code != "OK":
+                    dispatch_code = (
+                        "IRRIGATION_WINDOW_CANNOT_FIT"
+                        if dispatch_window.code == "TOO_LATE"
+                        else "IRRIGATION_OPERATING_WINDOW"
+                    )
+                    dispatch_reason = dispatch_code
+                else:
+                    latest_suspension_until = _parse_time(
+                        latest.irrigation_suspension_until_utc
+                    )
+                    if (
+                        latest_suspension_until is None
+                        or dispatch_window.projected_end_utc is None
+                        or dispatch_window.projected_end_utc > latest_suspension_until
+                    ):
+                        dispatch_code = "IRRIGATION_WINDOW_CANNOT_FIT"
+                        dispatch_reason = "IRRIGATION_SUSPENSION_WINDOW_EXPIRED"
+            if dispatch_code is not None:
+                reopened = replace(
+                    reserved,
+                    revision=reserved.revision + 1,
+                    irrigation_phase="READY",
+                    irrigation_current_relay_id=None,
+                    irrigation_zone_start_reserved_utc=None,
+                    last_decision_code=dispatch_code,
+                )
+                try:
+                    store.save(reopened, expected_revision=reserved.revision)
+                except Exception:
+                    reopened = reserved
+                details["irrigation_action"] = {
+                    "type": "StartZone", "outcome": "PRE_SEND_BLOCKED",
+                    "reason_code": dispatch_reason,
+                }
+                return replace(
+                    result,
+                    decision_code=dispatch_code,
+                    command_sent=False,
+                    message="Bewässerung ist nur ab 03:30 möglich und muss bis 08:00 beendet sein. Bitte früheren Start wählen.",
+                    details=_decorate(details, state=reopened, settings=settings, persisted=True, command_sent=False),
+                )
             response = start_zone_sender(
                 api_key,
                 int(next_zone["relay_id"]),
@@ -6046,8 +6377,46 @@ def run_full_failsafe_cycle(
             details=_decorate(details, state=state, settings=settings, persisted=False,
                               command_sent=False, error=type(exc).__name__),
         )
+
+    def before_start_dispatch() -> int:
+        return prepare_start_dispatch(
+            clock=command_clock,
+            store=store,
+            reserved=reserved,
+            mower=mower,
+            hydrawise_safety=hydra_safety,
+            safe_command_deadline_utc=safe_command_deadline,
+            command_end_utc=command_end,
+            requested_duration_minutes=duration,
+            mower_status_max_age_seconds=mower_status_max_age_seconds,
+            hydrawise_status_max_age_seconds=hydrawise_status_max_age_seconds,
+        )
+
     try:
-        response = start_sender(client_id, client_secret, mower_id, work_area_id, duration)
+        # Always fence legacy five-argument fakes/adapters immediately before
+        # their invocation.  The production sender repeats this exact fence
+        # after OAuth and immediately before its HTTP POST.
+        guarded_duration = before_start_dispatch()
+        if start_sender is start_in_work_area:
+            response = start_sender(
+                client_id, client_secret, mower_id, work_area_id, guarded_duration,
+                before_send=before_start_dispatch,
+            )
+        else:
+            response = start_sender(
+                client_id, client_secret, mower_id, work_area_id, guarded_duration
+            )
+    except StartDispatchBlocked as exc:
+        details["start_action"] = {
+            "type": "StartInWorkArea", "outcome": "PRE_SEND_BLOCKED",
+            "reason_code": exc.code, "requested_deadline_utc": command_end.isoformat(),
+            "failsafe_refresh": failsafe_refresh,
+        }
+        return replace(
+            result, decision_code="MOWER_START_SEND_BLOCKED", command_sent=False,
+            message="Der Mäherstart wurde vor dem HTTP-Versand verworfen; der Schutz-Latch bleibt bis zum Abgleich bestehen.",
+            details=_decorate(details, state=reserved, settings=settings, persisted=True, command_sent=False),
+        )
     except Exception as exc:
         details["start_action"] = {
             "type": "StartInWorkArea", "outcome": "UNCONFIRMED", "error_type": type(exc).__name__,

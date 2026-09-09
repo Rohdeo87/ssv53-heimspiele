@@ -4,6 +4,8 @@ import json
 from datetime import datetime, timedelta, timezone
 from typing import Any, Mapping
 
+from mower.irrigation_operating_window import validate_zone_sequence
+
 
 SCHEDULE_ACTIONS = frozenset(
     {
@@ -32,10 +34,20 @@ MAXIMUM_CUSTOM_DAYS = 14
 MAXIMUM_PAUSE_DAYS = 30
 MINIMUM_PAUSE_MINUTES = 5
 HISTORY_LIMIT = 12
+# The controller requires a fresh end confirmation for each selected zone.
+# A custom request is validated against this existing conservative assumption
+# before it can become a Hydrawise schedule mutation.
+CUSTOM_END_CONFIRMATION_SECONDS = 120
 
 
 class IrrigationScheduleValidationError(ValueError):
     pass
+
+
+class IrrigationOperatingWindowError(IrrigationScheduleValidationError):
+    def __init__(self, message: str, code: str) -> None:
+        super().__init__(message)
+        self.code = code
 
 
 def parse_utc(value: Any, field_name: str) -> datetime:
@@ -129,6 +141,24 @@ def validate_schedule_request(
                 "Mindestens eine Zone muss für den nächsten Lauf aktiviert bleiben."
             )
         zones.sort(key=lambda item: int(item["zone"]))
+        selected = [item for item in zones if item["selected"]]
+        starts: list[datetime] = []
+        cursor = desired
+        for item in selected:
+            starts.append(cursor)
+            cursor += timedelta(seconds=int(item["runSeconds"]))
+        operating_window = validate_zone_sequence(
+            starts,
+            [int(item["runSeconds"]) for item in selected],
+            validation_margin_seconds=(
+                len(selected) * CUSTOM_END_CONFIRMATION_SECONDS
+            ),
+        )
+        if operating_window.code != "OK":
+            raise IrrigationOperatingWindowError(
+                "Bewässerung ist nur ab 03:30 möglich und muss bis 08:00 beendet sein. Bitte einen passenden Start wählen.",
+                "IRRIGATION_OPERATING_WINDOW" if operating_window.code == "TOO_EARLY" else "IRRIGATION_WINDOW_CANNOT_FIT",
+            )
         return {"desiredStart": desired.isoformat(), "zones": zones}
 
     if raw:

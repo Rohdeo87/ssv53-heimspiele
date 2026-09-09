@@ -46,8 +46,15 @@ from mower.adaptive_planner import build_adaptive_plan
 from mower.coordination_shadow import capture_planning_inputs
 from mower.coordination_inputs import capture_enabled, prepare_coordination_inputs
 from mower.status_cache import cache_mode, read_status_cached
+from mower.dashboard_observations import (
+    dashboard_observation_store_from_environment,
+    publish_dashboard_observation,
+    read_dashboard_observation,
+)
 from mower.weather_service import resolve_weather
 from occupancy.training_runtime import resolve_runtime_training, training_mode
+from occupancy.training_control import TrainingControlSnapshot
+from occupancy.training_control import resolve_training_control
 from training_cancellations import AzureTableCancellationStore
 from special_occupancy import (
     AzureTableSpecialOccupancyStore,
@@ -210,11 +217,18 @@ def run_read_only_cycle(
     cancellation_store_factory=AzureTableCancellationStore.from_environment,
     special_store_factory=AzureTableSpecialOccupancyStore.from_environment,
     persist_observations: bool = True,
+    publish_dashboard_snapshot: bool = False,
+    dashboard_snapshot_only: bool = False,
+    dashboard_store_factory=dashboard_observation_store_from_environment,
+    dashboard_observation_clock=None,
+    training_control_snapshot: TrainingControlSnapshot | None = None,
 ) -> CycleResult:
     """Führt die komplette Live-Abfrage aus, sendet aber keinerlei Befehle."""
 
     if now_utc.tzinfo is None or now_utc.utcoffset() is None:
         raise ValueError("now_utc muss eine zeitzonenbewusste UTC-Zeit sein.")
+    if dashboard_snapshot_only and (persist_observations or publish_dashboard_snapshot):
+        raise ValueError("Dashboard-Beobachtungen dürfen ausschließlich gelesen werden.")
 
     client_id = environment.get("HUSQVARNA_CLIENT_ID", "").strip()
     client_secret = environment.get(
@@ -277,11 +291,36 @@ def run_read_only_cycle(
     hydrawise_label = "nicht verbunden"
     hydrawise_error: str | None = None
     hydrawise_cache = None
+    dashboard_observation = None
     confirmation_observed_until_utc = None
     hydrawise_key = environment.get("HYDRAWISE_API_KEY", "").strip()
-    if hydrawise_key:
+    controller_id = environment.get("HYDRAWISE_CONTROLLER_ID", "").strip() or None
+    if dashboard_snapshot_only:
+        # The app reads the control reader's immutable observation. It never
+        # falls back to another vendor request or earns new confirmation time.
         try:
-            controller_id = environment.get("HYDRAWISE_CONTROLLER_ID", "").strip() or None
+            dashboard_store = dashboard_store_factory(environment)
+            if dashboard_store is None:
+                raise RuntimeError("Dashboard observation is disabled")
+            observation = read_dashboard_observation(
+                dashboard_store, controller_id, expected_relay_ids=expected_relay_ids,
+                now_utc=now_utc,
+            )
+            hydrawise_status = observation.status
+            dashboard_observation = {
+                "quality": observation.quality,
+                "source_observed_at_utc": observation.source_observed_at_utc,
+                "fetched_at_utc": observation.fetched_at_utc,
+                "age_seconds": observation.age_seconds,
+                "read_only_snapshot": True,
+            }
+        except Exception:
+            dashboard_observation = {"quality": "CACHE_UNAVAILABLE", "read_only_snapshot": True}
+        hydrawise_label = "Aktueller Bewässerungsstand" if hydrawise_status is not None else "Aktueller Stand fehlt"
+        if hydrawise_status is None:
+            hydrawise_error = "Bewässerungsstand fehlt. Bitte aktualisieren und die Anlage prüfen."
+    elif hydrawise_key:
+        try:
             if cache_mode(environment) == "AZURE_TABLE":
                 cached = read_status_cached(
                     hydrawise_key, controller_id, environment=environment,
@@ -294,6 +333,20 @@ def run_read_only_cycle(
                     hydrawise_error = "Aktueller Bewässerungsstand fehlt. Nächsten erlaubten Abruf abwarten."
             else:
                 hydrawise_status = fetch_status(hydrawise_key, controller_id)
+                if publish_dashboard_snapshot:
+                    # Optional display publication must never prevent the
+                    # controller from evaluating its direct vendor evidence.
+                    try:
+                        dashboard_store = dashboard_store_factory(environment)
+                        if dashboard_store is not None:
+                            quality = publish_dashboard_observation(
+                                dashboard_store, controller_id, hydrawise_status,
+                                expected_relay_ids=expected_relay_ids,
+                                clock=dashboard_observation_clock,
+                            )
+                            dashboard_observation = {"quality": quality, "read_only_snapshot": False}
+                    except Exception:
+                        dashboard_observation = {"quality": "PUBLISH_FAILED", "read_only_snapshot": False}
             relays = (hydrawise_status or {}).get("relays")
             hydrawise_label = (
                 (f"Gemeinsamer Status ({len(relays)} Zonen)" if isinstance(relays, list) else "Aktueller Stand fehlt")
@@ -397,12 +450,22 @@ def run_read_only_cycle(
                 )
             ]
 
+    training_control = (
+        training_control_snapshot
+        if training_control_snapshot is not None
+        else resolve_training_control(
+            environment,
+            now_utc=now_utc,
+            state_store_factory=state_store_factory,
+        )
+    )
     training = resolve_runtime_training(
         config, consumer="mower", environment=environment, legacy_config=config,
         range_start=special_horizon_start, range_end=special_horizon_end, now_utc=now_utc,
         cancellations=cancellations,
         relocated_keys=relocated_training_occurrence_keys(special_events),
         source_fresh=not runtime_inputs.fallback_used,
+        control_snapshot=training_control,
     )
     if training.blocking_required:
         # Continue into telemetry and the normal parking path. Raising here
@@ -697,6 +760,7 @@ def run_read_only_cycle(
             },
             "hydrawise": {
                 "cache": hydrawise_cache,
+                "dashboard_observation": dashboard_observation,
                 "status": hydrawise_label,
                 "error": hydrawise_error,
                 "safety": hydrawise_safety.to_dict(),

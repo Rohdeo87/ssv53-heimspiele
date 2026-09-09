@@ -16,7 +16,7 @@ Hunter dokumentiert `nextpoll` als Sekunden bis zur nächsten Anfrage an den Sta
 
 Begründung: Neben der allgemeinen Hydrawise-Freigabekette existieren Bestätigungen für Fahrpläne, aufgehobene Zonenpausen und ein tatsächliches Zonenende. Mehrere davon zählen bislang Steuerungszyklen. Wiederverwendete Daten dürfen diese Ketten nicht künstlich fortsetzen. Die neu eingeführte Zeitkappe einer einzelnen Freigabeprüfung genügt für diese weiteren Ketten nicht.
 
-A01 liefert daher eine getestete gemeinsame Lesekoordination für befehlsfreie Betriebsarten. Eine fertige Optimierung des produktiven FULL_FAILSAFE-Ablaufs ist damit nicht nachgewiesen. Das Aktivieren des Flags in der heutigen Gerätebetriebsart würde deren Ausführung ausdrücklich sperren und ist kein zulässiger Einführungsweg.
+A01 liefert daher eine getestete gemeinsame Lesekoordination für befehlsfreie Betriebsarten. Eine fertige Optimierung des produktiven FULL_FAILSAFE-Ablaufs ist damit nicht nachgewiesen. Der aktuelle persistente Verbraucher bleibt bis zur unabhängigen Prüfung der Bestätigungsketten und zur zweiten Aktivierungsentscheidung gesperrt; das bloße Aktivieren des Flags in der heutigen Gerätebetriebsart würde deren Ausführung ausdrücklich sperren.
 
 ## Daten- und Funktionsvertrag
 

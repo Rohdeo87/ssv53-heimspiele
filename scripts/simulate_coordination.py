@@ -15,6 +15,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from mower.coordination_simulation import Settings, example_scenario, propose, simulate_day
+from mower.irrigation_operating_window import validate_fresh_start
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -30,11 +31,16 @@ def local(value: str) -> str:
 
 def comparison() -> dict:
     scenario, now, evidence = example_scenario()
+    planning_now = max(now, scenario.need.earliest_start)
     settings = Settings(enabled=True)
     baseline = simulate_day(scenario, scenario.need.original_start, settings)
+    for candidate in (scenario.need.original_start, planning_now):
+        window = validate_fresh_start(candidate, duration_seconds=int(scenario.need.duration.total_seconds()))
+        if window.code != "OK":
+            raise RuntimeError(f"Operating-window policy rejected simulation candidate: {window.code}")
     strategies = [{"key": "baseline", "label": "Ursprungstermin", "candidate_count": 1, **baseline}]
     for strategy, title in (("simple", "Bündelung beim Laden"), ("predictive", "Vorausschauender Vergleich")):
-        suggestion = propose(scenario, now=now, evidence=evidence, settings=settings, strategy=strategy)
+        suggestion = propose(scenario, now=planning_now, evidence=evidence, settings=settings, strategy=strategy)
         if suggestion.selected_start is None:
             raise RuntimeError(f"The documented example has no safe {strategy} suggestion: {suggestion.blockers}")
         result = simulate_day(scenario, suggestion.selected_start, settings)
@@ -47,7 +53,7 @@ def comparison() -> dict:
     for charge_minutes in (60, 90, 120, 180):
         changed = replace(scenario, full_charge_minutes=charge_minutes)
         reference = simulate_day(changed, changed.need.original_start, settings)
-        candidate = simulate_day(changed, now, settings)
+        candidate = simulate_day(changed, planning_now, settings)
         sensitivity.append({"assumed_full_charge_minutes": charge_minutes,
                             "baseline_productive_minutes": reference["productive_mowing_minutes"],
                             "bundled_productive_minutes": candidate["productive_mowing_minutes"],
@@ -65,7 +71,7 @@ def comparison() -> dict:
                           for name in ("mower/coordination_simulation.py", "scripts/simulate_coordination.py",
                                        "tests/test_coordination_simulation.py")},
         "day_start_utc": scenario.start.isoformat(), "day_end_utc": scenario.end.isoformat(),
-        "timezone": "Europe/Berlin", "planning_instant_utc": now.isoformat(),
+        "timezone": "Europe/Berlin", "planning_instant_utc": planning_now.isoformat(),
         "settings": asdict(settings), "water_need": scenario.need.to_dict(),
         "assumptions": [
             "Synthetischer Modelltag 15.09.2026, durchgehend 00:00–24:00 MESZ; keine Betriebsdaten.",
@@ -74,7 +80,7 @@ def comparison() -> dict:
             "Dock wird nach einer weiteren Minute mit zwei getrennten Beobachtungen als bestätigt modelliert.",
             "Verbindliche Belegung 16:30–20:30 inklusive bestehender Puffer; keine zusätzlichen Belegungspuffer.",
             "Ein angenommener bestätigter Wasserbedarf: fünf Zonen à 20 und zwei Zonen à 30 Minuten, insgesamt 160 Minuten.",
-            "Fachlich zulässiges Startfenster 03:00–07:30 wird für dieses Beispiel angenommen; Ursprungstermin 04:30.",
+            "Nutzerregel: Bewässerung frühestens 03:30 und alle Zonen bis 08:00 Europe/Berlin; der native 160-Minuten-Lauf 04:30–07:10 ergibt 05:20 als reinen spätesten Start. Die Simulation setzt für die 03:30-Variante voraus, dass der Mäher um 03:05 bereits sicher gedockt/geparkt ist und der Ursprungstermin unterdrückt ist; das ist kein Live-Nachweis.",
             "Alle 150 Trocknungsminuten beginnen nach dem tatsächlichen letzten modellierten Zonenende.",
             "Stations- und Wegsicherheit, frische vollständige Belegung sowie Gerätehalte-/Suspendierungsbestätigungen sind simuliert.",
             "Im Basismodell kein Regen, kein EPOS-Fehler, keine API-Lücke und kein manueller Eingriff; solche Fehler werden separat getestet.",
@@ -82,7 +88,7 @@ def comparison() -> dict:
             "Referenz ist ein modellierter Ablauf mit Ursprungstermin, keine exakte Wiedergabe der installierten FULL_FAILSAFE-Steuerung.",
         ],
         "strategies": strategies, "sensitivity": sensitivity,
-        "recommendation": "Einfache Laderegel weiter im Schatten prüfen; 54 Kandidaten bringen in diesem Beispiel keinen Zusatzgewinn.",
+        "recommendation": "Einfache Laderegel weiter im Schatten prüfen; die Kandidatenzahl und Kennzahlen stammen aus diesem Modelllauf und sind kein Live-Gewinn.",
     }
 
 
@@ -109,6 +115,7 @@ def render(data: dict) -> str:
         tracks.append(f'<section class="timeline-panel"><h2>{html.escape(item["label"])}</h2><div class="timeline-scroller"><div class="timeline-inner"><div class="axis"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div>{rows}</div></div><p class="note">Bewässerung {local(item["irrigation_start_utc"])}–{local(item["irrigation_end_utc"])} · früheste modellierte Trockenfreigabe {local(item["dry_until_utc"])}.</p><details><summary>Alle Zustandswechsel und gleichzeitigen Sperren prüfen</summary><div class="table-wrap"><table><thead><tr><th>Zeit MESZ</th><th>Mäher</th><th>Hauptgrund</th><th>Alle Gründe</th></tr></thead><tbody>{details}</tbody></table></div></details></section>')
         table_rows.append(f'<tr><th>{html.escape(item["label"])}</th><td>{item["productive_mowing_minutes"]}</td><td>{item["return_minutes"]}</td><td>{item["charging_minutes"]}</td><td>{item["parked_minutes"]}</td><td>{item["nonproductive_union_minutes"]}</td><td>{item["field_window_utilization_percent"]:.2f}%</td></tr>')
     assumptions = "".join(f"<li>{html.escape(value)}</li>" for value in data["assumptions"])
+    model_gain = max(item["productive_mowing_minutes"] for item in data["strategies"]) - data["strategies"][0]["productive_mowing_minutes"]
     legend = "".join(f'<span><i class="{key}"></i>{LABELS[key]}</span>' for key in ("MOWING", "RETURNING", "CHARGING", "PARKED", "IRRIGATION", "DRYING", "OCCUPANCY"))
     return f'''<!doctype html>
 <html lang="de"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -118,9 +125,9 @@ def render(data: dict) -> str:
 </style>
 <main><div class="eyebrow">SSV53 · Prüfung vom 09.09.2026</div><h1>Laden und Bewässerung gemeinsam planen</h1>
 <p>Modelltag Dienstag, 15. September 2026 · alle Uhrzeiten in Europe/Berlin (MESZ). Gleicher Wasserbedarf, gleiche Sportbelegung und gleiche Energieannahmen in allen drei Abläufen.</p>
-<p class="notice"><strong>Offline-Simulation, keine Livefreigabe.</strong> Die 78 zusätzlichen produktiven Minuten sind ein Modellergebnis. Geräteverhalten, Wasserbedarf, Stationssicherheit und zulässige Verschiebung sind für dieses Beispiel angenommen.</p>
+<p class="notice"><strong>Offline-Simulation, keine Livefreigabe.</strong> Die {model_gain} zusätzlichen produktiven Minuten sind ein Modellergebnis. Geräteverhalten, Wasserbedarf, Stationssicherheit und zulässige Verschiebung sind für dieses Beispiel angenommen.</p>
 <div class="metrics">{"".join(cards)}</div>
-<p><strong>Einfache Regel genügt im Beispiel:</strong> Der bereits notwendige Lauf beginnt beim bestätigten Laden um 03:05 statt um 04:30. Die vorausschauende Suche über 54 Kandidaten findet denselben Start. Die 150 Minuten Trocknung und alle 160 Minuten Bewässerung bleiben erhalten.</p>
+<p><strong>Modellannahme:</strong> Ein Lauf kann ab 03:30 beginnen, sofern Dockstatus und Unterdrückung des Ursprungstermins um 03:05 bereits sicher bestätigt sind. Die 150 Minuten Trocknung und alle 160 Minuten Bewässerung bleiben erhalten; Kennzahlen und Kandidatenzahl stammen ausschließlich aus diesem Offline-Lauf.</p>
 <div class="legend">{legend}</div>{"".join(tracks)}
 <section class="panel"><h2>Einen Zeitpunkt vergleichen</h2><div class="inspector"><label for="minute">Uhrzeit im Modell: <strong id="clock">09:00</strong></label><input id="minute" type="range" min="0" max="1439" value="540" step="1"><div id="states" class="state-output" aria-live="polite"></div></div></section>
 <section class="panel"><h2>Vollständige Minutenbilanz</h2><div class="table-wrap"><table><thead><tr><th>Ablauf</th><th>Produktiv</th><th>Heimfahrt</th><th>Laden</th><th>Geparkt</th><th>Nicht produktiv, vereinigt</th><th>Fensterausnutzung</th></tr></thead><tbody>{"".join(table_rows)}</tbody></table></div><p class="note">Produktiv + Heimfahrt + Laden + Geparkt = 1.440 Minuten pro Tag. Belegung, Wasser, Trocknung und Laden überlappen; ihre Rohsummen dürfen nicht addiert werden. Die Fensterausnutzung bezieht sich auf 890 Minuten ohne Belegung, Bewässerung oder Trocknung. Beide Hauptvarianten enden mit derselben modellierten Restenergie.</p></section>

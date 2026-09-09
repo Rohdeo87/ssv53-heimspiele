@@ -120,25 +120,29 @@ Simulation; dessen Gewinn darf nicht zu diesen 45 Minuten addiert werden.
 ## Tatsächlicher Ablaufautomat mit simulierten Geräten
 
 Der zusätzliche [Minutenablauf](coordination-execution-replay.json) führt den
-unveränderten öffentlichen Einstieg `run_full_failsafe_cycle` aus. Dieser Test
-benutzt sieben Zonen mit insgesamt **160 Minuten Wasserlaufzeit** und ist ein
-anderes Szenario als das oben genannte Beispiel mit zwei Zonen.
+unveränderten öffentlichen Einstieg `run_full_failsafe_cycle` aus. Diese
+Offline-Simulation benutzt sieben Zonen mit insgesamt **160 Minuten
+Wasserlaufzeit** und ist ein anderes Szenario als das oben genannte Beispiel
+mit zwei Zonen. Ihr modellierter Quelltermin beginnt um **04:55 Uhr
+Europe/Berlin**; er ist keine Behauptung über den Herstellerplan.
 
 Am simulierten 13.08.2026 wird der Lauf um 04:00 Uhr Berliner Zeit vorgemerkt
 und um 04:01 Uhr übernommen. Dazwischen und danach wird der gespeicherte Zustand
 neu geladen. Sieben Suspendierungen werden einzeln verarbeitet. Um 04:12 Uhr
 erfolgt der simulierte Parkbefehl; anschließend werden neue Stationsmeldungen
-geprüft. Die erste Zone läuft von 04:45 bis 05:05 Uhr, die zweite ab 05:25 Uhr.
-Die letzte Zone endet tatsächlich im Modell um 08:00 Uhr. Die Ende-Bestätigung
-ist um 08:02 Uhr abgeschlossen; die physische Trocknungsfrist endet um
-**10:30 Uhr**. Die Bestätigungszeit erzeugt keine weitere vollständige Trocknung.
+geprüft. Die erste Zone läuft von 04:45 bis 05:05 Uhr, die zweite ab 05:08 Uhr.
+Die letzte Zone endet tatsächlich im Modell um 07:43 Uhr. Die Ende-Bestätigung
+ist um 07:45 Uhr abgeschlossen; die physische Trocknungsfrist endet um
+**10:13 Uhr**. Die Bestätigungszeit erzeugt keine weitere vollständige Trocknung.
 
-Der ursprüngliche Quellenplan hatte 05:30 bis 08:30 Uhr vorgesehen. Gegenüber
-diesen Sollzeiten bleiben in diesem konkreten Modell **30 Minuten früheres
-Bewässerungsende**, obwohl der erste Start 45 Minuten früher erfolgt. Die
-Zonenübergänge verbrauchen einen Teil des Vorteils. Das ist ein synthetischer
+Der modellierte Quellenplan hätte 04:55 bis 07:35 Uhr vorgesehen. Er enthält
+keine erfundene 20-Minuten-Pause; die steuernde Ende-Bestätigung bildet die
+dreiminütigen physischen Übergänge im Ablauf ab. Dies ist ein synthetischer
 Soll-/Ablaufvergleich, keine Messung zusätzlichen produktiven Mähens und kein
-vollständiger Vergleich zweier realer Geräteprogramme.
+vollständiger Vergleich zweier realer Geräteprogramme. Der frische
+Hydrawise-GET-Nachweis vom 09.09. maß dagegen sieben Zonen von 04:30 bis 07:10
+Uhr Europe/Berlin ohne Pause; die reale Anlage muss vor jeder Aktivierung
+erneut gegen diesen aktuellen Nachweis geprüft werden.
 
 Der simulierte Hersteller prüft jeden der sieben ursprünglichen Starttermine
 tatsächlich gegen die angenommenen Suspendierungen: **sieben unterdrückte
@@ -149,7 +153,7 @@ Weitere Ablaufvarianten belegen:
   bestätigt die Steuerung diesen Zustand ohne zweiten Startbefehl.
 - Zurückgenommene Bedarfsfreigabe vor Zone zwei verhindert weitere Starts.
 - Drei Minuten fehlender sicherer Mähernachweis verschieben die erste Zone.
-  Nach einem weiteren Neustart bleibt die physische Pause von 20 Minuten erhalten.
+  Nach einem weiteren Neustart bleibt die physische Ende-Bestätigung erhalten.
 
 Die simulierte Station, Suspendierung und Ventilreaktion sind ausdrücklich
 Testannahmen. Diese Tests belegen die Softwareübergänge und ersetzen deren
@@ -170,7 +174,7 @@ Start- oder Planänderungsaktionen. Nachweise:
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | P02 | Gemeinsame Steuerung | Entwurf bisher ohne persistenten Verbraucher; Wiederholung könnte Wasser doppelt ausführen | Codeprüfung und gezielte Fehlerfälle | Einmalige Aufnahme innerhalb des bestehenden Automaten | Ermöglicht abgestimmte Ausführung; keine gemessenen Mähminuten | Mittel | Freigegebener Bedarf, sichere Station, Quellen- und Gerätebelege | Hoch | Standard aus, persistente Identitäten, erneute Prüfung, gleiche Sperren | Keine zweite Ausführung nach Neustart/Antwortverlust; Originaltermin unterdrückt | P1 |
 | P03 | Zeitprüfung | Neu gerechneter Zeitpunkt konnte von reserviertem Zeitpunkt abweichen | Regression mit Belegung nur in der ersten Minute | Exakte Prüfung des gespeicherten Zeitpunkts | Verhindert falsche Freigabe; keine Wassermengenänderung | Klein | Vollständige Belegung | Mittel | Zeitbindung und Tests | Gesperrter Originalzeitpunkt bleibt gesperrt | P0 |
-| P04 | Zonenpausen | Bestehender Verbraucher verlangte kurze Abstände; absolute Zeiten allein verkürzten Pausen bei Verspätungen | Tatsächlicher Ablaufautomat im isolierten Test, Pausen- und Verspätungsregressionen | Freigegebene Pausen im koordinierten Pfad übernehmen und Verzögerungen persistent weitergeben | Erhält fachlich freigegebene Pausen; verhindert falsche Restzeitplanung | Mittel | Frische Ende-Beobachtungen, unveränderte Quelle | Mittel | Übrige Verbraucher behalten bisherige Regeln; verbleibendes Zeitfenster erneut prüfen | 20 Minuten physische Pause bleiben auch bei spätem Start und Neustart erhalten | P0 |
+| P04 | Zonenabstände | Absolute Zeiten allein verkürzen bestätigte Übergänge bei Verspätungen | Tatsächlicher Ablaufautomat im isolierten Test und Verspätungsregressionen | Quellenabstände und Ende-Bestätigungen im koordinierten Pfad persistent weitergeben | Erhält nachgewiesene Abstände; verhindert falsche Restzeitplanung | Mittel | Frische Ende-Beobachtungen, unveränderte Quelle | Mittel | Übrige Verbraucher behalten bisherige Regeln; verbleibendes Zeitfenster erneut prüfen | Gemessene Quelle bleibt ohne erfundene Pause; bestätigte Übergänge bleiben auch bei spätem Start und Neustart erhalten | P0 |
 | U03 | Bedienung | Vormerkung oder ungeklärter Ablauf könnte als sichere Startzeit erscheinen | Browser- und UI-Tests | Einfache Meldungen, offene Zeiten, passende Bedienmöglichkeiten | Bessere Verständlichkeit | Klein | Aktueller Backendstatus | Klein | Gefahrenmeldungen behalten Vorrang | Keine optimistischen Zeiten oder konkurrierenden Starts bei unklarem Ablauf | P1 |
 | A02 | Statistikauswertung | App und Optimierer könnten dieselbe Auswertung mehrfach anfragen | Nebenläufigkeits- und Isolationstests | Gemeinsamer begrenzter Cache | Weniger doppelte Abfragen je Prozess; Geldwirkung ungemessen | Klein | Vorhandene Statistikberechtigung | Klein | Trennung nach Konto, tiefe Kopien, Zeitprüfung, Fehlerablauf | Ein Abruf bei parallelen Erstlesern; keine fremden/veralteten Daten | P2 |
 | T02 | Tests | Vergessenes Test-Double könnte eine echte Verbindung aufbauen | Netzwerkschutztest | Netzwerkzugriff in pytest-Läufen standardmäßig gesperrt | Verhindert unbeabsichtigte Geräteaufrufe aus Tests | Klein | pytest | Klein | Verletzung ist ein Testfehler und nicht als API-Ausfall verschluckbar | Kein echter Socket-Aufbau während Tests | P0 |

@@ -1,5 +1,11 @@
 # Bedingte Livefreigabe und tatsächliche Bereitschaft
 
+**Folgestand:** Die nachfolgenden Angaben beschreiben ihren damaligen Prüfstand.
+Die anschließend umgesetzten Korrekturen, der zentrale Winter-Schalter, die
+bestätigten Feiertagsregeln und das Bewässerungsfenster 03:30–08:00 sind im
+[aktuellen Abschlussbericht](../audit-2026-09-09/final-preflight.md) mit Nachweisen zusammengefasst.
+Frühere offene Saison- und Uhrzeitentscheidungen sind dadurch ersetzt.
+
 Stand 09.09.2026. Die Nutzerfreigabe lautet: **„Ok wenn wirklich alle
 Optimierungen umgesetzt sind kann es live gehen“. Diese Bedingung ist noch
 nicht erfüllt.** Es erfolgten kein Merge, keine Veröffentlichung im Appack-CMS,
@@ -12,7 +18,7 @@ nachgewiesenen Stand festgehalten; sie ersetzt keine fehlenden Betriebsdaten.
 | Maßnahme | Tatsächlicher Entwicklungsstand | Noch offen |
 |---|---|---|
 | I03 – Neue und bisherige Belegung | Eigenständiger Publisher übernimmt neue validierte Sperren und behält unbestätigt zurückgenommene Intervalle im selben JSON-/ICS-Bundle. Unabhängige Prüfung und Fehlerfälle einschließlich Neustart, Quellverlust und paralleler Veröffentlichung. [Nachweis](../audit-2026-09-09/import-additive-update.md) | Zusammenführung, kontrollierter Quellenlauf und Prüfung des anschließend tatsächlich verwendeten Bundles. |
-| O01 – Trainingskalender | Gemeinsame Quelle und Laufzeitanbindung von App, Mäher, Absagen, Verlegungs-Lookup und Konfliktprüfung umgesetzt. Unveränderliche Eingabekopien verhindern Versionswechsel während der Verarbeitung. [Nachweis](../audit-2026-09-09/integration-update.md) | Standard `SHARED_TRAINING_MODE=OFF`. Verbindliche Saison-/Ferienregeln und Freigabe des konkreten Kalenders fehlen; die Rückfrage wurde gestellt. Noch kein Wechsel der produktiven Quelle. |
+| O01 – Trainingskalender | Gemeinsame Quelle und Laufzeitanbindung von App, Mäher, Absagen, Verlegungs-Lookup und Konfliktprüfung im Entwicklungsstand umgesetzt; unveränderliche Eingabekopien verhindern Versionswechsel während der Verarbeitung. [Nachweis](../audit-2026-09-09/integration-update.md) | Standard `SHARED_TRAINING_MODE=OFF`. Verbindliche Saison-/Ferienregeln und Freigabe des konkreten Kalenders fehlen; noch kein Wechsel der produktiven Quelle. |
 | A01 – API-Abfragen | Gemeinsamer Cache im lesenden Pfad; Geräteketten verwenden tatsächliche Quellzeitpunkte. Wiederholungen verlängern keine Bestätigung und starten keine physische Trocknung neu. [Nachweis](../audit-2026-09-09/device-observation-update.md) | Cache bleibt `OFF`, Gerätebetriebsarten lehnen ihn ab. Herstellerbudget plus Minutentimer kann 120 Sekunden Abstand verursachen; die Revalidierung erlaubt höchstens 90 Sekunden. Zulässiger Takt ist vor Aktivierung nachzuweisen. Keine aktuelle Kosteneinsparung behauptet. |
 | P01/P02 – Laden und Wasser gemeinsam planen | Vergleich und persistente Anbindung an den bestehenden Gesamtcontroller ergänzt: unveränderter Bedarf, Zonenfolge/Pausen, einmalige Vormerkung, exakter Zeitvergleich und Prüfung vor Zonenstarts. Standard deaktiviert. [Aktuelle Fortsetzung](../audit-2026-09-09/coordination-execution-update.md) | Freigegebene Bedarfsfenster und Stations-/Wegeprüfung fehlen; neue Parallelbeobachtung und Gerätepilot wurden nicht durchgeführt. Ein vollständig eingeführter, live nachgewiesener Ablauf ist das noch nicht. |
 | V01 – Installationsnachweis | Diagnose prüft die im Manifest aufgeführten Quellbytes und unerwartete zusätzliche Anwendungsmodule. [Code](../../mower/build_provenance.py) | Diagnose noch nicht installiert. Paketdateien auf Datenträger sind kein Nachweis der Remote-Build-Abhängigkeiten, des bereits geladenen Codes oder des Geräteverhaltens. |
@@ -26,10 +32,10 @@ ersetzt. Sicherheits-, Sport- und Trocknungsregeln wurden nicht verkürzt.
 
 ## Nachweis vor den weiteren Entwicklungsänderungen
 
-Die erste aktuelle Prüfung betraf HEAD
+Die frühere Prüfung betraf HEAD
 `734656bc0fe24c2d77d33e9cca60fc371854723b`, mit Laufzeitcode aus
-`325a5564a1af71ff2a3d3b73241da2771f16f431`. Beide PRs waren offen, als Entwurf
-markiert und nicht zusammengeführt. Ihre exakten geprüften Köpfe und damaligen
+`325a5564a1af71ff2a3d3b73241da2771f16f431`. Beide PRs waren damals offen, als
+Entwurf markiert und nicht zusammengeführt. Ihre geprüften Köpfe und damaligen
 Paketnachweise stehen im [maschinellen Prüfstand](release-readiness.json).
 Dieser zeitgebundene Prüfstand behauptet keine CI-Prüfung späterer Änderungen.
 
@@ -68,22 +74,25 @@ erfüllen diese Bedingungen jeweils nicht allein. Die aktuelle Versions-/Paket-
 und Testzusammenfassung steht in
 [follow-up-delivery.json](../audit-2026-09-09/follow-up-delivery.json).
 
-Der vorherige lokale Gesamtlauf umfasste **917 Python-Tests, 425 Untertests
-und 88 Appack-Tests**, jeweils ohne Fehler. Der Quellstand ist
-`285d0018b9064ca7fe05c5822af9f808d4e16d03`. Das neue FULL_FAILSAFE-Quellpaket
-enthält 51 Einträge einschließlich Manifest. Alle 50 Quelldateien wurden direkt
-aus diesem Git-Commit gebaut, byteweise verglichen und anschließend ohne
-Netzwerkzugriff importiert. So wird eine abweichende Windows-Zeilenumwandlung
-nicht mit dem tatsächlichen Commitinhalt verwechselt. Das getrennte
-GitHub-CI-Quellpaket hat weiterhin die Stufe `DRY_RUN_READ_ONLY`.
+Die historischen lokalen Läufe umfassten **917 Python-Tests, 425 Untertests
+und 88 Appack-Tests** am Quellstand
+`285d0018b9064ca7fe05c5822af9f808d4e16d03`; sie bleiben zeitgebundene
+Nachweise. Der aktuelle Ausführungsstand ist HEAD
+`bcacc44e64fac3926e16247e526408fa21fd07f3`, mit Laufzeitquelle aus
+`c4fd6e7a25d7318950145687fd93f97af0728186`: **1.020 Python-Tests, 425
+Untertests und 102 Appack-Tests**. Der zugehörige Quellpaketnachweis steht in
+`../audit-2026-09-09/coordination-execution-delivery.json` und weist 56
+Quelldateien plus Manifest byteweise nach. Das getrennte GitHub-CI-Quellpaket
+hat weiterhin die Stufe `DRY_RUN_READ_ONLY`.
 
 Bei der späteren Einführung muss der kompatible Importverbraucher vor dem
 additiven Publisher bereitstehen. Alte Verbraucher lehnen das neue
 Rückhalteformat zwar ab, übernehmen dadurch aber auch keine neuen Sperren.
 Ein kontrollierter Rollout muss beide Seiten der Verarbeitung nachweisen.
 
-Die anschließende Integration ist mit **970 Python-Tests, 425 Untertests und
-90 Appack-Tests** geprüft. Zusätzliche gezielte Prüfungen folgten für die
+Die frühere anschließende Integration ist mit **970 Python-Tests, 425 Untertests
+und 90 Appack-Tests** geprüft; diese Zahlen sind historisch. Zusätzliche
+gezielte Prüfungen folgten für die
 Vortagsabfrage nächtlicher Absagen. Die neuen lokalen Kontrollaufnahmen sind
 Vorschauen mit Testdaten. [Änderungen, Wirkung, Risiken und verbleibende
 Grenzen](../audit-2026-09-09/integration-update.md).

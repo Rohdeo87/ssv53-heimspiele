@@ -101,14 +101,18 @@ from test_full_failsafe import ENV, NOW, result, settings, suspended_result
 
 def _handover(cycle):
     zones = deepcopy(cycle.details["hydrawise"]["zones"])
+    original_start = min(
+        datetime.fromisoformat(zone["scheduled_start_utc"])
+        for zone in zones
+    )
     need = {
         "schema_version": 1, "need_id": "coordination-1", "demand_reference": "approved",
         "mower_id": "mower-1", "required": True, "timing_window_approved": True,
         "station_and_paths_checked": True, "source_plan_id": canonical_schedule_id(zones),
-        "earliest_start_utc": (NOW + timedelta(minutes=45)).isoformat(),
-        "original_start_utc": (NOW + timedelta(minutes=90)).isoformat(),
-        "latest_start_utc": (NOW + timedelta(minutes=120)).isoformat(),
-        "valid_until_utc": (NOW + timedelta(minutes=120)).isoformat(), "zones": zones,
+        "earliest_start_utc": (original_start - timedelta(minutes=45)).isoformat(),
+        "original_start_utc": original_start.isoformat(),
+        "latest_start_utc": (original_start + timedelta(minutes=30)).isoformat(),
+        "valid_until_utc": (original_start + timedelta(minutes=30)).isoformat(), "zones": zones,
     }
     previous = cycle.to_dict()
     previous["executed_at_utc"] = (NOW - timedelta(minutes=1)).isoformat()
@@ -131,7 +135,7 @@ def _handover(cycle):
 
 
 def test_full_failsafe_reserves_coordination_before_any_sender_call():
-    cycle = result(irrigation_start=NOW + timedelta(minutes=90), activity="CHARGING")
+    cycle = result(irrigation_start=NOW + timedelta(minutes=60), activity="CHARGING")
     _handover(cycle)
     store = InMemoryStateStore()
     calls = []
@@ -150,7 +154,7 @@ def test_full_failsafe_reserves_coordination_before_any_sender_call():
 
 
 def test_full_failsafe_off_does_not_reserve_coordination():
-    cycle = result(irrigation_start=NOW + timedelta(minutes=90), activity="CHARGING")
+    cycle = result(irrigation_start=NOW + timedelta(minutes=60), activity="CHARGING")
     _handover(cycle)
     store = InMemoryStateStore()
     output = run_full_failsafe_cycle(
@@ -163,7 +167,7 @@ def test_full_failsafe_off_does_not_reserve_coordination():
 
 def test_reserved_coordination_requires_second_revalidation_then_uses_custom_transaction():
     from dataclasses import replace
-    first = result(irrigation_start=NOW + timedelta(minutes=90), activity="CHARGING")
+    first = result(irrigation_start=NOW + timedelta(minutes=60), activity="CHARGING")
     _handover(first)
     store = InMemoryStateStore()
     environment = {**ENV, "COORDINATION_EXECUTION_ENABLED": "true",
@@ -239,7 +243,7 @@ def test_permission_hint_cannot_enable_reservation():
 
 
 def test_disabled_after_reservation_keeps_dedup_but_creates_no_override():
-    first = result(irrigation_start=NOW + timedelta(minutes=90), activity="CHARGING")
+    first = result(irrigation_start=NOW + timedelta(minutes=60), activity="CHARGING")
     _handover(first)
     store = InMemoryStateStore()
     enabled_env = {**ENV, "COORDINATION_EXECUTION_ENABLED": "true",
@@ -385,10 +389,11 @@ def test_projection_carries_late_start_into_the_physical_pause():
                 now_utc=datetime(2026, 9, 15, 2, 3, tzinfo=timezone.utc),
                 end_confirmation_minutes=2)
     assert _projected_irrigation_end(**args) == datetime(2026, 9, 15, 2, 35, tzinfo=timezone.utc)
-    # The legacy executor does not adopt coordinated scheduled pauses.
+    # Every executor now retains persisted native pauses.  Dropping the
+    # coordination marker cannot collapse a real source interval.
     for zone in plan:
         zone.pop("coordination_execution")
-    assert _projected_irrigation_end(**args) == datetime(2026, 9, 15, 2, 17, tzinfo=timezone.utc)
+    assert _projected_irrigation_end(**args) == datetime(2026, 9, 15, 2, 35, tzinfo=timezone.utc)
 
 
 def test_original_contiguous_program_validation_is_not_relaxed():
@@ -409,7 +414,7 @@ def test_original_contiguous_program_validation_is_not_relaxed():
 
 
 def test_persisted_draft_offset_cannot_be_collapsed_before_custom_transaction():
-    first = result(irrigation_start=NOW + timedelta(minutes=90), activity="CHARGING")
+    first = result(irrigation_start=NOW + timedelta(minutes=60), activity="CHARGING")
     _handover(first)
     store = InMemoryStateStore()
     environment = {**ENV, "COORDINATION_EXECUTION_ENABLED": "true",

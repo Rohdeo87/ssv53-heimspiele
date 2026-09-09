@@ -1,9 +1,16 @@
-# O01: Gemeinsamer Trainingskalender – vorbereiteter Adapter
+# O01/T02: Gemeinsamer Trainingskalender und Winter-Schalter
 
-09.09.2026. **Entwickelt und offline getestet; deaktiviert und nicht an die
-Laufzeit angeschlossen.** Die bestehenden Konfigurationen und Sperren wurden
-nicht verändert. Saisonwechsel und Ferienfreigaben bleiben fachlich offen.
+09.09.2026. **Adapter und gemeinsame Laufzeitquelle entwickelt und offline
+getestet; standardmäßig deaktiviert.** Die produktive Quelle wurde bewusst
+nicht umgeschaltet. Die Nutzerentscheidung ersetzt feste Saison-Umschalttage
+durch den zentralen Schalter. Schulferien werden nicht pauschal ausgenommen.
 Die in Tests verwendeten freigegebenen Kalender sind ausschließlich synthetisch.
+
+Die ergänzten Nutzerregeln stehen in [user-operating-rules.md](user-operating-rules.md).
+Gesetzliche Brandenburger Feiertage unterdrücken dort ausschließlich Training;
+Spiele bleiben erhalten. Schulferien sind eine getrennte fachliche Entscheidung.
+Der persistente Winterumschalter wird zentral zum nächsten lokalen Mitternachts-
+wechsel ausgewertet; konkrete Saison-Umschalttage werden nicht geraten.
 
 ## Tatsächlicher Datenweg
 
@@ -121,8 +128,9 @@ produktive Mähzeit. Ein Test mit zwei überlappenden Trainingssperren zeigt:
 
 ## Vorbereitung der tatsächlichen Integration
 
-Die gemeinsamen Laufzeitdateien wurden in dieser Teilaufgabe nicht geändert.
-Der spätere Anschluss muss mindestens folgende Punkte gemeinsam erfüllen:
+Die gemeinsame Laufzeitquelle ist im aktuellen Entwicklungsstand angebunden,
+bleibt aber deaktiviert. Vor einer produktiven Umschaltung müssen mindestens
+folgende Punkte gemeinsam erfüllt sein:
 
 1. Kalender, Belegungsquelle und Mäherquelle aus einem versionierten,
    überprüften Paket laden. Eine deaktivierte oder nicht lesbare Quelle behält
@@ -146,30 +154,50 @@ Der spätere Anschluss muss mindestens folgende Punkte gemeinsam erfüllen:
    einzeln gegen freigegebene Regeln prüfen. Backend, Appack-Saisonbedienung,
    Kalenderpaket und Zustandsversion müssen zusammen eingeführt werden.
 
-## Exakt fehlende Aktivierungsdaten und verbleibende Grenze
+## Aktuelle Aktivierungsvoraussetzungen nach der Nutzerentscheidung
 
-- Vollständige, verantwortet bestätigte Sommer-/Winterzuordnung für
-  11.08.2026–09.07.2027; insbesondere beide tatsächlichen Umschalttage.
-- Fachliche Aussage je Training, ob es in Ferien und an Feiertagen stattfindet,
-  einschließlich vollständiger Ausnahmen und gegebenenfalls Ersatztermine.
-  Öffentliche Schulferien allein beweisen keine Trainingsabsage.
+- Feste zukünftige Umschalttage sind nicht mehr erforderlich. Der Schalter
+  steuert die Saison ab dem nächsten Berliner Tag. Gesetzliche Brandenburger
+  Feiertage entfernen ausschließlich Trainings; Spiele bleiben bestehen.
+  Für Schulferien wird keine zusätzliche pauschale Ausnahme angenommen.
 - Bestätigung der übernommenen Mannschaften, Platzzuordnungen, Zeiten und drei
   vorhandenen Einzelabsagen sowie Beleg und Zeitpunkt dieser Kalenderfreigabe.
 - Prüfung aller tatsächlich entfernten Rasen-Sperrintervalle gegen diese Regeln;
   danach an den Inhalt gebundene Freigabe und erneuter Vergleich mit den dann
   gültigen Altquellen.
-- Atomarer Produktionsadapter für beide Verbraucher, monotone
-  Veröffentlichung/Versionsprüfung und getesteter Rückfall. Diese Bibliothek
-  nimmt keine Produktionsumschaltung vor und speichert keinen Versionszeiger.
+- Der persistente Schalter, datierte Übergangshistorie, CAS und anfrageweit
+  unveränderliche Auflösung sind umgesetzt. Vor ACTIVE ist der nachgewiesene
+  Ausgangsplan mit [initialize_training_control.py](../../scripts/initialize_training_control.py)
+  einmalig zu speichern. Ein unbekannter Vortagsanker wird niemals erfunden.
+  Bei Nachweisbeginn D wird ACTIVE frühestens am Berliner Tagesbeginn D+1
+  eingeschaltet. So bleiben Nachttermine vom Vortag geschützt.
+- Der [vorbereitete Kalender](../../occupancy/training_calendar.manual-control.candidate.json)
+  enthält die unveränderten Wochenmuster, Einzelabsagen und Altquellen-Hashes,
+  die geklärte Feiertagsregel und keine festen Saisonperioden. Sein Freigabebeleg
+  bleibt offen. [prepare_training_calendar_approval.py](../../scripts/prepare_training_calendar_approval.py)
+  erstellt erst mit echtem Beleg, Zeitpunkt und erwartetem Inhaltshash eine
+  separate freigegebene Kopie. Es überschreibt keine vorhandenen Dateien.
+- Der Bundlepfad `--manual-training-control` verlangt diese freigegebene Quelle.
+  Der periodische Auto-Dispatch verwendet dauerhaft gespeicherte Freigabevariablen,
+  damit der nächste Spielimport den gemeinsamen Kalender nicht wieder entfernt.
+  Variablen und genaue Reihenfolge stehen im [Aktivierungsablauf](final-activation-runbook.md).
 
-**O01 ist damit als sichere Entwicklung vorbereitet, nicht fachlich aktiviert,
-produktiv integriert oder live abgenommen.** Ein unverändertes Weiterlaufen
+**O01 ist damit als sichere Entwicklung vorbereitet; die neue Quelle bleibt
+deaktiviert und ist nicht live abgenommen.** Ein unverändertes Weiterlaufen
 alter Winter-Rasensperren bleibt bis zur Klärung eine bekannte konservative
-Betriebseinschränkung.
+Betriebseinschränkung. Alle Verbraucher müssen denselben versionierten
+`TrainingBatch` verwenden; Spiele und Sonderbelegungen bleiben nachgeschaltet.
 
-Prüfung dieses Standes: **31 gezielte Tests bestanden**. Sie decken echte
+Prüfung des früheren Adapterstands: **31 gezielte Tests bestanden**. Sie decken echte
 Quellparität, ungültige/unfreigegebene Regeln, Quellenänderung, stabile IDs,
 Neustart, beide Projektionen, einmalige Pufferung, verzögerte Absagen,
 überlappende Ferienwirkung, Mitternacht und beide Sommerzeitwechsel ab.
-Der anschließende gemeinsame Lauf mit Trainingsabsagen, Belegungsservice,
+Der damalige gemeinsame Lauf mit Trainingsabsagen, Belegungsservice,
 Trainer-/Absage-API und bisheriger Mähplanung bestand mit **89 Tests**.
+
+Der neue Schalter wurde zusätzlich mit Neustarts, zwei aufeinanderfolgenden
+Wechseln, Nachtankern, beiden Sommerzeitwechseln, konkurrierender Bedienung,
+Idempotenz, fehlender Historie und ohne Azure-SDK im OFF-Modus geprüft.
+Die aktuelle Gesamtsuite und unabhängigen Reviews sind im
+[Entwicklungsabschluss](final-preflight.md) verlinkt. Keine der Testfreigaben
+ist ein produktiver Kalenderbeleg.

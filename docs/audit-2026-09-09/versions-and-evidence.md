@@ -5,6 +5,14 @@ genannte Ortszeit sind UTC. Private Rohantworten verbleiben lokal außerhalb des
 Git-Worktrees; veröffentlichbare Nachweise enthalten keine Schlüssel, Geräte-IDs,
 E-Mail-Adressen oder Personenprofile.
 
+**Ergänzung um 16:48 Uhr Berliner Zeit:** Der installierte Quellstand konnte
+über den lesenden Azure-`admin/vfs`-Zugang geprüft werden. Alle 46 Dateien stimmen
+bytegenau zum installierten Manifest, nach CRLF/LF-Normalisierung auch zum
+Migrationscommit `9c2d0fc9c010b366cd49b58b8086b27f9d59a0dd`.
+Die zuvor dokumentierte Zugriffslücke ist damit für Quellbytes geschlossen.
+[Dateiweise Nachweise](installed-source-evidence.json). Dependencies, laufende
+Zustände und Gerätewirkungen sind davon getrennt.
+
 | Ebene | Tatsächlich ermittelt | Beweiskraft und Grenze |
 |---|---|---|
 | Heimspielrepository `main` | `d67e9d3fef24117f504a192c9ecaee998612ddd7` über expliziten Fetch und GitHub-API | Quellcode-/Datenstand; zunächst veralteter lokaler main-Ref wurde nicht übernommen. |
@@ -14,7 +22,7 @@ E-Mail-Adressen oder Personenprofile.
 | Zweites Repository | `Rohdeo87/ssv53-app`, main `2d90d062d8c84d600eecd0dc592fe944963d08e5` | RN/Expo-Prototyp, keine belegte produktive Steuerungsintegration. |
 | Azure-Infrastruktur | RG `rg-ssv53-platzpflege-prod`; App `func-ssv53platzpflege-prod-q7kbw54s`; Running, HTTPS-only; Flex Consumption/Python 3.12, 512 MB, maximal 40 Instanzen | Ressourcen-/Konfigurationsnachweis; Instanzobergrenze beweist keine 40 gleichzeitig laufenden Timer. |
 | Deploymentdatensatz | Aktiv, Status 4, ID `cbac58e0-76b7-4fb2-b789-c9332d885b57`, Eingang 06.09., 05:35:20.675, Ende 05:36:37.232 | Beweist abgeschlossene Plattformbereitstellung, nicht identische Git-/Buildbytes. |
-| Installierte Quelldateien | Nicht byteweise lesbar: Blobdatenrolle verweigert; Shared Key deaktiviert; SCM-Manifestroute 404; Flex-Deploymentlogs nicht erhalten | Exakter installierter Code-SHA bleibt unbestätigt. Keine Rechteänderung zur Umgehung. |
+| Installierte Quelldateien | Zunächst Blob-/SCM-Zugriff gescheitert; um 16:48 Uhr alle 46 Quellen und Manifest über Azure admin/vfs gelesen | 46/46 Manifest-Hashes bestätigt, 46/46 zum Migrationscommit nach Zeilenenden-Normalisierung; Dependency-Wheels und Gerätewirkung nicht dadurch nachgewiesen. Keine Rechteänderung. |
 | Appack-CMS | Repositorytemplates zeigen auf den genannten Azure-Host | Aktuell gespeicherte/veröffentlichte/auf Geräten geladene Templateversion nicht direkt zugänglich. Lokale Screenshots sind keine CMS- oder Geräteabnahme. |
 | Modell und beobachteter Zustand | Log vom 09.09., 05:48: Automower 580 EPOS, 95 % Akku, ERROR/Code 93, kein bestätigtes Dock; Wasserablauf wartet | API-Telemetrie, keine physische Stations-/Ventilprüfung. |
 
@@ -116,3 +124,12 @@ Sperrminuten und Ausnutzung geeigneter Schnittfenster bleiben mangels
 vollständiger Bedarfs-/Sperr-/Durchflussdaten `null`. Benötigte Nachmessung steht
 im Einführungsplan. Die Baseline umfasst verschiedene historische
 Deployments; sie ist kein kontrollierter A/B-Versuch.
+
+## Letzter Git-Abgleich der Import-PR
+
+Der [lesende Merge-Tree-Nachweis](import-pr-current-merge-review.json) vergleicht
+PR 46 zusätzlich mit dem inzwischen weitergelaufenen Main. Die einzige neue
+Main-Datei ist `state/request_state.json`; lokal ist kein Inhaltskonflikt
+reproduzierbar. Das abweichende Connector-Signal wird separat aufgezeichnet
+und vor einem später genehmigten Merge erneut direkt geprüft. Es wurde kein
+Merge oder Branch-Rebase ausgeführt.

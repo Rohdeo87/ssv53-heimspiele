@@ -21,6 +21,7 @@ def main():
             "cuttingHeightMm": 30, "cuttingHeightSupported": True, "workAreaProgress": 62,
         },
         "automation": {"continuousMowingOwned": True, "parkedByAutomation": True, "irrigationPhase": "COMPLETE_HOLD"},
+        "trainingControl": {"available": True, "active": False, "pending": None, "effectiveAt": None, "nextEffectiveAt": "2026-09-09T22:00:00Z", "trainingRevision": "a" * 64},
         "irrigation": {
             "safety": {"available": True, "fresh": True, "clear_now": True, "active_zone_count": 0},
             "zones": [{"zone": number, "name": f"Zone {number}", "running": False, "run_seconds": 900} for number in range(1, 8)],
@@ -45,9 +46,12 @@ def main():
     preview = target.read_text(encoding="utf-8")
     preview = preview.replace("return {ok:true,status:200,json:async()=>window.auditFixture};", """const data=JSON.parse(JSON.stringify(window.auditFixture));
  if(location.hash==='#unknown')data.coordination.chargingEndEstimate=null;
+ if(location.hash==='#winter-planned'){data.trainingControl.pending=true;data.trainingControl.effectiveAt='2026-09-09T22:00:00Z';}
  if(location.hash==='#error'){data.mower.state='ERROR';data.mower.activity='NOT_APPLICABLE';data.mower.errorCode=93;data.mower.errorActive=true;data.automation.irrigationPhase=null;data.coordination.blockers=[{code:'MOWER_ERROR'}];data.coordination.dryUntil=null;}
  if(location.hash==='#rejected'){data.irrigationSchedule.override={kind:'PAUSE',status:'REJECTED'};data.automation.irrigationPhase=null;}
  if(location.hash==='#manual'){data.overall.code='OPERATOR_PARK_HOLD';data.coordination.blockers.push({code:'MANUAL_STOP'});data.automation.irrigationPhase=null;}
+ if(location.hash==='#stale-plan'){data.controlsAvailable=false;data.dataQuality={code:'CONFIG_STALE',displayOnly:true};data.mower.activity='MOWING';data.occupancy.available=false;data.trainingControl.available=false;data.automation.irrigationPhase=null;data.coordination.chargingEndEstimate=null;}
+ if(location.hash==='#water-missing'){data.controlsAvailable=false;data.dataQuality={code:'IRRIGATION_STATUS_UNAVAILABLE',displayOnly:true};data.irrigation.safety={available:false,fresh:false};data.coordination.chargingEndEstimate=null;}
  if(location.hash==='#coordination'||location.hash==='#coordination-blocked'){data.overall.code=location.hash==='#coordination'?'COORDINATION_EXECUTION_RESERVED':'COORDINATION_EXECUTION_START_BLOCKED';data.automation.irrigationPhase=null;data.coordination.dryUntil=null;data.coordination.releaseNotBefore=null;data.coordination.blockers=[{code:'CHARGING'}];}
  return {ok:true,status:200,json:async()=>data};""")
     banner = """<body><nav style="background:#172033;color:white;padding:8px;text-align:center;font:14px Arial">Vorschau · Beispieldaten<br>
@@ -56,7 +60,10 @@ def main():
 <a style="color:white" href="#error" onclick="setTimeout(()=>document.getElementById('refresh').click(),0)">Fehler</a> ·
 <a style="color:white" href="#offline" onclick="setTimeout(()=>document.getElementById('refresh').click(),0)">Keine Verbindung</a> ·
 <a style="color:white" href="#coordination" onclick="setTimeout(()=>document.getElementById('refresh').click(),0)">Wasser vorbereiten</a> ·
-<a style="color:white" href="#coordination-blocked" onclick="setTimeout(()=>document.getElementById('refresh').click(),0)">Wasser prüfen</a></nav>"""
+<a style="color:white" href="#coordination-blocked" onclick="setTimeout(()=>document.getElementById('refresh').click(),0)">Wasser prüfen</a> ·
+<a style="color:white" href="#stale-plan" onclick="setTimeout(()=>document.getElementById('refresh').click(),0)">Plan fehlt</a> ·
+<a style="color:white" href="#water-missing" onclick="setTimeout(()=>document.getElementById('refresh').click(),0)">Wasserstand fehlt</a> ·
+<a style="color:white" href="#winter-planned" onclick="setTimeout(()=>document.getElementById('refresh').click(),0)">Wintertraining</a></nav>"""
     preview = re.sub(r"<body><div style=\"background:#172033.*?</div>", lambda _: banner, preview, count=1, flags=re.S)
     target.write_text(preview, encoding="utf-8", newline="\n")
     print(f"Synthetic, network-isolated review: {output}")

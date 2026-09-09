@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -19,6 +20,7 @@ def park_until_further_notice(
     mower_id: str,
     *,
     timeout: int = 30,
+    before_send: Callable[[], None] | None = None,
 ) -> dict[str, Any]:
     """Sendet ausschließlich ParkUntilFurtherNotice; keine Startfunktion existiert."""
 
@@ -47,6 +49,10 @@ def park_until_further_notice(
             "User-Agent": USER_AGENT,
         },
     )
+    if before_send is not None:
+        # The caller may fence a slow authentication phase against a durable
+        # reservation immediately before the external side effect.
+        before_send()
     try:
         with urlopen(action_request, timeout=timeout) as response:  # noqa: S310
             body = response.read().decode("utf-8").strip()

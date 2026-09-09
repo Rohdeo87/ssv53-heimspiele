@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
 from types import MappingProxyType
-from typing import Any, Iterable, Mapping
+from typing import Any, Callable, Iterable, Mapping
 from zoneinfo import ZoneInfo
 
 
@@ -24,6 +24,48 @@ WEEKDAYS = {
     "freitag": 4, "friday": 4, "samstag": 5, "saturday": 5,
     "sonntag": 6, "sunday": 6,
 }
+
+
+def _gregorian_easter(year: int) -> date:
+    """Return Gregorian Easter Sunday using the anonymous algorithm."""
+
+    a = year % 19
+    b, c = divmod(year, 100)
+    d, e = divmod(b, 4)
+    f = (b + 8) // 25
+    g = (b - f + 1) // 3
+    h = (19 * a + b - d - g + 15) % 30
+    i, k = divmod(c, 4)
+    ell = (32 + 2 * e + 2 * i - h - k) % 7
+    m = (a + 11 * h + 22 * ell) // 451
+    month = (h + ell - 7 * m + 114) // 31
+    day = (h + ell - 7 * m + 114) % 31 + 1
+    return date(year, month, day)
+
+
+def is_brandenburg_statutory_holiday(day: date) -> bool:
+    """Brandenburg public holidays from BbgFTG §2(1).
+
+    This covers the statutory recurring rules only. Exceptional holidays under
+    §2(3) require a separately reviewed source. School holidays are not public
+    holidays and are intentionally not treated as blanket training closures.
+    """
+
+    if type(day) is not date:
+        raise TypeError("day muss ein Kalendertag sein.")
+    if (day.month, day.day) in {
+        (1, 1), (5, 1), (10, 3), (10, 31), (12, 25), (12, 26)
+    }:
+        return True
+    easter = _gregorian_easter(day.year)
+    return day in {
+        easter - timedelta(days=2),
+        easter,
+        easter + timedelta(days=1),
+        easter + timedelta(days=39),
+        easter + timedelta(days=49),
+        easter + timedelta(days=50),
+    }
 
 
 def content_digest(value: Any) -> str:
@@ -136,6 +178,7 @@ def validate_calendar(
     document: Mapping[str, Any], *, now_utc: datetime,
     occupancy_config: Mapping[str, Any] | None = None,
     mower_config: Mapping[str, Any] | None = None,
+    require_season_periods: bool = True,
 ) -> CalendarValidation:
     """Validate shape and list precise missing migration/activation evidence."""
     errors: list[str] = []
@@ -204,7 +247,7 @@ def validate_calendar(
                 assigned[day] = period["season"]
                 day += timedelta(days=1)
         missing = (coverage[1] - coverage[0]).days + 1 - len(assigned)
-        if missing:
+        if missing and require_season_periods:
             blockers.append(f"SEASON_DATES_UNCONFIRMED: {missing} Tage ohne verbindliche Saisonzuordnung.")
         holidays = document["holidays"]
         if not isinstance(holidays, dict) or set(holidays) != {"reviewed", "periods"} or type(holidays["reviewed"]) is not bool:
@@ -385,6 +428,11 @@ def resolve_training_calendar(
     document: Mapping[str, Any], *, range_start: datetime, range_end: datetime,
     now_utc: datetime, occupancy_config: Mapping[str, Any], mower_config: Mapping[str, Any],
     cancellations: Iterable[TrainingCancellation] = (),
+    season_override: str | None = None,
+    season_selector: Callable[[date], str | None] | None = None,
+    statutory_holiday_predicate: Callable[[date], bool] | None = (
+        is_brandenburg_statutory_holiday
+    ),
 ) -> CalendarResolution:
     """Return one shared batch after all calendar and migration gates pass.
 
@@ -392,8 +440,15 @@ def resolve_training_calendar(
     block when active resolution is unavailable; this never means a free
     legacy plan. Cancellations must come from the authenticated server store.
     """
-    validation = validate_calendar(document, now_utc=now_utc,
-                                   occupancy_config=occupancy_config, mower_config=mower_config)
+    validation = validate_calendar(
+        document,
+        now_utc=now_utc,
+        occupancy_config=occupancy_config,
+        mower_config=mower_config,
+        require_season_periods=(
+            season_override is None and season_selector is None
+        ),
+    )
     if not validation.ready:
         return CalendarResolution(validation)
     try:
@@ -417,10 +472,45 @@ def resolve_training_calendar(
             if previous is None or previous.release_not_before_utc < item.release_not_before_utc:
                 cancellation_map[key] = item
         exclusions = {(item["schedule_id"], _day(item["date"])) for item in document["excluded_occurrences"]}
+        if season_override is not None and season_selector is not None:
+            raise ValueError("TRAINING_CONTROL_SEASON_AMBIGUOUS")
+        selected_season = None
+        if season_override is not None:
+            selected_season = next(
+                (
+                    name for name in document["weekly_patterns"]
+                    if str(name).casefold() == str(season_override).casefold()
+                ),
+                None,
+            )
+            if selected_season is None:
+                raise ValueError("TRAINING_CONTROL_SEASON_INVALID")
         events: list[dict[str, Any]] = []
         day = first_anchor
         while day <= last_anchor:
-            season = next(period["season"] for period in document["season_periods"] if _period(period)[0] <= day <= _period(period)[1])
+            controlled_season = season_selector(day) if season_selector else None
+            if season_selector is not None and controlled_season is None:
+                raise ValueError("TRAINING_CONTROL_SEASON_UNAVAILABLE")
+            season = controlled_season or selected_season or next(
+                period["season"]
+                for period in document["season_periods"]
+                if _period(period)[0] <= day <= _period(period)[1]
+            )
+            season = next(
+                (
+                    name for name in document["weekly_patterns"]
+                    if str(name).casefold() == str(season).casefold()
+                ),
+                None,
+            )
+            if season is None:
+                raise ValueError("TRAINING_CONTROL_SEASON_INVALID")
+            if (
+                statutory_holiday_predicate is not None
+                and statutory_holiday_predicate(day)
+            ):
+                day += timedelta(days=1)
+                continue
             for session in document["weekly_patterns"][season]:
                 schedule_id = session["id"]
                 if _weekday(session["weekday"]) != day.weekday() or (schedule_id, day) in exclusions:

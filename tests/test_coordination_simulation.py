@@ -91,10 +91,10 @@ class CoordinationSimulationTests(unittest.TestCase):
             predictive = self.proposal(strategy="predictive")
             bundled = simulate_day(self.scenario, simple.selected_start, self.settings)
         self.assertEqual(baseline["productive_mowing_minutes"], 642)
-        self.assertEqual(bundled["productive_mowing_minutes"], 720)
-        self.assertEqual(simple.expected_gain_minutes, 78)
+        self.assertEqual(bundled["productive_mowing_minutes"], 702)
+        self.assertEqual(simple.expected_gain_minutes, 60)
         self.assertEqual(simple.selected_start, predictive.selected_start)
-        self.assertEqual(predictive.candidate_count, 54)
+        self.assertEqual(predictive.candidate_count, 23)
         self.assertEqual(baseline["final_battery_fraction"], bundled["final_battery_fraction"])
         for result in (baseline, bundled):
             self.assertEqual(result["irrigation_minutes"], 160)
@@ -107,7 +107,7 @@ class CoordinationSimulationTests(unittest.TestCase):
         result = simulate_day(self.scenario, self.now, self.settings)
         self.assertEqual(sum(result[key] for key in ("productive_mowing_minutes", "return_minutes", "charging_minutes", "parked_minutes")), 1440)
         self.assertEqual(sum(result["primary_reason_minutes_exclusive"].values()), 1440)
-        self.assertEqual(result["nonproductive_union_minutes"], 720)
+        self.assertEqual(result["nonproductive_union_minutes"], 738)
         # Charging overlaps water/occupancy. Adding these raw counters would be wrong.
         self.assertGreater(sum(result["reason_minutes_including_overlaps"].values()), result["nonproductive_union_minutes"])
 

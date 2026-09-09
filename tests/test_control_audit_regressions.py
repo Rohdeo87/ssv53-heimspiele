@@ -28,6 +28,10 @@ class ControlAuditRegressionTests(unittest.TestCase):
             suspend_zone_sender=lambda *_: self.fail("Unexpected irrigation schedule mutation"),
             start_zone_sender=lambda *_: self.fail("Unexpected real watering intent"),
             stop_zone_sender=stop_sender or (lambda *_: self.fail("Unexpected immediate water stop")),
+            # The production before-send guard samples wall time after its
+            # final state read. Keep this offline fixture at its cycle instant
+            # so the test exercises its intended CAS/latch behavior.
+            command_clock=lambda: when,
         )
 
     def refresh_state(self):

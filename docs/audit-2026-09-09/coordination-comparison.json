@@ -2,17 +2,17 @@
   "schema_version": 1,
   "simulation_only": true,
   "live_execution_enabled": false,
-  "generated_at_utc": "2026-09-09T06:10:47.439140+00:00",
-  "repository_base_commit": "9c2d0fc9c010b366cd49b58b8086b27f9d59a0dd",
+  "generated_at_utc": "2026-09-09T14:31:08.609210+00:00",
+  "repository_base_commit": "bcacc44e64fac3926e16247e526408fa21fd07f3",
   "source_sha256": {
-    "mower/coordination_simulation.py": "3bafdb38c6770c1f15a12534a30f71ec714c55e29cc0a40930b90a7ee640a3fb",
-    "scripts/simulate_coordination.py": "ffd9d3e8c22e9e2ffd5c433085758f9a9560b974e64eed2cd7ca35ddbf00997e",
-    "tests/test_coordination_simulation.py": "8fc2c89b77138a77b3fcfaaab73bb1243da2dbeb3d891026ecec70983c65112e"
+    "mower/coordination_simulation.py": "368a30a0cf94365e5c7f9779339707b5934ce8fc270eda23158df9b99dfba7c7",
+    "scripts/simulate_coordination.py": "06bf5b44ea317367a434a5d475147c3c8093b2ed48c046a80b9623e18c8e0232",
+    "tests/test_coordination_simulation.py": "ba58ed726680e9f7ac8783a05228e49c6082e9b7b5c2771a2c69c7f88a262db1"
   },
   "day_start_utc": "2026-09-14T22:00:00+00:00",
   "day_end_utc": "2026-09-15T22:00:00+00:00",
   "timezone": "Europe/Berlin",
-  "planning_instant_utc": "2026-09-15T01:05:00+00:00",
+  "planning_instant_utc": "2026-09-15T01:30:00+00:00",
   "settings": {
     "enabled": true,
     "execution_enabled": false,
@@ -28,9 +28,9 @@
   "water_need": {
     "need_id": "SIMULATION:rasen:2026-09-15:required-program-1",
     "demand_reference": "SIMULATED approved daily need, unchanged seven zone durations",
-    "earliest_start": "2026-09-15T01:00:00+00:00",
+    "earliest_start": "2026-09-15T01:30:00+00:00",
     "original_start": "2026-09-15T02:30:00+00:00",
-    "latest_start": "2026-09-15T05:30:00+00:00",
+    "latest_start": "2026-09-15T03:20:00+00:00",
     "zones": [
       {
         "zone_id": "SIMULATED_ZONE_1",
@@ -71,7 +71,7 @@
     "Dock wird nach einer weiteren Minute mit zwei getrennten Beobachtungen als bestätigt modelliert.",
     "Verbindliche Belegung 16:30–20:30 inklusive bestehender Puffer; keine zusätzlichen Belegungspuffer.",
     "Ein angenommener bestätigter Wasserbedarf: fünf Zonen à 20 und zwei Zonen à 30 Minuten, insgesamt 160 Minuten.",
-    "Fachlich zulässiges Startfenster 03:00–07:30 wird für dieses Beispiel angenommen; Ursprungstermin 04:30.",
+    "Nutzerregel: Bewässerung frühestens 03:30 und alle Zonen bis 08:00 Europe/Berlin; der native 160-Minuten-Lauf 04:30–07:10 ergibt 05:20 als reinen spätesten Start. Die Simulation setzt für die 03:30-Variante voraus, dass der Mäher um 03:05 bereits sicher gedockt/geparkt ist und der Ursprungstermin unterdrückt ist; das ist kein Live-Nachweis.",
     "Alle 150 Trocknungsminuten beginnen nach dem tatsächlichen letzten modellierten Zonenende.",
     "Stations- und Wegsicherheit, frische vollständige Belegung sowie Gerätehalte-/Suspendierungsbestätigungen sind simuliert.",
     "Im Basismodell kein Regen, kein EPOS-Fehler, keine API-Lücke und kein manueller Eingriff; solche Fehler werden separat getestet.",
@@ -259,34 +259,34 @@
         }
       ],
       "gain_vs_modelled_baseline_minutes": 0,
-      "additional_nonproductive_union_vs_best_model_minutes": 78
+      "additional_nonproductive_union_vs_best_model_minutes": 60
     },
     {
       "key": "simple",
       "label": "Bündelung beim Laden",
       "candidate_count": 1,
       "simulation_only": true,
-      "irrigation_start_utc": "2026-09-15T01:05:00+00:00",
-      "irrigation_end_utc": "2026-09-15T03:45:00+00:00",
-      "dry_until_utc": "2026-09-15T06:15:00+00:00",
+      "irrigation_start_utc": "2026-09-15T01:30:00+00:00",
+      "irrigation_end_utc": "2026-09-15T04:10:00+00:00",
+      "dry_until_utc": "2026-09-15T06:40:00+00:00",
       "elapsed_minutes": 1440,
-      "productive_mowing_minutes": 720,
+      "productive_mowing_minutes": 702,
       "return_minutes": 16,
-      "charging_minutes": 386,
-      "parked_minutes": 318,
+      "charging_minutes": 374,
+      "parked_minutes": 348,
       "field_suitable_minutes": 890,
-      "field_window_utilization_percent": 80.9,
-      "nonproductive_union_minutes": 720,
+      "field_window_utilization_percent": 78.88,
+      "nonproductive_union_minutes": 738,
       "primary_reason_minutes_exclusive": {
-        "CHARGING": 154,
+        "CHARGING": 172,
         "DRYING": 150,
         "IRRIGATION": 160,
         "OCCUPANCY": 240,
-        "PRODUCTIVE_MOWING": 720,
+        "PRODUCTIVE_MOWING": 702,
         "RETURNING": 16
       },
       "reason_minutes_including_overlaps": {
-        "CHARGING": 386,
+        "CHARGING": 374,
         "DRYING": 150,
         "IRRIGATION": 160,
         "OCCUPANCY": 240,
@@ -319,7 +319,7 @@
         },
         {
           "start_utc": "2026-09-15T01:04:00+00:00",
-          "end_utc": "2026-09-15T01:05:00+00:00",
+          "end_utc": "2026-09-15T01:30:00+00:00",
           "mower": "CHARGING",
           "primary": "CHARGING",
           "all_reasons": [
@@ -327,7 +327,7 @@
           ]
         },
         {
-          "start_utc": "2026-09-15T01:05:00+00:00",
+          "start_utc": "2026-09-15T01:30:00+00:00",
           "end_utc": "2026-09-15T03:04:00+00:00",
           "mower": "CHARGING",
           "primary": "IRRIGATION",
@@ -338,7 +338,7 @@
         },
         {
           "start_utc": "2026-09-15T03:04:00+00:00",
-          "end_utc": "2026-09-15T03:45:00+00:00",
+          "end_utc": "2026-09-15T04:10:00+00:00",
           "mower": "PARKED",
           "primary": "IRRIGATION",
           "all_reasons": [
@@ -346,8 +346,8 @@
           ]
         },
         {
-          "start_utc": "2026-09-15T03:45:00+00:00",
-          "end_utc": "2026-09-15T06:15:00+00:00",
+          "start_utc": "2026-09-15T04:10:00+00:00",
+          "end_utc": "2026-09-15T06:40:00+00:00",
           "mower": "PARKED",
           "primary": "DRYING",
           "all_reasons": [
@@ -355,15 +355,15 @@
           ]
         },
         {
-          "start_utc": "2026-09-15T06:15:00+00:00",
-          "end_utc": "2026-09-15T09:15:00+00:00",
+          "start_utc": "2026-09-15T06:40:00+00:00",
+          "end_utc": "2026-09-15T09:40:00+00:00",
           "mower": "MOWING",
           "primary": "PRODUCTIVE_MOWING",
           "all_reasons": []
         },
         {
-          "start_utc": "2026-09-15T09:15:00+00:00",
-          "end_utc": "2026-09-15T09:19:00+00:00",
+          "start_utc": "2026-09-15T09:40:00+00:00",
+          "end_utc": "2026-09-15T09:44:00+00:00",
           "mower": "RETURNING",
           "primary": "RETURNING",
           "all_reasons": [
@@ -371,8 +371,8 @@
           ]
         },
         {
-          "start_utc": "2026-09-15T09:19:00+00:00",
-          "end_utc": "2026-09-15T11:19:00+00:00",
+          "start_utc": "2026-09-15T09:44:00+00:00",
+          "end_utc": "2026-09-15T11:44:00+00:00",
           "mower": "CHARGING",
           "primary": "CHARGING",
           "all_reasons": [
@@ -380,33 +380,24 @@
           ]
         },
         {
-          "start_utc": "2026-09-15T11:19:00+00:00",
-          "end_utc": "2026-09-15T14:19:00+00:00",
+          "start_utc": "2026-09-15T11:44:00+00:00",
+          "end_utc": "2026-09-15T14:26:00+00:00",
           "mower": "MOWING",
           "primary": "PRODUCTIVE_MOWING",
           "all_reasons": []
         },
         {
-          "start_utc": "2026-09-15T14:19:00+00:00",
-          "end_utc": "2026-09-15T14:23:00+00:00",
-          "mower": "RETURNING",
-          "primary": "RETURNING",
-          "all_reasons": [
-            "RETURNING"
-          ]
-        },
-        {
-          "start_utc": "2026-09-15T14:23:00+00:00",
+          "start_utc": "2026-09-15T14:26:00+00:00",
           "end_utc": "2026-09-15T14:30:00+00:00",
-          "mower": "CHARGING",
-          "primary": "CHARGING",
+          "mower": "RETURNING",
+          "primary": "RETURNING",
           "all_reasons": [
-            "CHARGING"
+            "RETURNING"
           ]
         },
         {
           "start_utc": "2026-09-15T14:30:00+00:00",
-          "end_utc": "2026-09-15T16:23:00+00:00",
+          "end_utc": "2026-09-15T16:18:00+00:00",
           "mower": "CHARGING",
           "primary": "OCCUPANCY",
           "all_reasons": [
@@ -415,7 +406,7 @@
           ]
         },
         {
-          "start_utc": "2026-09-15T16:23:00+00:00",
+          "start_utc": "2026-09-15T16:18:00+00:00",
           "end_utc": "2026-09-15T18:30:00+00:00",
           "mower": "PARKED",
           "primary": "OCCUPANCY",
@@ -449,35 +440,35 @@
           ]
         }
       ],
-      "gain_vs_modelled_baseline_minutes": 78,
+      "gain_vs_modelled_baseline_minutes": 60,
       "additional_nonproductive_union_vs_best_model_minutes": 0
     },
     {
       "key": "predictive",
       "label": "Vorausschauender Vergleich",
-      "candidate_count": 54,
+      "candidate_count": 23,
       "simulation_only": true,
-      "irrigation_start_utc": "2026-09-15T01:05:00+00:00",
-      "irrigation_end_utc": "2026-09-15T03:45:00+00:00",
-      "dry_until_utc": "2026-09-15T06:15:00+00:00",
+      "irrigation_start_utc": "2026-09-15T01:30:00+00:00",
+      "irrigation_end_utc": "2026-09-15T04:10:00+00:00",
+      "dry_until_utc": "2026-09-15T06:40:00+00:00",
       "elapsed_minutes": 1440,
-      "productive_mowing_minutes": 720,
+      "productive_mowing_minutes": 702,
       "return_minutes": 16,
-      "charging_minutes": 386,
-      "parked_minutes": 318,
+      "charging_minutes": 374,
+      "parked_minutes": 348,
       "field_suitable_minutes": 890,
-      "field_window_utilization_percent": 80.9,
-      "nonproductive_union_minutes": 720,
+      "field_window_utilization_percent": 78.88,
+      "nonproductive_union_minutes": 738,
       "primary_reason_minutes_exclusive": {
-        "CHARGING": 154,
+        "CHARGING": 172,
         "DRYING": 150,
         "IRRIGATION": 160,
         "OCCUPANCY": 240,
-        "PRODUCTIVE_MOWING": 720,
+        "PRODUCTIVE_MOWING": 702,
         "RETURNING": 16
       },
       "reason_minutes_including_overlaps": {
-        "CHARGING": 386,
+        "CHARGING": 374,
         "DRYING": 150,
         "IRRIGATION": 160,
         "OCCUPANCY": 240,
@@ -510,7 +501,7 @@
         },
         {
           "start_utc": "2026-09-15T01:04:00+00:00",
-          "end_utc": "2026-09-15T01:05:00+00:00",
+          "end_utc": "2026-09-15T01:30:00+00:00",
           "mower": "CHARGING",
           "primary": "CHARGING",
           "all_reasons": [
@@ -518,7 +509,7 @@
           ]
         },
         {
-          "start_utc": "2026-09-15T01:05:00+00:00",
+          "start_utc": "2026-09-15T01:30:00+00:00",
           "end_utc": "2026-09-15T03:04:00+00:00",
           "mower": "CHARGING",
           "primary": "IRRIGATION",
@@ -529,7 +520,7 @@
         },
         {
           "start_utc": "2026-09-15T03:04:00+00:00",
-          "end_utc": "2026-09-15T03:45:00+00:00",
+          "end_utc": "2026-09-15T04:10:00+00:00",
           "mower": "PARKED",
           "primary": "IRRIGATION",
           "all_reasons": [
@@ -537,8 +528,8 @@
           ]
         },
         {
-          "start_utc": "2026-09-15T03:45:00+00:00",
-          "end_utc": "2026-09-15T06:15:00+00:00",
+          "start_utc": "2026-09-15T04:10:00+00:00",
+          "end_utc": "2026-09-15T06:40:00+00:00",
           "mower": "PARKED",
           "primary": "DRYING",
           "all_reasons": [
@@ -546,15 +537,15 @@
           ]
         },
         {
-          "start_utc": "2026-09-15T06:15:00+00:00",
-          "end_utc": "2026-09-15T09:15:00+00:00",
+          "start_utc": "2026-09-15T06:40:00+00:00",
+          "end_utc": "2026-09-15T09:40:00+00:00",
           "mower": "MOWING",
           "primary": "PRODUCTIVE_MOWING",
           "all_reasons": []
         },
         {
-          "start_utc": "2026-09-15T09:15:00+00:00",
-          "end_utc": "2026-09-15T09:19:00+00:00",
+          "start_utc": "2026-09-15T09:40:00+00:00",
+          "end_utc": "2026-09-15T09:44:00+00:00",
           "mower": "RETURNING",
           "primary": "RETURNING",
           "all_reasons": [
@@ -562,8 +553,8 @@
           ]
         },
         {
-          "start_utc": "2026-09-15T09:19:00+00:00",
-          "end_utc": "2026-09-15T11:19:00+00:00",
+          "start_utc": "2026-09-15T09:44:00+00:00",
+          "end_utc": "2026-09-15T11:44:00+00:00",
           "mower": "CHARGING",
           "primary": "CHARGING",
           "all_reasons": [
@@ -571,33 +562,24 @@
           ]
         },
         {
-          "start_utc": "2026-09-15T11:19:00+00:00",
-          "end_utc": "2026-09-15T14:19:00+00:00",
+          "start_utc": "2026-09-15T11:44:00+00:00",
+          "end_utc": "2026-09-15T14:26:00+00:00",
           "mower": "MOWING",
           "primary": "PRODUCTIVE_MOWING",
           "all_reasons": []
         },
         {
-          "start_utc": "2026-09-15T14:19:00+00:00",
-          "end_utc": "2026-09-15T14:23:00+00:00",
-          "mower": "RETURNING",
-          "primary": "RETURNING",
-          "all_reasons": [
-            "RETURNING"
-          ]
-        },
-        {
-          "start_utc": "2026-09-15T14:23:00+00:00",
+          "start_utc": "2026-09-15T14:26:00+00:00",
           "end_utc": "2026-09-15T14:30:00+00:00",
-          "mower": "CHARGING",
-          "primary": "CHARGING",
+          "mower": "RETURNING",
+          "primary": "RETURNING",
           "all_reasons": [
-            "CHARGING"
+            "RETURNING"
           ]
         },
         {
           "start_utc": "2026-09-15T14:30:00+00:00",
-          "end_utc": "2026-09-15T16:23:00+00:00",
+          "end_utc": "2026-09-15T16:18:00+00:00",
           "mower": "CHARGING",
           "primary": "OCCUPANCY",
           "all_reasons": [
@@ -606,7 +588,7 @@
           ]
         },
         {
-          "start_utc": "2026-09-15T16:23:00+00:00",
+          "start_utc": "2026-09-15T16:18:00+00:00",
           "end_utc": "2026-09-15T18:30:00+00:00",
           "mower": "PARKED",
           "primary": "OCCUPANCY",
@@ -640,7 +622,7 @@
           ]
         }
       ],
-      "gain_vs_modelled_baseline_minutes": 78,
+      "gain_vs_modelled_baseline_minutes": 60,
       "additional_nonproductive_union_vs_best_model_minutes": 0
     }
   ],
@@ -664,19 +646,19 @@
     {
       "assumed_full_charge_minutes": 120,
       "baseline_productive_minutes": 642,
-      "bundled_productive_minutes": 720,
-      "gain_minutes": 78,
+      "bundled_productive_minutes": 702,
+      "gain_minutes": 60,
       "baseline_final_battery_fraction": 0.216667,
       "bundled_final_battery_fraction": 0.216667
     },
     {
       "assumed_full_charge_minutes": 180,
       "baseline_productive_minutes": 582,
-      "bundled_productive_minutes": 667,
-      "gain_minutes": 85,
+      "bundled_productive_minutes": 642,
+      "gain_minutes": 60,
       "baseline_final_battery_fraction": 0.144444,
       "bundled_final_battery_fraction": 0.144444
     }
   ],
-  "recommendation": "Einfache Laderegel weiter im Schatten prüfen; 54 Kandidaten bringen in diesem Beispiel keinen Zusatzgewinn."
+  "recommendation": "Einfache Laderegel weiter im Schatten prüfen; die Kandidatenzahl und Kennzahlen stammen aus diesem Modelllauf und sind kein Live-Gewinn."
 }

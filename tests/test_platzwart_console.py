@@ -60,6 +60,8 @@ class PlatzwartAuthenticationTests(unittest.TestCase):
 
         self.assertFalse(payload["controlsAvailable"])
         self.assertEqual(payload["dataQuality"]["code"], "CONFIG_STALE")
+        self.assertFalse(payload["occupancy"]["available"])
+        self.assertNotIn("bleiben sicher gesperrt", payload["overall"]["message"])
         self.assertTrue(payload["dataQuality"]["displayOnly"])
         self.assertEqual(payload["mower"]["activity"], "MOWING")
         self.assertEqual(payload["mower"]["batteryPercent"], 71)
@@ -84,6 +86,7 @@ class PlatzwartAuthenticationTests(unittest.TestCase):
 
         self.assertFalse(payload["controlsAvailable"])
         self.assertEqual(payload["dataQuality"]["code"], "DISPLAY_UNAVAILABLE")
+        self.assertFalse(payload["occupancy"]["available"])
         self.assertFalse(payload["irrigation"]["safety"]["available"])
         self.assertEqual(payload["occupancy"]["upcoming"], [])
 
@@ -516,10 +519,43 @@ class PlatzwartAuthenticationTests(unittest.TestCase):
 
 
 class PlatzwartSafetyIntegrationTests(unittest.TestCase):
+    def test_manual_irrigation_outside_window_never_queues_request(self) -> None:
+        for action, moment, extra in (
+            ("START_IRRIGATION", NOW.replace(hour=1, minute=29), {}),
+            ("START_IRRIGATION", NOW.replace(hour=6), {}),
+            ("START_IRRIGATION_ZONE", NOW.replace(hour=5, minute=40), {"zone": 3, "run_seconds": 1200}),
+        ):
+            with self.subTest(action=action, moment=moment):
+                store = InMemoryStateStore()
+                with patch("platzwart_console.AzureTableStateStore.from_environment", return_value=store), patch("platzwart_console.RuntimeSettings.from_mapping", return_value=settings()), patch("platzwart_console.ConsoleTableStore.from_environment") as audit, patch("platzwart_console.run_read_only_cycle") as read:
+                    with self.assertRaises(PlatzwartError) as error:
+                        request_action(action, "outside-window", action, ENV, moment, **extra)
+                self.assertIn(error.exception.code, {"IRRIGATION_OPERATING_WINDOW", "IRRIGATION_WINDOW_CANNOT_FIT"})
+                self.assertIsNone(store.load().operator_request_id)
+                audit.assert_not_called()
+                read.assert_not_called()
+
+    def test_manual_zone_request_keeps_duration_and_remains_pending(self) -> None:
+        store = InMemoryStateStore()
+        with patch("platzwart_console.AzureTableStateStore.from_environment", return_value=store), patch("platzwart_console.RuntimeSettings.from_mapping", return_value=settings()), patch("platzwart_console.ConsoleTableStore.from_environment"), patch("platzwart_console.run_read_only_cycle") as read:
+            accepted = request_action("START_IRRIGATION_ZONE", "fits-window", "START_IRRIGATION_ZONE", ENV, NOW, zone=3, run_seconds=1500)
+        self.assertEqual(accepted["status"], "PENDING")
+        self.assertEqual(store.load().operator_request_run_seconds, 1500)
+        read.assert_not_called()
+
+    def test_custom_irrigation_window_error_is_actionable(self) -> None:
+        with self.assertRaises(PlatzwartError) as error:
+            request_action("CUSTOMIZE_NEXT_IRRIGATION", "custom-outside", "CUSTOMIZE_NEXT_IRRIGATION", ENV, NOW, irrigation_schedule={
+                "desiredStart": NOW.replace(hour=5, minute=45).isoformat(),
+                "zones": [{"zone": index, "runSeconds": 1200, "selected": True} for index in range(1, 8)],
+            })
+        self.assertEqual(error.exception.code, "IRRIGATION_WINDOW_CANNOT_FIT")
+
     def run_cycle(self, initial: AutomationState, live_result, **senders):
         store = InMemoryStateStore(initial)
         cycle = run_full_failsafe_cycle(
             now_utc=NOW,
+            command_clock=lambda: NOW,
             settings=settings(),
             environment=ENV,
             past_due=False,

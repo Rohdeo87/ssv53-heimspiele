@@ -1,0 +1,24 @@
+{
+  "template_only": "NOT_READY: replace every placeholder with independently reviewed local evidence; this file is never an approval.",
+  "schema_version": 2,
+  "stage": "PRE_ACTIVATION",
+  "release_mode": "LIMITED_SUPERVISED_FIRST_ACTIVATION",
+  "approved_binding": {
+    "head": "REPLACE_WITH_EXACT_40_CHARACTER_GIT_HEAD",
+    "package": {"path": "dist/REPLACE.zip", "sha256": "REPLACE_WITH_ZIP_SHA256", "source_head": "REPLACE_WITH_SAME_HEAD", "receipt": {"path": "evidence/package-receipt.json", "sha256": "REPLACE_WITH_RECEIPT_SHA256"}},
+    "manifest": {"sha256": "REPLACE_WITH_MANIFEST_SHA256", "receipt": {"path": "evidence/manifest-receipt.json", "sha256": "REPLACE_WITH_RECEIPT_SHA256"}},
+    "calendar": {"path": "evidence/calendar-receipt.json", "sha256": "REPLACE_WITH_RECEIPT_SHA256"},
+    "need": {"path": "evidence/watering-receipt.json", "sha256": "REPLACE_WITH_RECEIPT_SHA256"},
+    "window": {"evidence": {"path": "evidence/window-receipt.json", "sha256": "REPLACE_WITH_RECEIPT_SHA256"}, "detail": {"window_id": "REPLACE_WITH_BOUND_WINDOW_ID", "starts_at_utc": "REPLACE_WITH_UTC_START", "ends_at_utc": "REPLACE_WITH_FUTURE_UTC_END"}}
+  },
+  "exact_head_ci": {"head": "REPLACE_WITH_SAME_HEAD", "conclusion": "success", "evidence": {"path": "evidence/ci-receipt.json", "sha256": "REPLACE_WITH_RECEIPT_SHA256"}},
+  "immutable_assumptions": {"training_calendar": {"path": "evidence/calendar-receipt.json", "sha256": "REPLACE_WITH_SAME_CALENDAR_RECEIPT_SHA256"}, "approved_watering": {"path": "evidence/watering-receipt.json", "sha256": "REPLACE_WITH_SAME_WATERING_RECEIPT_SHA256"}},
+  "pre_activation_safety_evidence": {
+    "field": {"path": "evidence/field-receipt.json", "sha256": "REPLACE_WITH_RECEIPT_SHA256"},
+    "station": {"path": "evidence/station-receipt.json", "sha256": "REPLACE_WITH_RECEIPT_SHA256"},
+    "native_schedule": {"path": "evidence/native-schedule-receipt.json", "sha256": "REPLACE_WITH_RECEIPT_SHA256"},
+    "controller_ownership": {"path": "evidence/controller-ownership-receipt.json", "sha256": "REPLACE_WITH_RECEIPT_SHA256"}
+  },
+  "post_activation_evidence": {},
+  "final_operator_approval": {"state": "PENDING", "one_shot": true, "approval_request_id": "REPLACE_WITH_UNIQUE_REQUEST_ID", "binding_sha256": "REPLACE_WITH_CANONICAL_APPROVED_BINDING_SHA256"}
+}

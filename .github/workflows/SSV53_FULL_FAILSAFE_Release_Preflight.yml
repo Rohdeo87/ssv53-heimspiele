@@ -1,0 +1,107 @@
+name: FULL_FAILSAFE Release-Preflight
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_head:
+        description: "Exakter 40-stelliger Git-Commit auf feature/azure-mower-migration"
+        required: true
+        type: string
+      confirmation:
+        description: "Exakt SSV53-FULL-FAILSAFE-RELEASE-PREFLIGHT eingeben"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ssv53-full-failsafe-release-preflight-${{ inputs.source_head }}
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    name: Exakten FULL_FAILSAFE-Stand prüfen und paketieren
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      MIGRATION_BRANCH: feature/azure-mower-migration
+      SOURCE_HEAD: ${{ inputs.source_head }}
+
+    steps:
+      - name: Manuellen Prüfauftrag und Workflow-Branch sperren
+        shell: bash
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          [ "$GITHUB_REF_NAME" = "$MIGRATION_BRANCH" ]
+          [ "$CONFIRMATION" = "SSV53-FULL-FAILSAFE-RELEASE-PREFLIGHT" ]
+          [[ "$SOURCE_HEAD" =~ ^[0-9a-f]{40}$ ]]
+
+      - name: Exakten Quellstand laden
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.source_head }}
+          fetch-depth: 0
+
+      - name: Exakten Quellstand gegen Migrationsbranch prüfen
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ "$(git rev-parse HEAD)" = "$SOURCE_HEAD" ]
+          git merge-base --is-ancestor "$SOURCE_HEAD" "origin/$MIGRATION_BRANCH"
+          git diff --exit-code
+          [ -z "$(git status --porcelain --untracked-files=no)" ]
+
+      - name: Python 3.12 einrichten
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Testabhängigkeiten installieren
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check -r requirements-test.txt
+
+      - name: Vollständige pytest-Regression ausführen
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m compileall -q mower function_app.py scripts
+          python -m pytest -q tests
+
+      - name: FULL_FAILSAFE aus kanonischen Git-Bytes bauen und ohne Netzwerk importieren
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/verify_full_failsafe_delivery.py \
+            --commit "$SOURCE_HEAD" \
+            --output dist/ssv53-platzpflege-full-failsafe-release.zip \
+            --report dist/release-preflight-evidence.json
+
+      - name: Geprüftes Paket und exakten Nachweis archivieren
+        uses: actions/upload-artifact@v7
+        with:
+          name: ssv53-full-failsafe-release-${{ inputs.source_head }}
+          path: |
+            dist/ssv53-platzpflege-full-failsafe-release.zip
+            dist/release-preflight-evidence.json
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+      - name: Preflight zusammenfassen
+        shell: bash
+        run: |
+          {
+            echo "# FULL_FAILSAFE Release-Preflight"
+            echo
+            echo "- Geprüfter Commit: \`$SOURCE_HEAD\`"
+            echo "- Tests: **pytest vollständig erfolgreich**"
+            echo "- Paketartefakt und Byte-/Manifestnachweis: **vorhanden**"
+            echo "- Azure-Zugang oder Deployment: **nein**"
+            echo "- Geräte-, CMS- und Appsetting-Änderung: **nein**"
+          } >> "$GITHUB_STEP_SUMMARY"

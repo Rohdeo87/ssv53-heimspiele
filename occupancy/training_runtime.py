@@ -14,7 +14,12 @@ from typing import Any, Iterable, Mapping
 
 from occupancy.training_calendar import (
     TrainingBatch, TrainingCancellation, content_digest, legacy_source_hashes,
-    resolve_training_calendar, validate_batch_for_range, validate_calendar,
+    is_brandenburg_statutory_holiday, resolve_training_calendar,
+    validate_batch_for_range, validate_calendar,
+)
+from occupancy.training_control import (
+    TrainingControlSnapshot,
+    control_enabled as training_control_enabled,
 )
 
 ENVELOPE_KEY = "shared_training_calendar"
@@ -31,12 +36,25 @@ def training_mode(environment: Mapping[str, str]) -> str:
     return str(environment.get("SHARED_TRAINING_MODE", "OFF")).strip().upper()
 
 
-def make_training_envelope(document: Mapping[str, Any], *, occupancy_config: Mapping[str, Any],
-                           mower_config: Mapping[str, Any], now_utc: datetime) -> dict[str, Any]:
-    validation = validate_calendar(document, now_utc=now_utc,
-                                   occupancy_config=occupancy_config, mower_config=mower_config)
+def make_training_envelope(
+    document: Mapping[str, Any], *, occupancy_config: Mapping[str, Any],
+    mower_config: Mapping[str, Any], now_utc: datetime,
+    manual_season_control: bool = False,
+) -> dict[str, Any]:
+    validation = validate_calendar(
+        document,
+        now_utc=now_utc,
+        occupancy_config=occupancy_config,
+        mower_config=mower_config,
+        require_season_periods=not manual_season_control,
+    )
     if validation.errors:
         raise ValueError("Ungültiger gemeinsamer Trainingskalender: " + "; ".join(validation.errors))
+    if validation.activation_blockers:
+        raise ValueError(
+            "Gemeinsamer Trainingskalender ist nicht freigegeben: "
+            + "; ".join(validation.activation_blockers)
+        )
     if document["legacy_sources"] != legacy_source_hashes(occupancy_config, mower_config):
         raise ValueError("Der Trainingskalender gehört nicht zu den angegebenen Ausgangsdaten.")
     content = {
@@ -55,6 +73,7 @@ class RuntimeTraining:
     candidate: TrainingBatch | None = None
     blockers: tuple[str, ...] = ()
     envelope_sha256: str | None = None
+    control_snapshot: TrainingControlSnapshot | None = None
 
     @property
     def blocking_required(self) -> bool:
@@ -73,6 +92,11 @@ class RuntimeTraining:
             "envelope_sha256": self.envelope_sha256,
             "calendar_revision": selected.revision if selected else None,
             "calendar_sha256": selected.content_sha256 if selected else None,
+            "trainingControl": (
+                self.control_snapshot.metadata()
+                if self.control_snapshot is not None
+                else None
+            ),
         }
 
 
@@ -81,16 +105,39 @@ def resolve_runtime_training(
     legacy_config: Mapping[str, Any], range_start: datetime, range_end: datetime,
     now_utc: datetime, cancellations: Iterable[Any] = (),
     relocated_keys: Iterable[tuple[str, str]] = (), source_fresh: bool = True,
+    control_snapshot: TrainingControlSnapshot | None = None,
+    statutory_holiday_predicate=is_brandenburg_statutory_holiday,
 ) -> RuntimeTraining:
     mode = training_mode(environment)
     if mode == "OFF":
+        if training_control_enabled(environment):
+            return RuntimeTraining(
+                "ACTIVE",
+                blockers=("TRAINING_CONTROL_REQUIRES_SHARED_TRAINING",),
+                control_snapshot=control_snapshot,
+            )
         return RuntimeTraining(mode)
     if mode not in {"SHADOW", "ACTIVE"}:
         return RuntimeTraining(mode, blockers=("SHARED_TRAINING_MODE_INVALID",))
+    if training_control_enabled(environment) and mode != "ACTIVE":
+        return RuntimeTraining(
+            mode,
+            blockers=("TRAINING_CONTROL_REQUIRES_ACTIVE_RUNTIME",),
+            control_snapshot=control_snapshot,
+        )
     digest = None
     try:
         if consumer not in {"occupancy", "mower"}:
             raise ValueError("TRAINING_CONSUMER_INVALID")
+        if training_control_enabled(environment):
+            if control_snapshot is None:
+                raise ValueError("TRAINING_CONTROL_SNAPSHOT_REQUIRED")
+            if not control_snapshot.available or control_snapshot.season is None:
+                raise ValueError(
+                    control_snapshot.reason_code or "TRAINING_CONTROL_UNAVAILABLE"
+                )
+        if statutory_holiday_predicate is None:
+            raise ValueError("BRANDENBURG_HOLIDAY_SOURCE_UNAVAILABLE")
         if not source_fresh:
             raise ValueError("TRAINING_PUBLICATION_STALE")
         envelope = holder.get(ENVELOPE_KEY)
@@ -116,10 +163,17 @@ def resolve_runtime_training(
         )
         result = resolve_training_calendar(envelope["calendar"], range_start=range_start,
             range_end=range_end, now_utc=now_utc, occupancy_config=occupancy,
-            mower_config=mower, cancellations=trusted_cancellations)
+            mower_config=mower, cancellations=trusted_cancellations,
+            season_selector=(
+                control_snapshot.season_for_anchor
+                if training_control_enabled(environment)
+                and control_snapshot is not None
+                else None
+            ),
+            statutory_holiday_predicate=statutory_holiday_predicate)
         if result.batch is None:
             return RuntimeTraining(mode, blockers=result.validation.errors + result.validation.activation_blockers,
-                                   envelope_sha256=digest)
+                                   envelope_sha256=digest, control_snapshot=control_snapshot)
         batch = result.batch
         # Only authenticated, persisted relocation records may suppress originals.
         relocated = set(relocated_keys)
@@ -128,13 +182,18 @@ def resolve_runtime_training(
                 if (event["scheduleId"], datetime.fromisoformat(event["start"]).date().isoformat()) not in relocated))
         validate_batch_for_range(batch, range_start, range_end)
         return RuntimeTraining(mode, batch=batch if mode == "ACTIVE" else None,
-                               candidate=batch, envelope_sha256=digest)
+                               candidate=batch, envelope_sha256=digest,
+                               control_snapshot=control_snapshot)
     except (ValueError, TypeError, KeyError, AttributeError, OverflowError) as exc:
-        return RuntimeTraining(mode, blockers=(str(exc),), envelope_sha256=digest)
+        return RuntimeTraining(mode, blockers=(str(exc),), envelope_sha256=digest,
+                               control_snapshot=control_snapshot)
 
 
 def resolve_training_file(path: str | Path, **kwargs: Any) -> RuntimeTraining:
-    if training_mode(kwargs["environment"]) == "OFF":
+    if (
+        training_mode(kwargs["environment"]) == "OFF"
+        and not training_control_enabled(kwargs["environment"])
+    ):
         return RuntimeTraining("OFF")
     try:
         holder = json.loads(Path(path).read_text(encoding="utf-8"))

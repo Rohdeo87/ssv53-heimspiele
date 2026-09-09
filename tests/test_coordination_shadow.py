@@ -63,6 +63,17 @@ class CoordinationShadowTests(unittest.TestCase):
         self.assertFalse(result['execution_available'])
         self.assertIn('ORIGINAL_SCHEDULE_SUPPRESSION_CONFIRMED', result['execution_prerequisites'])
 
+    def test_persisted_fixed_start_before_0330_is_rejected_not_clamped(self):
+        # 00:30 UTC is 02:30 CEST.  A persisted reservation cannot be moved
+        # to a different candidate merely because that other candidate fits.
+        proposal = compare_charging_window(
+            cycle=self.cycle, previous_cycle=self.previous, need=self.need,
+            charging_end_estimate=self.estimate, fixed_start_utc=stamp(-90),
+        )
+
+        self.assertEqual(proposal['status'], 'BLOCKED')
+        self.assertIn('IRRIGATION_OPERATING_WINDOW', proposal['blockers'])
+
     def test_occupancy_overlap_is_unioned_once_in_gain(self):
         # The extra 60 min of the original drying period already overlap sport.
         self.cycle['details']['coordination_shadow_input']['occupancy'] = [
