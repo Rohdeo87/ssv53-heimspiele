@@ -119,12 +119,6 @@ def resolve_runtime_training(
         return RuntimeTraining(mode)
     if mode not in {"SHADOW", "ACTIVE"}:
         return RuntimeTraining(mode, blockers=("SHARED_TRAINING_MODE_INVALID",))
-    if training_control_enabled(environment) and mode not in {"SHADOW", "ACTIVE"}:
-        return RuntimeTraining(
-            mode,
-            blockers=("TRAINING_CONTROL_REQUIRES_ACTIVE_RUNTIME",),
-            control_snapshot=control_snapshot,
-        )
     digest = None
     try:
         if consumer not in {"occupancy", "mower"}:
