@@ -65,5 +65,19 @@ Freigabe muss nicht ohne Anlass erneut pauschal erfragt werden.
 
 Ein grüner Testlauf, ein gebautes ZIP oder veröffentlichte Belegungsdaten
 erfüllen diese Bedingungen jeweils nicht allein. Die aktuelle Versions-/Paket-
-und Testzusammenfassung wird nach Abschluss der Entwicklungsprüfung in
-[follow-up-delivery.json](../audit-2026-09-09/follow-up-delivery.json) festgehalten.
+und Testzusammenfassung steht in
+[follow-up-delivery.json](../audit-2026-09-09/follow-up-delivery.json).
+
+Der abgeschlossene lokale Gesamtlauf umfasst **917 Python-Tests, 425 Untertests
+und 88 Appack-Tests**, jeweils ohne Fehler. Der Quellstand ist
+`285d0018b9064ca7fe05c5822af9f808d4e16d03`. Das neue FULL_FAILSAFE-Quellpaket
+enthält 51 Einträge einschließlich Manifest. Alle 50 Quelldateien wurden direkt
+aus diesem Git-Commit gebaut, byteweise verglichen und anschließend ohne
+Netzwerkzugriff importiert. So wird eine abweichende Windows-Zeilenumwandlung
+nicht mit dem tatsächlichen Commitinhalt verwechselt. Das getrennte
+GitHub-CI-Quellpaket hat weiterhin die Stufe `DRY_RUN_READ_ONLY`.
+
+Bei der späteren Einführung muss der kompatible Importverbraucher vor dem
+additiven Publisher bereitstehen. Alte Verbraucher lehnen das neue
+Rückhalteformat zwar ab, übernehmen dadurch aber auch keine neuen Sperren.
+Ein kontrollierter Rollout muss beide Seiten der Verarbeitung nachweisen.
