@@ -1245,16 +1245,5 @@
       "source": "fussball.de",
       "checksum": "5abcaaa49910de363b1dbf087914173b178207950dd688f832b9a1e34bbd4fef"
     }
-  ],
-  "publication": {
-    "schemaVersion": 1,
-    "status": "ok",
-    "sourceGeneratedAt": "2026-09-09T17:24:56+00:00",
-    "sourceDigest": "12e15094f4c23d7a3c9434f73f1c4f7234398ee29e9b62b568d3dd7208ffdb12",
-    "sourceCount": 46,
-    "retainedCount": 0,
-    "effectiveCount": 46,
-    "requiredConsumer": null,
-    "effectiveDigest": "7a195ac7550915e8d31b0fd6349fe2f622680d1e9dca723bb181e19f766becec"
-  }
+  ]
 }
