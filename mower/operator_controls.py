@@ -148,12 +148,20 @@ def _load_journal(state: AutomationState) -> list[dict[str, Any]]:
 
 
 def _dump_journal(entries: list[dict[str, Any]]) -> str:
-    if len(entries) > MAX_JOURNAL_ENTRIES:
-        raise OperatorControlError("JOURNAL_FULL")
-    payload = json.dumps(entries, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
-    if len(payload.encode("utf-8")) > 16_384:
-        raise OperatorControlError("JOURNAL_FULL")
-    return payload
+    retained = list(entries)
+    while True:
+        payload = json.dumps(retained, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+        if len(retained) <= MAX_JOURNAL_ENTRIES and len(payload.encode("utf-8")) <= 16_384:
+            return payload
+        # Confirmation adds timestamps after enqueue. Compact certain history
+        # at serialization too; a count-only limit can exceed Azure's bounded
+        # journal budget before the nominal 32nd completed command.
+        removable = [(index, _parse_time(entry["requested_at"]))
+                     for index, entry in enumerate(retained)
+                     if entry["status"] in {"CONFIRMED", "REJECTED", "EXPIRED"}]
+        if not removable:
+            raise OperatorControlError("JOURNAL_FULL")
+        retained.pop(min(removable, key=lambda item: item[1])[0])
 
 
 def operator_commands_payload(state: AutomationState) -> dict[str, dict[str, Any]]:
