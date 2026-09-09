@@ -1621,6 +1621,8 @@ def parse_club_matchplan(
     config: dict[str, Any],
     audit: dict[str, Any] | None = None,
     duplicate_resolver: Callable[[str, list[Match], dict[str, Any]], Match | None] | None = None,
+    *,
+    defer_duplicate_resolution: bool = False,
 ) -> list[Match]:
     soup = BeautifulSoup(html_text, "lxml")
     competition_rows = soup.select(
@@ -1629,6 +1631,14 @@ def parse_club_matchplan(
     if not competition_rows:
         # Leere Zeitfenster sind zulässig, solange eine Spielplantabelle vorhanden ist.
         if "club-matchplan-table" in html_text or soup.select_one(".club-matchplan-table"):
+            if source_detail_ids(soup) or any(
+                extract_festival_group_id(str(link.get("href") or ""))
+                for link in soup.select('a[href*="/staffel/"]')
+            ):
+                raise ScrapeError(
+                    "Spiel-/Festival-Links ohne erkennbare Spielzeilen; "
+                    "geändertes Quellformat ist kein leerer Spielplan."
+                )
             if audit is not None:
                 audit.update({
                     "source_url": source_url,
@@ -1762,15 +1772,25 @@ def parse_club_matchplan(
     } - {""}
     parsed_festivals = {extract_festival_group_id(item.detail_url) for item in matches} - {""}
     missing_festivals = sorted(source_festivals - parsed_festivals)
-    (
-        merged_matches,
-        collapsed_duplicate_ids,
-        duplicate_conflicts,
-        duplicate_resolutions,
-    ) = collapse_duplicate_detail_ids(matches, duplicate_resolver)
-    festival_round_assignments = apply_festival_round_assignment_rules(
-        merged_matches, config
-    )
+    # A published relocation may end in another accepted date window. The
+    # season importer resolves identities only after all windows were read;
+    # standalone parsing keeps the stricter complete-response behaviour.
+    if defer_duplicate_resolution:
+        merged_matches = matches
+        collapsed_duplicate_ids = []
+        duplicate_conflicts = []
+        duplicate_resolutions = []
+        festival_round_assignments = []
+    else:
+        (
+            merged_matches,
+            collapsed_duplicate_ids,
+            duplicate_conflicts,
+            duplicate_resolutions,
+        ) = collapse_duplicate_detail_ids(matches, duplicate_resolver)
+        festival_round_assignments = apply_festival_round_assignment_rules(
+            merged_matches, config
+        )
     conflicting_duplicate_ids = sorted(
         str(item.get("detail_id") or "")
         for item in duplicate_conflicts
@@ -1798,6 +1818,7 @@ def parse_club_matchplan(
             "collapsed_duplicate_detail_ids": collapsed_duplicate_ids,
             "duplicate_conflicts": duplicate_conflicts,
             "duplicate_resolutions": duplicate_resolutions,
+            "duplicate_resolution_deferred": defer_duplicate_resolution,
             "has_more": has_more_results(html_text),
         })
     if missing_ids:
@@ -2263,6 +2284,7 @@ def run(
                 config,
                 audit=audit,
                 duplicate_resolver=duplicate_resolver,
+                defer_duplicate_resolution=True,
             )
             audit["request_count_after_parse"] = client.request_count
             truncated = bool(audit.get("has_more")) or int(audit.get("competition_rows", 0)) >= response_limit
@@ -2294,15 +2316,35 @@ def run(
             for match in window_matches:
                 if match.kickoff and not (window_from <= match.kickoff[:10] <= window_to):
                     continue
-                apply_venue_rules(match, rules, default_decision, local_venue_pattern)
                 accepted_matches.append(match)
             audit["accepted"] = True
             window_audits.append(audit)
 
-        matches = deduplicate(accepted_matches)
+        (
+            merged_matches,
+            collapsed_ids,
+            duplicate_conflicts,
+            duplicate_resolutions,
+        ) = collapse_duplicate_detail_ids(accepted_matches, duplicate_resolver)
+        if duplicate_conflicts:
+            raise ScrapeError(
+                "Widersprüchliche Spiel-IDs nach Zusammenführung aller Zeitfenster: "
+                + ", ".join(str(item["detail_id"]) for item in duplicate_conflicts)
+            )
+        festival_round_assignments = apply_festival_round_assignment_rules(
+            merged_matches, config
+        )
+        matches = deduplicate(merged_matches)
+        for match in matches:
+            apply_venue_rules(match, rules, default_decision, local_venue_pattern)
         previous_registry = load_previous_registry(registry_path)
         registry = build_team_registry(matches, previous_registry, extract_club_id(config))
         quality = evaluate_quality(matches, window_audits, config, client.request_count)
+        quality["cross_window_resolution"] = {
+            "collapsed_duplicate_detail_ids": collapsed_ids,
+            "duplicate_resolutions": duplicate_resolutions,
+            "festival_round_assignments": festival_round_assignments,
+        }
         write_outputs(output_dir, matches, quality, registry)
         write_failed_teams(output_dir, failed)
 
