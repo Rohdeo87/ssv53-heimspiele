@@ -49,7 +49,7 @@ test("Laufendes Wasser außerhalb der erlaubten Zeit verlangt eine klare Handlun
   s.generatedAt="2026-09-09T01:30:00Z";
   assert.equal(view.dashboardMessage(s).title,"Bewässerung läuft");
   s.mower.activity="MOWING";
-  assert.equal(view.dashboardMessage(s).title,"Mäher bitte stoppen");
+  assert.equal(view.dashboardMessage(s).title,"Bewässerung läuft");
   s.mower.activity="CHARGING";s.overall.code="IRRIGATION_ACTIVE_OUTSIDE_OPERATING_WINDOW";
   s.automation.irrigationPhase="FAILED";s.generatedAt="2026-09-09T06:05:00Z";
   assert.equal(view.dashboardMessage(s).title,"Bewässerung bitte beenden");
@@ -65,7 +65,7 @@ test("Veralteter Belegungsplan verspricht keinen sicheren physischen Mäherstopp
   assert.equal(message.title, "Belegungsplan nicht aktuell");
   assert.match(message.text, /vor Ort prüfen/);
   assert.match(message.text, /erst nach bestätigtem Mäherstopp/);
-  assert.equal(view.nextMowerStart(s), "Noch offen");
+  assert.equal(view.nextMowerStart(s), "Mäher läuft bereits");
   s.dataQuality.code = "IRRIGATION_STATUS_UNAVAILABLE";
   assert.equal(view.dashboardMessage(s).title, "Bewässerungsstand fehlt");
   assert.match(view.dashboardMessage(s).text, /Keine Geräte starten/);
@@ -152,6 +152,28 @@ test("Trocknungsanzeige rundet nur nach oben und behandelt Mitternacht", () => {
   assert.equal(view.dryingTime("2026-09-09T21:59:59Z", "2026-09-09T20:00:00Z"), "Do., 10.09.26, 00:00 Uhr");
 });
 
+test("Manueller Betrieb bleibt verständlich und priorisiert echte Sperren", () => {
+  const s = snapshot();
+  s.operationMode = "MANUAL"; s.mower.activity = "MOWING"; s.coordination.blockers = [];
+  s.coordination.dryUntil = "2026-09-09T12:28:01Z";
+  assert.equal(view.dashboardMessage(s).title, "Manueller Betrieb");
+  assert.match(view.dashboardMessage(s).text, /Rasenpause bis/);
+  s.coordination.dryUntil = null; s.occupancy.current = {start: "2026-09-09T10:00:00Z", end: "2026-09-09T11:00:00Z"};
+  assert.equal(view.dashboardMessage(s).title, "Manueller Betrieb");
+  assert.match(view.dashboardMessage(s).text, /belegt/);
+  s.occupancy.current = null; s.irrigation.safety.active_zone_count = 1;
+  assert.equal(view.dashboardMessage(s).title, "Bewässerung läuft");
+});
+
+test("Höhenstatus unterscheidet ausstehend, bestätigt und abgewiesen", () => {
+  const s = snapshot(); s.operatorCommands = {SET_CUTTING_HEIGHT: {targetMm: 26, status: "PENDING"}};
+  assert.equal(view.heightStatusText(s), "26 mm angefragt – Bestätigung steht aus.");
+  s.operatorCommands.SET_CUTTING_HEIGHT.status = "CONFIRMED";
+  assert.equal(view.heightStatusText(s), "26 mm bestätigt.");
+  s.operatorCommands.SET_CUTTING_HEIGHT.status = "REJECTED";
+  assert.equal(view.heightStatusText(s), "Änderung nicht bestätigt. Bitte aktuellen Wert prüfen.");
+});
+
 test("Manueller Stopp bleibt als Pause sichtbar, auch mit berechenbarem Ladeende", () => {
   const s = snapshot(); s.coordination.blockers.push({code: "MANUAL_STOP"});
   assert.equal(view.nextMowerStart(s), "Automatik pausiert");
@@ -223,9 +245,19 @@ test("Fehlermeldungen und Fortschritt unterscheiden Anfrage und tatsächliche Au
     assert.doesNotMatch(error, /raw|token|error details/);
   }
   assert.match(view.friendlyError({status: 500}, "action"), /prüfen/);
+  assert.equal(view.friendlyError({status: 409}, "action"), "Änderung nicht angenommen. Bitte aktualisieren und Meldung prüfen.");
+  assert.match(view.friendlyError({status: 409, code: "ACTION_PENDING"}, "action"), /andere Änderung/);
   assert.equal((html.match(/id="mower-next-start"/g) || []).length, 1);
   assert.equal((html.match(/id="charge-end-time"/g) || []).length, 1);
   assert.ok(!html.includes('id="diagnostic-blockers"'));
+});
+
+test("Bedienkette verwendet Vertragsversion und Journalabfrage mit Request-ID", () => {
+  assert.match(html, /clientContractVersion=2/);
+  assert.match(html, /operatorCommands/);
+  assert.match(html, /QUEUED/);
+  assert.match(html, /SENT_UNCONFIRMED/);
+  assert.match(html, /pendingRequestId/);
 });
 
 for (const timezone of ["UTC", "Europe/Berlin", "America/Los_Angeles"]) {
@@ -286,6 +318,47 @@ test("Geschlossene Bedienung erzeugt keine Startzusage und lässt keine Geräte�
   }
 });
 
+test("Aktionsfähigkeiten sind pro Aktion maßgeblich und Parken bleibt bei Höhenanfrage möglich", () => {
+  const s = snapshot();
+  s.deviceControlsAvailable = false;
+  s.actionCapabilities = {
+    PARK_MOWER: {available: true, reason: "PROTECTIVE_PARK"},
+    SET_CUTTING_HEIGHT: {available: false, reason: "OPERATOR_ACTION_UNCONFIRMED"}
+  };
+  s.mower.activity = "MOWING";
+  s.mower.errorCode = 93;
+  s.automation.pendingAction = "SET_CUTTING_HEIGHT";
+  assert.equal(view.deviceActionAllowed(s, "PARK_MOWER"), true);
+  assert.equal(view.deviceActionAllowed(s, "SET_CUTTING_HEIGHT"), false);
+  assert.equal(view.effectiveMowerActions(s).showPark, true);
+  assert.equal(view.effectiveMowerActions(s).showStart, false);
+});
+
+test("Operatorjournal zeigt Parkanfrage und unklaren Ausgang verständlich", () => {
+  const s = snapshot();
+  s.mower.activity = "PARKED_IN_CS";
+  for (const status of ["QUEUED", "RESERVED", "SENT_UNCONFIRMED", "CONFIRMING"]) {
+    s.operatorCommands = {PARK_MOWER: {status, requestId: "park-1"}};
+    assert.equal(view.dashboardMessage(s).title, "Parken angefragt – Bestätigung steht aus", status);
+  }
+  s.operatorCommands.PARK_MOWER.status = "UNKNOWN";
+  assert.equal(view.dashboardMessage(s).title, "Parken nicht bestätigt");
+  assert.match(view.dashboardMessage(s).text, /nicht automatisch/);
+  s.operatorCommands.PARK_MOWER.status = "CONFIRMED";
+  assert.equal(view.dashboardMessage(s).title, "Rasen trocknet");
+});
+
+test("Journalstatus der Schnitthöhe bleibt ausstehend statt Erfolg zu behaupten", () => {
+  const s = snapshot();
+  s.operatorCommands = {SET_CUTTING_HEIGHT: {targetMm: 26, status: "QUEUED"}};
+  for (const status of ["QUEUED", "RESERVED", "SENT_UNCONFIRMED", "UNKNOWN"]) {
+    s.operatorCommands.SET_CUTTING_HEIGHT.status = status;
+    assert.equal(view.heightStatusText(s), "26 mm angefragt – Bestätigung steht aus.", status);
+  }
+  s.operatorCommands.SET_CUTTING_HEIGHT.status = "CONFIRMED";
+  assert.equal(view.heightStatusText(s), "26 mm bestätigt.");
+});
+
 test("Alte oder widersprüchliche Meldungen sperren Start, aber erlauben verfügbare Stoppaktionen", () => {
   for (const blocks of [[{code:"MOWER_TELEMETRY"}], null, [null]]) {
     const s = snapshot(); s.coordination.blockers = blocks;
@@ -299,4 +372,39 @@ test("Alte oder widersprüchliche Meldungen sperren Start, aber erlauben verfüg
   assert.equal(view.effectiveMowerActions(manual).showStart,false);
   const fresh=snapshot(); assert.equal(view.deviceActionAllowed(fresh,"START_MOWING"),true);
   assert.equal(view.deviceActionAllowed(fresh,"UNKNOWN_ACTION"),false);
+});
+
+
+test("Historische Bestätigungen verdecken keinen neuen manuellen Betrieb", () => {
+ const s=snapshot();s.deviceControlsAvailable=false;s.mower.activity="MOWING";s.mower.operationMode="MANUAL";s.mower.cuttingHeightMm=25;s.automation={};s.coordination.dryUntil=null;s.coordination.blockers=[];
+ s.operatorCommands={PARK_MOWER:{status:"CONFIRMED",requestId:"old-park"},SET_CUTTING_HEIGHT:{status:"CONFIRMED",targetMm:26,requestId:"old-height"}};
+ assert.equal(view.dashboardMessage(s).title,"Manueller Betrieb");
+ assert.equal(view.heightStatusText(s),"");
+ assert.equal(view.nextMowerStart(s),"Mäher läuft bereits");
+});
+
+test("Eine alte Bestätigung beendet keine neue Anfrage", () => {
+ const s=snapshot();s.operatorCommands={SET_CUTTING_HEIGHT:{status:"CONFIRMED",requestId:"old"}};
+ assert.equal(view.actionRequestPending(s,"SET_CUTTING_HEIGHT","new",true),true);
+ s.operatorCommands.SET_CUTTING_HEIGHT={status:"SENT_UNCONFIRMED",requestId:"new"};
+ assert.equal(view.actionRequestPending(s,"SET_CUTTING_HEIGHT","new",true),true);
+ s.operatorCommands.SET_CUTTING_HEIGHT.status="CONFIRMED";
+ assert.equal(view.actionRequestPending(s,"SET_CUTTING_HEIGHT","new",true),false);
+ s.operatorCommands.SET_CUTTING_HEIGHT.status="UNKNOWN";
+ assert.equal(view.actionRequestPending(s,"SET_CUTTING_HEIGHT","new",true),false);
+});
+
+test("Parken bleibt auch beim Laden erreichbar und Ladezustand wird nicht durch Bedienrechte ersetzt", () => {
+ const s=snapshot();s.deviceControlsAvailable=false;s.actionCapabilities={PARK_MOWER:{available:true}};s.automation={};s.coordination.blockers=[];s.coordination.dryUntil=null;
+ assert.equal(view.dashboardMessage(s).title,"Mäher lädt");
+ assert.equal(view.effectiveMowerActions(s).showPark,true);
+});
+
+
+test("Statuspolling wartet tatsächlich auf die passende neue Bestätigung", async () => {
+ const {sourceOf}=require("./helpers/platzwart_template");
+ const states=[{operatorCommands:{SET_CUTTING_HEIGHT:{requestId:"old",status:"CONFIRMED"}}},{operatorCommands:{SET_CUTTING_HEIGHT:{requestId:"new",status:"SENT_UNCONFIRMED"}}},{operatorCommands:{SET_CUTTING_HEIGHT:{requestId:"new",status:"CONFIRMED"}}}];let reads=0;
+ const poll=new Function("load","setTimeout",sourceOf("operatorActionPending")+sourceOf("actionRequestPending")+sourceOf("waitForAction")+";return waitForAction;")(()=>Promise.resolve(states[reads++]),(callback)=>callback());
+ const answer=await poll(0,"SET_CUTTING_HEIGHT","new",true);
+ assert.equal(reads,3);assert.equal(answer.operatorCommands.SET_CUTTING_HEIGHT.requestId,"new");
 });

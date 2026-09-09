@@ -273,6 +273,22 @@ class ControllerPhase2Tests(unittest.TestCase):
         )
         self.assertEqual(result.decision_code, "TEST_FULL_FAILSAFE_LOCKED")
 
+    def test_operator_only_uses_only_the_explicit_operator_runner(self) -> None:
+        def operator_runner(**kwargs):
+            self.assertEqual(kwargs["settings"].control_mode.value, "OPERATOR_ONLY")
+            self.assertFalse(kwargs["settings"].enable_start_commands)
+            self.assertFalse(kwargs["settings"].enable_irrigation_commands)
+            return CycleResult(2, NOW.isoformat(), kwargs["source"], "OPERATOR_ONLY", False,
+                               "TEST_OPERATOR_ONLY", False, "locked")
+
+        result = run_control_cycle(
+            now_utc=NOW,
+            environment={"CONTROL_MODE": "OPERATOR_ONLY", "ENABLE_LIVE_READS": "true"},
+            past_due=False,
+            operator_runner=operator_runner,
+        )
+        self.assertEqual(result.decision_code, "TEST_OPERATOR_ONLY")
+
 
 if __name__ == "__main__":
     unittest.main()

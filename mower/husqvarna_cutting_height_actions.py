@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -16,6 +17,7 @@ def set_work_area_cutting_height(
     cutting_height_percent: int,
     *,
     timeout: int = 30,
+    before_send: Callable[[], None] | None = None,
 ) -> dict[str, Any]:
     """Changes only the cutting height of one explicitly identified work area."""
 
@@ -55,6 +57,8 @@ def set_work_area_cutting_height(
             "User-Agent": USER_AGENT,
         },
     )
+    if before_send is not None:
+        before_send()
     try:
         with urlopen(request, timeout=timeout) as response:  # noqa: S310
             body = response.read().decode("utf-8").strip()
