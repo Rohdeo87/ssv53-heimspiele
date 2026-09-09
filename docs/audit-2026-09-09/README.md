@@ -7,6 +7,11 @@ behebt Freigabe-, Persistenz-, Berechtigungs-, Diagnose- und Messfehler. Eine
 Ausweitung des unbeaufsichtigten Automatikbetriebs ist auf dieser Beweislage
 noch nicht abnahmefähig.
 
+Die Änderungen sind in zwei prüfbaren Entwürfen abgelegt:
+[PR #46: Importfix gegen main](https://github.com/Rohdeo87/ssv53-heimspiele/pull/46)
+und [PR #47: Steuerung, App und Audit gegen den Migrationsbranch](https://github.com/Rohdeo87/ssv53-heimspiele/pull/47).
+Beide sind offen; es wurde nichts zusammengeführt oder produktiv veröffentlicht.
+
 Besonders wichtig: Im vorhandenen Betrieb wurde Mäherbewegung während einer
 Trocknungssperre protokolliert. Der verursachende Sender ist nicht nachgewiesen.
 Eine erfolgreiche Cloudantwort oder ein grüner Deploymentworkflow kann diesen
@@ -37,6 +42,9 @@ fehlenden Gerätenachweis nicht ersetzen.
    zeigt mehrere Sperren, Datenalter, echte Trocknungsfrist, unbekanntes Ladeende
    und unbestätigte Befehlswirkung. Der tatsächliche FULL_FAILSAFE-Lesepfad ist
    ohne State-Schreiben getestet. [Architektur und Rollenwirkung](architecture.md).
+   Die zusätzliche CI-Prüfung deckte einen echten Zeitzonenfehler beim Anlegen
+   und Verlegen auf: Berliner Vereinszeit wird jetzt unabhängig vom Gerät als
+   korrekter UTC-Zeitpunkt übermittelt; unklare DST-Eingaben werden abgewiesen.
 5. **Produktivität nachvollziehbar gemessen:** Die Baseline enthält 2.870,59
    als MOWING ohne Fehler gemeldete Minuten. Heimfahrt, Fahrt zum Platz, Laden,
    Parken und Fehler werden getrennt; rund 609 Minuten tragen Code 93. Dies
@@ -55,7 +63,7 @@ fehlenden Gerätenachweis nicht ersetzen.
 | Repositories, Historie, Infrastruktur, Trigger, Konfiguration, kritische Codepfade | Analysiert; 197 Ausgangspfade inventarisiert |
 | FUSSBALL.DE-Quelle und vorhandene Azure-Betriebslogs | Live lesend geprüft |
 | Fehlerkorrekturen, Diagnose, Auth-Grenze, Appack-Templates | Im isolierten Entwicklungsbranch umgesetzt |
-| Gesamttests | 694 Python-Tests + 406 Untertests, 70 Node-Tests bestanden |
+| Gesamttests | 694 Python-Tests + 406 Untertests, 73 Node-Tests bestanden |
 | Import-Hotfix separat auf aktuellem main | 119 Tests + 192 Untertests; CI am exakten Kopf grün |
 | Kurze/lange Datenlücken, Konkurrenz, Neustarts, Tagesplanung | Offline reproduziert bzw. simuliert |
 | Desktop-/Mobil-/Ausfallansicht und gemeinsame Zeitleiste | Lokal im Browser geprüft, Screenshots vorhanden |

@@ -4,16 +4,21 @@
   "base_branch": "feature/azure-mower-migration",
   "base_commit": "9c2d0fc9c010b366cd49b58b8086b27f9d59a0dd",
   "review_branch": "audit/platzpflege-20260909",
-  "source_commit": "1b0fefa1cc9f2f2a5098de2c8bcc107a94bb0e71",
   "import_pull_request": "https://github.com/Rohdeo87/ssv53-heimspiele/pull/46",
   "import_source_commit": "efe932cbaf5186f050847a29347566782e891c20",
   "import_ci": "https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/34318897870",
   "local_tests": {
     "python_passed": 694,
     "python_subtests_passed": 406,
-    "appack_passed": 70,
+    "appack_passed": 73,
     "compileall": "passed",
-    "git_diff_check": "passed"
+    "git_diff_check": "passed",
+    "appack_host_timezones": [
+      "UTC",
+      "Europe/Berlin",
+      "America/New_York"
+    ],
+    "appack_timezone_matrix_cases_per_host": 19
   },
   "package": {
     "source_commit": "1b0fefa1cc9f2f2a5098de2c8bcc107a94bb0e71",
@@ -37,5 +42,40 @@
     "live_pilot": false,
     "production_deployed": false
   },
-  "original_user_changes_preserved": true
+  "original_user_changes_preserved": true,
+  "technical_pull_request": "https://github.com/Rohdeo87/ssv53-heimspiele/pull/47",
+  "technical_initial_review_commit": "0a0102922cc3c4073d0d33bfe5376dfdbfb173e8",
+  "technical_initial_ci": [
+    {
+      "name": "Azure-Function Quellpaket bauen",
+      "result": "success",
+      "url": "https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/34321434490"
+    },
+    {
+      "name": "SSV53 Code prüfen",
+      "result": "failure",
+      "url": "https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/34321434486",
+      "cause": "Three calendar tests assumed Europe/Berlin on the test host. Corrected assertions and actual occupancy write timezone bug; tested real create/move payloads and DST boundaries in commit 427675e309d09e9b8f9cab828bd0a48ef189413f."
+    }
+  ],
+  "runtime_source_commit": "1b0fefa1cc9f2f2a5098de2c8bcc107a94bb0e71",
+  "runtime_source_commit_scope": "Backend bytes contained in the local FULL_FAILSAFE source package; later Appack and documentation commits are identified separately.",
+  "appack_source_commit": "427675e309d09e9b8f9cab828bd0a48ef189413f",
+  "ci_read_only_source_package_evidence": "ci-package-evidence.json",
+  "verified_implementation_commit": "427675e309d09e9b8f9cab828bd0a48ef189413f",
+  "verified_implementation_ci": [
+    {
+      "name": "SSV53 Code prüfen",
+      "result": "success",
+      "url": "https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/34322667581",
+      "head_sha": "427675e309d09e9b8f9cab828bd0a48ef189413f"
+    },
+    {
+      "name": "Azure-Function Quellpaket bauen",
+      "result": "success",
+      "url": "https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/34322667546",
+      "head_sha": "427675e309d09e9b8f9cab828bd0a48ef189413f"
+    }
+  ],
+  "later_commits_scope": "Only audit documentation and test-result evidence; the final PR head is checked again before delivery."
 }

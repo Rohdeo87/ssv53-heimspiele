@@ -1,0 +1,19 @@
+{
+  "evidence_at": "2026-09-09",
+  "source_commit": "0a0102922cc3c4073d0d33bfe5376dfdbfb173e8",
+  "workflow_run": "https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/34321434490",
+  "artifact_url": "https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/34321434490/artifacts/10092007318",
+  "artifact_id": 10092007318,
+  "artifact_name": "ssv53-azure-function-source-70",
+  "artifact_container_digest": "sha256:f07580e60d01ec7b9e443a6448121c11ec247489b3f54b5854617120828e7570",
+  "artifact_size_in_bytes": 165082,
+  "artifact_expires_at": "2026-09-23T06:57:26Z",
+  "source_zip_sha256_from_build_log": "f42d826785995b88714e2db10d084db19e8b37269c2d36785b3209216a9247a7",
+  "source_file_count_from_build_log": 39,
+  "safety_stage": "DRY_RUN_READ_ONLY",
+  "artifact_metadata_and_build_log_verified": true,
+  "remote_artifact_bytes_independently_downloaded": false,
+  "remote_runtime_build_completed": false,
+  "deployed": false,
+  "note": "Separate existing read-only source builder; not the local 47-file FULL_FAILSAFE source package. CI source artifact is not an installed Azure runtime."
+}

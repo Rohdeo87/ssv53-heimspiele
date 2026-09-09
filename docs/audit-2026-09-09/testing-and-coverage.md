@@ -1,7 +1,7 @@
 # Test-, Review- und Sichtnachweise
 
 Abschluss der lokalen integrierten Prüfung am 09.09.2026: **694 Python-Tests und
-406 Untertests bestanden**, **70 Node-/Appack-Tests bestanden**. Python 3.12.14,
+406 Untertests bestanden**, **73 Node-/Appack-Tests bestanden**. Python 3.12.14,
 isolierte Umgebung mit `requirements-test.txt` einschließlich `tzdata` und
 pytest; der frühere fehlende Zeitzonen-Testbedarf wurde tatsächlich installiert.
 Python-Kompilierung und `git diff --check` sind erfolgreich.
@@ -23,7 +23,24 @@ Der Main-Hotfix wurde getrennt gegen aktuelle Main-Basis getestet: 119 Tests und
 192 Untertests, gegenüber 112/192 zuvor. GitHub-CI für den exakten Kopf
 `efe932cbaf5186f050847a29347566782e891c20` ist
 [erfolgreich](https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/34318897870).
-Der neue Audit-PR-/Buildnachweis wird in `delivery.json` festgehalten.
+Für den vollständigen Implementierungscommit `427675e309d09e9b8f9cab828bd0a48ef189413f`
+sind [Code-CI](https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/34322667581)
+und [Paket-CI](https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/34322667546)
+erfolgreich. Die Zuordnung steht in [delivery.json](delivery.json).
+
+Der erste [Audit-CI-Lauf](https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/34321434486)
+bestand alle Python-Tests, scheiterte aber an drei älteren Node-Annahmen über
+die Hostzeitzone. Der anschließende Review bestätigte zusätzlich einen echten
+Fehler im Schreibpfad: lokale Formulardaten wurden als Gerätezeit interpretiert.
+[Commit 427675e](https://github.com/Rohdeo87/ssv53-heimspiele/commit/427675e309d09e9b8f9cab828bd0a48ef189413f)
+behebt beide Ursachen. Die vollständigen **73 Node-Tests** bestehen unter UTC,
+Europe/Berlin und America/New_York; die Suite führt dabei je 19 innere
+Zeitzonenregressionen in drei Prozessen aus. Diese 57 Fälle werden nicht noch
+einmal zur äußeren Testzahl addiert. Geprüft werden echte Create-/Move-Payloads,
+Mitternacht, beide Berliner Zeitwechsel, Konflikttexte, Verlegungsdauer sowie
+die abweichende US-Zeitumstellung. HTML und TXT sind bytegleich. Der Hauptaudit
+hat Diff und UTC-Gesamtlauf unabhängig nachgeprüft; es wurde keine CI-Zeitzone
+gesetzt, um den ursprünglichen Fehler zu verdecken.
 
 Die Tests verwenden lokale Fixtures, temporäre Stores, Fake-Sender und injizierte
 Uhren. Standardtests sind keine Integration mit echten Gerätebefehlen. Bei den

@@ -60,6 +60,17 @@ Der missverständlich benannte Sommertermin `som-kr-ue40-mo` trägt in der
 maßgeblichen Appkonfiguration ausdrücklich `resource_id=rasen` und ist auch im
 Mäherplan enthalten. Der ID-Text allein darf den Platz nicht bestimmen.
 
+Der Belegungsplan unterscheidet jetzt echte API-Zeitpunkte in `extendedProps`
+von lokalen Date-Objekten, die nur Berliner Wandzeit im vorhandenen FullCalendar
+darstellen. Formulare interpretieren Eingaben ausdrücklich in Europe/Berlin;
+Create/Move senden UTC. Anstoßtexte, Konflikte, Formularvorgaben und Zeitdauern
+verwenden den passenden Bezug. Nicht existente oder doppeldeutige Berliner
+Eingaben werden abgewiesen. Der lokale Kalenderträger bleibt eingeschränkt:
+Kann beispielsweise eine US-Gerätezeitumstellung die Berliner Uhrzeit nicht
+darstellen, erscheint ein Fehler statt einer stillen Verschiebung. Eine
+vollständige Kalenderintegration mit benannter Zeitzone wäre ein eigener
+Integrationsschritt; die backendseitige Belegung bleibt davon unabhängig.
+
 ## Tatsächliche Trigger und mögliche Konkurrenz
 
 In Azure gefunden: 14 Funktionen. Mähsteuerung `0 * * * * *`, Monitor aktiv,

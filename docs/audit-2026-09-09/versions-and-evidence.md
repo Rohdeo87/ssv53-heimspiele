@@ -10,7 +10,7 @@ E-Mail-Adressen oder Personenprofile.
 | Heimspielrepository `main` | `d67e9d3fef24117f504a192c9ecaee998612ddd7` über expliziten Fetch und GitHub-API | Quellcode-/Datenstand; zunächst veralteter lokaler main-Ref wurde nicht übernommen. |
 | Historischer Migrationsbranch | `feature/azure-mower-migration`, `9c2d0fc9c010b366cd49b58b8086b27f9d59a0dd` | Grundlage dieses technischen Audits. Nutzeränderungen im Originalcheckout erhalten. |
 | Import-Hotfix | `efe932cbaf5186f050847a29347566782e891c20`, Branch `fix/cross-window-relocation-20260909`, [PR #46](https://github.com/Rohdeo87/ssv53-heimspiele/pull/46) | Eigener Main-PR; weder zusammengeführt noch als Feed veröffentlicht. |
-| Gesamtaudit | Branch `audit/platzpflege-20260909`; Codecommit `1b0fefa1cc9f2f2a5098de2c8bcc107a94bb0e71`; Zuordnung in [delivery.json](delivery.json) | Entwicklungsänderung, keine installierte Version. |
+| Gesamtaudit | Branch `audit/platzpflege-20260909`; Runtime-Codecommit `1b0fefa1cc9f2f2a5098de2c8bcc107a94bb0e71`; Zuordnung in [delivery.json](delivery.json) | Entwicklungsänderung, keine installierte Version. |
 | Zweites Repository | `Rohdeo87/ssv53-app`, main `2d90d062d8c84d600eecd0dc592fe944963d08e5` | RN/Expo-Prototyp, keine belegte produktive Steuerungsintegration. |
 | Azure-Infrastruktur | RG `rg-ssv53-platzpflege-prod`; App `func-ssv53platzpflege-prod-q7kbw54s`; Running, HTTPS-only; Flex Consumption/Python 3.12, 512 MB, maximal 40 Instanzen | Ressourcen-/Konfigurationsnachweis; Instanzobergrenze beweist keine 40 gleichzeitig laufenden Timer. |
 | Deploymentdatensatz | Aktiv, Status 4, ID `cbac58e0-76b7-4fb2-b789-c9332d885b57`, Eingang 06.09., 05:35:20.675, Ende 05:36:37.232 | Beweist abgeschlossene Plattformbereitstellung, nicht identische Git-/Buildbytes. |
@@ -30,6 +30,15 @@ installiert. Künftige Zykluslogs enthalten `build_provenance` mit dem Bytehash
 des geladenen Entrypoints und, falls vorhanden, des Paketmanifests. Das Feld
 `all_installed_files_verified=false` macht ausdrücklich kenntlich, dass diese
 Diagnose allein keine vollständige Prüfung aller installierten Dateien ist.
+
+Zusätzlich erzeugte der [GitHub-Paketworkflow](https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/34321434490)
+erfolgreich ein **separates Read-only-Quellpaket** mit 39 Dateien. Dessen
+[Artefakt](https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/34321434490/artifacts/10092007318)
+und [Metadaten-/Lognachweis](ci-package-evidence.json) sind vorhanden; die
+Aufbewahrung endet am 23.09.2026. Die entfernten ZIP-Bytes wurden nicht erneut
+heruntergeladen. Dieses Artefakt ist weder das lokale 47-Dateien-FULL_FAILSAFE-
+Paket noch ein installierter Azure-Remote-Build. Beide Prüfungen senden keine
+Gerätebefehle.
 
 ## Verifizierte Konfiguration
 
