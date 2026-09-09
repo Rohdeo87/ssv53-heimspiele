@@ -8,9 +8,9 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs/audit-2026-09-09"
 
 
-def build():
+def build(*, output=OUT, fixture=None):
     source = (ROOT / "appack-platzwart-dashboard.html").read_text(encoding="utf-8")
-    payload = {
+    payload = fixture or {
         "ok": True, "generatedAt": "2026-09-09T10:00:00Z", "controlsAvailable": True,
         "overall": {"code": "HYDRAWISE_CLEAR_CONFIRMATION", "title": "Freigabe wird geprüft", "message": "Synthetischer Prüffall: Laden und Trocknung überlappen."},
         "mower": {"activity": "CHARGING", "state": "IN_OPERATION", "connected": True, "errorCode": 0, "batteryPercent": 73, "model": "Automower 580 EPOS", "cuttingHeightMm": 30},
@@ -41,10 +41,10 @@ window.fetch=async function(url,options){
 </script>'''.replace("PAYLOAD", json.dumps(payload, ensure_ascii=False))
     preview = preview.replace("<head>", "<head>\n" + setup, 1)
     preview = preview.replace("<body>", '<body><div style="background:#172033;color:white;padding:12px;text-align:center">SIMULATION · Beispielwerte · Netzwerk gesperrt · keine Gerätebefehle<br><a style="color:white" href="#offline" onclick="location.hash=\'offline\';document.getElementById(\'refresh\').click()">Verbindungsausfall zeigen</a></div>', 1)
-    OUT.mkdir(parents=True, exist_ok=True)
-    (OUT / "appack-preview.html").write_text(preview, encoding="utf-8")
-    (OUT / "appack-preview-mobile.html").write_text('''<!doctype html><html lang="de"><meta charset="utf-8"><title>Mobile Prüfung – 390 px</title><style>body{margin:0;background:#e8edf3;font-family:Arial;text-align:center}iframe{width:390px;height:1600px;border:1px solid #657084;background:white;max-width:100%}</style><h1>Appack-Vorschau · 390 px</h1><p>Browserreferenz mit synthetischen Daten; keine Geräteabnahme.</p><iframe title="Platzpflege Mobilvorschau" src="appack-preview.html"></iframe></html>''', encoding="utf-8")
-    (OUT / "appack-preview-provenance.json").write_text(json.dumps({"source": "appack-platzwart-dashboard.html", "sha256": hashlib.sha256((ROOT / "appack-platzwart-dashboard.html").read_bytes()).hexdigest(), "synthetic": True, "network": "blocked by CSP", "device_acceptance": False}, indent=2) + "\n", encoding="utf-8")
+    output.mkdir(parents=True, exist_ok=True)
+    (output / "appack-preview.html").write_text(preview, encoding="utf-8")
+    (output / "appack-preview-mobile.html").write_text('''<!doctype html><html lang="de"><meta charset="utf-8"><title>Mobile Prüfung – 390 px</title><style>body{margin:0;background:#e8edf3;font-family:Arial;text-align:center}iframe{width:390px;height:1600px;border:1px solid #657084;background:white;max-width:100%}</style><h1>Appack-Vorschau · 390 px</h1><p>Browserreferenz mit synthetischen Daten; keine Geräteabnahme.</p><iframe title="Platzpflege Mobilvorschau" src="appack-preview.html"></iframe></html>''', encoding="utf-8")
+    (output / "appack-preview-provenance.json").write_text(json.dumps({"source": "appack-platzwart-dashboard.html", "sha256": hashlib.sha256((ROOT / "appack-platzwart-dashboard.html").read_bytes()).hexdigest(), "synthetic": True, "network": "blocked by CSP", "device_acceptance": False}, indent=2) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":

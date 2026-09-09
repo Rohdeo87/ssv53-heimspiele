@@ -1,5 +1,10 @@
 # Gesamtbewertung der SSV53-Platzpflegeplattform
 
+**UI-Folgeänderung:** Die anschließend gewünschte einfache Anzeige mit klaren
+Uhrzeiten liegt unter [docs/ui-2026-09-09](../ui-2026-09-09/README.md).
+Die dortigen Aufnahmen, Tests und Paketnachweise ergänzen diesen Auditstand.
+Die älteren UI-Aufnahmen und Paket-Hashes hier bleiben als früherer Stand erhalten.
+
 Die geprüfte Plattform enthält behebbare Softwarefehler und zusätzlich offene
 Geräte-/Betriebsrisiken. Der aktuelle Importausfall ist ursächlich erklärt und
 als kleiner separater Main-PR vorbereitet. Die größere Entwicklungsänderung

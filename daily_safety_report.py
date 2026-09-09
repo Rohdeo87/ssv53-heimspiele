@@ -96,6 +96,10 @@ class CycleObservation:
     # Command-bearing cycle events survive deduplication of the state minute.
     # They are reported attempts, never confirmations of device execution.
     command_attempts: tuple[ReportedCommandAttempt, ...] = ()
+    # These additional facts are only used for the read-only charging estimate.
+    # Missing fields never become synthetic healthy/zero-battery observations.
+    charging_telemetry_valid: bool = False
+    mower_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -185,7 +189,7 @@ def _as_bool(value: Any) -> bool:
 def _as_int(value: Any) -> int:
     try:
         return int(value or 0)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         return 0
 
 
@@ -194,6 +198,206 @@ def _as_float(value: Any) -> float:
         return float(value or 0.0)
     except (TypeError, ValueError):
         return 0.0
+
+
+def _charging_integer(value: Any, maximum: int) -> int | None:
+    if isinstance(value, bool) or value in (None, ""):
+        return None
+    try:
+        number = float(value)
+        if number.is_integer() and 0 <= number <= maximum:
+            return int(number)
+    except (TypeError, ValueError, OverflowError):
+        pass
+    return None
+
+
+def _valid_charging_telemetry(row: Mapping[str, Any], observed_at: datetime) -> bool:
+    battery = _charging_integer(row.get("charging_battery_raw", row.get("battery_percent")), 100)
+    error = _charging_integer(row.get("charging_error_raw", row.get("error_code")), 999999)
+    stamp = _charging_integer(row.get("mower_status_timestamp_ms"), 253402300799000)
+    if battery is None or error != 0 or stamp is None:
+        return False
+    if str(row.get("mower_state") or "").upper() != "IN_OPERATION":
+        return False
+    # Old exports lack connected; their fresh status evidence can still be
+    # evaluated for coverage. An explicit disconnected observation is invalid.
+    if str(row.get("mower_connected") or "").lower() in {"false", "0"} or row.get("mower_connected") is False:
+        return False
+    try:
+        age = (observed_at - datetime.fromtimestamp(stamp / 1000, timezone.utc)).total_seconds()
+        return -30 <= age <= 180
+    except (ValueError, OverflowError, OSError):
+        return False
+
+
+def charging_evidence(observations: Sequence[CycleObservation], now_utc: datetime) -> dict[str, Any]:
+    """Build a private display model from the existing statistics query.
+
+    A usable section must reach observed 100%, remain error-free, have valid
+    battery/status fields and consecutive telemetry minutes throughout. An
+    invalid section is discarded entirely; it is never stitched over a gap.
+    """
+    completed: list[dict[str, Any]] = []
+    current: list[CycleObservation] = []
+    invalid = False
+    previous: CycleObservation | None = None
+    sections = 0
+
+    def adjacent(first, second):
+        elapsed = (second.timestamp_utc - first.timestamp_utc).total_seconds()
+        minutes = (second.timestamp_utc.replace(second=0, microsecond=0)
+                   - first.timestamp_utc.replace(second=0, microsecond=0)).total_seconds()
+        return 0 < elapsed <= 90 and minutes == 60
+
+    def samples(items):
+        return [{"at": item.timestamp_utc.isoformat(), "battery": item.battery_percent} for item in items]
+
+    for item in sorted(observations, key=lambda value: value.timestamp_utc):
+        if not now_utc - timedelta(days=7) <= item.timestamp_utc <= now_utc:
+            continue
+        if item.activity == "CHARGING":
+            if not current:
+                sections += 1
+                invalid = previous is None or previous.activity == "CHARGING" or not adjacent(previous, item)
+            elif not adjacent(current[-1], item) or item.battery_percent < current[-1].battery_percent:
+                invalid = True
+            if not item.charging_telemetry_valid or (current and item.mower_id != current[0].mower_id):
+                invalid = True
+            current.append(item)
+        elif current:
+            finish_valid = (
+                not invalid and item.charging_telemetry_valid and adjacent(current[-1], item)
+                and item.mower_id == current[0].mower_id and item.battery_percent == 100
+                and item.activity in {"LEAVING", "MOWING", "PARKED_IN_CS"}
+            )
+            if finish_valid:
+                # A delayed departure is not extra charging: use the first
+                # observed full battery once departure/parking confirms closure.
+                full = next((point for point in current if point.battery_percent == 100), item)
+                points = [point for point in current if point.timestamp_utc < full.timestamp_utc] + [full]
+                if len(points) >= 6 and full.battery_percent - points[0].battery_percent >= 10:
+                    completed.append({"mowerId": current[0].mower_id, "samples": samples(points)})
+            current = []
+            invalid = False
+        previous = item
+    return {
+        "generatedAt": now_utc.isoformat(),
+        "completed": completed,
+        "ongoing": {"mowerId": current[0].mower_id, "samples": samples(current)} if current and not invalid else None,
+        "sectionsObserved": sections,
+        "validCompletedSections": len(completed),
+    }
+
+
+def estimate_charging_end(
+    evidence: Mapping[str, Any] | None, mower: Mapping[str, Any], now_utc: datetime,
+) -> dict[str, Any] | None:
+    """A fixed, empirical charging-end estimate; never a controller permission.
+
+    Use the slowest observed remaining time among >=3 comparable completed
+    sections on >=2 days. Always anchor to the first observed battery point of
+    this charge. Insufficient coverage there cannot be repaired by selecting
+    a later, higher battery point during a cache refresh or process restart.
+    A missed prediction, stalled/abnormal progress or insufficient evidence
+    returns unknown. No extrapolated percent-per-minute charge rate is used.
+    """
+    if not isinstance(evidence, Mapping) or mower.get("activity") != "CHARGING" or mower.get("connected") is not True:
+        return None
+    if not _valid_charging_telemetry({
+        "battery_percent": mower.get("battery_percent"), "error_code": mower.get("error_code"),
+        "mower_state": mower.get("state"), "mower_connected": mower.get("connected"),
+        "mower_status_timestamp_ms": mower.get("status_timestamp_ms"),
+    }, now_utc):
+        return None
+    battery = _charging_integer(mower.get("battery_percent"), 100)
+    mower_id = str(mower.get("mower_id") or "")
+    if battery is None or battery >= 100 or not mower_id:
+        return None
+
+    def points(section):
+        return [(_parse_utc(point.get("at")), _charging_integer(point.get("battery"), 100))
+                for point in section.get("samples", [])]
+
+    try:
+        generated = _parse_utc(evidence.get("generatedAt"))
+        ongoing = evidence.get("ongoing") or {}
+        current = points(ongoing)
+        if (generated is None or not 0 <= (now_utc - generated).total_seconds() <= 300
+                or ongoing.get("mowerId") != mower_id or len(current) < 3
+                or any(at is None or level is None for at, level in current)):
+            return None
+        latest_at, latest_battery = current[-1]
+        if not 0 <= (generated - latest_at).total_seconds() <= 180 or battery < latest_battery:
+            return None
+        if now_utc < latest_at or (now_utc - current[0][0]).total_seconds() < 300:
+            return None
+        # The cache can be five minutes old. Current live battery is appended
+        # for progress checks and is never replaced by the cached last battery.
+        progress = current + [(now_utc, battery)]
+        first_same = next((at for at, level in progress if level == battery), now_utc)
+        if (now_utc - first_same).total_seconds() >= 300:
+            return None
+        recent = [(at, level) for at, level in progress if now_utc - timedelta(minutes=10) <= at < now_utc]
+        if not recent or battery - recent[0][1] < 2:
+            return None
+        histories = []
+        for section in evidence.get("completed", []):
+            if section.get("mowerId") != mower_id:
+                continue
+            history = points(section)
+            if history and all(at is not None and level is not None for at, level in history):
+                end = history[-1][0]
+                if now_utc - timedelta(days=7) <= end <= generated:
+                    histories.append(history)
+
+        def crossing(history, level):
+            if not history[0][1] <= level <= history[-1][1]:
+                return None
+            for index, (at, observed) in enumerate(history):
+                if observed == level:
+                    return at
+                if observed > level and index:
+                    before_at, before_level = history[index - 1]
+                    # Interpolation only inside adjacent observed battery
+                    # points of the same validated completed charge.
+                    return before_at + (at - before_at) * ((level - before_level) / (observed - before_level))
+            return None
+
+        anchor = current[0]
+        if anchor[1] > battery:
+            return None
+        candidates = [(history, crossing(history, anchor[1])) for history in histories]
+        matches = [(history, at) for history, at in candidates if at is not None]
+        days = {history[-1][0].date() for history, _ in matches}
+        # With this immutable anchor, removing an old comparison can only
+        # shorten the maximum remaining duration or make coverage insufficient.
+        # It cannot revive an expired estimate at a later battery observation.
+        if len(matches) < 3 or len(days) < 2:
+            return None
+        durations = [(history[-1][0] - at).total_seconds() for history, at in matches]
+        if min(durations) <= 0 or max(durations) > min(durations) * 1.75 or max(durations) - min(durations) > 1200:
+            return None
+        deadline = anchor[0] + timedelta(seconds=max(durations))
+        # Five-minute display precision, rounded conservatively up. The anchor
+        # persists in telemetry across cache refreshes; an expired time stays
+        # unknown for this section, instead of being shifted forwards again.
+        deadline = datetime.fromtimestamp(math.ceil(deadline.timestamp() / 300) * 300, timezone.utc)
+        if deadline <= now_utc:
+            return None
+        current_remaining = [(history[-1][0] - at).total_seconds()
+                             for history, _ in matches if (at := crossing(history, battery)) is not None]
+        if not current_remaining or max(current_remaining) > (deadline - now_utc).total_seconds() + 120:
+            return None
+        return {
+            "at": deadline.isoformat(), "estimated": True,
+            "source": "OBSERVED_COMPLETED_CHARGING_SECTIONS", "currentBatteryPercent": battery,
+            "sampleCount": len(matches), "daysCovered": len({history[-1][0].date() for history, _ in matches}),
+            "anchorAt": anchor[0].isoformat(), "latestCompletionAt": max(history[-1][0] for history, _ in matches).isoformat(),
+            "precisionMinutes": 5,
+        }
+    except (TypeError, ValueError, KeyError, OverflowError, DailyReportError):
+        return None
 
 
 def report_recipient(values: Mapping[str, str]) -> str:
@@ -366,6 +570,11 @@ traces
     mower_state=tostring(p.details.mower.state),
     error_code=toint(p.details.mower.error_code),
     battery_percent=toint(p.details.mower.battery_percent),
+    charging_battery_raw=tostring(p.details.mower.battery_percent),
+    charging_error_raw=tostring(p.details.mower.error_code),
+    mower_connected=tostring(p.details.mower.connected),
+    mower_status_timestamp_ms=tostring(p.details.mower.status_timestamp_ms),
+    mower_id=tostring(p.details.mower.mower_id),
     decision_code=tostring(p.decision_code),
     command_sent=tobool(p.command_sent),
     invocation_id=tostring(p.invocation_id),
@@ -441,6 +650,8 @@ def parse_cycle_rows(rows: Sequence[Mapping[str, Any]]) -> list[CycleObservation
             mower_state=str(row.get("mower_state") or "UNKNOWN").upper(),
             error_code=_as_int(row.get("error_code")),
             battery_percent=_as_int(row.get("battery_percent")),
+            charging_telemetry_valid=_valid_charging_telemetry(row, timestamp),
+            mower_id=str(row.get("mower_id") or ""),
             decision_code=str(row.get("decision_code") or ""),
             command_sent=_as_bool(row.get("command_sent")),
             hydrawise_available=_as_bool(row.get("hydrawise_available")),
@@ -767,8 +978,9 @@ def dashboard_statistics(
         _cycle_query(period_start_local.astimezone(timezone.utc), now_utc),
         timespan="P8D",
     )
+    observations = parse_cycle_rows(rows)
     summary = summarize_report(
-        parse_cycle_rows(rows),
+        observations,
         now_utc=now_utc,
         exception_count_24h=0,
     )
@@ -792,6 +1004,9 @@ def dashboard_statistics(
         ),
         "estimatedAreaCycles7d": summary.estimated_area_cycles_7d,
         "areaCompletionNote": AREA_COMPLETION_NOTE,
+        # Kept only in the existing five-minute statistics cache. The status
+        # endpoint removes these observation curves before returning its JSON.
+        "_chargingEvidence": charging_evidence(observations, now_utc),
     }
 
 
