@@ -37,6 +37,21 @@ def control_runtime_active(environment: Mapping[str, str]) -> bool:
     return str(environment.get("SHARED_TRAINING_MODE", "OFF")).strip().upper() == "ACTIVE"
 
 
+def control_runtime_readable(environment: Mapping[str, str]) -> bool:
+    """Whether the persistent season state may be read for a candidate.
+
+    SHADOW deliberately shares ACTIVE's exact state snapshot so a candidate can
+    be compared against the approved season.  It remains distinct from
+    ``control_runtime_active``: that predicate exclusively protects the
+    operator mutation route below.
+    """
+
+    return str(environment.get("SHARED_TRAINING_MODE", "OFF")).strip().upper() in {
+        "SHADOW",
+        "ACTIVE",
+    }
+
+
 @dataclass(frozen=True)
 class TrainingTransition:
     effective_at_utc: str
@@ -424,7 +439,7 @@ def resolve_training_control(
             "TRAINING_CONTROL_DISABLED", None,
             next_local_midnight(now_utc).isoformat(),
         )
-    if not control_runtime_active(environment):
+    if not control_runtime_readable(environment):
         return TrainingControlSnapshot(
             False, None, None, None, None, "runtime_mode",
             "TRAINING_CONTROL_REQUIRES_ACTIVE_RUNTIME", None,
@@ -548,6 +563,7 @@ __all__ = [
     "TrainingControlChanged",
     "control_enabled",
     "control_runtime_active",
+    "control_runtime_readable",
     "initialize_training_control",
     "next_local_midnight",
     "resolve_training_control",

@@ -40,6 +40,7 @@ ACTIVE_ENV = {
     "WINTER_TRAINING_CONTROL_ENABLED": "true",
     "SHARED_TRAINING_MODE": "ACTIVE",
 }
+SHADOW_ENV = {**ACTIVE_ENV, "SHARED_TRAINING_MODE": "SHADOW"}
 HISTORY_START = "2026-08-10T22:00:00+00:00"
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -53,7 +54,7 @@ def control_state(**values):
     )
 
 
-def test_control_defaults_to_summer_and_is_unavailable_until_runtime_is_active():
+def test_shadow_reads_confirmed_control_but_keeps_it_non_active():
     disabled = resolve_training_control({}, now_utc=NOW)
     assert disabled.public_payload() == {
         "available": False,
@@ -64,13 +65,135 @@ def test_control_defaults_to_summer_and_is_unavailable_until_runtime_is_active()
         "trainingRevision": None,
         "nextEffectiveAt": "2026-09-09T22:00:00+00:00",
     }
+    class ReadOnlyStore(InMemoryStateStore):
+        def save(self, *_args, **_kwargs):
+            raise AssertionError("SHADOW must never write training control")
+
     shadow = resolve_training_control(
-        {**ACTIVE_ENV, "SHARED_TRAINING_MODE": "SHADOW"},
-        now_utc=NOW,
-        state_store_factory=lambda _env: InMemoryStateStore(),
+        SHADOW_ENV, now_utc=NOW,
+        state_store_factory=lambda _env: ReadOnlyStore(control_state()),
     )
-    assert not shadow.available
-    assert shadow.reason_code == "TRAINING_CONTROL_REQUIRES_ACTIVE_RUNTIME"
+    assert shadow.available
+    assert shadow.season == "Sommer"
+    assert shadow.pending_enabled is None
+
+
+@pytest.mark.parametrize(
+    ("winter_enabled", "expected_ids"),
+    [(False, ["test-e1", "test-a"]), (True, ["test-winter"])],
+)
+def test_shadow_uses_confirmed_persistent_season_only_for_candidate(
+    winter_enabled, expected_ids,
+):
+    store = InMemoryStateStore(control_state(winter_training_enabled=winter_enabled))
+    snapshot = resolve_training_control(
+        SHADOW_ENV, now_utc=NOW, state_store_factory=lambda _env: store,
+    )
+    document, occupancy, mower = fixture()
+    envelope = make_training_envelope(
+        document, occupancy_config=occupancy, mower_config=mower, now_utc=NOW,
+    )
+    result = resolve_runtime_training(
+        {ENVELOPE_KEY: envelope}, consumer="mower", environment=SHADOW_ENV,
+        legacy_config=mower, range_start=datetime(2026, 9, 8, tzinfo=UTC),
+        range_end=datetime(2026, 9, 10, tzinfo=UTC), now_utc=NOW,
+        control_snapshot=snapshot,
+    )
+    assert result.batch is None
+    assert result.candidate is not None
+    assert [event["scheduleId"] for event in result.candidate.events] == expected_ids
+    assert store.load().revision == 1
+
+
+def test_shadow_keeps_missing_history_fail_closed_without_candidate():
+    store = InMemoryStateStore(AutomationState(revision=7))
+    snapshot = resolve_training_control(
+        SHADOW_ENV, now_utc=NOW, state_store_factory=lambda _env: store,
+    )
+    assert not snapshot.available
+    assert snapshot.reason_code == "TRAINING_CONTROL_HISTORY_MISSING"
+    document, occupancy, mower = fixture()
+    envelope = make_training_envelope(
+        document, occupancy_config=occupancy, mower_config=mower, now_utc=NOW,
+    )
+    result = resolve_runtime_training(
+        {ENVELOPE_KEY: envelope}, consumer="mower", environment=SHADOW_ENV,
+        legacy_config=mower, range_start=datetime(2026, 9, 8, tzinfo=UTC),
+        range_end=datetime(2026, 9, 10, tzinfo=UTC), now_utc=NOW,
+        control_snapshot=snapshot,
+    )
+    assert result.batch is None and result.candidate is None
+    assert "TRAINING_CONTROL_HISTORY_MISSING" in result.blockers
+
+
+@pytest.mark.parametrize(
+    ("winter_enabled", "expected_ids"),
+    [(False, ["test-e1", "test-a"]), (True, ["test-winter"])],
+)
+def test_shadow_manual_calendar_uses_confirmed_season_after_history_anchor(
+    winter_enabled, expected_ids,
+):
+    """Manual calendars intentionally omit all season date periods."""
+
+    # D15 is the first later Tuesday: the D9 history boundary must still
+    # select the manual season after the initialisation day.
+    now = datetime(2026, 9, 15, 12, tzinfo=UTC)
+    store = InMemoryStateStore(AutomationState(
+        revision=7,
+        winter_training_enabled=winter_enabled,
+        winter_training_history_valid_from_utc="2026-09-08T22:00:00+00:00",
+        winter_training_history_approval_reference="approved-d9-anchor",
+    ))
+    snapshot = resolve_training_control(
+        SHADOW_ENV, now_utc=now, state_store_factory=lambda _env: store,
+    )
+    document, occupancy, mower = fixture()
+    document["season_periods"] = []
+    approve_synthetic(document)
+    envelope = make_training_envelope(
+        document, occupancy_config=occupancy, mower_config=mower, now_utc=now,
+        manual_season_control=True,
+    )
+    result = resolve_runtime_training(
+        {ENVELOPE_KEY: envelope}, consumer="mower", environment=SHADOW_ENV,
+        legacy_config=mower,
+        range_start=datetime.fromisoformat("2026-09-15T00:00:00+02:00"),
+        range_end=datetime.fromisoformat("2026-09-16T00:00:00+02:00"),
+        now_utc=now, control_snapshot=snapshot,
+    )
+    assert result.batch is None
+    assert result.candidate is not None
+    assert [item["scheduleId"] for item in result.candidate.events] == expected_ids
+    assert store.load().revision == 7
+
+
+def test_shadow_manual_calendar_rejects_previous_anchor_before_history():
+    now = datetime(2026, 9, 10, 12, tzinfo=UTC)
+    store = InMemoryStateStore(AutomationState(
+        revision=7,
+        winter_training_enabled=False,
+        winter_training_history_valid_from_utc="2026-09-08T22:00:00+00:00",
+        winter_training_history_approval_reference="approved-d9-anchor",
+    ))
+    snapshot = resolve_training_control(
+        SHADOW_ENV, now_utc=now, state_store_factory=lambda _env: store,
+    )
+    document, occupancy, mower = fixture()
+    document["season_periods"] = []
+    approve_synthetic(document)
+    envelope = make_training_envelope(
+        document, occupancy_config=occupancy, mower_config=mower, now_utc=now,
+        manual_season_control=True,
+    )
+    result = resolve_runtime_training(
+        {ENVELOPE_KEY: envelope}, consumer="mower", environment=SHADOW_ENV,
+        legacy_config=mower,
+        range_start=datetime.fromisoformat("2026-09-09T00:00:00+02:00"),
+        range_end=datetime.fromisoformat("2026-09-10T00:00:00+02:00"),
+        now_utc=now, control_snapshot=snapshot,
+    )
+    assert result.batch is None and result.candidate is None
+    assert "TRAINING_CONTROL_SEASON_UNAVAILABLE" in result.blockers
 
 
 @pytest.mark.parametrize(
@@ -419,6 +542,21 @@ def test_pending_transition_changes_tomorrows_planning_before_midnight():
     assert pending.season_for_anchor(date(2026, 9, 7)) == "Sommer"
     assert pending.season_for_anchor(date(2026, 9, 8)) == "Winter"
 
+    shadow_snapshot = resolve_training_control(
+        SHADOW_ENV, now_utc=now, state_store_factory=lambda _env: store,
+    )
+    shadow = resolve_runtime_training(
+        {ENVELOPE_KEY: envelope}, consumer="mower", environment=SHADOW_ENV,
+        legacy_config=mower,
+        range_start=datetime.fromisoformat("2026-09-07T00:00:00+02:00"),
+        range_end=datetime.fromisoformat("2026-09-09T00:00:00+02:00"),
+        now_utc=now, control_snapshot=shadow_snapshot,
+    )
+    assert shadow.batch is None
+    assert shadow.candidate is not None
+    assert [item["scheduleId"] for item in shadow.candidate.events] == ["test-winter"]
+    assert shadow_snapshot.pending_enabled is True
+
 
 def _overnight_transition_calendar():
     document, occupancy, mower = fixture()
@@ -603,6 +741,7 @@ def test_console_action_requires_active_runtime_and_returns_updated_control(monk
             state_store_factory=lambda _env: store,
         )
     assert caught.value.code == "TRAINING_CONTROL_UNAVAILABLE"
+    assert store.load().revision == 2
 
 
 def test_invalid_persisted_boolean_is_not_interpreted_as_true():
@@ -687,6 +826,7 @@ def test_status_flag_off_disables_switch_and_active_status_reuses_one_snapshot(
     from test_full_failsafe import ENV as FULL_ENV, result as cycle_result
 
     observed = []
+    store = InMemoryStateStore(control_state())
 
     def read_cycle(**kwargs):
         observed.append(kwargs["training_control_snapshot"])
@@ -703,7 +843,7 @@ def test_status_flag_off_disables_switch_and_active_status_reuses_one_snapshot(
     )
     monkeypatch.setattr(
         "platzwart_console.AzureTableStateStore.from_environment",
-        lambda _env: InMemoryStateStore(control_state()),
+        lambda _env: store,
     )
     disabled = live_status(FULL_ENV, NOW)
     assert disabled["trainingControl"]["available"] is False
@@ -712,6 +852,11 @@ def test_status_flag_off_disables_switch_and_active_status_reuses_one_snapshot(
     enabled = live_status({**FULL_ENV, **ACTIVE_ENV}, NOW)
     assert enabled["trainingControl"] == observed[-1].public_payload()
     assert enabled["trainingControl"]["available"] is True
+
+    shadow = live_status({**FULL_ENV, **SHADOW_ENV}, NOW)
+    assert shadow["trainingControl"]["available"] is False
+    assert observed[-1].reason_code == "TRAINING_CONTROL_REQUIRES_ACTIVE_RUNTIME"
+    assert store.load().revision == 1
 
 
 def test_initializer_cli_requires_admin_route_and_passes_explicit_proof(capsys):
