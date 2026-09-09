@@ -139,6 +139,14 @@ installierte App oder vollständige native Kalenderbedienung:
 [Desktop](../ui-2026-09-09/shared-training-desktop.png),
 [prüfbare Ansicht](../ui-2026-09-09/shared-training-preview.html).
 
+Quellcommit: `bc0a06ce8aefc68d54ca1ca8f427a8fb8c38340d`. Das lokale
+FULL_FAILSAFE-Quellpaket enthält 53 Einträge einschließlich Manifest. Alle
+52 Quelldateien wurden aus den kanonischen Git-Bytes gebaut und dagegen
+geprüft. Der Import ohne Netzwerkzugriff registriert 14 Azure-Funktionen.
+Paket-SHA-256: `482c2aee1aa1f88bba229eb982f7e1d6abac45aeb921da57caf51d6c1a81f360`.
+Die [Datei- und Testnachweise](integration-delivery.json) belegen die
+Quellzusammenstellung, keine installierten Abhängigkeiten oder Liveausführung.
+
 Luna übernahm abgegrenzte Implementierungen, Fixtures und Paketlisten mit kurzen
 Aufträgen. Terra überarbeitete die Gerätebestätigungen und prüfte die
 Trainingsanbindung zusätzlich. Astra integrierte und prüfte die Ergebnisse;
