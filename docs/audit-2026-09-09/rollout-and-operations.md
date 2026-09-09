@@ -1,9 +1,21 @@
 # Gestufte Einführung und Betrieb
 
-Dies ist ein vorbereiteter Ablauf. Die inzwischen erteilte bedingte Livefreigabe und ihre noch nicht erfüllten Voraussetzungen stehen im [aktuellen Prüfstand](../ui-2026-09-09/release-readiness.md). Aktuell wurden
-Analyse, Entwicklung, lokale Tests, Simulation und lesende Betriebsprüfung
-durchgeführt. Der neue Planer hat keine Geräteanbindung. Keine der folgenden
-Liveaktionen wurde während des Audits ausgeführt.
+Die folgende Stufentabelle beschreibt die Abnahmebedingungen; sie ist selbst
+kein Ausführungsnachweis. **Nachtrag 09.09., 20:17 Uhr:** Die erteilte betreute
+Freigabe wurde für Zustandssicherung, vier geprüfte Merges, Codeinstallation,
+aktuelle Datenveröffentlichung, Sommerinitialisierung und Appack-Veröffentlichung
+genutzt. Die Geräteadapter sind implementiert und installiert. Echte
+Statusbeobachtung und Kalender-SHADOW laufen; Gerätebefehle und koordinierte
+Bewässerung bleiben gesperrt. Der frühere Satz „keine Geräteanbindung“ gilt
+für diesen Auslieferungsstand nicht mehr.
+
+Stufen 1–4 enthalten umfangreiche Entwicklungsnachweise; ihre ausdrücklich
+offenen Vor-Ort- und Geräteabnahmen bleiben offen. Stufe 5 hat kurze reale
+Beobachtungsfolgen und einen erfolgreichen zukünftigen Kalendervergleich,
+aber noch keine vollständige Ereignisabdeckung. Stufen 6–7 sind nicht als
+ausgeführt zu werten. Tatsächliche Versionen, Zeiten, Nachweise und nächste
+Schritte: [Einführungsprotokoll](live-introduction-progress.md) und
+[konkreter Ablauf](final-activation-runbook.md).
 
 ## Abnahmestufen
 

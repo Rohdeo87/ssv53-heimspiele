@@ -1,0 +1,20 @@
+{
+  "scope": "one read-only ARM deployment and runtime status check",
+  "deployment": {
+    "id": "6631c7aa-66af-4c80-8005-50a1fc7b6d51",
+    "status": 4,
+    "remoteBuild": true,
+    "receivedTimeUtc": "2026-09-09T17:59:55.8043104Z",
+    "startTimeUtc": "2026-09-09T17:59:55.8043104Z",
+    "endTimeUtc": "2026-09-09T18:01:17.1463084Z",
+    "lastSuccessEndTimeUtc": "2026-09-09T18:01:17.1463084Z",
+    "complete": true,
+    "active": true
+  },
+  "runtimeDeploymentStatus": {
+    "status": "BuildSuccessful",
+    "numberOfInstancesSuccessful": 0,
+    "numberOfInstancesFailed": 0,
+    "numberOfInstancesInProgress": 0
+  }
+}

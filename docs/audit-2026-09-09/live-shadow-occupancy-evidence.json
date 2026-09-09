@@ -1,0 +1,152 @@
+{
+  "observed_at_utc": "2026-09-09T18:17:21.118247+00:00",
+  "occupancy": [
+    {
+      "start": "2026-09-09",
+      "end": "2026-09-11",
+      "http_status": 200,
+      "response_sha256": "eebe5915912176607b70829372cf3187087132ca55e2f97eee7e6bbb030e2370",
+      "events_count": 8,
+      "fields": {
+        "match_source": "azure_blob",
+        "match_source_generated_at_utc": "2026-09-09T17:24:56+00:00",
+        "match_source_fallback": false,
+        "match_source_fresh": true,
+        "training_calendar": {
+          "active": false,
+          "blockers": [
+            "TRAINING_CONTROL_SEASON_UNAVAILABLE"
+          ],
+          "calendar_revision": null,
+          "calendar_sha256": null,
+          "candidate_available": false,
+          "envelope_sha256": "804ca739366b1f372947ed661eac9b142567934030091c102cf2707f01b629d5",
+          "fail_closed": false,
+          "mode": "SHADOW",
+          "trainingControl": {
+            "anchorTransitions": [],
+            "available": true,
+            "effectiveAt": null,
+            "historyValidFrom": "2026-09-08T22:00:00+00:00",
+            "nextEffectiveAt": "2026-09-09T22:00:00+00:00",
+            "pendingEnabled": null,
+            "reasonCode": null,
+            "season": "Sommer",
+            "source": "automation_state",
+            "stateRevision": 1,
+            "trainingRevision": "a0f97f7897e84f9360522e63c5f4a2e7727664052413bcc73def823219997d8f",
+            "winterEnabled": false
+          }
+        },
+        "training_cancellations": {
+          "available": true,
+          "fail_closed": false
+        },
+        "special_occupancy": {
+          "available": true,
+          "count": 0,
+          "enabled": true,
+          "error": null,
+          "fail_closed": false
+        }
+      }
+    },
+    {
+      "start": "2026-09-10",
+      "end": "2026-09-11",
+      "http_status": 200,
+      "response_sha256": "71757c7340554870d3d6baf44f5db9d9080bddb949658962c4efb8cd875f3934",
+      "events_count": 4,
+      "fields": {
+        "match_source": "azure_blob",
+        "match_source_generated_at_utc": "2026-09-09T17:24:56+00:00",
+        "match_source_fallback": false,
+        "match_source_fresh": true,
+        "training_calendar": {
+          "active": false,
+          "blockers": [],
+          "calendar_revision": 2,
+          "calendar_sha256": "bc9ccae4f33054cd29dcf4eed044d1b8095cac29c9215182f2646fdb3cdf1eec",
+          "candidate_available": true,
+          "envelope_sha256": "804ca739366b1f372947ed661eac9b142567934030091c102cf2707f01b629d5",
+          "fail_closed": false,
+          "mode": "SHADOW",
+          "trainingControl": {
+            "anchorTransitions": [],
+            "available": true,
+            "effectiveAt": null,
+            "historyValidFrom": "2026-09-08T22:00:00+00:00",
+            "nextEffectiveAt": "2026-09-09T22:00:00+00:00",
+            "pendingEnabled": null,
+            "reasonCode": null,
+            "season": "Sommer",
+            "source": "automation_state",
+            "stateRevision": 1,
+            "trainingRevision": "a0f97f7897e84f9360522e63c5f4a2e7727664052413bcc73def823219997d8f",
+            "winterEnabled": false
+          }
+        },
+        "training_cancellations": {
+          "available": true,
+          "fail_closed": false
+        },
+        "special_occupancy": {
+          "available": true,
+          "count": 0,
+          "enabled": true,
+          "error": null,
+          "fail_closed": false
+        }
+      }
+    },
+    {
+      "start": "2026-09-15",
+      "end": "2026-09-16",
+      "http_status": 200,
+      "response_sha256": "de4920d3b896a739122ce74e0d1243de43652f9da7a730fdb11483aad77d523d",
+      "events_count": 4,
+      "fields": {
+        "match_source": "azure_blob",
+        "match_source_generated_at_utc": "2026-09-09T17:24:56+00:00",
+        "match_source_fallback": false,
+        "match_source_fresh": true,
+        "training_calendar": {
+          "active": false,
+          "blockers": [],
+          "calendar_revision": 2,
+          "calendar_sha256": "bc9ccae4f33054cd29dcf4eed044d1b8095cac29c9215182f2646fdb3cdf1eec",
+          "candidate_available": true,
+          "envelope_sha256": "804ca739366b1f372947ed661eac9b142567934030091c102cf2707f01b629d5",
+          "fail_closed": false,
+          "mode": "SHADOW",
+          "trainingControl": {
+            "anchorTransitions": [],
+            "available": true,
+            "effectiveAt": null,
+            "historyValidFrom": "2026-09-08T22:00:00+00:00",
+            "nextEffectiveAt": "2026-09-09T22:00:00+00:00",
+            "pendingEnabled": null,
+            "reasonCode": null,
+            "season": "Sommer",
+            "source": "automation_state",
+            "stateRevision": 1,
+            "trainingRevision": "a0f97f7897e84f9360522e63c5f4a2e7727664052413bcc73def823219997d8f",
+            "winterEnabled": false
+          }
+        },
+        "training_cancellations": {
+          "available": true,
+          "fail_closed": false
+        },
+        "special_occupancy": {
+          "available": true,
+          "count": 0,
+          "enabled": true,
+          "error": null,
+          "fail_closed": false
+        }
+      }
+    }
+  ],
+  "device_commands_sent": false
+}

@@ -1,16 +1,26 @@
 # Gesamtbewertung der SSV53-Platzpflegeplattform
 
-**Begonnene Einführung:** Die [Startprüfung ab 17:41 Uhr](live-introduction-check.md)
-berücksichtigt die neue Bestätigung zu Station und Zufahrt. Sie dokumentiert
-die noch fehlende Zustandssicherung und die weiterhin ausgefallene alte
-Steuerung. Es wurde bisher kein Deployment und kein Gerätebefehl ausgeführt.
+**Begonnene Einführung:** Der [aktuelle Ausführungsstand](live-introduction-progress.md)
+dokumentiert die erteilte Freigabe, vollständige Zustandssicherung, wieder
+entfernte Leseberechtigung, Codeinstallation, aktuellen Spielimport und den
+tatsächlichen Verbrauch des veröffentlichten Datenpakets. PR 46, 47, 48 und
+[50](https://github.com/Rohdeo87/ssv53-heimspiele/pull/50) sind übernommen.
+Der Sommerplan ist einmalig gespeichert; die einfache Appack-Anzeige ist
+veröffentlicht und nach erneutem Laden mit der geprüften Quelle verglichen.
+Auch die Kalenderkorrektur ist installiert und an allen 61 Quelldateien geprüft.
+Fünf weitere echte Zyklen liefen ohne Gerätebefehle; Kalenderkandidaten für den
+10. und 15.09. wurden live erfolgreich geprüft. Die Geräteschreibrechte bleiben
+geschlossen; der weitere Abnahmestand ist im Protokoll getrennt ausgewiesen. Es gibt noch keinen Nachweis zusätzlicher produktiver Mähzeit. Die
+[Startprüfung ab 17:41 Uhr](live-introduction-check.md) bleibt als früherer Stand erhalten.
 
-**Aktueller Abschlussstand:** [Entwicklungsprüfung und Produktionsbefunde](final-preflight.md),
+**Entwicklungsstand vor der Einführung:** [Entwicklungsprüfung und Produktionsbefunde](final-preflight.md),
 [verbindliche neue Betriebsregeln](user-operating-rules.md) und
 [konkreter Freigabeablauf](final-activation-runbook.md). Der Liefernachweis steht
-in [final-preflight-delivery.json](final-preflight-delivery.json). Der neue
-[Winter-Schalter](../ui-2026-09-09/final-preflight/winter-switch-390.png) ist lokal
-mit Beispieldaten geprüft; es erfolgte keine Veröffentlichung.
+in [final-preflight-delivery.json](final-preflight-delivery.json). Die
+[Winter-Schalter-Vorschau](../ui-2026-09-09/final-preflight/winter-switch-390.png)
+verwendet Beispieldaten. Den späteren CMS-Speicher- und Quelltextnachweis enthält
+[appack-publication-evidence.json](appack-publication-evidence.json); die
+angemeldete native Geräteansicht bleibt eine gesonderte Abnahme.
 
 Die folgenden Abschnitte sind der **zeitgebundene Erstaudit**. Seine Testzahlen,
 Pakete und damaligen Restarbeiten sind historisch. Der neue Bewässerungsbeginn
@@ -24,7 +34,7 @@ verbindet die Planung mit dem persistenten Ausführungsablauf. Sie enthält die
 zusätzlichen Fehlernachweise, einfache App-Anzeigen, isolierte Ablaufprüfungen
 und die weiterhin offenen Voraussetzungen für den Livebetrieb.
 
-**Aktueller Folgestand:** Die bedingte Livefreigabe und die zusätzlichen
+**Früherer Folgestand vor der Einführung:** Die bedingte Livefreigabe und die zusätzlichen
 Entwicklungsänderungen am Import, Trainingsmodell, Statuscache und lesenden
 Planungsvergleich sind in [release-readiness.md](../ui-2026-09-09/release-readiness.md)
 zusammengefasst. Dort sind auch die noch offenen Integrationen benannt. Die
@@ -46,7 +56,8 @@ noch nicht abnahmefähig.
 Die Änderungen sind in zwei prüfbaren Entwürfen abgelegt:
 [PR #46: Importfix gegen main](https://github.com/Rohdeo87/ssv53-heimspiele/pull/46)
 und [PR #47: Steuerung, App und Audit gegen den Migrationsbranch](https://github.com/Rohdeo87/ssv53-heimspiele/pull/47).
-Beide sind offen; es wurde nichts zusammengeführt oder produktiv veröffentlicht.
+Zum Zeitpunkt des Erstaudits waren beide offen. Die inzwischen tatsächlich
+ausgeführten Merges und Veröffentlichungen sind am Dokumentanfang verlinkt.
 
 Besonders wichtig: Im vorhandenen Betrieb wurde Mäherbewegung während einer
 Trocknungssperre protokolliert. Der verursachende Sender ist nicht nachgewiesen.

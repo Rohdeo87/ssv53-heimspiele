@@ -1,0 +1,36 @@
+{
+  "requested_at_utc": "2026-09-09T18:11:25.954509+00:00",
+  "changes": {
+    "CONTROL_MODE": "DRY_RUN",
+    "ENABLE_LIVE_READS": "true",
+    "COORDINATION_SHADOW_CAPTURE_ENABLED": "true",
+    "SHARED_TRAINING_MODE": "SHADOW",
+    "WINTER_TRAINING_CONTROL_ENABLED": "true",
+    "AzureWebJobs.ssv53_mower_timer.Disabled": "false"
+  },
+  "readable_manual_calendar_only": true,
+  "winter_toggle_writes_require_ACTIVE": true,
+  "device_write_gates_unchanged_false": true,
+  "initialization_gate_unchanged_false": true,
+  "source_package_sha256": "570858f6da7f85ddbb4182fd4539f534ca5225d2c47dc1a03a1ebdf66535350f",
+  "verified_at_utc": "2026-09-09T18:11:37.978709+00:00",
+  "actual_settings": {
+    "CONTROL_MODE": "DRY_RUN",
+    "ENABLE_PARK_COMMANDS": "false",
+    "FULL_MOWER_CONFIRMATION": "LOCKED",
+    "ENABLE_IRRIGATION_COMMANDS": "false",
+    "ENABLE_LIVE_READS": "true",
+    "SHARED_TRAINING_MODE": "SHADOW",
+    "AzureWebJobs.ssv53_mower_timer.Disabled": "false",
+    "SSV53_DYNAMIC_CONFIG_ENABLED": "true",
+    "COORDINATION_EXECUTION_ENABLED": "false",
+    "HYDRAWISE_STATUS_CACHE_MODE": "OFF",
+    "ENABLE_START_COMMANDS": "false",
+    "FULL_FAILSAFE_CONFIRMATION": "LOCKED",
+    "COORDINATION_SHADOW_CAPTURE_ENABLED": "true",
+    "WINTER_TRAINING_INITIALIZATION_ENABLED": "false",
+    "WINTER_TRAINING_CONTROL_ENABLED": "true",
+    "HYDRAWISE_DASHBOARD_OBSERVATION_MODE": "OFF"
+  },
+  "unrelated_settings_unchanged": true
+}

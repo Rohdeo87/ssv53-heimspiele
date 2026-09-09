@@ -1,0 +1,152 @@
+{
+  "cycles": [
+    {
+      "trace_at_utc": "2026-09-09T17:49:03.2025482Z",
+      "executed_at_utc": "2026-09-09T17:49:00.002917+00:00",
+      "control_mode": "DRY_RUN",
+      "decision_code": "EXTERNAL_OVERRIDE",
+      "command_sent": false,
+      "input_files": {
+        "config": "/tmp/ssv53-config/snapshots/d85acc052089da005362460fe9dce04640a504618bd9b279230c0c0787ed5526/mower-config.json",
+        "fallback_used": false,
+        "manifest_etag": "\"0x8DF0E98C3FA361F\"",
+        "manifest_path": "current/manifest.json",
+        "matches": "/tmp/ssv53-config/snapshots/d85acc052089da005362460fe9dce04640a504618bd9b279230c0c0787ed5526/rasen.ics",
+        "matches_found": true,
+        "matches_loaded": 41,
+        "published_at_utc": "2026-09-09T17:34:54+00:00",
+        "source_kind": "azure_blob_cache"
+      },
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "state": "RESTRICTED",
+        "battery_percent": 100,
+        "override_action": "FORCE_PARK",
+        "connected": true,
+        "error_code": 0,
+        "timestamp": null
+      },
+      "state_revision": 42036,
+      "state_persisted": true,
+      "water_fresh": true,
+      "active_water_zones": 0,
+      "dry_until_utc": "2026-09-09T20:16:04.511512+00:00",
+      "coordination_blockers": [
+        "APPROVED_COORDINATION_CONFIG_DISABLED"
+      ],
+      "source_manifest_sha256": "fbab7b7078c769f141f4532888e8336029d69d8767c7d527f613cd5e5772589e"
+    },
+    {
+      "trace_at_utc": "2026-09-09T17:48:03.4034354Z",
+      "executed_at_utc": "2026-09-09T17:48:00.001782+00:00",
+      "control_mode": "DRY_RUN",
+      "decision_code": "EXTERNAL_OVERRIDE",
+      "command_sent": false,
+      "input_files": {
+        "config": "/tmp/ssv53-config/snapshots/d85acc052089da005362460fe9dce04640a504618bd9b279230c0c0787ed5526/mower-config.json",
+        "fallback_used": false,
+        "manifest_etag": "\"0x8DF0E98C3FA361F\"",
+        "manifest_path": "current/manifest.json",
+        "matches": "/tmp/ssv53-config/snapshots/d85acc052089da005362460fe9dce04640a504618bd9b279230c0c0787ed5526/rasen.ics",
+        "matches_found": true,
+        "matches_loaded": 41,
+        "published_at_utc": "2026-09-09T17:34:54+00:00",
+        "source_kind": "azure_blob_cache"
+      },
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "state": "RESTRICTED",
+        "battery_percent": 100,
+        "override_action": "FORCE_PARK",
+        "connected": true,
+        "error_code": 0,
+        "timestamp": null
+      },
+      "state_revision": 42035,
+      "state_persisted": true,
+      "water_fresh": true,
+      "active_water_zones": 0,
+      "dry_until_utc": "2026-09-09T20:16:04.511512+00:00",
+      "coordination_blockers": [
+        "APPROVED_COORDINATION_CONFIG_DISABLED"
+      ],
+      "source_manifest_sha256": "fbab7b7078c769f141f4532888e8336029d69d8767c7d527f613cd5e5772589e"
+    },
+    {
+      "trace_at_utc": "2026-09-09T17:47:04.4753034Z",
+      "executed_at_utc": "2026-09-09T17:47:00.008494+00:00",
+      "control_mode": "DRY_RUN",
+      "decision_code": "EXTERNAL_OVERRIDE",
+      "command_sent": false,
+      "input_files": {
+        "config": "/tmp/ssv53-config/snapshots/d85acc052089da005362460fe9dce04640a504618bd9b279230c0c0787ed5526/mower-config.json",
+        "fallback_used": false,
+        "manifest_etag": "\"0x8DF0E98C3FA361F\"",
+        "manifest_path": "current/manifest.json",
+        "matches": "/tmp/ssv53-config/snapshots/d85acc052089da005362460fe9dce04640a504618bd9b279230c0c0787ed5526/rasen.ics",
+        "matches_found": true,
+        "matches_loaded": 41,
+        "published_at_utc": "2026-09-09T17:34:54+00:00",
+        "source_kind": "azure_blob_cache"
+      },
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "state": "RESTRICTED",
+        "battery_percent": 100,
+        "override_action": "FORCE_PARK",
+        "connected": true,
+        "error_code": 0,
+        "timestamp": null
+      },
+      "state_revision": 42034,
+      "state_persisted": true,
+      "water_fresh": true,
+      "active_water_zones": 0,
+      "dry_until_utc": "2026-09-09T20:16:04.511512+00:00",
+      "coordination_blockers": [
+        "APPROVED_COORDINATION_CONFIG_DISABLED"
+      ],
+      "source_manifest_sha256": "fbab7b7078c769f141f4532888e8336029d69d8767c7d527f613cd5e5772589e"
+    },
+    {
+      "trace_at_utc": "2026-09-09T17:46:06.3782437Z",
+      "executed_at_utc": "2026-09-09T17:46:04.511512+00:00",
+      "control_mode": "DRY_RUN",
+      "decision_code": "EXTERNAL_OVERRIDE",
+      "command_sent": false,
+      "input_files": {
+        "config": "/tmp/ssv53-config/snapshots/d85acc052089da005362460fe9dce04640a504618bd9b279230c0c0787ed5526/mower-config.json",
+        "fallback_used": false,
+        "manifest_etag": "\"0x8DF0E98C3FA361F\"",
+        "manifest_path": "current/manifest.json",
+        "matches": "/tmp/ssv53-config/snapshots/d85acc052089da005362460fe9dce04640a504618bd9b279230c0c0787ed5526/rasen.ics",
+        "matches_found": true,
+        "matches_loaded": 41,
+        "published_at_utc": "2026-09-09T17:34:54+00:00",
+        "source_kind": "azure_blob"
+      },
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "state": "RESTRICTED",
+        "battery_percent": 100,
+        "override_action": "FORCE_PARK",
+        "connected": true,
+        "error_code": 0,
+        "timestamp": null
+      },
+      "state_revision": 42033,
+      "state_persisted": true,
+      "water_fresh": true,
+      "active_water_zones": 0,
+      "dry_until_utc": "2026-09-09T20:16:04.511512+00:00",
+      "coordination_blockers": [
+        "APPROVED_COORDINATION_CONFIG_DISABLED"
+      ],
+      "source_manifest_sha256": "fbab7b7078c769f141f4532888e8336029d69d8767c7d527f613cd5e5772589e"
+    }
+  ],
+  "device_commands_sent": 0,
+  "comparison_calendar_active": false,
+  "actual_device_fresh_reads": true,
+  "complete_shadow_acceptance": false
+}

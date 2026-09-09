@@ -1,11 +1,11 @@
 # Konkreter Ablauf nach der abschließenden Freigabe
 
-**Vorbereitet, nicht ausgeführt.** Dieser Ablauf bündelt die sieben Stufen aus
-[rollout-and-operations.md](rollout-and-operations.md). Er verändert keine
-produktive Einstellung und ist keine zusätzliche Freigabe. Die letzte
-Nutzeranweisung verlangt ausdrücklich die Vorbereitung bis unmittelbar vor
-der Live-Schaltung. Frühere bedingte Zustimmungen werden nicht als erfolgte
-Geräteabnahme ausgelegt.
+**Ablauf für die freigegebene betreute Einführung.** Die ausdrückliche
+Nutzerfreigabe vom 09.09. liegt vor; der Nutzer übernimmt die Aufsicht und
+nennt 19:00 Uhr als Trainingsende. Der tatsächliche Ausführungsstand steht
+im [Einführungsprotokoll](live-introduction-progress.md). Dieses Dokument
+bündelt die sieben Stufen aus [rollout-and-operations.md](rollout-and-operations.md)
+und ist selbst kein Nachweis einer Installation oder Geräteabnahme.
 
 ## Festes Auslieferungsobjekt
 
@@ -16,24 +16,33 @@ Geräteabnahme ausgelegt.
   gegen `main`; geprüfter Kopf `efe932cbaf5186f050847a29347566782e891c20`.
   Zielköpfe unmittelbar vor einem Merge erneut lesen, Pflichtchecks und
   Mergebarkeit prüfen. Bei Änderung neu vergleichen, nicht den alten Nachweis übernehmen.
-- Der finale Quellcommit, ZIP-/Manifest-Hash und die Testbelege sind in
-  [final-preflight-delivery.json](final-preflight-delivery.json) gebunden.
+- Additive Veröffentlichung [PR 48](https://github.com/Rohdeo87/ssv53-heimspiele/pull/48)
+  gegen `main`: nach PR 46 neu aufgesetzt, erneut geprüft und als
+  `c4218fcbdda0fcd4b3ec5b4160b0bf93e7aa2c66` übernommen. Der anschließende echte
+  Abruf/Publikationslauf ist im Einführungsprotokoll belegt.
+- [PR 50](https://github.com/Rohdeo87/ssv53-heimspiele/pull/50) ergänzt den
+  lesenden Vergleich des bestätigten Sommer-/Winterzustands. Mergecommit
+  `03c95f75dfca8921532849f3721e4b237823da90`; die Schreibroute bleibt ACTIVE-only.
+- Der ursprüngliche Lieferstand steht in
+  [final-preflight-delivery.json](final-preflight-delivery.json). Maßgeblich für die
+  inzwischen installierte Nachkorrektur sind [Quellnachweis](live-installed-shadow-source-evidence.json),
+  [Deployment](live-shadow-deployment-evidence.json) und [Einführungsprotokoll](live-introduction-progress.md).
   Die prüfbare Appack-Vorlage ist `appack-platzwart-dashboard.txt`, bytegleich
   mit `.html`; ihre SHA-256 ist Bestandteil des Nachweises.
 - Das neue CI erzeugt zusätzlich zum DRY_RUN-Paket ein getrenntes FULL_FAILSAFE-
   Quellpaket. Ein auf GitHub gespeichertes Archiv ist noch kein Remote-Build.
   Das Paket benötigt weiterhin den Python-3.12-Build in Azure.
 
-## Vor dem Freigabeaufruf einzutragende Fakten
+## Fakten vor dem Gerätepiloten
 
 | Tatsache | Benötigter konkreter Nachweis | Heutiger Stand |
 |---|---|---|
-| Training | Nutzerregel: Brandenburg-Feiertage ohne Training, Spiele erhalten; Winterplan über zentralen Schalter, Änderung ab nächstem lokalen Tag; gehashter Kalender | Regeln bestätigt; Schalter und gemeinsamer Kalender im neuen Paket, vor Aktivierung Inhaltsvergleich erforderlich |
+| Training | Nutzerregel: Brandenburg-Feiertage ohne Training, Spiele erhalten; Winterplan über zentralen Schalter, Änderung ab nächstem lokalen Tag; gehashter Kalender | Sommer am 09.09. einmalig initialisiert; genehmigter Kalender veröffentlicht. SHADOW-Kandidaten für 10. und 15.09. live geprüft; ACTIVE frühestens 10.09. 00:00 Berlin, keine Umschaltung vorgemerkt |
 | Bewässerungsbedarf | Bestehender nötiger Lauf und unveränderte Zonen/Dauern/Pausen; Start ab 03:30 und vollständiges Ende bis 08:00 Berlin | Zeitfenster durch Nutzer bestätigt; gelesener nächster Sollplan 04:30–07:10 passt nominell, Ausführung benötigt zusätzliche Reserve und erneute Prüfung |
-| Station und Platz | Station sowie Fahrweg für alle sieben Zonen geschützt, freier Testplatz, lokale Stoppmöglichkeit und benannte Person | Vor-Ort-Bestätigung offen |
-| Geräteverantwortung | Nativer Plan/aktive Aufträge und alle anderen Sender abgeglichen; keine unbekannte START-Wirkung | Mäher-Kalender leer beim Einzelabruf; FORCE_MOW aktiv; volle Warteschlange unbekannt |
-| Rückfallobjekt | Lesbare aktuelle Appsettings/Zustandssicherung, verfügbare bisherige Software, native Pläne und aktive Suspendierungen | Appsettings lesbar; alle 46 installierten Quellen plus Manifest als geprüftes lokales Quellarchiv gesichert; aktueller Zustand/native Pläne bei gesicherten Geräten erneut erfassen |
-| Appack | Berechtigter CMS-Zugang zum Zieltemplate und echtes Appgerät für Sitzung-/Rollenprüfung | Lokales Template/Vorschau geprüft; Zielveröffentlichung offen |
+| Station und Platz | Station sowie Fahrweg für alle sieben Zonen geschützt, freier Testplatz, lokale Stoppmöglichkeit und benannte Person | Nutzer bestätigt Station/Zufahrt außerhalb Beregnung, eigene Aufsicht und Mäher im Dock. Training bis 19:00, anschließend Puffer bis 19:30; keine Startzusage |
+| Geräteverantwortung | Nativer Plan/aktive Aufträge und alle anderen Sender abgeglichen; keine unbekannte START-Wirkung | Beobachtungsfolgen ab 19:46 und 20:13–20:17 melden Station, 100 Prozent und FORCE_PARK. Dieser Parkzustand wird erhalten. Vollständige Herstellerwarteschlange und Verhalten beim späteren Start bleiben offen |
+| Rückfallobjekt | Lesbare aktuelle Appsettings/Zustandssicherung, verfügbare bisherige Software, native Pläne und aktive Suspendierungen | 46 installierte Quellen gesichert; vollständiger Table-Export mit 27.005 Einträgen geprüft, zusätzliche Leseberechtigung wieder entfernt; vor Installation Aktualität erneut prüfen |
+| Appack | Berechtigter CMS-Zugang zum Zieltemplate und echtes Appgerät für Sitzung-/Rollenprüfung | Platzpflege.tpl um 19:53 gespeichert und nach Reload mit geprüftem Quelltext verglichen; angemeldete native Appansicht gesondert zu bestätigen |
 
 Fehlende Angaben bleiben fehlend. Die
 [Freigabevorlage](release-approval-input.example.json) ist bewusst `NOT_READY`.
@@ -106,7 +115,7 @@ unbeaufsichtigter Vollbetrieb sind getrennte Freigabestufen.
 | `HYDRAWISE_STATUS_CACHE_MODE` | OFF | Kein Bestandteil dieses Gerätepiloten; 90-s-Kette unverändert |
 | `HYDRAWISE_DASHBOARD_OBSERVATION_MODE` | OFF, anschließend gesondert AZURE_TABLE prüfen | Bestehende Tabellenrechte, frische Publikation, App ohne zusätzliche GETs nachgewiesen |
 | `SHARED_TRAINING_MODE` | OFF während Installation, danach SHADOW/ACTIVE im betreuten Vergleich | Feiertags-/Winterregeln und alle Kalenderverbraucher verglichen; ACTIVE ist Pflicht für Freigabe mit den neuen Trainingsregeln |
-| `WINTER_TRAINING_CONTROL_ENABLED` | false während Installation, danach true zusammen mit gemeinsamem Kalender ACTIVE | Persistenter Schalter lesbar, Ausgangszustand Sommer und Wechsel-/Ausfallprüfung bestätigt |
+| `WINTER_TRAINING_CONTROL_ENABLED` | false während Installation; mit PR 50 in SHADOW für den lesenden Vergleich true möglich | SHADOW liefert nur Kandidaten; App-Schalter und Schreibroute bleiben gesperrt. Bedienung erst mit ACTIVE und nachgewiesenem Vortag |
 | `WINTER_TRAINING_INITIALIZATION_ENABLED` | false; ausschließlich während bestätigter einmaliger Einrichtung true, danach wieder false | ADMIN-Hostschlüssel, konkrete Freigabe, aktueller Revisionsvergleich; keine Geräteaktion |
 | `COORDINATION_SHADOW_CAPTURE_ENABLED` | Nur nach versionsgebundener Installation einschalten | Vollständige Eingänge; ausschließlich Vergleich |
 | `COORDINATION_EXECUTION_ENABLED` | false | Konkreter betreuter Pilot mit exakter Bedarfs-/Zeitfensterfreigabe |
@@ -128,9 +137,10 @@ Vor dem Merge liefert der bestehende PR-CI-Paketworkflow den Paketnachweis.
 
 ## Kalender und Winter-Schalter konkret vorbereiten
 
-Dieser Ablauf wird erst innerhalb der ausdrücklich freigegebenen Einführung
-auf dem dann bestätigten Commit ausgeführt. Die Dateien sind vorbereitet;
-es wurde kein produktiver Freigabebeleg eingesetzt.
+Die Freigabebelege und einmalige Sommerinitialisierung dieses Ablaufs wurden am
+09.09. ausgeführt. Nicht erneut initialisieren. Das Einführungsprotokoll enthält
+die tatsächlichen Revisionen, Veröffentlichungen und den verbleibenden ACTIVE-Schritt.
+Die folgende Reihenfolge bleibt als reproduzierbarer Betriebsablauf erhalten.
 
 1. Die übernommenen 17 Sommer- und 18 Winter-Wochenmuster, drei Einzelabsagen,
    Platzzuordnungen und den Ausgangsplan am örtlichen Tag D abgleichen.
@@ -155,9 +165,10 @@ es wurde kein produktiver Freigabebeleg eingesetzt.
    Quelle veröffentlicht werden; das würde die Freigabe absichtlich sperren.
 5. Nach Installation den Schalter einmalig über
    `scripts/initialize_training_control.py` einrichten. Die CLI verwendet ausschließlich den geschützten HTTP-Zugang.
-   Der lokale Azure-Benutzer konnte die Tabelle
-   beim lesenden Versuch nicht erreichen (403); zusätzliche Datenrechte wurden
-   nicht erteilt. Dafür ist ein separater, standardmäßig gesperrter Verwaltungsweg
+   Der lokale Azure-Benutzer konnte die Tabelle zunächst nicht lesen (403).
+   Der danach ausdrücklich genehmigte, auf die Zustandssicherung begrenzte
+   Table-Lesezugriff wurde wieder entfernt und erlaubt keine Schreibzugriffe.
+   Für die Initialisierung ist ein separater, standardmäßig gesperrter Verwaltungsweg
    über die installierte Function vorbereitet:
    `https://func-ssv53platzpflege-prod-q7kbw54s.azurewebsites.net/api/training-control/initialize`.
    Dessen GET liest nur Revision und Trainingszustand; POST initialisiert exakt
@@ -179,9 +190,11 @@ es wurde kein produktiver Freigabebeleg eingesetzt.
    Ein exakter Replay derselben Initialisierung ist idempotent, eine abweichende
    zweite Einrichtung wird abgelehnt. Anschließend Gate wieder false setzen und
    flüchtigen Schlüssel entfernen.
-8. Bei Nachweisbeginn D bleiben die aktiven Trainingsflags bis zum Tagesbeginn
-   D+1 aus. Danach beide Flags zusammen einschalten und heutigen Plan, Vortagsanker
-   sowie Zukunftshorizont in App und Steuerung vergleichen. Es gibt keine
+8. Bei Nachweisbeginn D bleibt der gemeinsame Kalender bis zum Tagesbeginn
+   D+1 außerhalb von ACTIVE. Mit PR 50 darf SHADOW vorher den bestätigten Zustand
+   lesen; fehlende historische Tagesanker werden dabei nicht angenommen. Danach
+   ACTIVE mit eingeschaltetem Trainings-Control gemeinsam setzen und heutigen Plan,
+   Vortagsanker sowie Zukunftshorizont in App und Steuerung vergleichen. Es gibt keine
    angenommene historische Saison. Manuelle Stopps und Bewässerungsjournale werden
    bei Einrichtung und Umschalten erhalten.
 

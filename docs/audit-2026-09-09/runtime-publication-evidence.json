@@ -1,0 +1,31 @@
+{
+  "verified_at_utc": "2026-09-09T17:57:26.641245+00:00",
+  "workflow_run_id": 34383735588,
+  "manifest": {
+    "config_blob": "versions/20260909T173454Z-bd7238124fb9-34383735588/mower/config.json",
+    "config_sha256": "e691f1890187b96f0af6b141c56e70a3936152d2dfb323fd98fae33b9bb5669d",
+    "matches_blob": "versions/20260909T173454Z-bd7238124fb9-34383735588/public/rasen.ics",
+    "matches_sha256": "7de4a84c20544adddf1506a3e55b2f591dbb9140eb3fd0d8505d32f058af82fd",
+    "occupancy_matches_blob": "versions/20260909T173454Z-bd7238124fb9-34383735588/public/matches.json",
+    "occupancy_matches_sha256": "d1ec3d6e0c341832b65ecef83ddbc4ffb7d46847b819aedfc89030bcf58faf1c",
+    "published_at_utc": "2026-09-09T17:34:54+00:00",
+    "schema_version": 1,
+    "source_commit": "112f35a190d3aeb9a3bdae5f98d0c8ae3d56d398",
+    "source_generated_at_utc": "2026-09-09T17:24:56+00:00",
+    "version": "20260909T173454Z-bd7238124fb9-34383735588"
+  },
+  "manifest_sha256": "876a18a37ecfe4242581f90d1f969b0a884924b1b74f4cd4123b99e3e8865d5c",
+  "artifact_zip_sha256": "79fdb274ae4cef478dbb9ffbf5754429ebbbf12d81c71d766a19eb2898da02c8",
+  "all_artifact_hashes_valid": true,
+  "actual_runtime_consumption_verified": true,
+  "evidence_method": "Installed config loader uses content-addressed snapshot; actual timer traces contain exact SHA256(config + NUL + ICS) from published CI artifact, matching publish time, no fallback.",
+  "config_and_ics_snapshot_sha256": "d85acc052089da005362460fe9dce04640a504618bd9b279230c0c0787ed5526",
+  "matching_live_cycles": 4,
+  "calendar_envelope_sha256": "804ca739366b1f372947ed661eac9b142567934030091c102cf2707f01b629d5",
+  "calendar_exactly_approved": true,
+  "actual_occupancy_http_status": 200,
+  "direct_local_blob_read": 403,
+  "direct_host_tmp_read": 403,
+  "direct_blob_file_read_by_root": false,
+  "no_permission_expansion": true
+}

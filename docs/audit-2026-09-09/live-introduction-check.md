@@ -1,5 +1,9 @@
 # Startprüfung am 9. September 2026
 
+**Historische Startaufnahme.** Die anschließend erteilte Freigabe, erfolgreiche
+Sicherung und entfernte Leseberechtigung sind im
+[aktuellen Ausführungsstand](live-introduction-progress.md) dokumentiert.
+
 **Stand: 17:55 Uhr Europe/Berlin. Die Startprüfung läuft; es wurde noch kein
 Deployment und kein Gerätebefehl ausgeführt.** Die Aussage des Nutzers, nun
 beginnen zu können, wird als Auftrag zur betreuten Einführung behandelt. Sie

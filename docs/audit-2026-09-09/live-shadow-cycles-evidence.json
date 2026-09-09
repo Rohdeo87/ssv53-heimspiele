@@ -1,0 +1,270 @@
+{
+  "cycles": [
+    {
+      "timestamp": "2026-09-09T18:13:02.6645501Z",
+      "control_mode": "DRY_RUN",
+      "decision_code": "EXTERNAL_OVERRIDE",
+      "command_sent": false,
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "state": "RESTRICTED",
+        "battery_percent": 100,
+        "connected": true,
+        "error_code": 0,
+        "override_action": "FORCE_PARK",
+        "restricted_reason": "PARK_OVERRIDE",
+        "status_timestamp_ms": 1788976753885
+      },
+      "hydrawise": {
+        "fresh": true,
+        "zones": 7,
+        "active": 0,
+        "dry_until_utc": "2026-09-09T20:41:51.487032+00:00",
+        "telemetry_confirmed": false
+      },
+      "build_provenance": {
+        "all_installed_files_verified": false,
+        "entrypoint_sha256": "b38d32a3dfc53fdbbbead9fcad96ded7bfe7865af89309675d3d36f33a320556",
+        "manifest_file_count": 61,
+        "manifest_files_verified": true,
+        "package_manifest_sha256": "7c93901b640250814fe29a5217526b5b98a834dfbc02b2dc41c0594e77da077b",
+        "remote_build_dependencies_verified": false,
+        "verification_error": null,
+        "verified_file_count": 61
+      },
+      "training_calendar": {
+        "mode": "SHADOW",
+        "active": false,
+        "candidate_available": false,
+        "blockers": [
+          "TRAINING_CONTROL_SEASON_UNAVAILABLE"
+        ],
+        "envelope_sha256": "804ca739366b1f372947ed661eac9b142567934030091c102cf2707f01b629d5"
+      },
+      "input_files": {
+        "config": "/tmp/ssv53-config/snapshots/d85acc052089da005362460fe9dce04640a504618bd9b279230c0c0787ed5526/mower-config.json",
+        "fallback_used": false,
+        "manifest_etag": "\"0x8DF0E98C3FA361F\"",
+        "manifest_path": "current/manifest.json",
+        "matches": "/tmp/ssv53-config/snapshots/d85acc052089da005362460fe9dce04640a504618bd9b279230c0c0787ed5526/rasen.ics",
+        "matches_found": true,
+        "matches_loaded": 41,
+        "published_at_utc": "2026-09-09T17:34:54+00:00",
+        "source_kind": "azure_blob_cache"
+      }
+    },
+    {
+      "timestamp": "2026-09-09T18:14:03.143884Z",
+      "control_mode": "DRY_RUN",
+      "decision_code": "EXTERNAL_OVERRIDE",
+      "command_sent": false,
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "state": "RESTRICTED",
+        "battery_percent": 100,
+        "connected": true,
+        "error_code": 0,
+        "override_action": "FORCE_PARK",
+        "restricted_reason": "PARK_OVERRIDE",
+        "status_timestamp_ms": 1788976753885
+      },
+      "hydrawise": {
+        "fresh": true,
+        "zones": 7,
+        "active": 0,
+        "dry_until_utc": "2026-09-09T20:41:51.487032+00:00",
+        "telemetry_confirmed": true
+      },
+      "build_provenance": {
+        "all_installed_files_verified": false,
+        "entrypoint_sha256": "b38d32a3dfc53fdbbbead9fcad96ded7bfe7865af89309675d3d36f33a320556",
+        "manifest_file_count": 61,
+        "manifest_files_verified": true,
+        "package_manifest_sha256": "7c93901b640250814fe29a5217526b5b98a834dfbc02b2dc41c0594e77da077b",
+        "remote_build_dependencies_verified": false,
+        "verification_error": null,
+        "verified_file_count": 61
+      },
+      "training_calendar": {
+        "mode": "SHADOW",
+        "active": false,
+        "candidate_available": false,
+        "blockers": [
+          "TRAINING_CONTROL_SEASON_UNAVAILABLE"
+        ],
+        "envelope_sha256": "804ca739366b1f372947ed661eac9b142567934030091c102cf2707f01b629d5"
+      },
+      "input_files": {
+        "config": "/tmp/ssv53-config/snapshots/d85acc052089da005362460fe9dce04640a504618bd9b279230c0c0787ed5526/mower-config.json",
+        "fallback_used": false,
+        "manifest_etag": "\"0x8DF0E98C3FA361F\"",
+        "manifest_path": "current/manifest.json",
+        "matches": "/tmp/ssv53-config/snapshots/d85acc052089da005362460fe9dce04640a504618bd9b279230c0c0787ed5526/rasen.ics",
+        "matches_found": true,
+        "matches_loaded": 41,
+        "published_at_utc": "2026-09-09T17:34:54+00:00",
+        "source_kind": "azure_blob_cache"
+      }
+    },
+    {
+      "timestamp": "2026-09-09T18:15:02.8662928Z",
+      "control_mode": "DRY_RUN",
+      "decision_code": "EXTERNAL_OVERRIDE",
+      "command_sent": false,
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "state": "RESTRICTED",
+        "battery_percent": 100,
+        "connected": true,
+        "error_code": 0,
+        "override_action": "FORCE_PARK",
+        "restricted_reason": "PARK_OVERRIDE",
+        "status_timestamp_ms": 1788977683886
+      },
+      "hydrawise": {
+        "fresh": true,
+        "zones": 7,
+        "active": 0,
+        "dry_until_utc": "2026-09-09T20:41:51.487032+00:00",
+        "telemetry_confirmed": true
+      },
+      "build_provenance": {
+        "all_installed_files_verified": false,
+        "entrypoint_sha256": "b38d32a3dfc53fdbbbead9fcad96ded7bfe7865af89309675d3d36f33a320556",
+        "manifest_file_count": 61,
+        "manifest_files_verified": true,
+        "package_manifest_sha256": "7c93901b640250814fe29a5217526b5b98a834dfbc02b2dc41c0594e77da077b",
+        "remote_build_dependencies_verified": false,
+        "verification_error": null,
+        "verified_file_count": 61
+      },
+      "training_calendar": {
+        "mode": "SHADOW",
+        "active": false,
+        "candidate_available": false,
+        "blockers": [
+          "TRAINING_CONTROL_SEASON_UNAVAILABLE"
+        ],
+        "envelope_sha256": "804ca739366b1f372947ed661eac9b142567934030091c102cf2707f01b629d5"
+      },
+      "input_files": {
+        "config": "/tmp/ssv53-config/snapshots/d85acc052089da005362460fe9dce04640a504618bd9b279230c0c0787ed5526/mower-config.json",
+        "fallback_used": false,
+        "manifest_etag": "\"0x8DF0E98C3FA361F\"",
+        "manifest_path": "current/manifest.json",
+        "matches": "/tmp/ssv53-config/snapshots/d85acc052089da005362460fe9dce04640a504618bd9b279230c0c0787ed5526/rasen.ics",
+        "matches_found": true,
+        "matches_loaded": 41,
+        "published_at_utc": "2026-09-09T17:34:54+00:00",
+        "source_kind": "azure_blob_cache"
+      }
+    },
+    {
+      "timestamp": "2026-09-09T18:16:02.2403585Z",
+      "control_mode": "DRY_RUN",
+      "decision_code": "EXTERNAL_OVERRIDE",
+      "command_sent": false,
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "state": "RESTRICTED",
+        "battery_percent": 100,
+        "connected": true,
+        "error_code": 0,
+        "override_action": "FORCE_PARK",
+        "restricted_reason": "PARK_OVERRIDE",
+        "status_timestamp_ms": 1788977683886
+      },
+      "hydrawise": {
+        "fresh": true,
+        "zones": 7,
+        "active": 0,
+        "dry_until_utc": "2026-09-09T20:41:51.487032+00:00",
+        "telemetry_confirmed": true
+      },
+      "build_provenance": {
+        "all_installed_files_verified": false,
+        "entrypoint_sha256": "b38d32a3dfc53fdbbbead9fcad96ded7bfe7865af89309675d3d36f33a320556",
+        "manifest_file_count": 61,
+        "manifest_files_verified": true,
+        "package_manifest_sha256": "7c93901b640250814fe29a5217526b5b98a834dfbc02b2dc41c0594e77da077b",
+        "remote_build_dependencies_verified": false,
+        "verification_error": null,
+        "verified_file_count": 61
+      },
+      "training_calendar": {
+        "mode": "SHADOW",
+        "active": false,
+        "candidate_available": false,
+        "blockers": [
+          "TRAINING_CONTROL_SEASON_UNAVAILABLE"
+        ],
+        "envelope_sha256": "804ca739366b1f372947ed661eac9b142567934030091c102cf2707f01b629d5"
+      },
+      "input_files": {
+        "config": "/tmp/ssv53-config/snapshots/d85acc052089da005362460fe9dce04640a504618bd9b279230c0c0787ed5526/mower-config.json",
+        "fallback_used": false,
+        "manifest_etag": "\"0x8DF0E98C3FA361F\"",
+        "manifest_path": "current/manifest.json",
+        "matches": "/tmp/ssv53-config/snapshots/d85acc052089da005362460fe9dce04640a504618bd9b279230c0c0787ed5526/rasen.ics",
+        "matches_found": true,
+        "matches_loaded": 41,
+        "published_at_utc": "2026-09-09T17:34:54+00:00",
+        "source_kind": "azure_blob_cache"
+      }
+    },
+    {
+      "timestamp": "2026-09-09T18:17:02.2473508Z",
+      "control_mode": "DRY_RUN",
+      "decision_code": "EXTERNAL_OVERRIDE",
+      "command_sent": false,
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "state": "RESTRICTED",
+        "battery_percent": 100,
+        "connected": true,
+        "error_code": 0,
+        "override_action": "FORCE_PARK",
+        "restricted_reason": "PARK_OVERRIDE",
+        "status_timestamp_ms": 1788977683886
+      },
+      "hydrawise": {
+        "fresh": true,
+        "zones": 7,
+        "active": 0,
+        "dry_until_utc": "2026-09-09T20:41:51.487032+00:00",
+        "telemetry_confirmed": true
+      },
+      "build_provenance": {
+        "all_installed_files_verified": false,
+        "entrypoint_sha256": "b38d32a3dfc53fdbbbead9fcad96ded7bfe7865af89309675d3d36f33a320556",
+        "manifest_file_count": 61,
+        "manifest_files_verified": true,
+        "package_manifest_sha256": "7c93901b640250814fe29a5217526b5b98a834dfbc02b2dc41c0594e77da077b",
+        "remote_build_dependencies_verified": false,
+        "verification_error": null,
+        "verified_file_count": 61
+      },
+      "training_calendar": {
+        "mode": "SHADOW",
+        "active": false,
+        "candidate_available": false,
+        "blockers": [
+          "TRAINING_CONTROL_SEASON_UNAVAILABLE"
+        ],
+        "envelope_sha256": "804ca739366b1f372947ed661eac9b142567934030091c102cf2707f01b629d5"
+      },
+      "input_files": {
+        "config": "/tmp/ssv53-config/snapshots/d85acc052089da005362460fe9dce04640a504618bd9b279230c0c0787ed5526/mower-config.json",
+        "fallback_used": false,
+        "manifest_etag": "\"0x8DF0E98C3FA361F\"",
+        "manifest_path": "current/manifest.json",
+        "matches": "/tmp/ssv53-config/snapshots/d85acc052089da005362460fe9dce04640a504618bd9b279230c0c0787ed5526/rasen.ics",
+        "matches_found": true,
+        "matches_loaded": 41,
+        "published_at_utc": "2026-09-09T17:34:54+00:00",
+        "source_kind": "azure_blob_cache"
+      }
+    }
+  ],
+  "scope": "Live status observations only; device commands disabled; same-day manual calendar has expected missing preceding-day history."
+}

@@ -1,0 +1,1618 @@
+{
+  "schema_version": 1,
+  "updated_at_utc": "2026-09-09T18:25:17.860218+00:00",
+  "introduction_status": "CODE_DATA_APP_INSTALLED_READONLY_SHADOW_VERIFIED_DEVICE_PILOT_PENDING",
+  "user_authorization": {
+    "temporary_table_reader": true,
+    "supervisor": "user personally",
+    "reported_training_end_local": "2026-09-09T19:00:00+02:00",
+    "earliest_after_training_buffer_local": "2026-09-09T19:30:00+02:00",
+    "earliest_is_not_a_start_promise": true,
+    "station_and_route_outside_sprinklers_user_confirmed": true,
+    "physical_dock_confirmed": true,
+    "dock_confirmation_text": "Der mäher ist im dock"
+  },
+  "backup": {
+    "verified_at_utc": "2026-09-09T16:15:44.213251+00:00",
+    "complete_pages": 28,
+    "unique_entities": 27005,
+    "partition_count": 30,
+    "irrigation_journal_rows": 26231,
+    "state_revision": 42031,
+    "state_unchanged_from_initial": true,
+    "manifest_sha256": "c4f4dd9b11d1497161b512aa1c4373d82291958660d1acfda8aa192e02d0abb7",
+    "page_hashes_verified": true,
+    "global_atomicity": false,
+    "pagination_chain_verified": true,
+    "pagination_verified_at_utc": "2026-09-09T16:23:39.587461+00:00"
+  },
+  "temporary_access": {
+    "granted_at_utc": "2026-09-09T16:03:22.779960+00:00",
+    "removed_at_utc": "2026-09-09T16:16:21.141463+00:00",
+    "table_scope_only": true,
+    "removal_absence_verified": true,
+    "existing_roles_untouched": true,
+    "cached_access_expiry_not_asserted": true,
+    "final_state_refresh_reader_removed_at_utc": "2026-09-09T16:51:38.335906+00:00",
+    "final_state_refresh_reader_absence_verified": true
+  },
+  "device_action": {
+    "requested": "ParkUntilFurtherNotice",
+    "automatic_approval_review": "rejected before process creation",
+    "provided_reason": "blocked by policy; no further explanation provided",
+    "commands_sent": 0,
+    "retried": false,
+    "local_confirmation_pending": false,
+    "physical_dock_confirmed_by_user": true,
+    "indefinite_park_override_proven": false,
+    "physical_dock_and_no_native_start_suffice_only_for_inert_installation": true
+  },
+  "fresh_import": {
+    "code_commit": "efe932cbaf5186f050847a29347566782e891c20",
+    "started_at_utc": "2026-09-09T16:17:02.3456961Z",
+    "finished_at_utc": "2026-09-09T16:17:14.0869589Z",
+    "counts": {
+      "source_records": 113,
+      "included": 46,
+      "excluded": 67,
+      "review": 0,
+      "teams": 9,
+      "failed_teams": 0,
+      "included_by_calendar": {
+        "Kunstrasen": 5,
+        "Rasen": 41
+      }
+    },
+    "source_statuses": [
+      200,
+      200,
+      200,
+      200
+    ],
+    "challenge_encountered": false,
+    "published": false,
+    "independent_authoritative_team_roster_verified": false,
+    "summary_sha256": "eaae4d017e19b7909608a1a581396650e07fe51f44eea9fa0fea4c1c27c55395"
+  },
+  "offline_publication": {
+    "status": "ok",
+    "counts": {
+      "before": 45,
+      "after": 46,
+      "added": 1,
+      "changed": 0,
+      "removed": 0,
+      "effectiveAfter": 46,
+      "retained": 0,
+      "released": 0
+    },
+    "published": false
+  },
+  "offline_runtime_bundle": {
+    "source_commit_marker": "LOCAL-PREFLIGHT-UNPUBLISHED",
+    "matches_loaded": 41,
+    "training_blocks_14_days": 16,
+    "shared_training_envelope_sha256": "804ca739366b1f372947ed661eac9b142567934030091c102cf2707f01b629d5",
+    "published": false
+  },
+  "production_changes": {
+    "appsettings_changed": true,
+    "code_deployed": true,
+    "calendar_initialized": true,
+    "appack_published": true,
+    "device_commands_sent": 0,
+    "native_schedules_changed": false,
+    "prs_merged": true,
+    "inert_settings_verified": {
+      "verified_at_utc": "2026-09-09T16:52:44.700397+00:00",
+      "inert_settings_verified": {
+        "CONTROL_MODE": "OFF",
+        "ENABLE_PARK_COMMANDS": "false",
+        "ENABLE_START_COMMANDS": "false",
+        "ENABLE_IRRIGATION_COMMANDS": "false",
+        "AzureWebJobs.ssv53_mower_timer.Disabled": "true",
+        "HYDRAWISE_STATUS_CACHE_MODE": "OFF",
+        "HYDRAWISE_DASHBOARD_OBSERVATION_MODE": "OFF",
+        "SHARED_TRAINING_MODE": "OFF",
+        "WINTER_TRAINING_CONTROL_ENABLED": "false",
+        "WINTER_TRAINING_INITIALIZATION_ENABLED": "false",
+        "COORDINATION_SHADOW_CAPTURE_ENABLED": "false",
+        "COORDINATION_EXECUTION_ENABLED": "false",
+        "ENABLE_LIVE_READS": "false",
+        "FULL_MOWER_CONFIRMATION": "LOCKED",
+        "FULL_FAILSAFE_CONFIRMATION": "LOCKED"
+      },
+      "unrelated_settings_unchanged": true,
+      "device_commands_sent": 0
+    },
+    "source_deployment_status": "source_files_and_host_verified",
+    "runtime_data_published": true,
+    "observation_timer_enabled": true,
+    "shared_training_mode": "SHADOW",
+    "coordination_execution_enabled": false,
+    "native_winter_toggle_write_enabled": false
+  },
+  "today_calendar": {
+    "nominal_training_local": [
+      "17:30",
+      "19:00"
+    ],
+    "buffered_interval_local": [
+      "17:00",
+      "19:30"
+    ],
+    "calendar_clear_at_19_30": true,
+    "live_release_proven": false,
+    "actual_planner_invoked": true,
+    "evidence_sha256": "c368a84e762b76f6ff7f9e9ba26768e42a3490ee3f83005ca044d88304978988"
+  },
+  "publisher_main_port": {
+    "pr": "https://github.com/Rohdeo87/ssv53-heimspiele/pull/48",
+    "base_branch": "main",
+    "base_sha": "0689dea20974f46e78ea805d265810747696afe9",
+    "reviewed_head_sha": "44e484a09484fe9f41e266d3143892435529879f",
+    "head_reviewed_not_merged": false,
+    "local_full_suite": {
+      "tests": 182,
+      "subtests": 199,
+      "passed": true,
+      "duration_seconds": 28.14,
+      "output_sha256": "25bd3c5c265bd9d3df1d781afc37082a9cc2772ddb1c63c527b4c3df960a7eda",
+      "tested_head_sha": "146aab909f33f4b46cabdc0e3edd0ac098cf9174",
+      "head_context": "Local run before rebase; final reviewed head has its separate successful CI evidence."
+    },
+    "ci_run": "https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/34381811876",
+    "ci_conclusion": "success",
+    "consumer_before_publication_required": true,
+    "legacy_cli_hardening_review_in_progress": false,
+    "audited_git_source_comparison": {
+      "publish_matches.py": {
+        "identical_audited_git_bytes": true,
+        "sha256": "e174ebeb23c4332ac2756b15c9da3d6b5b4bebcc96b7c5f60db8791c125cd915"
+      },
+      "report_changes.py": {
+        "identical_audited_git_bytes": true,
+        "sha256": "554432b21f970879954ed9a11333436cded061a54cbd1f41f41904bd1f197e32"
+      },
+      "notify_changes.py": {
+        "identical_audited_git_bytes": true,
+        "sha256": "2aff42103a0096dcf4ac8081b55cae6ff9d07ca49f35b1960fecdd29bd882b1e"
+      },
+      ".github/workflows/update-matches.yml": {
+        "identical_audited_git_bytes": true,
+        "sha256": "ebc833ac01f2aaec1547d0441f94046bff882467e197c84640ed7bc23f4e01c9"
+      },
+      "create_feed.py": {
+        "identical_audited_git_bytes": true,
+        "sha256": "5f2530e2f108eea86014a4a7bc7fc4c20702503e0a2d6caa3301fd78572da81e"
+      }
+    },
+    "merge_commit_sha": "c4218fcbdda0fcd4b3ec5b4160b0bf93e7aa2c66",
+    "actual_publication_run": "https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/34382702542",
+    "actual_data_commit": "112f35a190d3aeb9a3bdae5f98d0c8ae3d56d398"
+  },
+  "final_state_refresh": {
+    "read_at_utc": "2026-09-09T16:51:02.576751+00:00",
+    "same_control_entity_as_complete_backup": true,
+    "etag_same_as_backup": true,
+    "current_raw_sha256": "ede5663bc6d9fbaa649516f1ed285e496a664fb09bfad0223e15b3458a9c734f",
+    "field_count": 43,
+    "global_snapshot_not_asserted": true
+  },
+  "source_deployment_intent": {
+    "started_at_utc": "2026-09-09T16:53:42.720436+00:00",
+    "archive_sha256": "12c7484f8618f1d68efa03ee6e509f4438fd4141af0168bf5a0e71370e54fc71",
+    "source_commit": "204078c63ccc55b10d5c1715b4d12a6c22a7acf9",
+    "manifest_sha256": "fbab7b7078c769f141f4532888e8336029d69d8767c7d527f613cd5e5772589e",
+    "build_remote": true,
+    "device_commands_authorized_by_this_step": false
+  },
+  "post_deployment_host": {
+    "checked_at_utc": "2026-09-09T17:03:00.620537+00:00",
+    "all_inert_settings_preserved": true,
+    "checks": [
+      {
+        "name": "host",
+        "http_status": 200,
+        "host_state": "Running",
+        "body_code": null
+      },
+      {
+        "name": "initializer_without_key",
+        "http_status": 401,
+        "host_state": null,
+        "body_code": null
+      },
+      {
+        "name": "initializer_locked_with_admin_key",
+        "http_status": 403,
+        "host_state": null,
+        "body_code": "TRAINING_CONTROL_INITIALIZATION_DISABLED"
+      }
+    ],
+    "device_commands_sent": 0
+  },
+  "training_initialization": {
+    "verified_at_utc": "2026-09-09T17:11:10.335137+00:00",
+    "initialized": true,
+    "initial_plan": "Sommer",
+    "history_valid_from": "2026-09-09",
+    "state_revision_before": 42031,
+    "state_revision_after": 42032,
+    "training_control": {
+      "active": false,
+      "available": true,
+      "effectiveAt": null,
+      "nextEffectiveAt": "2026-09-09T22:00:00+00:00",
+      "pending": null,
+      "stateRevision": 1,
+      "trainingRevision": "a0f97f7897e84f9360522e63c5f4a2e7727664052413bcc73def823219997d8f"
+    },
+    "device_commands_sent": 0
+  },
+  "training_initialization_gate_closure": {
+    "closed_at_utc": "2026-09-09T17:11:23.441312+00:00",
+    "initializer_gate_closed": true,
+    "all_device_gates_still_closed": true
+  },
+  "repository_calendar_variables": {
+    "verified_at_utc": "2026-09-09T17:06:18.093500+00:00",
+    "variables": {
+      "SSV53_TRAINING_CONTENT_SHA256": "bc9ccae4f33054cd29dcf4eed044d1b8095cac29c9215182f2646fdb3cdf1eec",
+      "SSV53_TRAINING_APPROVAL_REFERENCE": "SSV53-USER-RELEASE-20260909-160127Z",
+      "SSV53_TRAINING_APPROVED_AT": "2026-09-09T16:01:27Z",
+      "SSV53_MANUAL_TRAINING_CONTROL_ENABLED": "true"
+    },
+    "enabled_flag_written_last": true,
+    "only_missing_variables_created": true,
+    "device_commands_sent": 0
+  },
+  "merged_prs": [
+    {
+      "number": 47,
+      "commit": "bd7238124fb942c35b628b4dafab094556cb3e1b",
+      "target": "feature/azure-mower-migration"
+    },
+    {
+      "number": 46,
+      "commit": "a304f004a98fff91d5c8915598db43f6d831d316",
+      "target": "main"
+    }
+  ],
+  "runtime_publication": {
+    "verified_at_utc": "2026-09-09T17:57:26.641245+00:00",
+    "workflow_run_id": 34383735588,
+    "manifest": {
+      "config_blob": "versions/20260909T173454Z-bd7238124fb9-34383735588/mower/config.json",
+      "config_sha256": "e691f1890187b96f0af6b141c56e70a3936152d2dfb323fd98fae33b9bb5669d",
+      "matches_blob": "versions/20260909T173454Z-bd7238124fb9-34383735588/public/rasen.ics",
+      "matches_sha256": "7de4a84c20544adddf1506a3e55b2f591dbb9140eb3fd0d8505d32f058af82fd",
+      "occupancy_matches_blob": "versions/20260909T173454Z-bd7238124fb9-34383735588/public/matches.json",
+      "occupancy_matches_sha256": "d1ec3d6e0c341832b65ecef83ddbc4ffb7d46847b819aedfc89030bcf58faf1c",
+      "published_at_utc": "2026-09-09T17:34:54+00:00",
+      "schema_version": 1,
+      "source_commit": "112f35a190d3aeb9a3bdae5f98d0c8ae3d56d398",
+      "source_generated_at_utc": "2026-09-09T17:24:56+00:00",
+      "version": "20260909T173454Z-bd7238124fb9-34383735588"
+    },
+    "manifest_sha256": "876a18a37ecfe4242581f90d1f969b0a884924b1b74f4cd4123b99e3e8865d5c",
+    "artifact_zip_sha256": "79fdb274ae4cef478dbb9ffbf5754429ebbbf12d81c71d766a19eb2898da02c8",
+    "all_artifact_hashes_valid": true,
+    "actual_runtime_consumption_verified": true,
+    "evidence_method": "Installed config loader uses content-addressed snapshot; actual timer traces contain exact SHA256(config + NUL + ICS) from published CI artifact, matching publish time, no fallback.",
+    "config_and_ics_snapshot_sha256": "d85acc052089da005362460fe9dce04640a504618bd9b279230c0c0787ed5526",
+    "matching_live_cycles": 4,
+    "calendar_envelope_sha256": "804ca739366b1f372947ed661eac9b142567934030091c102cf2707f01b629d5",
+    "calendar_exactly_approved": true,
+    "actual_occupancy_http_status": 200,
+    "direct_local_blob_read": 403,
+    "direct_host_tmp_read": 403,
+    "direct_blob_file_read_by_root": false,
+    "no_permission_expansion": true
+  },
+  "appack_publication": {
+    "verifiedAtUtc": "2026-09-09T17:56:37.491Z",
+    "templateId": "6a86ab6c4b3c829dd60de9b7",
+    "templateName": "Platzpflege.tpl",
+    "moduleId": "ssv53_TextImage_1787563191482",
+    "cmsSavedAtLocal": "2026-09-09 19:53 Europe/Berlin",
+    "reloadedFromServer": true,
+    "sourceSha256": "d0573fa45b944dc70524d43c43d64b691b9b7ff8e523890984300ee05c2d13a5",
+    "savedEditorSha256": "edc0e00b9534de46c75093e9c5701270f24e5f1a6fbe0199cb829dde31c58b03",
+    "savedNormalizedSha256": "d0573fa45b944dc70524d43c43d64b691b9b7ff8e523890984300ee05c2d13a5",
+    "exactContentAfterNewlineNormalization": true,
+    "beforeSha256": "295d39f6787b07217be156f8949227fc0741bebd1dd4d918a6f8dacb7251cc97",
+    "nativeDeviceViewVerified": false,
+    "previewRequiresUserEnrollment": true
+  },
+  "first_readonly_observation": {
+    "cycles": [
+      {
+        "trace_at_utc": "2026-09-09T17:49:03.2025482Z",
+        "executed_at_utc": "2026-09-09T17:49:00.002917+00:00",
+        "control_mode": "DRY_RUN",
+        "decision_code": "EXTERNAL_OVERRIDE",
+        "command_sent": false,
+        "input_files": {
+          "config": "/tmp/ssv53-config/snapshots/d85acc052089da005362460fe9dce04640a504618bd9b279230c0c0787ed5526/mower-config.json",
+          "fallback_used": false,
+          "manifest_etag": "\"0x8DF0E98C3FA361F\"",
+          "manifest_path": "current/manifest.json",
+          "matches": "/tmp/ssv53-config/snapshots/d85acc052089da005362460fe9dce04640a504618bd9b279230c0c0787ed5526/rasen.ics",
+          "matches_found": true,
+          "matches_loaded": 41,
+          "published_at_utc": "2026-09-09T17:34:54+00:00",
+          "source_kind": "azure_blob_cache"
+        },
+        "mower": {
+          "activity": "PARKED_IN_CS",
+          "state": "RESTRICTED",
+          "battery_percent": 100,
+          "override_action": "FORCE_PARK",
+          "connected": true,
+          "error_code": 0,
+          "timestamp": null
+        },
+        "state_revision": 42036,
+        "state_persisted": true,
+        "water_fresh": true,
+        "active_water_zones": 0,
+        "dry_until_utc": "2026-09-09T20:16:04.511512+00:00",
+        "coordination_blockers": [
+          "APPROVED_COORDINATION_CONFIG_DISABLED"
+        ],
+        "source_manifest_sha256": "fbab7b7078c769f141f4532888e8336029d69d8767c7d527f613cd5e5772589e"
+      },
+      {
+        "trace_at_utc": "2026-09-09T17:48:03.4034354Z",
+        "executed_at_utc": "2026-09-09T17:48:00.001782+00:00",
+        "control_mode": "DRY_RUN",
+        "decision_code": "EXTERNAL_OVERRIDE",
+        "command_sent": false,
+        "input_files": {
+          "config": "/tmp/ssv53-config/snapshots/d85acc052089da005362460fe9dce04640a504618bd9b279230c0c0787ed5526/mower-config.json",
+          "fallback_used": false,
+          "manifest_etag": "\"0x8DF0E98C3FA361F\"",
+          "manifest_path": "current/manifest.json",
+          "matches": "/tmp/ssv53-config/snapshots/d85acc052089da005362460fe9dce04640a504618bd9b279230c0c0787ed5526/rasen.ics",
+          "matches_found": true,
+          "matches_loaded": 41,
+          "published_at_utc": "2026-09-09T17:34:54+00:00",
+          "source_kind": "azure_blob_cache"
+        },
+        "mower": {
+          "activity": "PARKED_IN_CS",
+          "state": "RESTRICTED",
+          "battery_percent": 100,
+          "override_action": "FORCE_PARK",
+          "connected": true,
+          "error_code": 0,
+          "timestamp": null
+        },
+        "state_revision": 42035,
+        "state_persisted": true,
+        "water_fresh": true,
+        "active_water_zones": 0,
+        "dry_until_utc": "2026-09-09T20:16:04.511512+00:00",
+        "coordination_blockers": [
+          "APPROVED_COORDINATION_CONFIG_DISABLED"
+        ],
+        "source_manifest_sha256": "fbab7b7078c769f141f4532888e8336029d69d8767c7d527f613cd5e5772589e"
+      },
+      {
+        "trace_at_utc": "2026-09-09T17:47:04.4753034Z",
+        "executed_at_utc": "2026-09-09T17:47:00.008494+00:00",
+        "control_mode": "DRY_RUN",
+        "decision_code": "EXTERNAL_OVERRIDE",
+        "command_sent": false,
+        "input_files": {
+          "config": "/tmp/ssv53-config/snapshots/d85acc052089da005362460fe9dce04640a504618bd9b279230c0c0787ed5526/mower-config.json",
+          "fallback_used": false,
+          "manifest_etag": "\"0x8DF0E98C3FA361F\"",
+          "manifest_path": "current/manifest.json",
+          "matches": "/tmp/ssv53-config/snapshots/d85acc052089da005362460fe9dce04640a504618bd9b279230c0c0787ed5526/rasen.ics",
+          "matches_found": true,
+          "matches_loaded": 41,
+          "published_at_utc": "2026-09-09T17:34:54+00:00",
+          "source_kind": "azure_blob_cache"
+        },
+        "mower": {
+          "activity": "PARKED_IN_CS",
+          "state": "RESTRICTED",
+          "battery_percent": 100,
+          "override_action": "FORCE_PARK",
+          "connected": true,
+          "error_code": 0,
+          "timestamp": null
+        },
+        "state_revision": 42034,
+        "state_persisted": true,
+        "water_fresh": true,
+        "active_water_zones": 0,
+        "dry_until_utc": "2026-09-09T20:16:04.511512+00:00",
+        "coordination_blockers": [
+          "APPROVED_COORDINATION_CONFIG_DISABLED"
+        ],
+        "source_manifest_sha256": "fbab7b7078c769f141f4532888e8336029d69d8767c7d527f613cd5e5772589e"
+      },
+      {
+        "trace_at_utc": "2026-09-09T17:46:06.3782437Z",
+        "executed_at_utc": "2026-09-09T17:46:04.511512+00:00",
+        "control_mode": "DRY_RUN",
+        "decision_code": "EXTERNAL_OVERRIDE",
+        "command_sent": false,
+        "input_files": {
+          "config": "/tmp/ssv53-config/snapshots/d85acc052089da005362460fe9dce04640a504618bd9b279230c0c0787ed5526/mower-config.json",
+          "fallback_used": false,
+          "manifest_etag": "\"0x8DF0E98C3FA361F\"",
+          "manifest_path": "current/manifest.json",
+          "matches": "/tmp/ssv53-config/snapshots/d85acc052089da005362460fe9dce04640a504618bd9b279230c0c0787ed5526/rasen.ics",
+          "matches_found": true,
+          "matches_loaded": 41,
+          "published_at_utc": "2026-09-09T17:34:54+00:00",
+          "source_kind": "azure_blob"
+        },
+        "mower": {
+          "activity": "PARKED_IN_CS",
+          "state": "RESTRICTED",
+          "battery_percent": 100,
+          "override_action": "FORCE_PARK",
+          "connected": true,
+          "error_code": 0,
+          "timestamp": null
+        },
+        "state_revision": 42033,
+        "state_persisted": true,
+        "water_fresh": true,
+        "active_water_zones": 0,
+        "dry_until_utc": "2026-09-09T20:16:04.511512+00:00",
+        "coordination_blockers": [
+          "APPROVED_COORDINATION_CONFIG_DISABLED"
+        ],
+        "source_manifest_sha256": "fbab7b7078c769f141f4532888e8336029d69d8767c7d527f613cd5e5772589e"
+      }
+    ],
+    "device_commands_sent": 0,
+    "comparison_calendar_active": false,
+    "actual_device_fresh_reads": true,
+    "complete_shadow_acceptance": false
+  },
+  "settings_before_shadow_fix_install": {
+    "requested_at_utc": "2026-09-09T17:45:37.307311+00:00",
+    "changes": {
+      "CONTROL_MODE": "DRY_RUN",
+      "ENABLE_LIVE_READS": "true",
+      "COORDINATION_SHADOW_CAPTURE_ENABLED": "true",
+      "AzureWebJobs.ssv53_mower_timer.Disabled": "false"
+    },
+    "device_write_flags_unchanged_false": true,
+    "confirmation_gates_unchanged_locked": true,
+    "expected_persistence": "AutomationState CAS observations and irrigation observation journal; no device commands",
+    "shared_training_mode": "OFF pending manual-calendar shadow fix",
+    "runtime_publish_run": 34383735588,
+    "verified_at_utc": "2026-09-09T17:45:51.528831+00:00",
+    "actual_settings": {
+      "FULL_FAILSAFE_CONFIRMATION": "LOCKED",
+      "ENABLE_START_COMMANDS": "false",
+      "ENABLE_PARK_COMMANDS": "false",
+      "FULL_MOWER_CONFIRMATION": "LOCKED",
+      "HYDRAWISE_STATUS_CACHE_MODE": "OFF",
+      "SSV53_DYNAMIC_CONFIG_ENABLED": "true",
+      "COORDINATION_SHADOW_CAPTURE_ENABLED": "true",
+      "COORDINATION_EXECUTION_ENABLED": "false",
+      "SHARED_TRAINING_MODE": "OFF",
+      "WINTER_TRAINING_CONTROL_ENABLED": "false",
+      "HYDRAWISE_DASHBOARD_OBSERVATION_MODE": "OFF",
+      "AzureWebJobs.ssv53_mower_timer.Disabled": "false",
+      "ENABLE_IRRIGATION_COMMANDS": "false",
+      "CONTROL_MODE": "DRY_RUN",
+      "WINTER_TRAINING_INITIALIZATION_ENABLED": "false",
+      "ENABLE_LIVE_READS": "true"
+    },
+    "unrelated_settings_unchanged": true
+  },
+  "shadow_fix_inert_settings": {
+    "verified_at_utc": "2026-09-09T17:59:44.058970+00:00",
+    "changes": {
+      "CONTROL_MODE": "OFF",
+      "ENABLE_LIVE_READS": "false",
+      "COORDINATION_SHADOW_CAPTURE_ENABLED": "false",
+      "AzureWebJobs.ssv53_mower_timer.Disabled": "true"
+    },
+    "device_gates_false": true,
+    "confirmations_locked": true,
+    "unrelated_settings_unchanged": true
+  },
+  "shadow_fix_package": {
+    "verified_at_utc": "2026-09-09T17:58:39.125537+00:00",
+    "source_commit": "4e4d60125108097743bfaac6b18c8405eb48013b",
+    "ci_run_id": 34385868992,
+    "artifact_id": 10117679931,
+    "artifact_name": "ssv53-full-failsafe-source-82",
+    "outer_zip_sha256": "c1994c04a3efe7c90e7a567c9ea10b1704b844964e7a859eb51de4385049c457",
+    "source_package_sha256": "570858f6da7f85ddbb4182fd4539f534ca5225d2c47dc1a03a1ebdf66535350f",
+    "source_manifest_sha256": "7c93901b640250814fe29a5217526b5b98a834dfbc02b2dc41c0594e77da077b",
+    "verified_canonical_files": 61,
+    "package_path": "..\\diagnostics\\live-introduction-20260909\\manual-training-shadow-source-ci.zip",
+    "remote_build_required": true
+  },
+  "shadow_fix_merge": {
+    "pr": 50,
+    "url": "https://github.com/Rohdeo87/ssv53-heimspiele/pull/50",
+    "head_sha": "4e4d60125108097743bfaac6b18c8405eb48013b",
+    "merge_commit_sha": "03c95f75dfca8921532849f3721e4b237823da90",
+    "merged_at": "2026-09-09T17:58:33Z"
+  },
+  "shadow_fix_tests": {
+    "source_commit": "4e4d60125108097743bfaac6b18c8405eb48013b",
+    "tests_passed": 1159,
+    "subtests_passed": 439,
+    "targeted_tests_passed": 79,
+    "full_suite_output_sha256": "bd5276491a4e6ea02f9208648326fe11d260d93752b036b5f4e7713d838466ac",
+    "full_suite_output_file": "manual-training-shadow-tests.txt"
+  },
+  "pre_installation_mower_observation": {
+    "retrieved_at_utc": "2026-09-09T16:44:37.382751+00:00",
+    "activity": "PARKED_IN_CS",
+    "state": "RESTRICTED",
+    "battery_percent": 100,
+    "connected": true,
+    "error_code": 0,
+    "override_action": "NOT_ACTIVE",
+    "status_age_seconds": 163.3,
+    "native_calendar_task_count": 0,
+    "next_start_timestamp": 0,
+    "restricted_reason": "WEEK_SCHEDULE",
+    "device_commands_sent": 0
+  },
+  "pre_installation_hydrawise_observation": {
+    "retrieved_at_utc": "2026-09-09T16:45:17.453824+00:00",
+    "raw_controller_time": 1788972317,
+    "relays": [
+      {
+        "relay_id": 9104894,
+        "time": 35083,
+        "run": 1200,
+        "type": 1
+      },
+      {
+        "relay_id": 9104906,
+        "time": 36283,
+        "run": 1200,
+        "type": 1
+      },
+      {
+        "relay_id": 9104909,
+        "time": 37483,
+        "run": 1200,
+        "type": 1
+      },
+      {
+        "relay_id": 9104911,
+        "time": 38683,
+        "run": 1200,
+        "type": 1
+      },
+      {
+        "relay_id": 9104913,
+        "time": 39883,
+        "run": 1200,
+        "type": 1
+      },
+      {
+        "relay_id": 9104920,
+        "time": 41083,
+        "run": 1800,
+        "type": 1
+      },
+      {
+        "relay_id": 9104921,
+        "time": 42883,
+        "run": 1800,
+        "type": 1
+      }
+    ],
+    "device_commands_sent": 0
+  },
+  "mower_latest_observation": {
+    "activity": "PARKED_IN_CS",
+    "state": "RESTRICTED",
+    "battery_percent": 100,
+    "connected": true,
+    "error_code": 0,
+    "override_action": "FORCE_PARK",
+    "restricted_reason": "PARK_OVERRIDE",
+    "status_timestamp_ms": 1788977683886,
+    "observed_at_utc": "2026-09-09T18:17:02.2473508Z"
+  },
+  "remaining_acceptance": [
+    "After 2026-09-10T00:00:00+02:00 verify previous-day history and full app/controller calendar equality before ACTIVE; no scheduled automatic activation exists.",
+    "Authenticated native app visual/session/role acceptance; current publication proof covers stored template and CMS only.",
+    "Real charge, due water, actual end, drying, occupancy and day-change coverage; restart and data-recovery observed with no device writes only.",
+    "Bind a genuine water need and prove original native schedule suppression; current coordinator input deliberately remains APPROVED_COORDINATION_CONFIG_DISABLED.",
+    "Reconcile native mower schedules and pending effects, preserve FORCE_PARK until deliberate supervised release, and establish actual supervisor availability at the device pilot.",
+    "Supervised device command acknowledgment versus physical effect, timeout and recovery acceptance before unattended expansion.",
+    "Measure productive mowing gain against comparable operating conditions; 60-minute improvement remains simulation only."
+  ],
+  "initial_installation_source_evidence": {
+    "verified_at_utc": "2026-09-09T16:59:43.256240+00:00",
+    "installed_manifest_sha256": "fbab7b7078c769f141f4532888e8336029d69d8767c7d527f613cd5e5772589e",
+    "archive_sha256": "12c7484f8618f1d68efa03ee6e509f4438fd4141af0168bf5a0e71370e54fc71",
+    "expected_source_files": 61,
+    "verified_source_files": 61,
+    "all_source_bytes_match": true,
+    "errors": [],
+    "scope": "actual installed source files; build runtime and device behavior remain separate",
+    "resolved_read_errors": [
+      {
+        "path": "special_occupancy.py",
+        "error": "URLError",
+        "http_status": null
+      }
+    ],
+    "manifest_unchanged_across_verification": true
+  },
+  "initial_installation_deployment": {
+    "id": "c702baf7-e385-410d-9d84-68827919a508",
+    "remote_build": true,
+    "complete": true,
+    "remote_build_completed_at_utc": "2026-09-09T16:55:14.3140126Z",
+    "runtime_deployment_status": "BuildSuccessful",
+    "independent_status_summary_sha256": "c13170eebad227730fd14f1212dfb4bba03a5ed18036109260039b5d72c2cdcc",
+    "active_at_initial_verification": true
+  },
+  "installed_source": {
+    "verified_at_utc": "2026-09-09T18:09:51.199487+00:00",
+    "source_commit": "4e4d60125108097743bfaac6b18c8405eb48013b",
+    "merge_commit": "03c95f75dfca8921532849f3721e4b237823da90",
+    "source_package_sha256": "570858f6da7f85ddbb4182fd4539f534ca5225d2c47dc1a03a1ebdf66535350f",
+    "source_manifest_sha256": "7c93901b640250814fe29a5217526b5b98a834dfbc02b2dc41c0594e77da077b",
+    "manifest_unchanged_during_verification": true,
+    "host_state": "Running",
+    "verified_source_files": 61,
+    "files": [
+      {
+        "path": "daily_safety_report.py",
+        "sha256": "1b07997458f4fd6801b287d505db0ab5599374ceffcf6c9f7dc886b8b7d670d2",
+        "size": 77998,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "function_app.py",
+        "sha256": "b38d32a3dfc53fdbbbead9fcad96ded7bfe7865af89309675d3d36f33a320556",
+        "size": 74870,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "host.json",
+        "sha256": "c6309279f4333adccbc9277d4a856bad9197f7e0325c080c03237ddc73e0dc7a",
+        "size": 508,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "mower/__init__.py",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "size": 0,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "mower/adaptive_planner.py",
+        "sha256": "c44584699bff3e7e4fd68e4faea09b4a2a7369089713caa60a814e31a04b3c04",
+        "size": 21300,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "mower/build_provenance.py",
+        "sha256": "aa7879589b94c6dc956ff19379af9d77b3810b3fdf988de14adb82282bd3f6f9",
+        "size": 4499,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "mower/config.json",
+        "sha256": "e2c508ec00678710dab7640169b4f609f3d1fd8a08b11255d25a72fc3b7acb89",
+        "size": 2131,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "mower/config_source.py",
+        "sha256": "81845e9ce2984f0bd9ea18a3db5a357f32b04f506b03ca5c434da52afcfe9dd5",
+        "size": 11300,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "mower/controller.py",
+        "sha256": "f4ad9bd55d8406a31f196f724c945dd35d96abc7c71e4f1f0fb4e5a1a884454d",
+        "size": 5938,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "mower/coordination_execution.py",
+        "sha256": "a051e64790700c9163763008056263c7b55c2a1ec530d3adf73e83ae15a76772",
+        "size": 16809,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "mower/coordination_inputs.py",
+        "sha256": "397c7838b5bec2e6d371b5bfca9478c6f90f8e2c2cacc76c5abcac31de60f379",
+        "size": 8200,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "mower/coordination_request.py",
+        "sha256": "c6adb915227525cea2ee5d0d01e7fe1a9c090551170caada257cff1e92b90d52",
+        "size": 6101,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "mower/coordination_shadow.py",
+        "sha256": "ed50e5bafe20e84ded5dcf55e75cc0b2ae81b05a3c6efaf724fce040fe0635e4",
+        "size": 15791,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "mower/cutting_height.py",
+        "sha256": "3187066bce16a5f9784ca0319082614caf124eed2814a476de2e01dc7f784344",
+        "size": 1085,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "mower/dashboard_observations.py",
+        "sha256": "6610164d20fa1b9a4d5dcc362b896ce2ba0ebd512a387a630673785c43ca29d8",
+        "size": 14767,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "mower/decision.py",
+        "sha256": "0429f53dd10235f2b65f032dbf94498a267cb61dd3d547a4178f2f9c9168e00a",
+        "size": 12654,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "mower/dry_run.py",
+        "sha256": "c9378e844122e0ff12adeeed30680ae0cb15b8fdf68b8df1e82a0b110e30d1cf",
+        "size": 34353,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "mower/full_failsafe.py",
+        "sha256": "f03ec86948d1d81be3eb2f1901549bd48d6f228194eca821aef71e0cc06f6ec5",
+        "size": 284829,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "mower/full_mower.py",
+        "sha256": "c04c819b9caa49368a69b029093f712ffdbd107ee284267211204f592b69179f",
+        "size": 26005,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "mower/husqvarna.py",
+        "sha256": "2a23d474b65c786d8301ce9a86588dbbb8d7f4f7a2479c0fb5126b2969782c97",
+        "size": 10817,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "mower/husqvarna_actions.py",
+        "sha256": "33f4e95d26eca411b3296ca84414342de652f8cfd1206269dd0b120146d0b68e",
+        "size": 2578,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "mower/husqvarna_cutting_height_actions.py",
+        "sha256": "b9decb493033481f17e4016f416f49a996e4addf936925365607377c96b06242",
+        "size": 2774,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "mower/husqvarna_start_actions.py",
+        "sha256": "db46ad751b46e14dbebaa043a1c256105a20de487558e26c685ad46885eed583",
+        "size": 3530,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "mower/husqvarna_statistics_actions.py",
+        "sha256": "ab3f3ac22a25b4789727c2ced1a7622270a505f4b443c5dba7b29aa3483cc70a",
+        "size": 2012,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "mower/hydrawise.py",
+        "sha256": "eaf1d548702cfb1bf507fe98f1c29a7daf0371c401a9558da95efb6b5b6df27c",
+        "size": 25490,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "mower/hydrawise_actions.py",
+        "sha256": "e52edb695c526d09833f04b11b28270742859552a1c7137d8ef1df84a90ab387",
+        "size": 3165,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "mower/input_failure_guard.py",
+        "sha256": "e664815daa4f3367d83a6a39be2c8b43b929b04b542824ffb42b8b76e2c7aea9",
+        "size": 31809,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "mower/irrigation_journal.py",
+        "sha256": "6bd6e392b780cc112e4a72f123b401822d47265a7976a798276eefb88eef37f9",
+        "size": 10017,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "mower/irrigation_operating_window.py",
+        "sha256": "cbc5a9c6cea2162bba4aef3c93b88b117271a7f1f62a1ff9dd89328a5253e378",
+        "size": 6728,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "mower/irrigation_recovery.py",
+        "sha256": "9d8f11643f24484a5806a0c2fc5cda24eefb29174c2683d763b8cf3330d6ca58",
+        "size": 14687,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "mower/irrigation_schedule.py",
+        "sha256": "6c47862c211ab3b20d2fad529d019cc22c08172e41e311612cbfa0054980d68f",
+        "size": 8479,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "mower/park_only.py",
+        "sha256": "fafcdb7eaa5993513687d4a4ba4d7dc6b57f2341ad2a485db6d176f22b148039",
+        "size": 11450,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "mower/planner.py",
+        "sha256": "cb12c8b999482219b81d548e1d9087830ba9b5d605a052738f45ae7137c9071b",
+        "size": 16626,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "mower/runtime.py",
+        "sha256": "da318b0b75747bcb9c09233c061c6cac90a59acdc14e0d03a0f275cbdeca9cca",
+        "size": 7065,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "mower/safety.py",
+        "sha256": "f532fd51a745b72707019acce8ce4ada0c943d30ed29f3cfecad6a4935109631",
+        "size": 7336,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "mower/start_dispatch_guard.py",
+        "sha256": "c9517e3621e699bf2dc0e1bbcc18b821ddcf8528590e98256ff63ed668a2aeee",
+        "size": 5467,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "mower/state.py",
+        "sha256": "31690e826aa264f20e2754c1b17ba440f767797a438bdc0326c9e5f0dd328103",
+        "size": 39342,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "mower/state_store.py",
+        "sha256": "133a302a04297355cc53f1b773ce49eef1cfcbc1e29fa9d99760a09970f51b68",
+        "size": 7214,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "mower/statistics_cache.py",
+        "sha256": "cd2c515c37a982de1cf8d60fc8b4591c1be6366f7c813468c4cd9efefa42357a",
+        "size": 2381,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "mower/status_cache.py",
+        "sha256": "cbb17b082805d1322b1e098ce36fd32db56d6df38abed64693c7522748227402",
+        "size": 16034,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "mower/status_cache_store.py",
+        "sha256": "1ef4128c186aae8d745e4a755ffdb5ceba4668d5d7dc6423d16ab5eb591ff9b2",
+        "size": 5607,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "mower/weather.py",
+        "sha256": "8562dcbbdd50c94c01e1472c040213b8917f5967979ced40b4f624f46d24760c",
+        "size": 13024,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "mower/weather_service.py",
+        "sha256": "a4f9c84d60f697d0dccb45f9e8dd47aa374e2aa37c92924a88fdbb8a95d2f732",
+        "size": 6301,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "mower/weather_store.py",
+        "sha256": "fd5b05631773b4f2e63540ef287dcbd60c6c6d75420d8908aded1693e0cc3c39",
+        "size": 15167,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "occupancy/__init__.py",
+        "sha256": "933d5cc6e232bdd1b7454aa305459e7f4e1b5555267130063e103b9a2721a81a",
+        "size": 78,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "occupancy/config.json",
+        "sha256": "026430ebe970652f5d1b8c556aab813aad862295491d36d1f2e4ca1eba2c9972",
+        "size": 6866,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "occupancy/match_model.py",
+        "sha256": "bd4685e57bbbf4d0fbf9b5e1a6c0e8cdbe9cdd45559cc23468a8bdac18475e99",
+        "size": 6962,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "occupancy/runtime_source.py",
+        "sha256": "68f96e130afc2e7abf60d6d0d6c31cbb53a6be7cb5fa44db5a91365839e6efcf",
+        "size": 14218,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "occupancy/service.py",
+        "sha256": "1a98f58d02e1624f7142e56cf6b3122add9135b66f45406c9109716240091a86",
+        "size": 21716,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "occupancy/training_calendar.py",
+        "sha256": "800239acc7317f0bfcc31d651769abdcb91a9e9f449cea4480655a7c8283f766",
+        "size": 28740,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "occupancy/training_control.py",
+        "sha256": "81dc0fa80f88aff53d527f1c2b23776f3757b5f6099195a56e23ac8d0bb49b8c",
+        "size": 23158,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "occupancy/training_runtime.py",
+        "sha256": "7e9a3d73d94eb16c7ad28059bd0fa9371dc3255f979701c725d65114cafe8bf2",
+        "size": 9401,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "occupancy_notifications.py",
+        "sha256": "8b1f51d0c799e4d3f37afbf9e8adab7effaa34ae0ddf67f3fa7111ac3a259043",
+        "size": 22817,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "order_mail.py",
+        "sha256": "2cbcea6f772098af828c5267aefb1a62e650f9cf1dba68d7b3d0a242a7f5d0a7",
+        "size": 35632,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "platzwart_console.py",
+        "sha256": "0e3c8bb36f14cf1d8619cb03a70419b11415f22d9ff70d17deef9f5709cab63c",
+        "size": 71234,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "public/kunstrasen.ics",
+        "sha256": "03ea038ebd952d61fd0a82d535741c9ab73c8235dbf6c15e388db66ac13106a6",
+        "size": 2983,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "public/matches.json",
+        "sha256": "9d157b8fb16976afe4a5deb77d9f1e65302ef56dfbbee01340488cf405cc55c3",
+        "size": 54599,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "public/rasen.ics",
+        "sha256": "1ab8e35ca03729877d6785b0a156dcc580eb3c4475d9a69b1b184fbc943f8dc7",
+        "size": 21458,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "requirements.txt",
+        "sha256": "dc2624384f3ed3c210c944191103bb6f364aa97353208a2b0389f05efdf4bcac",
+        "size": 153,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "special_occupancy.py",
+        "sha256": "4ae497a539e58a5814c069748a5449a2c35068a06f80a737fa5b2f536a03c610",
+        "size": 42516,
+        "matches_ci": true,
+        "read_attempts": 1
+      },
+      {
+        "path": "training_cancellations.py",
+        "sha256": "c46ed3b0f53b83cfb6100e74d8ebd4b29f15a15563635124341d8ef05b294e96",
+        "size": 12194,
+        "matches_ci": true,
+        "read_attempts": 1
+      }
+    ],
+    "settings": {
+      "CONTROL_MODE": "OFF",
+      "ENABLE_LIVE_READS": "false",
+      "ENABLE_PARK_COMMANDS": "false",
+      "ENABLE_START_COMMANDS": "false",
+      "ENABLE_IRRIGATION_COMMANDS": "false",
+      "FULL_MOWER_CONFIRMATION": "LOCKED",
+      "FULL_FAILSAFE_CONFIRMATION": "LOCKED",
+      "AzureWebJobs.ssv53_mower_timer.Disabled": "true",
+      "WINTER_TRAINING_CONTROL_ENABLED": "false",
+      "WINTER_TRAINING_INITIALIZATION_ENABLED": "false",
+      "COORDINATION_EXECUTION_ENABLED": "false",
+      "COORDINATION_SHADOW_CAPTURE_ENABLED": "false"
+    },
+    "device_commands_sent": 0,
+    "dependency_binaries_byte_verified": false
+  },
+  "deployment": {
+    "scope": "one read-only ARM deployment and runtime status check",
+    "deployment": {
+      "id": "6631c7aa-66af-4c80-8005-50a1fc7b6d51",
+      "status": 4,
+      "remoteBuild": true,
+      "receivedTimeUtc": "2026-09-09T17:59:55.8043104Z",
+      "startTimeUtc": "2026-09-09T17:59:55.8043104Z",
+      "endTimeUtc": "2026-09-09T18:01:17.1463084Z",
+      "lastSuccessEndTimeUtc": "2026-09-09T18:01:17.1463084Z",
+      "complete": true,
+      "active": true
+    },
+    "runtimeDeploymentStatus": {
+      "status": "BuildSuccessful",
+      "numberOfInstancesSuccessful": 0,
+      "numberOfInstancesFailed": 0,
+      "numberOfInstancesInProgress": 0
+    }
+  },
+  "actual_observation_settings": {
+    "requested_at_utc": "2026-09-09T18:11:25.954509+00:00",
+    "changes": {
+      "CONTROL_MODE": "DRY_RUN",
+      "ENABLE_LIVE_READS": "true",
+      "COORDINATION_SHADOW_CAPTURE_ENABLED": "true",
+      "SHARED_TRAINING_MODE": "SHADOW",
+      "WINTER_TRAINING_CONTROL_ENABLED": "true",
+      "AzureWebJobs.ssv53_mower_timer.Disabled": "false"
+    },
+    "readable_manual_calendar_only": true,
+    "winter_toggle_writes_require_ACTIVE": true,
+    "device_write_gates_unchanged_false": true,
+    "initialization_gate_unchanged_false": true,
+    "source_package_sha256": "570858f6da7f85ddbb4182fd4539f534ca5225d2c47dc1a03a1ebdf66535350f",
+    "verified_at_utc": "2026-09-09T18:11:37.978709+00:00",
+    "actual_settings": {
+      "CONTROL_MODE": "DRY_RUN",
+      "ENABLE_PARK_COMMANDS": "false",
+      "FULL_MOWER_CONFIRMATION": "LOCKED",
+      "ENABLE_IRRIGATION_COMMANDS": "false",
+      "ENABLE_LIVE_READS": "true",
+      "SHARED_TRAINING_MODE": "SHADOW",
+      "AzureWebJobs.ssv53_mower_timer.Disabled": "false",
+      "SSV53_DYNAMIC_CONFIG_ENABLED": "true",
+      "COORDINATION_EXECUTION_ENABLED": "false",
+      "HYDRAWISE_STATUS_CACHE_MODE": "OFF",
+      "ENABLE_START_COMMANDS": "false",
+      "FULL_FAILSAFE_CONFIRMATION": "LOCKED",
+      "COORDINATION_SHADOW_CAPTURE_ENABLED": "true",
+      "WINTER_TRAINING_INITIALIZATION_ENABLED": "false",
+      "WINTER_TRAINING_CONTROL_ENABLED": "true",
+      "HYDRAWISE_DASHBOARD_OBSERVATION_MODE": "OFF"
+    },
+    "unrelated_settings_unchanged": true
+  },
+  "shadow_calendar_endpoint_observations": {
+    "observed_at_utc": "2026-09-09T18:17:21.118247+00:00",
+    "occupancy": [
+      {
+        "start": "2026-09-09",
+        "end": "2026-09-11",
+        "http_status": 200,
+        "response_sha256": "eebe5915912176607b70829372cf3187087132ca55e2f97eee7e6bbb030e2370",
+        "events_count": 8,
+        "fields": {
+          "match_source": "azure_blob",
+          "match_source_generated_at_utc": "2026-09-09T17:24:56+00:00",
+          "match_source_fallback": false,
+          "match_source_fresh": true,
+          "training_calendar": {
+            "active": false,
+            "blockers": [
+              "TRAINING_CONTROL_SEASON_UNAVAILABLE"
+            ],
+            "calendar_revision": null,
+            "calendar_sha256": null,
+            "candidate_available": false,
+            "envelope_sha256": "804ca739366b1f372947ed661eac9b142567934030091c102cf2707f01b629d5",
+            "fail_closed": false,
+            "mode": "SHADOW",
+            "trainingControl": {
+              "anchorTransitions": [],
+              "available": true,
+              "effectiveAt": null,
+              "historyValidFrom": "2026-09-08T22:00:00+00:00",
+              "nextEffectiveAt": "2026-09-09T22:00:00+00:00",
+              "pendingEnabled": null,
+              "reasonCode": null,
+              "season": "Sommer",
+              "source": "automation_state",
+              "stateRevision": 1,
+              "trainingRevision": "a0f97f7897e84f9360522e63c5f4a2e7727664052413bcc73def823219997d8f",
+              "winterEnabled": false
+            }
+          },
+          "training_cancellations": {
+            "available": true,
+            "fail_closed": false
+          },
+          "special_occupancy": {
+            "available": true,
+            "count": 0,
+            "enabled": true,
+            "error": null,
+            "fail_closed": false
+          }
+        }
+      },
+      {
+        "start": "2026-09-10",
+        "end": "2026-09-11",
+        "http_status": 200,
+        "response_sha256": "71757c7340554870d3d6baf44f5db9d9080bddb949658962c4efb8cd875f3934",
+        "events_count": 4,
+        "fields": {
+          "match_source": "azure_blob",
+          "match_source_generated_at_utc": "2026-09-09T17:24:56+00:00",
+          "match_source_fallback": false,
+          "match_source_fresh": true,
+          "training_calendar": {
+            "active": false,
+            "blockers": [],
+            "calendar_revision": 2,
+            "calendar_sha256": "bc9ccae4f33054cd29dcf4eed044d1b8095cac29c9215182f2646fdb3cdf1eec",
+            "candidate_available": true,
+            "envelope_sha256": "804ca739366b1f372947ed661eac9b142567934030091c102cf2707f01b629d5",
+            "fail_closed": false,
+            "mode": "SHADOW",
+            "trainingControl": {
+              "anchorTransitions": [],
+              "available": true,
+              "effectiveAt": null,
+              "historyValidFrom": "2026-09-08T22:00:00+00:00",
+              "nextEffectiveAt": "2026-09-09T22:00:00+00:00",
+              "pendingEnabled": null,
+              "reasonCode": null,
+              "season": "Sommer",
+              "source": "automation_state",
+              "stateRevision": 1,
+              "trainingRevision": "a0f97f7897e84f9360522e63c5f4a2e7727664052413bcc73def823219997d8f",
+              "winterEnabled": false
+            }
+          },
+          "training_cancellations": {
+            "available": true,
+            "fail_closed": false
+          },
+          "special_occupancy": {
+            "available": true,
+            "count": 0,
+            "enabled": true,
+            "error": null,
+            "fail_closed": false
+          }
+        }
+      },
+      {
+        "start": "2026-09-15",
+        "end": "2026-09-16",
+        "http_status": 200,
+        "response_sha256": "de4920d3b896a739122ce74e0d1243de43652f9da7a730fdb11483aad77d523d",
+        "events_count": 4,
+        "fields": {
+          "match_source": "azure_blob",
+          "match_source_generated_at_utc": "2026-09-09T17:24:56+00:00",
+          "match_source_fallback": false,
+          "match_source_fresh": true,
+          "training_calendar": {
+            "active": false,
+            "blockers": [],
+            "calendar_revision": 2,
+            "calendar_sha256": "bc9ccae4f33054cd29dcf4eed044d1b8095cac29c9215182f2646fdb3cdf1eec",
+            "candidate_available": true,
+            "envelope_sha256": "804ca739366b1f372947ed661eac9b142567934030091c102cf2707f01b629d5",
+            "fail_closed": false,
+            "mode": "SHADOW",
+            "trainingControl": {
+              "anchorTransitions": [],
+              "available": true,
+              "effectiveAt": null,
+              "historyValidFrom": "2026-09-08T22:00:00+00:00",
+              "nextEffectiveAt": "2026-09-09T22:00:00+00:00",
+              "pendingEnabled": null,
+              "reasonCode": null,
+              "season": "Sommer",
+              "source": "automation_state",
+              "stateRevision": 1,
+              "trainingRevision": "a0f97f7897e84f9360522e63c5f4a2e7727664052413bcc73def823219997d8f",
+              "winterEnabled": false
+            }
+          },
+          "training_cancellations": {
+            "available": true,
+            "fail_closed": false
+          },
+          "special_occupancy": {
+            "available": true,
+            "count": 0,
+            "enabled": true,
+            "error": null,
+            "fail_closed": false
+          }
+        }
+      }
+    ],
+    "device_commands_sent": false
+  },
+  "latest_readonly_observation": {
+    "cycles": [
+      {
+        "timestamp": "2026-09-09T18:13:02.6645501Z",
+        "control_mode": "DRY_RUN",
+        "decision_code": "EXTERNAL_OVERRIDE",
+        "command_sent": false,
+        "mower": {
+          "activity": "PARKED_IN_CS",
+          "state": "RESTRICTED",
+          "battery_percent": 100,
+          "connected": true,
+          "error_code": 0,
+          "override_action": "FORCE_PARK",
+          "restricted_reason": "PARK_OVERRIDE",
+          "status_timestamp_ms": 1788976753885
+        },
+        "hydrawise": {
+          "fresh": true,
+          "zones": 7,
+          "active": 0,
+          "dry_until_utc": "2026-09-09T20:41:51.487032+00:00",
+          "telemetry_confirmed": false
+        },
+        "build_provenance": {
+          "all_installed_files_verified": false,
+          "entrypoint_sha256": "b38d32a3dfc53fdbbbead9fcad96ded7bfe7865af89309675d3d36f33a320556",
+          "manifest_file_count": 61,
+          "manifest_files_verified": true,
+          "package_manifest_sha256": "7c93901b640250814fe29a5217526b5b98a834dfbc02b2dc41c0594e77da077b",
+          "remote_build_dependencies_verified": false,
+          "verification_error": null,
+          "verified_file_count": 61
+        },
+        "training_calendar": {
+          "mode": "SHADOW",
+          "active": false,
+          "candidate_available": false,
+          "blockers": [
+            "TRAINING_CONTROL_SEASON_UNAVAILABLE"
+          ],
+          "envelope_sha256": "804ca739366b1f372947ed661eac9b142567934030091c102cf2707f01b629d5"
+        },
+        "input_files": {
+          "config": "/tmp/ssv53-config/snapshots/d85acc052089da005362460fe9dce04640a504618bd9b279230c0c0787ed5526/mower-config.json",
+          "fallback_used": false,
+          "manifest_etag": "\"0x8DF0E98C3FA361F\"",
+          "manifest_path": "current/manifest.json",
+          "matches": "/tmp/ssv53-config/snapshots/d85acc052089da005362460fe9dce04640a504618bd9b279230c0c0787ed5526/rasen.ics",
+          "matches_found": true,
+          "matches_loaded": 41,
+          "published_at_utc": "2026-09-09T17:34:54+00:00",
+          "source_kind": "azure_blob_cache"
+        }
+      },
+      {
+        "timestamp": "2026-09-09T18:14:03.143884Z",
+        "control_mode": "DRY_RUN",
+        "decision_code": "EXTERNAL_OVERRIDE",
+        "command_sent": false,
+        "mower": {
+          "activity": "PARKED_IN_CS",
+          "state": "RESTRICTED",
+          "battery_percent": 100,
+          "connected": true,
+          "error_code": 0,
+          "override_action": "FORCE_PARK",
+          "restricted_reason": "PARK_OVERRIDE",
+          "status_timestamp_ms": 1788976753885
+        },
+        "hydrawise": {
+          "fresh": true,
+          "zones": 7,
+          "active": 0,
+          "dry_until_utc": "2026-09-09T20:41:51.487032+00:00",
+          "telemetry_confirmed": true
+        },
+        "build_provenance": {
+          "all_installed_files_verified": false,
+          "entrypoint_sha256": "b38d32a3dfc53fdbbbead9fcad96ded7bfe7865af89309675d3d36f33a320556",
+          "manifest_file_count": 61,
+          "manifest_files_verified": true,
+          "package_manifest_sha256": "7c93901b640250814fe29a5217526b5b98a834dfbc02b2dc41c0594e77da077b",
+          "remote_build_dependencies_verified": false,
+          "verification_error": null,
+          "verified_file_count": 61
+        },
+        "training_calendar": {
+          "mode": "SHADOW",
+          "active": false,
+          "candidate_available": false,
+          "blockers": [
+            "TRAINING_CONTROL_SEASON_UNAVAILABLE"
+          ],
+          "envelope_sha256": "804ca739366b1f372947ed661eac9b142567934030091c102cf2707f01b629d5"
+        },
+        "input_files": {
+          "config": "/tmp/ssv53-config/snapshots/d85acc052089da005362460fe9dce04640a504618bd9b279230c0c0787ed5526/mower-config.json",
+          "fallback_used": false,
+          "manifest_etag": "\"0x8DF0E98C3FA361F\"",
+          "manifest_path": "current/manifest.json",
+          "matches": "/tmp/ssv53-config/snapshots/d85acc052089da005362460fe9dce04640a504618bd9b279230c0c0787ed5526/rasen.ics",
+          "matches_found": true,
+          "matches_loaded": 41,
+          "published_at_utc": "2026-09-09T17:34:54+00:00",
+          "source_kind": "azure_blob_cache"
+        }
+      },
+      {
+        "timestamp": "2026-09-09T18:15:02.8662928Z",
+        "control_mode": "DRY_RUN",
+        "decision_code": "EXTERNAL_OVERRIDE",
+        "command_sent": false,
+        "mower": {
+          "activity": "PARKED_IN_CS",
+          "state": "RESTRICTED",
+          "battery_percent": 100,
+          "connected": true,
+          "error_code": 0,
+          "override_action": "FORCE_PARK",
+          "restricted_reason": "PARK_OVERRIDE",
+          "status_timestamp_ms": 1788977683886
+        },
+        "hydrawise": {
+          "fresh": true,
+          "zones": 7,
+          "active": 0,
+          "dry_until_utc": "2026-09-09T20:41:51.487032+00:00",
+          "telemetry_confirmed": true
+        },
+        "build_provenance": {
+          "all_installed_files_verified": false,
+          "entrypoint_sha256": "b38d32a3dfc53fdbbbead9fcad96ded7bfe7865af89309675d3d36f33a320556",
+          "manifest_file_count": 61,
+          "manifest_files_verified": true,
+          "package_manifest_sha256": "7c93901b640250814fe29a5217526b5b98a834dfbc02b2dc41c0594e77da077b",
+          "remote_build_dependencies_verified": false,
+          "verification_error": null,
+          "verified_file_count": 61
+        },
+        "training_calendar": {
+          "mode": "SHADOW",
+          "active": false,
+          "candidate_available": false,
+          "blockers": [
+            "TRAINING_CONTROL_SEASON_UNAVAILABLE"
+          ],
+          "envelope_sha256": "804ca739366b1f372947ed661eac9b142567934030091c102cf2707f01b629d5"
+        },
+        "input_files": {
+          "config": "/tmp/ssv53-config/snapshots/d85acc052089da005362460fe9dce04640a504618bd9b279230c0c0787ed5526/mower-config.json",
+          "fallback_used": false,
+          "manifest_etag": "\"0x8DF0E98C3FA361F\"",
+          "manifest_path": "current/manifest.json",
+          "matches": "/tmp/ssv53-config/snapshots/d85acc052089da005362460fe9dce04640a504618bd9b279230c0c0787ed5526/rasen.ics",
+          "matches_found": true,
+          "matches_loaded": 41,
+          "published_at_utc": "2026-09-09T17:34:54+00:00",
+          "source_kind": "azure_blob_cache"
+        }
+      },
+      {
+        "timestamp": "2026-09-09T18:16:02.2403585Z",
+        "control_mode": "DRY_RUN",
+        "decision_code": "EXTERNAL_OVERRIDE",
+        "command_sent": false,
+        "mower": {
+          "activity": "PARKED_IN_CS",
+          "state": "RESTRICTED",
+          "battery_percent": 100,
+          "connected": true,
+          "error_code": 0,
+          "override_action": "FORCE_PARK",
+          "restricted_reason": "PARK_OVERRIDE",
+          "status_timestamp_ms": 1788977683886
+        },
+        "hydrawise": {
+          "fresh": true,
+          "zones": 7,
+          "active": 0,
+          "dry_until_utc": "2026-09-09T20:41:51.487032+00:00",
+          "telemetry_confirmed": true
+        },
+        "build_provenance": {
+          "all_installed_files_verified": false,
+          "entrypoint_sha256": "b38d32a3dfc53fdbbbead9fcad96ded7bfe7865af89309675d3d36f33a320556",
+          "manifest_file_count": 61,
+          "manifest_files_verified": true,
+          "package_manifest_sha256": "7c93901b640250814fe29a5217526b5b98a834dfbc02b2dc41c0594e77da077b",
+          "remote_build_dependencies_verified": false,
+          "verification_error": null,
+          "verified_file_count": 61
+        },
+        "training_calendar": {
+          "mode": "SHADOW",
+          "active": false,
+          "candidate_available": false,
+          "blockers": [
+            "TRAINING_CONTROL_SEASON_UNAVAILABLE"
+          ],
+          "envelope_sha256": "804ca739366b1f372947ed661eac9b142567934030091c102cf2707f01b629d5"
+        },
+        "input_files": {
+          "config": "/tmp/ssv53-config/snapshots/d85acc052089da005362460fe9dce04640a504618bd9b279230c0c0787ed5526/mower-config.json",
+          "fallback_used": false,
+          "manifest_etag": "\"0x8DF0E98C3FA361F\"",
+          "manifest_path": "current/manifest.json",
+          "matches": "/tmp/ssv53-config/snapshots/d85acc052089da005362460fe9dce04640a504618bd9b279230c0c0787ed5526/rasen.ics",
+          "matches_found": true,
+          "matches_loaded": 41,
+          "published_at_utc": "2026-09-09T17:34:54+00:00",
+          "source_kind": "azure_blob_cache"
+        }
+      },
+      {
+        "timestamp": "2026-09-09T18:17:02.2473508Z",
+        "control_mode": "DRY_RUN",
+        "decision_code": "EXTERNAL_OVERRIDE",
+        "command_sent": false,
+        "mower": {
+          "activity": "PARKED_IN_CS",
+          "state": "RESTRICTED",
+          "battery_percent": 100,
+          "connected": true,
+          "error_code": 0,
+          "override_action": "FORCE_PARK",
+          "restricted_reason": "PARK_OVERRIDE",
+          "status_timestamp_ms": 1788977683886
+        },
+        "hydrawise": {
+          "fresh": true,
+          "zones": 7,
+          "active": 0,
+          "dry_until_utc": "2026-09-09T20:41:51.487032+00:00",
+          "telemetry_confirmed": true
+        },
+        "build_provenance": {
+          "all_installed_files_verified": false,
+          "entrypoint_sha256": "b38d32a3dfc53fdbbbead9fcad96ded7bfe7865af89309675d3d36f33a320556",
+          "manifest_file_count": 61,
+          "manifest_files_verified": true,
+          "package_manifest_sha256": "7c93901b640250814fe29a5217526b5b98a834dfbc02b2dc41c0594e77da077b",
+          "remote_build_dependencies_verified": false,
+          "verification_error": null,
+          "verified_file_count": 61
+        },
+        "training_calendar": {
+          "mode": "SHADOW",
+          "active": false,
+          "candidate_available": false,
+          "blockers": [
+            "TRAINING_CONTROL_SEASON_UNAVAILABLE"
+          ],
+          "envelope_sha256": "804ca739366b1f372947ed661eac9b142567934030091c102cf2707f01b629d5"
+        },
+        "input_files": {
+          "config": "/tmp/ssv53-config/snapshots/d85acc052089da005362460fe9dce04640a504618bd9b279230c0c0787ed5526/mower-config.json",
+          "fallback_used": false,
+          "manifest_etag": "\"0x8DF0E98C3FA361F\"",
+          "manifest_path": "current/manifest.json",
+          "matches": "/tmp/ssv53-config/snapshots/d85acc052089da005362460fe9dce04640a504618bd9b279230c0c0787ed5526/rasen.ics",
+          "matches_found": true,
+          "matches_loaded": 41,
+          "published_at_utc": "2026-09-09T17:34:54+00:00",
+          "source_kind": "azure_blob_cache"
+        }
+      }
+    ],
+    "scope": "Live status observations only; device commands disabled; same-day manual calendar has expected missing preceding-day history."
+  },
+  "hydrawise_latest_observation": {
+    "fresh": true,
+    "zones": 7,
+    "active": 0,
+    "dry_until_utc": "2026-09-09T20:41:51.487032+00:00",
+    "telemetry_confirmed": true,
+    "observed_at_utc": "2026-09-09T18:17:02.2473508Z"
+  },
+  "independent_final_document_review": {
+    "model": "gpt-5.6-luna",
+    "scope": [
+      "installation status",
+      "separate historical and current observation series",
+      "calendar date ranges",
+      "simulation gain"
+    ],
+    "initial_findings": 4,
+    "verified_closed": 4,
+    "remaining_review_findings": 0,
+    "does_not_accept_device_pilot": true
+  }
+}
