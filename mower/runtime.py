@@ -8,6 +8,7 @@ from typing import Any, Mapping
 
 FULL_MOWER_CONFIRMATION = "SSV53-TRAINING-MATCH-PARK-START"
 FULL_FAILSAFE_CONFIRMATION = "SSV53-MOWER-HYDRAWISE-7-ZONES-150-MINUTES-ADAPTIVE-V1"
+OPERATOR_CONTROL_CONFIRMATION = "SSV53-OPERATOR-PARK-HEIGHT-V1"
 
 
 class ControlMode(str, Enum):
@@ -15,6 +16,7 @@ class ControlMode(str, Enum):
 
     OFF = "OFF"
     DRY_RUN = "DRY_RUN"
+    OPERATOR_ONLY = "OPERATOR_ONLY"
     PARK_ONLY = "PARK_ONLY"
     FULL_MOWER = "FULL_MOWER"
     FULL_FAILSAFE = "FULL_FAILSAFE"
@@ -34,6 +36,7 @@ class ControlMode(str, Enum):
     def allows_park(self) -> bool:
         return self in {
             ControlMode.PARK_ONLY,
+            ControlMode.OPERATOR_ONLY,
             ControlMode.FULL_MOWER,
             ControlMode.FULL_FAILSAFE,
         }
@@ -73,6 +76,10 @@ class RuntimeSettings:
     full_mower_confirmation: str
     full_failsafe_confirmation: str
     park_lookahead_minutes: int
+    # Kept optional at the end so direct construction by older readers stays
+    # command-free until this opt-in mode is explicitly configured.
+    enable_operator_cutting_height_commands: bool = False
+    operator_control_confirmation: str = ""
 
     @classmethod
     def from_mapping(cls, values: Mapping[str, str]) -> "RuntimeSettings":
@@ -124,11 +131,18 @@ class RuntimeSettings:
                 values.get("ENABLE_IRRIGATION_COMMANDS"),
                 default=False,
             ),
+            enable_operator_cutting_height_commands=_parse_bool(
+                values.get("ENABLE_OPERATOR_CUTTING_HEIGHT_COMMANDS"),
+                default=False,
+            ),
             full_mower_confirmation=str(
                 values.get("FULL_MOWER_CONFIRMATION", "")
             ).strip(),
             full_failsafe_confirmation=str(
                 values.get("FULL_FAILSAFE_CONFIRMATION", "")
+            ).strip(),
+            operator_control_confirmation=str(
+                values.get("OPERATOR_CONTROL_CONFIRMATION", "")
             ).strip(),
             park_lookahead_minutes=park_lookahead_minutes,
         )
@@ -147,6 +161,15 @@ class RuntimeSettings:
             self.full_mower_write_gate_enabled
             and self.enable_irrigation_commands
             and self.full_failsafe_confirmation == FULL_FAILSAFE_CONFIRMATION
+        )
+
+    @property
+    def operator_control_gate_enabled(self) -> bool:
+        return (
+            self.control_mode is ControlMode.OPERATOR_ONLY
+            and self.enable_live_reads
+            and self.operator_control_confirmation
+            == OPERATOR_CONTROL_CONFIRMATION
         )
 
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from dataclasses import asdict, dataclass, replace
 from datetime import datetime, timedelta, timezone
 from typing import Any, Mapping
@@ -113,6 +114,9 @@ class AutomationState:
     operator_request_cutting_height_mm: int | None = None
     operator_request_occupancy_override_key: str | None = None
     operator_request_irrigation_schedule_json: str | None = None
+    # Isolated OPERATOR_ONLY command journal. Legacy console request fields
+    # remain deliberately separate and can never be replayed by this path.
+    operator_commands_json: str | None = None
     operator_occupancy_override_key: str | None = None
     operator_occupancy_override_until_utc: str | None = None
     irrigation_schedule_override_json: str | None = None
@@ -160,6 +164,15 @@ class AutomationState:
             "POSSIBLE_IRRIGATION_DURING_GAP",
         }:
             raise ValueError("hydrawise_clear_origin ist ungültig.")
+        if self.operator_commands_json is not None:
+            if len(self.operator_commands_json.encode("utf-8")) > 16_384:
+                raise ValueError("operator_commands_json ist zu groß.")
+            try:
+                journal = json.loads(self.operator_commands_json)
+            except (TypeError, ValueError) as exc:
+                raise ValueError("operator_commands_json ist kein gültiges JSON.") from exc
+            if not isinstance(journal, list) or len(journal) > 32:
+                raise ValueError("operator_commands_json hat ein ungültiges Format.")
         for field_name in (
             "last_cycle_started_utc",
             "last_success_utc",
@@ -439,6 +452,9 @@ class AutomationState:
             ),
             operator_request_irrigation_schedule_json=_normalize_optional_text(
                 values.get("operator_request_irrigation_schedule_json")
+            ),
+            operator_commands_json=_normalize_optional_text(
+                values.get("operator_commands_json")
             ),
             operator_occupancy_override_key=_normalize_optional_text(
                 values.get("operator_occupancy_override_key")

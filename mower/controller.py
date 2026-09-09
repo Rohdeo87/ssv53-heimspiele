@@ -20,6 +20,7 @@ LiveCycleRunner = Callable[..., CycleResult]
 ParkOnlyRunner = Callable[..., CycleResult]
 FullMowerRunner = Callable[..., CycleResult]
 FullFailsafeRunner = Callable[..., CycleResult]
+OperatorRunner = Callable[..., CycleResult]
 RuntimeInputResolver = Callable[..., Any]
 
 
@@ -69,6 +70,7 @@ def run_control_cycle(
     park_only_runner: ParkOnlyRunner | None = None,
     full_mower_runner: FullMowerRunner | None = None,
     full_failsafe_runner: FullFailsafeRunner | None = None,
+    operator_runner: OperatorRunner | None = None,
     runtime_input_resolver: RuntimeInputResolver = resolve_runtime_inputs,
 ) -> CycleResult:
     """Führt genau einen sicheren Azure-Steuerungszyklus aus.
@@ -120,6 +122,21 @@ def run_control_cycle(
 
             full_failsafe_runner = run_full_failsafe_cycle
         return full_failsafe_runner(
+            now_utc=now_utc,
+            settings=settings,
+            environment=environment,
+            past_due=past_due,
+            source=source,
+        )
+
+    if settings.control_mode is ControlMode.OPERATOR_ONLY:
+        if not settings.enable_live_reads:
+            raise RuntimeError("OPERATOR_ONLY benötigt ENABLE_LIVE_READS=true.")
+        if operator_runner is None:
+            # Sender are imported only after this explicitly selected mode.
+            from mower.operator_controls import run_operator_cycle
+            operator_runner = run_operator_cycle
+        return operator_runner(
             now_utc=now_utc,
             settings=settings,
             environment=environment,

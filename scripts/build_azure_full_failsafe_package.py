@@ -43,6 +43,7 @@ REQUIRED_FILES = (
     "mower/decision.py",
     "mower/dry_run.py",
     "mower/full_failsafe.py",
+    "mower/operator_controls.py",
     "mower/input_failure_guard.py",
     "mower/start_dispatch_guard.py",
     "mower/full_mower.py",

@@ -4,6 +4,7 @@ import base64
 import hashlib
 import hmac
 import json
+import importlib
 import secrets
 import threading
 import urllib.parse
@@ -32,7 +33,7 @@ from mower.cutting_height import (
     cutting_height_percent_to_mm,
     supports_metric_cutting_height,
 )
-from mower.runtime import ControlMode, RuntimeSettings
+from mower.runtime import ControlMode, CycleResult, RuntimeSettings
 from mower.state import AutomationState
 from mower.state_store import AzureTableStateStore, StateConflictError
 from mower.safety import occupancy_override_allowed
@@ -1129,6 +1130,80 @@ def _clubhouse_events(environment: Mapping[str, str], now_utc: datetime) -> dict
     return payload
 
 
+def _operator_module():
+    # The read-only distribution intentionally omits all command executors.
+    try:
+        return importlib.import_module("mower.operator_controls")
+    except ModuleNotFoundError as exc:
+        if exc.name != "mower.operator_controls":
+            raise
+        return None
+
+
+def _action_status(settings, state, mower, *, state_available, controls_available,
+                   telemetry_fresh, environment):
+    module = _operator_module()
+    capabilities = {
+        action: {"available": bool(controls_available and _runtime_device_controls_enabled(settings)),
+                 "reason": "AVAILABLE" if controls_available and _runtime_device_controls_enabled(settings) else "AUTOMATION_LOCKED"}
+        for action in ALLOWED_ACTIONS if action != "SET_WINTER_TRAINING"
+    }
+    commands = module.operator_commands_payload(state) if module else {}
+    if settings.control_mode is not ControlMode.OPERATOR_ONLY:
+        return capabilities, commands
+    capabilities = module.action_capabilities(settings) if module else {
+        action: {"available": False, "reason": "OPERATOR_CONTROL_LOCKED"}
+        for action in capabilities
+    }
+    journal_valid = not any(item.get("messageCode") == "JOURNAL_INVALID" for item in commands.values())
+    configured_id = str(environment.get("HUSQVARNA_MOWER_ID") or "").strip()
+    target_known = bool(configured_id and str(mower.get("mower_id") or "") == configured_id)
+    target = mower.get("target_work_area") or {}
+    for action, capability in capabilities.items():
+        if not state_available or not journal_valid:
+            capability.update(available=False, reason="STATE_UNAVAILABLE")
+        elif not target_known:
+            capability.update(available=False, reason="MOWER_TARGET_UNAVAILABLE")
+        elif action == "SET_CUTTING_HEIGHT" and any(
+            item.get("status") == "UNKNOWN" for item in commands.values()
+        ):
+            capability.update(available=False, reason="OPERATOR_ACTION_UNCONFIRMED")
+        elif action == "SET_CUTTING_HEIGHT" and not (
+            telemetry_fresh and supports_metric_cutting_height(mower.get("model"))
+            and not _mower_error_active(mower)
+            and target.get("use_global_cutting_height") is False
+            and target.get("enabled") is True
+            and str(target.get("name") or "").casefold() == "rasenfläche"
+            and type(target.get("id")) is int and target["id"] > 0
+        ):
+            capability.update(available=False, reason="MOWER_STATE_UNAVAILABLE")
+    return capabilities, commands
+
+
+def _operation_mode(settings, state, mower, telemetry_fresh):
+    if not telemetry_fresh:
+        return "UNKNOWN"
+    if settings.control_mode in {ControlMode.FULL_MOWER, ControlMode.FULL_FAILSAFE} and (
+        settings.full_mower_write_gate_enabled and state.continuous_mowing_owned
+        and state.last_decision_code != "EXTERNAL_OVERRIDE"
+    ):
+        return "AUTOMATIC"
+    return "MANUAL"
+
+
+def _operator_display_fallback(settings, environment, now_utc):
+    if settings.control_mode is not ControlMode.OPERATOR_ONLY:
+        raise RuntimeError("Operator display fallback requires OPERATOR_ONLY")
+    module = _operator_module()
+    if module is None:
+        raise RuntimeError("Operator display unavailable")
+    mower = module.read_operator_mower(environment)
+    return CycleResult(2, now_utc.isoformat(), "platzwart-status-mower-only",
+                       settings.control_mode.value, False, "PLAN_UNAVAILABLE", False,
+                       "Der Belegungsplan oder die Bewässerungsdaten fehlen. Bitte aktualisieren.",
+                       {"mower": mower, "current_plan": {}, "hydrawise": {}})
+
+
 def live_status(environment: Mapping[str, str], now_utc: datetime) -> dict[str, Any]:
     controls_available = True
     dashboard_snapshot_only = str(environment.get("HYDRAWISE_DASHBOARD_OBSERVATION_MODE") or "OFF").strip().upper() != "OFF"
@@ -1173,48 +1248,39 @@ def live_status(environment: Mapping[str, str], now_utc: datetime) -> dict[str, 
             None,
             next_local_midnight(now_utc).isoformat(),
         )
+    settings = RuntimeSettings.from_mapping(environment)
     try:
-        settings = RuntimeSettings.from_mapping(environment)
         result = run_read_only_cycle(
-            now_utc=now_utc,
-            settings=settings,
-            environment=environment,
-            past_due=False,
-            source="platzwart-status",
-            persist_observations=False,
+            now_utc=now_utc, settings=settings, environment=environment,
+            past_due=False, source="platzwart-status", persist_observations=False,
             dashboard_snapshot_only=dashboard_snapshot_only,
             training_control_snapshot=training_control,
         )
-    except RuntimeError as exc:
-        # Die Steuerung muss bei einer abgelaufenen dynamischen Konfiguration
-        # weiterhin fail-closed bleiben. Für die ausschließlich lesende Anzeige
-        # dürfen wir dagegen die paketierte Konfiguration verwenden: Dieser
-        # Pfad ruft nur Live-Zustände ab und kann niemals Befehle senden.
-        if "Keine frische, validierte Laufzeitkonfiguration verfügbar" not in str(exc):
+    except Exception as exc:
+        stale_config = isinstance(exc, RuntimeError) and (
+            "Keine frische, validierte Laufzeitkonfiguration verfügbar" in str(exc)
+        )
+        if stale_config:
+            # Packaged fallback only explains the display; it never authorizes a start.
+            display_environment = dict(environment)
+            display_environment["SSV53_DYNAMIC_CONFIG_ENABLED"] = "false"
+            result = run_read_only_cycle(
+                now_utc=now_utc, settings=settings, environment=display_environment,
+                past_due=False, source="platzwart-status-display-only",
+                persist_observations=False, dashboard_snapshot_only=dashboard_snapshot_only,
+                training_control_snapshot=training_control,
+            )
+            if state_available:
+                data_quality = {"code": "CONFIG_STALE", "displayOnly": True,
+                                "message": "Der Belegungsplan ist nicht aktuell. Bitte aktualisieren und den Platzwart informieren. Keine Geräte starten."}
+        elif settings.control_mode is ControlMode.OPERATOR_ONLY:
+            # Parking remains available when the independent mower GET works.
+            result = _operator_display_fallback(settings, environment, now_utc)
+            data_quality = {"code": "PLAN_UNAVAILABLE", "displayOnly": True,
+                            "message": result.message}
+        else:
             raise
-        display_environment = dict(environment)
-        display_environment["SSV53_DYNAMIC_CONFIG_ENABLED"] = "false"
-        settings = RuntimeSettings.from_mapping(display_environment)
-        result = run_read_only_cycle(
-            now_utc=now_utc,
-            settings=settings,
-            environment=display_environment,
-            past_due=False,
-            source="platzwart-status-display-only",
-            persist_observations=False,
-            dashboard_snapshot_only=dashboard_snapshot_only,
-            training_control_snapshot=training_control,
-        )
         controls_available = False
-        if state_available:
-            data_quality = {
-                "code": "CONFIG_STALE",
-                "displayOnly": True,
-                "message": (
-                    "Der Belegungsplan ist nicht aktuell. Bitte den Mäher vor Ort "
-                    "prüfen und den Platzwart informieren. Keine Geräte starten."
-                ),
-            }
     details = result.details
     mower = dict(details.get("mower") or {})
     hydrawise = dict(details.get("hydrawise") or {})
@@ -1233,6 +1299,11 @@ def live_status(environment: Mapping[str, str], now_utc: datetime) -> dict[str, 
     device_controls_available = bool(
         controls_available
         and _runtime_device_controls_enabled(settings)
+    )
+    action_capabilities, operator_commands = _action_status(
+        settings, state, mower, state_available=state_available,
+        controls_available=controls_available, telemetry_fresh=telemetry_fresh,
+        environment=environment,
     )
     current_plan = _display_current_plan(
         dict(details.get("current_plan") or {}),
@@ -1339,6 +1410,8 @@ def live_status(environment: Mapping[str, str], now_utc: datetime) -> dict[str, 
         "generatedAt": now_utc.astimezone(timezone.utc).isoformat(),
         "controlsAvailable": controls_available,
         "deviceControlsAvailable": device_controls_available,
+        "actionCapabilities": action_capabilities,
+        "operatorCommands": operator_commands,
         "dataQuality": data_quality,
         "overall": {
             "code": state.last_decision_code if controls_available else data_quality["code"],
@@ -1351,6 +1424,7 @@ def live_status(environment: Mapping[str, str], now_utc: datetime) -> dict[str, 
             "displayLabel": _mower_display_label(mower, state),
             "inactiveReason": mower.get("inactive_reason") or mower.get("inactiveReason"),
             "mode": mower.get("mode"),
+            "operationMode": _operation_mode(settings, state, mower, telemetry_fresh),
             "batteryPercent": mower.get("battery_percent"), "errorCode": mower.get("error_code"),
             "errorActive": _mower_error_active(mower),
             "errorMessage": _mower_error_message(mower),
@@ -1373,7 +1447,7 @@ def live_status(environment: Mapping[str, str], now_utc: datetime) -> dict[str, 
             "zones": zones, "releaseConfirmation": hydrawise.get("release_confirmation"),
         },
         "occupancy": {
-            "available": data_quality["code"] != "CONFIG_STALE",
+            "available": data_quality["code"] not in {"CONFIG_STALE", "PLAN_UNAVAILABLE"},
             "overrideAllowed": occupancy_override_allowed(current_plan.get("blocked_now")),
             "current": current_plan.get("blocked_now"), "next": current_plan.get("next_block"),
             "parking": current_plan.get("parking_block"),
@@ -1405,6 +1479,8 @@ def unavailable_live_status(now_utc: datetime) -> dict[str, Any]:
         "generatedAt": now_utc.astimezone(timezone.utc).isoformat(),
         "controlsAvailable": False,
         "deviceControlsAvailable": False,
+        "actionCapabilities": {action: {"available": False, "reason": "STATE_UNAVAILABLE"} for action in ALLOWED_ACTIONS},
+        "operatorCommands": {},
         "dataQuality": {
             "code": "DISPLAY_UNAVAILABLE",
             "displayOnly": True,
@@ -1413,6 +1489,7 @@ def unavailable_live_status(now_utc: datetime) -> dict[str, Any]:
         "overall": {"code": "DISPLAY_UNAVAILABLE", "message": message},
         "mower": {
             "activity": None,
+            "operationMode": "UNKNOWN",
             "state": None,
             "displayActivity": None,
             "displayLabel": None,
@@ -1472,6 +1549,7 @@ def request_action(
     irrigation_schedule: Mapping[str, Any] | None = None,
     winter_training_enabled: bool | None = None,
     training_revision: str | None = None,
+    client_contract_version: int | None = None,
     state_store_factory=AzureTableStateStore.from_environment,
 ) -> dict[str, Any]:
     normalized = action.strip().upper()
@@ -1599,10 +1677,8 @@ def request_action(
     elif normalized == "SET_CUTTING_HEIGHT":
         if cutting_height_mm is None:
             raise PlatzwartError("CUTTING_HEIGHT_INVALID", "Bitte eine Schnitthöhe wählen.")
-        try:
-            cutting_height_mm = int(cutting_height_mm)
-        except (TypeError, ValueError) as exc:
-            raise PlatzwartError("CUTTING_HEIGHT_INVALID", "Bitte eine gültige Schnitthöhe wählen.") from exc
+        if type(cutting_height_mm) is not int:
+            raise PlatzwartError("CUTTING_HEIGHT_INVALID", "Bitte eine ganze Schnitthöhe in Millimetern wählen.")
         if not MINIMUM_MM <= cutting_height_mm <= MAXIMUM_MM:
             raise PlatzwartError(
                 "CUTTING_HEIGHT_INVALID",
@@ -1615,6 +1691,32 @@ def request_action(
         run_seconds = None
         cutting_height_mm = None
     settings = RuntimeSettings.from_mapping(environment)
+    if settings.control_mode is ControlMode.OPERATOR_ONLY:
+        if type(client_contract_version) is not int or client_contract_version != 2:
+            raise PlatzwartError("APP_UPDATE_REQUIRED", "Bitte die Platzpflegeseite schließen und neu öffnen.", 409)
+        module = _operator_module()
+        if module is None or normalized not in {"PARK_MOWER", "SET_CUTTING_HEIGHT"}:
+            raise PlatzwartError("OPERATOR_CONTROL_LOCKED", "Diese Bedienaktion ist noch nicht freigegeben.", 409)
+        mower_id = str(environment.get("HUSQVARNA_MOWER_ID") or "").strip()
+        if not mower_id:
+            raise PlatzwartError("OPERATOR_CONTROL_LOCKED", "Der Mäher ist noch nicht für die Bedienung eingerichtet.", 409)
+        try:
+            store = state_store_factory(environment)
+            command = module.queue_operator_action(store, settings, normalized, request_id,
+                                                   now_utc, mower_id=mower_id,
+                                                   cutting_height_mm=cutting_height_mm)
+        except StateConflictError as exc:
+            raise PlatzwartError("STATE_CHANGED", "Der Stand hat sich geändert. Bitte aktualisieren.", 409) from exc
+        except module.OperatorControlError as exc:
+            code = exc.code if exc.code in {"ACTION_PENDING", "REQUEST_ID_REUSED", "OPERATOR_ACTION_UNCONFIRMED"} else "OPERATOR_CONTROL_LOCKED"
+            message = {
+                "ACTION_PENDING": "Diese Bedienaktion wird bereits bearbeitet. Bitte warten.",
+                "REQUEST_ID_REUSED": "Die Anfrage passt nicht zum bisherigen Auftrag. Bitte aktualisieren.",
+                "OPERATOR_ACTION_UNCONFIRMED": "Die vorherige Änderung ist noch nicht bestätigt. Bitte den aktuellen Wert prüfen.",
+            }.get(code, "Diese Änderung ist gerade nicht möglich. Bitte aktualisieren.")
+            raise PlatzwartError(code, message, 409) from exc
+        ConsoleTableStore.from_environment(environment).audit(now_utc, normalized, "ACCEPTED", request_id)
+        return {"accepted": True, "requestId": request_id, "status": command["status"], "operatorCommand": command}
     if not _runtime_device_controls_enabled(settings):
         raise PlatzwartError("AUTOMATION_LOCKED", "Die sichere Automatik ist nicht vollständig freigegeben.", 409)
     store = AzureTableStateStore.from_environment(environment)

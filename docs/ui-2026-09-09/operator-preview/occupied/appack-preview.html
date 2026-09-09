@@ -1,6 +1,17 @@
 <!doctype html>
 <html lang="de">
 <head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<script>
+window.auditFixture={"ok": true, "generatedAt": "2026-09-09T21:16:33Z", "controlsAvailable": true, "deviceControlsAvailable": false, "actionCapabilities": {"PARK_MOWER": {"available": true, "reason": "AVAILABLE"}, "SET_CUTTING_HEIGHT": {"available": true, "reason": "AVAILABLE"}, "START_MOWING": {"available": false, "reason": "FULL_FAILSAFE_GATE"}, "START_IRRIGATION": {"available": false, "reason": "FULL_FAILSAFE_GATE"}, "START_IRRIGATION_ZONE": {"available": false, "reason": "FULL_FAILSAFE_GATE"}, "STOP_IRRIGATION_NOW": {"available": false, "reason": "FULL_FAILSAFE_GATE"}, "CUSTOMIZE_NEXT_IRRIGATION": {"available": false, "reason": "FULL_FAILSAFE_GATE"}}, "operatorCommands": {}, "overall": {"code": "EXTERNAL_OVERRIDE", "message": "Externally started"}, "mower": {"activity": "MOWING", "state": "IN_OPERATION", "displayActivity": "MOWING", "operationMode": "MANUAL", "telemetryFresh": true, "statusAgeSeconds": 16, "connected": true, "errorCode": 0, "batteryPercent": 51, "model": "Husqvarna Automower 580 EPOS", "cuttingHeightMm": 25, "cuttingHeightSupported": true, "cuttingHeightMinimumMm": 20, "cuttingHeightMaximumMm": 60, "workAreaProgress": 48}, "automation": {"continuousMowingOwned": false}, "irrigation": {"safety": {"available": true, "fresh": true, "clear_now": true, "active_zone_count": 0}, "zones": []}, "occupancy": {"available": true, "current": {"title": "Training Jugend (Beispiel)", "source": "training", "start": "2026-09-09T21:00:00Z", "end": "2026-09-09T22:00:00Z"}, "parking": null, "upcoming": []}, "coordination": {"dryUntil": null, "blockers": [], "dataAgeSeconds": {"mower": 16, "irrigation": 4, "controller": 31}, "chargingEndEstimate": null}, "dataQuality": {"code": "LIVE", "displayOnly": false}, "irrigationSchedule": {"available": true, "nextRun": {"start": "2026-09-10T02:30:00Z", "zones": []}}, "statistics": {}, "irrigationStatistics": {}, "clubhouse": {"available": true, "events": []}};
+localStorage.setItem('ssv53_platzwart_device_v1',JSON.stringify({deviceId:'synthetic',deviceToken:'not-a-credential'}));
+sessionStorage.setItem('ssv53_platzwart_session_v1',JSON.stringify({token:'synthetic-not-signed',expiresAt:'2099-01-01T00:00:00Z'}));
+window.fetch=async function(url,options){
+ if(options&&options.method==='POST')return {ok:false,status:409,json:async()=>({error:'Vorschau: Es wird kein Gerätebefehl gesendet.'})};
+ if(location.hash==='#offline')throw new TypeError('Failed to fetch');
+ return {ok:true,status:200,json:async()=>window.auditFixture};
+};
+</script>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>Platzpflege</title>
@@ -52,10 +63,10 @@
     .training-toggle-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px}.training-toggle-row h2{margin:0;font-size:21px}.training-switch{display:flex;align-items:center;gap:9px;min-height:52px;flex:0 0 auto;padding:8px 10px;border:2px solid var(--line);border-radius:14px;background:#fff;color:var(--ink);font-weight:700}.training-switch-track{display:block;position:relative;width:42px;height:26px;border-radius:16px;background:#8792a3}.training-switch-track:after{content:"";position:absolute;left:3px;top:3px;width:20px;height:20px;background:#fff;border-radius:50%}.training-switch[aria-checked="true"] .training-switch-track{background:var(--blue)}.training-switch[aria-checked="true"] .training-switch-track:after{left:19px}.training-switch:disabled{opacity:.55}.training-switch:focus-visible{outline:3px solid var(--blue);outline-offset:3px}.training-note{font-size:16px;margin:12px 0 0}.training-pending{font-weight:700;color:var(--blue)}
   </style>
 </head>
-<body>
+<body><div style="background:#172033;color:white;padding:12px;text-align:center">SIMULATION · Beispielwerte · Netzwerk gesperrt · keine Gerätebefehle<br><a style="color:white" href="#offline" onclick="location.hash='offline';document.getElementById('refresh').click()">Verbindungsausfall zeigen</a></div>
 <main class="shell">
   <header class="head">
-    <img class="logo" src="https://cdn.appack.de/ssv53/images/Icon_Verein.png" alt="SSV 53">
+    <div class="logo" style="margin:auto;font-weight:800;color:#285ea7;padding:20px 0">SSV53</div>
     <h1>Platzpflege</h1><hr class="gold">
   </header>
 
@@ -125,7 +136,7 @@
 <dialog id="water-attention-dialog" class="stats-dialog"><div class="dialog-body"><div class="stats-head"><div><div class="eyebrow">Bewässerung</div><h2 id="water-attention-title">Bewässerung prüfen</h2></div><button id="water-attention-close" class="stats-close" type="button" aria-label="Hinweis schließen">×</button></div><div id="water-attention-summary" class="attention-summary"></div><ul id="water-attention-list" class="attention-list"></ul><p class="stats-note">Fehlt ein Abschluss, bitte die Bewässerung vor Ort prüfen.</p></div></dialog>
 
 <script>
-  var profileJSON = [#if profile_json?has_content]${profile_json}[#else]{}[/#if];
+  var profileJSON = {"roleKeys":["Platzwart"]};
   document.addEventListener("DOMContentLoaded",function(){"use strict";
     function ssvElementVisible(element){if(!element||!element.isConnected)return false;var box=element.getBoundingClientRect();return box.width>0&&box.height>0&&window.getComputedStyle(element).visibility!=="hidden"}
     function ssvElementOverflows(element){if(!ssvElementVisible(element))return false;return element.scrollWidth>element.clientWidth+2||element.scrollHeight>element.clientHeight+2}
@@ -133,7 +144,7 @@
     function ssvNeedsLargeTextLayout(){var textTargets=document.querySelectorAll(".btn:not(.icon-btn),.plan-choice,.profile-row button,.zone-controls select,.facts span,.stat-value,.stats-note,.height-value"),groupTargets=document.querySelectorAll(".card-head,.card-icons,.stats-head,.dialog-actions,.plan-actions.two,.profile-row,.plan-datetime-group,.zone-controls");return Array.prototype.some.call(textTargets,ssvElementOverflows)||Array.prototype.some.call(groupTargets,ssvChildrenClipped)}
     var ssvLayoutCheckPending=false;function ssvCheckLargeTextLayout(){if(document.documentElement.classList.contains("ssv-large-text")||ssvLayoutCheckPending)return;ssvLayoutCheckPending=true;window.requestAnimationFrame(function(){window.requestAnimationFrame(function(){ssvLayoutCheckPending=false;if(ssvNeedsLargeTextLayout())document.documentElement.classList.add("ssv-large-text")})})}
     window.ssvNeedsLargeTextLayout=ssvNeedsLargeTextLayout;window.addEventListener("resize",ssvCheckLargeTextLayout);window.addEventListener("orientationchange",ssvCheckLargeTextLayout);if(document.fonts&&document.fonts.ready)document.fonts.ready.then(ssvCheckLargeTextLayout);if(window.MutationObserver)new MutationObserver(ssvCheckLargeTextLayout).observe(document.body,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:["class","hidden"]});ssvCheckLargeTextLayout();
-    var API="https://func-ssv53platzpflege-prod-q7kbw54s.azurewebsites.net/api/platzwart";
+    var API="/synthetic/platzwart";
     var DEVICE_KEY="ssv53_platzwart_device_v1",SESSION_KEY="ssv53_platzwart_session_v1";
     var state={status:null,pendingAction:null,pendingPayload:null,pendingRequestId:null,timer:0,loading:false,loginPending:false,heightDirty:false,heightChoice:30};
     function norm(v){return String(v||"").trim().toLocaleLowerCase("de-DE").replace(/ä/g,"ae").replace(/ö/g,"oe").replace(/ü/g,"ue").replace(/ß/g,"ss").replace(/[\s_-]+/g,"")}

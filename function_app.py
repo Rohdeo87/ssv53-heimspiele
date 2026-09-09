@@ -848,6 +848,7 @@ def ssv53_platzwart_action(req: func.HttpRequest) -> func.HttpResponse:
     if req.method.upper() == "OPTIONS":
         return func.HttpResponse(status_code=204, headers=_platzwart_headers(req))
     now = datetime.now(timezone.utc)
+    body = {}
     try:
         session = require_platzwart_session(_platzwart_token(req), os.environ, now)
         body = req.get_json()
@@ -865,11 +866,8 @@ def ssv53_platzwart_action(req: func.HttpRequest) -> func.HttpResponse:
                 if body.get("runSeconds") is not None
                 else None
             ),
-            cutting_height_mm=(
-                int(body["cuttingHeightMm"])
-                if body.get("cuttingHeightMm") is not None
-                else None
-            ),
+            cutting_height_mm=body.get("cuttingHeightMm"),
+            client_contract_version=body.get("clientContractVersion"),
             occupancy_override_key=str(body.get("occupancyOverrideKey") or ""),
             irrigation_schedule=(
                 body.get("schedule")
@@ -897,6 +895,10 @@ def ssv53_platzwart_action(req: func.HttpRequest) -> func.HttpResponse:
             400,
         )
     except PlatzwartError as exc:
+        raw_action = body.get("action") if isinstance(body, dict) else None
+        # Log the bounded action kind and rejection, never PIN/token/body/device IDs.
+        safe_action = raw_action if isinstance(raw_action, str) and len(raw_action) <= 48 and all(c in "ABCDEFGHIJKLMNOPQRSTUVWXYZ_" for c in raw_action) else "INVALID"
+        LOGGER.warning("SSV53_PLATZWART_ACTION_REJECTED action=%s code=%s", safe_action, exc.code)
         return _platzwart_response(req, {"code": exc.code, "error": str(exc)}, exc.status_code)
     except Exception:
         LOGGER.exception("SSV53_PLATZWART_ACTION_ERROR")
