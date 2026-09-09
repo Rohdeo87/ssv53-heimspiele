@@ -1,5 +1,10 @@
 # Gesamtbewertung der SSV53-Platzpflegeplattform
 
+**Begonnene Einführung:** Die [Startprüfung ab 17:41 Uhr](live-introduction-check.md)
+berücksichtigt die neue Bestätigung zu Station und Zufahrt. Sie dokumentiert
+die noch fehlende Zustandssicherung und die weiterhin ausgefallene alte
+Steuerung. Es wurde bisher kein Deployment und kein Gerätebefehl ausgeführt.
+
 **Aktueller Abschlussstand:** [Entwicklungsprüfung und Produktionsbefunde](final-preflight.md),
 [verbindliche neue Betriebsregeln](user-operating-rules.md) und
 [konkreter Freigabeablauf](final-activation-runbook.md). Der Liefernachweis steht
