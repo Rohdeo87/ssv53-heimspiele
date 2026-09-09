@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "checked_at_utc": "2026-09-09 10:49:45 UTC",
+  "checked_pr_head": "695f8b6d39e9876fabfec4eba2b3f0b8044f6aeb",
+  "source_commit": "285d0018b9064ca7fe05c5822af9f808d4e16d03",
+  "checked_base": "9c2d0fc9c010b366cd49b58b8086b27f9d59a0dd",
+  "runs": [
+    {
+      "id": 34342094043,
+      "name": "Azure-Function Quellpaket bauen",
+      "status": "completed",
+      "conclusion": "success",
+      "sha": "695f8b6d39e9876fabfec4eba2b3f0b8044f6aeb",
+      "url": "https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/34342094043"
+    },
+    {
+      "id": 34342094009,
+      "name": "SSV53 Code prüfen",
+      "status": "completed",
+      "conclusion": "success",
+      "sha": "695f8b6d39e9876fabfec4eba2b3f0b8044f6aeb",
+      "url": "https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/34342094009"
+    }
+  ],
+  "ci_artifacts": [
+    {
+      "id": 10100153477,
+      "name": "ssv53-azure-function-source-74",
+      "size_in_bytes": 183180,
+      "expired": false,
+      "digest": "sha256:22ddd65e4109e012c14a1af2e793e3d58bad389a2c92ec7c2a36cde85d3d8d82",
+      "created_at": "2026-09-09T10:47:42Z",
+      "url": "https://api.github.com/repos/Rohdeo87/ssv53-heimspiele/actions/artifacts/10100153477"
+    }
+  ],
+  "ci_artifact_contents_downloaded": false,
+  "ci_artifact_stage_from_workflow": "DRY_RUN_READ_ONLY",
+  "local_full_failsafe_package_is_separate": true,
+  "pr_draft": true,
+  "pr_merged": false,
+  "auto_merge": false,
+  "new_software_deployed": false,
+  "device_actions_performed": []
+}

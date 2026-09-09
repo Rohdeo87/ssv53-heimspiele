@@ -72,8 +72,11 @@
     "git_diff_check": "passed",
     "default_tests_send_real_device_commands": false,
     "ci": {
-      "status_at_document_creation": "not yet pushed",
-      "review_location": "https://github.com/Rohdeo87/ssv53-heimspiele/pull/47/checks"
+      "status": "success",
+      "tested_pr_head": "695f8b6d39e9876fabfec4eba2b3f0b8044f6aeb",
+      "source_commit": "285d0018b9064ca7fe05c5822af9f808d4e16d03",
+      "evidence": "docs/audit-2026-09-09/follow-up-ci-evidence.json",
+      "later_metadata_commits_are_not_this_checked_head": true
     }
   },
   "independent_reviews": [
