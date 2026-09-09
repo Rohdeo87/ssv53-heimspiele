@@ -37,7 +37,7 @@ from mower.irrigation_schedule import (
     START_BLOCKING_SCHEDULE_STATUSES,
 )
 from mower.runtime import ControlMode, CycleResult, RuntimeSettings
-from mower.safety import CommandIntent, evaluate_command_gate
+from mower.safety import CommandIntent, evaluate_command_gate, occupancy_override_allowed
 from mower.state import AutomationState
 from mower.state_store import AzureTableStateStore, StateConflictError, StateStore
 
@@ -1019,7 +1019,11 @@ def _cycle_state(
     mower = _as_dict(details.get("mower"))
     safety = _as_dict(_as_dict(details.get("hydrawise")).get("safety"))
     observed = _parse_time(safety.get("observed_at_utc"))
-    fresh = bool(safety.get("available")) and bool(safety.get("fresh"))
+    fresh = (
+        bool(safety.get("available"))
+        and bool(safety.get("fresh"))
+        and safety.get("relay_set_valid") is True
+    )
     clear = fresh and bool(safety.get("clear_now"))
     zones = _as_dict(details.get("hydrawise")).get("zones")
     next_irrigation: datetime | None = None
@@ -1061,6 +1065,8 @@ def _state_details(state: AutomationState, *, persisted: bool, error: str | None
         "park_confirmed_utc": state.park_confirmed_utc,
         "park_confirmed_observations": state.park_confirmed_observations,
         "continuous_mowing_owned": state.continuous_mowing_owned,
+        "mower_start_pending_since_utc": state.mower_start_pending_since_utc,
+        "mower_start_pending_deadline_utc": state.mower_start_pending_deadline_utc,
         "irrigation_phase": state.irrigation_phase,
         "irrigation_plan_id": state.irrigation_plan_id,
         "irrigation_current_relay_id": state.irrigation_current_relay_id,
@@ -1104,6 +1110,7 @@ def _state_details(state: AutomationState, *, persisted: bool, error: str | None
         ),
         "hydrawise_clear_since_utc": state.hydrawise_clear_since_utc,
         "hydrawise_clear_origin": state.hydrawise_clear_origin,
+        "hydrawise_drying_since_utc": state.hydrawise_drying_since_utc,
     }
 
 
@@ -1180,6 +1187,108 @@ def _failed_irrigation(state: AutomationState, reason: str) -> AutomationState:
         irrigation_phase="FAILED",
         irrigation_failed_reason=reason,
     )
+
+
+def _hold_unconfirmed_mower_start(
+    *, store: StateStore, original: AutomationState, state: AutomationState,
+    result: CycleResult, details: dict[str, Any], settings: RuntimeSettings,
+    environment: Mapping[str, str], now_utc: datetime,
+    mower_status_fresh: bool, expected_relay_ids: frozenset[int],
+    park_sender: ParkSender, stop_zone_sender: StopZoneSender,
+) -> CycleResult:
+    """An ambiguous START is a durable stop latch, never an expired lease.
+
+    A later dock observation does not prove that the vendor's command queue
+    is empty. Only protective parking and an explicit immediate water stop
+    are permitted here. Automatic water/start/resume commands stay disabled
+    until an operator reconciles the vendor/device state outside this loop.
+    """
+
+    mower = _as_dict(details.get("mower"))
+    hydra = _as_dict(_as_dict(details.get("hydrawise")).get("safety"))
+    action = _operator_action(state, now_utc)
+    details["mower_start_outcome"] = {
+        "status": "UNCONFIRMED",
+        "reserved_at_utc": state.mower_start_pending_since_utc,
+        "requested_deadline_utc": state.mower_start_pending_deadline_utc,
+        "last_acknowledged_deadline_utc": state.continuous_mowing_window_end_utc,
+        "automatic_retry_allowed": False,
+        "dock_observation_clears_latch": False,
+        "resolution": "Gerätewarteschlange, nativen Zeitplan und sicheren Parkzustand vor manueller Freigabe abgleichen.",
+    }
+    safe_stop_ids = _active_relay_ids(details)
+    if (
+        action == "STOP_IRRIGATION_NOW"
+        and settings.enable_irrigation_commands
+        and hydra.get("available") is True and hydra.get("fresh") is True
+        and hydra.get("relay_set_valid") is True
+        and set(hydra.get("observed_relay_ids", [])) == expected_relay_ids
+        and len(safe_stop_ids) == 1 and safe_stop_ids.issubset(expected_relay_ids)
+    ):
+        reserved = _finish_operator_request(
+            state, "Direkter Wasserstopp reserviert; Mäherstart bleibt ungeklärt.",
+            status="SENT_UNCONFIRMED",
+        )
+        try:
+            store.save(reserved, expected_revision=original.revision)
+        except Exception as exc:
+            return replace(result, decision_code="IRRIGATION_STOP_RESERVATION_FAILED", command_sent=False,
+                           message="Wasserstopp konnte nicht persistent reserviert werden.",
+                           details=_decorate(details, state=state, settings=settings, persisted=False,
+                                             command_sent=False, error=type(exc).__name__))
+        relay_id = next(iter(safe_stop_ids))
+        try:
+            response = stop_zone_sender(str(environment.get("HYDRAWISE_API_KEY", "")), relay_id,
+                                        environment.get("HYDRAWISE_CONTROLLER_ID") or None)
+        except Exception as exc:
+            details["irrigation_action"] = {"type": "StopZone", "relay_id": relay_id,
+                                             "outcome": "UNCONFIRMED", "error_type": type(exc).__name__}
+        else:
+            details["irrigation_action"] = {"type": "StopZone", "relay_id": relay_id, "response": response}
+        return replace(result, decision_code="MOWER_START_OUTCOME_UNCONFIRMED", command_sent=True,
+                       message="Wasserstopp angefordert; die ungeklärte Mäheraktion sperrt weitere Starts.",
+                       details=_decorate(details, state=reserved, settings=settings, persisted=True, command_sent=True))
+    if action and action != "PARK_MOWER":
+        state = _finish_operator_request(state, "Startwirkung ungeklärt; zuerst Geräteaktion abgleichen.", status="REJECTED")
+
+    activity = str(mower.get("activity") or "").upper()
+    mower_state = str(mower.get("state") or "").upper()
+    safe_to_park = (
+        settings.enable_park_commands and mower_status_fresh and mower.get("connected") is True
+        and now_utc - _parse_time(state.mower_start_pending_since_utc) >= timedelta(seconds=90)
+        and bool(mower.get("mower_id")) and int(mower.get("error_code") or 0) == 0
+        and mower_state not in ERROR_STATES | MANUAL_STATES
+        and activity in PARK_COMMAND_ACTIVITIES
+        and (not state.parked_by_automation or activity in PARKABLE_ACTIVITIES
+             or str(mower.get("override_action") or "").upper() not in PARK_OVERRIDE_ACTIONS)
+    )
+    if safe_to_park:
+        intent = CommandIntent(action="PARK", target=str(mower["mower_id"]),
+                               reason=f"unconfirmed-start|{state.mower_start_pending_since_utc}")
+        gate = evaluate_command_gate(state=original, intent=intent, now_utc=now_utc, dedupe_minutes=3)
+        if gate.allowed:
+            parked = state.record_command(fingerprint=intent.fingerprint, sent_utc=now_utc,
+                                           action="PARK", park_source="start_outcome_unknown", restart_allowed=False)
+            try:
+                store.save(parked, expected_revision=original.revision)
+            except Exception as exc:
+                return replace(result, decision_code="MOWER_START_OUTCOME_UNCONFIRMED", command_sent=False,
+                               message="Startwirkung ungeklärt; Schutzparkierung konnte nicht reserviert werden.",
+                               details=_decorate(details, state=state, settings=settings, persisted=False,
+                                                 command_sent=False, error=type(exc).__name__))
+            try:
+                response = park_sender(str(environment.get("HUSQVARNA_CLIENT_ID", "")),
+                                       str(environment.get("HUSQVARNA_CLIENT_SECRET", "")), str(mower["mower_id"]))
+            except Exception as exc:
+                details["park_action"] = {"type": "ParkUntilFurtherNotice", "outcome": "UNCONFIRMED", "error_type": type(exc).__name__}
+            else:
+                details["park_action"] = {"type": "ParkUntilFurtherNotice", "response": response}
+            return replace(result, decision_code="MOWER_START_OUTCOME_UNCONFIRMED", command_sent=True,
+                           message="Schutzparkierung angefordert; ungeklärte Startwirkung erfordert manuellen Abgleich.",
+                           details=_decorate(details, state=parked, settings=settings, persisted=True, command_sent=True))
+    return _persist_result(store=store, original=original, state=state, result=result, details=details,
+                           settings=settings, decision_code="MOWER_START_OUTCOME_UNCONFIRMED",
+                           message="Die frühere Startwirkung ist ungeklärt; Parkbeobachtung allein hebt diese Sperre nicht auf.")
 
 
 def _partial_irrigation_end_proof(
@@ -1539,6 +1648,14 @@ def run_full_failsafe_cycle(
             settings=settings,
             decision_code="MAINTENANCE_MODE",
             message="Wartungsmodus ist aktiv; alle automatischen Befehle bleiben gesperrt.",
+        )
+
+    if state.mower_start_pending_since_utc is not None:
+        return _hold_unconfirmed_mower_start(
+            store=store, original=original, state=state, result=result, details=details,
+            settings=settings, environment=environment, now_utc=now,
+            mower_status_fresh=mower_status_fresh, expected_relay_ids=expected_relay_ids,
+            park_sender=park_sender, stop_zone_sender=stop_zone_sender,
         )
 
     block_source = str(parking_block.get("source") or "").strip().lower()
@@ -2713,6 +2830,8 @@ def run_full_failsafe_cycle(
         and current_occupancy_end > now
         and bool(all_current_block_sources)
         and all_current_block_sources.issubset(occupancy_only_sources)
+        and occupancy_override_allowed(blocked_now)
+        and (not parking_block or occupancy_override_allowed(parking_block))
         and state.irrigation_phase is None
     )
     if occupancy_override_request and (
@@ -3659,10 +3778,10 @@ def run_full_failsafe_cycle(
                 message="Beregnung wartet zunächst auf den eigenen sicheren Parkbefehl.",
             )
 
-        # ``status_timestamp_ms`` is Husqvarnas Zeitpunkt der letzten
-        # Zustandsaenderung, nicht der Zeitpunkt unseres erfolgreichen
-        # Live-Abrufs. Vor einem Wasserstart bleibt ein frischer Eventnachweis
-        # zwingend. Nach einem bereits gesendeten Zonenstart muss die
+        # ``status_timestamp_ms`` is the backend-generated timestamp of the
+        # latest status update according to Husqvarna, not a physical sensor
+        # timestamp or the receipt time of our poll. Before a water start a
+        # fresh status update remains mandatory. Nach einem Zonenstart muss die
         # Hydrawise-Enderkennung aber weiterlaufen koennen, solange der aktuelle
         # Live-Abruf den Maeher weiterhin verbunden, fehlerfrei und im Dock
         # meldet. Die naechste READY-Zone erfordert danach wieder einen frischen
@@ -4622,7 +4741,7 @@ def run_full_failsafe_cycle(
                     details=details,
                     settings=settings,
                     decision_code="IRRIGATION_ZONE_CONFIRMED_RUNNING",
-                    message="Der angeforderte Hydrawise-Zonenstart ist physisch bestätigt.",
+                    message="Hydrawise meldet die angeforderte Zone als laufend.",
                 )
             start_timeout = _env_int(
                 environment,
@@ -4899,9 +5018,18 @@ def run_full_failsafe_cycle(
         now_utc=now,
         required_clear_minutes=release_minutes,
         persistent_state_available=True,
+        drying_since_utc=state.hydrawise_drying_since_utc,
+        telemetry_confirmation_minutes=_env_int(
+            environment,
+            "HYDRAWISE_DATA_GAP_CONFIRMATION_MINUTES",
+            2,
+            minimum=1,
+            maximum=1440,
+        ),
     )
     cancelled_without_run_release = (
         state.irrigation_cancelled_without_run_utc is not None
+        and state.hydrawise_drying_since_utc is None
         and bool(hydra_safety.get("available"))
         and bool(hydra_safety.get("fresh"))
         and bool(hydra_safety.get("clear_now"))
@@ -5388,68 +5516,54 @@ def run_full_failsafe_cycle(
         command_state = _clear_irrigation(command_state)
     client_id = str(environment.get("HUSQVARNA_CLIENT_ID", "")).strip()
     client_secret = str(environment.get("HUSQVARNA_CLIENT_SECRET", "")).strip()
-    if failsafe_refresh:
-        response = start_sender(
-            client_id,
-            client_secret,
-            mower_id,
-            work_area_id,
-            duration,
+    # All START variants share one durable reservation. Keep the previously
+    # acknowledged interval until the vendor response and following CAS both
+    # succeed; a process death or lost response must not invent a shorter one.
+    reserved = replace(
+        state, revision=state.revision + 1,
+        last_command_fingerprint=intent.fingerprint, last_command_utc=now.isoformat(),
+        mower_start_pending_since_utc=now.isoformat(),
+        mower_start_pending_deadline_utc=command_end.isoformat(),
+    )
+    try:
+        store.save(reserved, expected_revision=original.revision)
+    except Exception as exc:
+        return replace(
+            result, decision_code="MOWER_START_RESERVATION_FAILED", command_sent=False,
+            message="Mäherstart wurde wegen fehlender persistenter Reservierung nicht gesendet.",
+            details=_decorate(details, state=state, settings=settings, persisted=False,
+                              command_sent=False, error=type(exc).__name__),
         )
-        try:
-            store.save(command_state, expected_revision=original.revision)
-        except Exception as exc:
-            details["start_action"] = {
-                "type": "StartInWorkArea",
-                "response": response,
-                "duration_minutes": duration,
-                "work_area_id": work_area_id,
-                "continuous_mowing": True,
-                "command_end_utc": command_end.isoformat(),
-                "failsafe_refresh": True,
-                "state_confirmation_error": f"{type(exc).__name__}: {exc}",
-            }
-            return replace(
-                result,
-                decision_code="CONTINUOUS_MOWING_FAILSAFE_REFRESH_SENT_STATE_UNCONFIRMED",
-                message=(
-                    "Husqvarna hat die sichere kürzere Laufzeit angenommen; "
-                    "die Zustandsbestätigung wird im nächsten Zyklus wiederholt."
-                ),
-                command_sent=True,
-                details=_decorate(
-                    details,
-                    state=state,
-                    settings=settings,
-                    persisted=False,
-                    command_sent=True,
-                    error=f"{type(exc).__name__}: {exc}",
-                ),
-            )
-    else:
-        try:
-            store.save(command_state, expected_revision=original.revision)
-        except Exception as exc:
-            return replace(
-                result,
-                decision_code="MOWER_START_RESERVATION_FAILED",
-                message="Mäherstart wurde wegen fehlender persistenter Reservierung nicht gesendet.",
-                command_sent=False,
-                details=_decorate(
-                    details,
-                    state=state,
-                    settings=settings,
-                    persisted=False,
-                    command_sent=False,
-                    error=f"{type(exc).__name__}: {exc}",
-                ),
-            )
-        response = start_sender(
-            client_id,
-            client_secret,
-            mower_id,
-            work_area_id,
-            duration,
+    try:
+        response = start_sender(client_id, client_secret, mower_id, work_area_id, duration)
+    except Exception as exc:
+        details["start_action"] = {
+            "type": "StartInWorkArea", "outcome": "UNCONFIRMED", "error_type": type(exc).__name__,
+            "requested_deadline_utc": command_end.isoformat(), "failsafe_refresh": failsafe_refresh,
+        }
+        return replace(
+            result, decision_code="MOWER_START_OUTCOME_UNCONFIRMED", command_sent=True,
+            message="Die Startantwort fehlt; weitere Starts bleiben bis zum Abgleich gesperrt.",
+            details=_decorate(details, state=reserved, settings=settings, persisted=True, command_sent=True),
+        )
+    command_state = replace(
+        command_state, revision=reserved.revision + 1,
+        mower_start_pending_since_utc=None, mower_start_pending_deadline_utc=None,
+    )
+    try:
+        store.save(command_state, expected_revision=reserved.revision)
+    except Exception as exc:
+        details["start_action"] = {
+            "type": "StartInWorkArea", "response": response,
+            "duration_minutes": duration, "work_area_id": work_area_id,
+            "continuous_mowing": True, "requested_deadline_utc": command_end.isoformat(),
+            "failsafe_refresh": failsafe_refresh, "state_confirmation_error": type(exc).__name__,
+        }
+        return replace(
+            result, decision_code="MOWER_START_OUTCOME_UNCONFIRMED", command_sent=True,
+            message="Start angenommen, aber nicht sicher gespeichert; weitere Starts bleiben bis zum Abgleich gesperrt.",
+            details=_decorate(details, state=reserved, settings=settings, persisted=False,
+                              command_sent=True, error=type(exc).__name__),
         )
     details["start_action"] = {
         "type": "StartInWorkArea",
@@ -5461,6 +5575,8 @@ def run_full_failsafe_cycle(
         "failsafe_refresh": failsafe_refresh,
         "turnaround_before_dock": turnaround_before_dock,
         "hydrawise_release_minutes": release_minutes,
+        "acknowledgement": "VENDOR_QUEUE_ACCEPTED",
+        "physical_execution_confirmed": False,
     }
     return replace(
         result,
@@ -5474,12 +5590,12 @@ def run_full_failsafe_cycle(
             )
         ),
         message=(
-            "Der laufende Mähauftrag wurde im Mäher selbst bis zur sicheren Rückkehrfrist begrenzt."
+            "Die zeitlich begrenzte Laufzeitänderung wurde angenommen; die Geräteausführung ist noch nicht bestätigt."
             if failsafe_refresh
             else (
-                "Der ausreichend geladene Mäher wurde vor der Station sicher erneut in die Rasenfläche geschickt."
+                "Der begrenzte Startbefehl für die Rückfahrt wurde angenommen; die Geräteausführung ist noch nicht bestätigt."
                 if turnaround_before_dock
-                else "Der Mäher wurde im sicheren freien Fenster zum kontinuierlichen Mähen gestartet."
+                else "Der begrenzte Mähstart wurde angenommen; die Geräteausführung ist noch nicht bestätigt."
             )
         ),
         command_sent=True,

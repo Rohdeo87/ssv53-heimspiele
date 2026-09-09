@@ -6,7 +6,7 @@ import math
 import re
 import statistics
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, datetime, time, timedelta, timezone
 from email.message import EmailMessage
 from email.utils import formataddr
@@ -38,14 +38,27 @@ from mower.weather_store import (
 
 REPORT_PARTITION = "ssv53-daily-safety-report-v1"
 REPORT_TIME_ZONE = ZoneInfo("Europe/Berlin")
-MOWING_ACTIVITIES = frozenset({"MOWING", "LEAVING"})
+MOWING_ACTIVITIES = frozenset({"MOWING"})
 PARKED_ACTIVITIES = frozenset({"PARKED_IN_CS", "CHARGING"})
 QUERY_SCOPE = "https://api.applicationinsights.io/.default"
 MAX_QUERY_ROWS = 20_000
+AREA_COMPLETION_NOTE = (
+    "Flächenabschlüsse laut Gerät stammen ausschließlich aus lastTimeCompleted. "
+    "Zusätzliche Abschlüsse sind Schätzungen aus einem stabilen Fortschritt von mindestens "
+    "99 % mit anschließendem Rücksetzen auf höchstens 1 %. Zeitlich zugehörige "
+    "Gerätemeldungen und Schätzungen zählen nur einmal. Ein unabhängiger Nachweis der "
+    "Schnittwirkung liegt damit nicht vor; Mähzeit und Heimfahrten gelten nicht als Abschluss."
+)
 
 
 class DailyReportError(RuntimeError):
     pass
+
+
+@dataclass(frozen=True)
+class ReportedCommandAttempt:
+    identity: str
+    timestamp_utc: datetime
 
 
 @dataclass(frozen=True)
@@ -80,6 +93,9 @@ class CycleObservation:
     adaptive_lost_dry_mowing_minutes: int
     adaptive_drying_extension_minutes: int
     adaptive_expected_rain_mm: float
+    # Command-bearing cycle events survive deduplication of the state minute.
+    # They are reported attempts, never confirmations of device execution.
+    command_attempts: tuple[ReportedCommandAttempt, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -115,6 +131,13 @@ class DailyReportSummary:
     parking_source: str
     overall_status: str
     warnings: tuple[str, ...]
+    inferred_area_cycles_7d: int = 0
+    last_inferred_area_utc: datetime | None = None
+
+    @property
+    def estimated_area_cycles_7d(self) -> int:
+        """Deduplicated combined count; inferred events remain estimates."""
+        return self.completed_area_cycles_7d + self.inferred_area_cycles_7d
 
 
 @dataclass(frozen=True)
@@ -345,6 +368,9 @@ traces
     battery_percent=toint(p.details.mower.battery_percent),
     decision_code=tostring(p.decision_code),
     command_sent=tobool(p.command_sent),
+    invocation_id=tostring(p.invocation_id),
+    retry_count=toint(p.retry_count),
+    executed_at_utc=tostring(p.executed_at_utc),
     hydrawise_available=tobool(p.details.hydrawise.safety.available),
     hydrawise_fresh=tobool(p.details.hydrawise.safety.fresh),
     hydrawise_active_zones=toint(p.details.hydrawise.safety.active_zone_count),
@@ -385,11 +411,30 @@ def _exception_query(period_start_utc: datetime, period_end_utc: datetime) -> st
 
 def parse_cycle_rows(rows: Sequence[Mapping[str, Any]]) -> list[CycleObservation]:
     observations: dict[datetime, CycleObservation] = {}
+    attempts_by_minute: dict[datetime, dict[str, ReportedCommandAttempt]] = defaultdict(dict)
     for row in rows:
         timestamp = _parse_utc(row.get("timestamp"))
         if timestamp is None:
             continue
         minute = timestamp.replace(second=0, microsecond=0)
+        if _as_bool(row.get("command_sent")):
+            executed = _parse_utc(row.get("executed_at_utc")) or timestamp
+            invocation = str(row.get("invocation_id") or "").strip()
+            # Azure logs the same invocation/retry result at most once logically;
+            # duplicate ingestion must not manufacture another attempt. For old
+            # exports without invocation metadata, use the exact cycle timestamp
+            # and decision, not the containing minute.
+            identity = (
+                f"invocation:{invocation}:retry:{_as_int(row.get('retry_count'))}"
+                if invocation else
+                f"legacy:{executed.isoformat()}:{str(row.get('decision_code') or '')}"
+            )
+            attempt = ReportedCommandAttempt(identity, executed)
+            previous_attempt = attempts_by_minute[minute].get(identity)
+            if previous_attempt is None or attempt.timestamp_utc < previous_attempt.timestamp_utc:
+                attempts_by_minute[minute][identity] = attempt
+        if minute in observations and observations[minute].timestamp_utc > timestamp:
+            continue
         observations[minute] = CycleObservation(
             timestamp_utc=timestamp,
             activity=str(row.get("activity") or "UNKNOWN").upper(),
@@ -438,7 +483,11 @@ def parse_cycle_rows(rows: Sequence[Mapping[str, Any]]) -> list[CycleObservation
                 row.get("adaptive_expected_rain_mm")
             ),
         )
-    return sorted(observations.values(), key=lambda item: item.timestamp_utc)
+    return sorted(
+        (replace(item, command_attempts=tuple(attempts_by_minute[minute].values()))
+         for minute, item in observations.items()),
+        key=lambda item: item.timestamp_utc,
+    )
 
 
 def _return_durations_minutes(
@@ -447,9 +496,16 @@ def _return_durations_minutes(
     durations: list[float] = []
     going_home_started_at: datetime | None = None
     previous_activity: str | None = None
+    previous_timestamp: datetime | None = None
     for item in observations:
+        gap = previous_timestamp is not None and item.timestamp_utc - previous_timestamp > timedelta(seconds=90)
+        if gap:
+            # The mower could already have docked anywhere inside this gap.
+            # Keep a continuing GOING_HOME tail censored until another observed
+            # state starts a new journey; do not report that tail as a full trip.
+            going_home_started_at = None
         if item.activity == "GOING_HOME":
-            if previous_activity != "GOING_HOME":
+            if previous_activity != "GOING_HOME" and not gap:
                 going_home_started_at = item.timestamp_utc
         elif going_home_started_at is not None:
             if item.activity in PARKED_ACTIVITIES:
@@ -458,6 +514,7 @@ def _return_durations_minutes(
                     durations.append(duration)
             going_home_started_at = None
         previous_activity = item.activity
+        previous_timestamp = item.timestamp_utc
     return durations
 
 
@@ -549,9 +606,19 @@ def summarize_report(
     relevant = [item for item in observations if period_start_utc <= item.timestamp_utc <= now_utc]
     last_24h_start = now_utc - timedelta(hours=24)
     last_24h = [item for item in relevant if item.timestamp_utc >= last_24h_start]
+    command_attempts: dict[str, datetime] = {}
+    for item in observations:
+        attempts = item.command_attempts or (
+            (ReportedCommandAttempt(f"legacy:{item.timestamp_utc.isoformat()}:{item.decision_code}", item.timestamp_utc),)
+            if item.command_sent else ()
+        )
+        for attempt in attempts:
+            command_attempts[attempt.identity] = min(
+                command_attempts.get(attempt.identity, attempt.timestamp_utc), attempt.timestamp_utc
+            )
     daily_minutes: dict[date, int] = defaultdict(int)
     for item in relevant:
-        if item.activity in MOWING_ACTIVITIES:
+        if item.activity in MOWING_ACTIVITIES and item.error_code == 0 and item.mower_state not in {"ERROR", "FATAL_ERROR"}:
             daily_minutes[item.timestamp_utc.astimezone(REPORT_TIME_ZONE).date()] += 1
     days = tuple((start_day + timedelta(days=index), daily_minutes[start_day + timedelta(days=index)]) for index in range(7))
     mowing_minutes = sum(minutes for _, minutes in days)
@@ -559,17 +626,16 @@ def summarize_report(
         item.work_area_last_completed
         for item in relevant
         if item.work_area_last_completed > 0
-        and datetime.fromtimestamp(
-            item.work_area_last_completed, timezone.utc
-        ) >= period_start_utc - timedelta(hours=3)
+        and period_start_utc.timestamp() <= item.work_area_last_completed <= now_utc.timestamp()
     }
     completion_times = sorted(
         datetime.fromtimestamp(value, timezone.utc) for value in completion_values
     )
-    # The 580 EPOS currently leaves lastTimeCompleted at 0. Its systematic-area
-    # progress is integer telemetry and can therefore move 99 -> 0 between two
-    # minute samples even though the app briefly shows 100 %. Treat only a
-    # stable 99 % plateau followed immediately by the reset as a completion.
+    # Some telemetry has no lastTimeCompleted. Preserve the existing stable
+    # 99 -> 0 heuristic as a separate estimate, never as a device-reported
+    # completion. Read all device timestamps first so later-arriving metadata
+    # takes precedence over an estimate of the same event.
+    inferred_completion_times: list[datetime] = []
     high_progress_samples = 0
     last_high_progress_at: datetime | None = None
     for item in relevant:
@@ -595,13 +661,12 @@ def summarize_report(
             and item.work_area_progress <= 1
         )
         if inferred_completion and not any(
-            abs((item.timestamp_utc - confirmed).total_seconds()) <= 10 * 60
-            for confirmed in completion_times
+            abs((item.timestamp_utc - existing).total_seconds()) <= 10 * 60
+            for existing in (*completion_times, *inferred_completion_times)
         ):
-            completion_times.append(item.timestamp_utc)
+            inferred_completion_times.append(item.timestamp_utc)
         high_progress_samples = 0
         last_high_progress_at = None
-    completion_times.sort()
     completed_cycles = len(completion_times)
     last_completed_area_utc = completion_times[-1] if completion_times else None
     return_minutes = _return_durations_minutes(relevant)
@@ -654,7 +719,7 @@ def summarize_report(
         expected_cycles_24h=expected_cycles,
         gap_count_24h=gaps,
         exception_count_24h=max(0, int(exception_count_24h)),
-        command_count_24h=sum(1 for item in last_24h if item.command_sent),
+        command_count_24h=sum(last_24h_start <= when <= now_utc for when in command_attempts.values()),
         mowing_minutes_7d=mowing_minutes,
         average_daily_mowing_minutes_7d=round(mowing_minutes / 7),
         mowing_minutes_today=days[-1][1],
@@ -678,6 +743,10 @@ def summarize_report(
         parking_source=latest.parking_source if latest else "",
         overall_status="Abweichung" if warnings else "planmäßig",
         warnings=tuple(warnings),
+        inferred_area_cycles_7d=len(inferred_completion_times),
+        last_inferred_area_utc=(
+            inferred_completion_times[-1] if inferred_completion_times else None
+        ),
     )
 
 
@@ -715,6 +784,14 @@ def dashboard_statistics(
             if summary.last_completed_area_utc is not None
             else None
         ),
+        "inferredAreaCycles7d": summary.inferred_area_cycles_7d,
+        "lastInferredAreaUtc": (
+            summary.last_inferred_area_utc.isoformat()
+            if summary.last_inferred_area_utc is not None
+            else None
+        ),
+        "estimatedAreaCycles7d": summary.estimated_area_cycles_7d,
+        "areaCompletionNote": AREA_COMPLETION_NOTE,
     }
 
 
@@ -1240,7 +1317,7 @@ def build_message(
         ("Minutenzyklen 24 h", f"{summary.cycle_count_24h} / ca. {summary.expected_cycles_24h}"),
         ("Lücken über 90 Sek.", str(summary.gap_count_24h)),
         ("Ausnahmen 24 h", str(summary.exception_count_24h)),
-        ("Befehle 24 h", str(summary.command_count_24h)),
+        ("Gemeldete Befehlsversuche 24 h", str(summary.command_count_24h)),
         ("Mähzeit 7 Tage", _minutes(summary.mowing_minutes_7d)),
         ("Ø Mähzeit pro Tag", _minutes(summary.average_daily_mowing_minutes_7d)),
         ("Mähzeit heute", _minutes(summary.mowing_minutes_today)),
@@ -1251,8 +1328,10 @@ def build_message(
             else "noch kein Messwert",
         ),
         ("Aktueller Flächenfortschritt", f"{summary.current_work_area_progress} %"),
-        ("Bestätigte Abschlüsse (7 Tage)", f"{summary.completed_area_cycles_7d}"),
-        ("Letzter bestätigter Abschluss", _local_time(summary.last_completed_area_utc)),
+        ("Flächenabschlüsse laut Gerät (7 Tage)", str(summary.completed_area_cycles_7d)),
+        ("Zusätzliche Abschlüsse – Schätzung (7 Tage)", str(summary.inferred_area_cycles_7d)),
+        ("Letzter Abschluss laut Gerät", _local_time(summary.last_completed_area_utc)),
+        ("Letzter geschätzter Abschluss", _local_time(summary.last_inferred_area_utc)),
         (
             "Hydrawise",
             "frisch und erreichbar"
@@ -1373,8 +1452,7 @@ def build_message(
             "Mähzeiten der letzten sieben Tage:",
             *[f"{day.strftime('%d.%m.%Y')}: {_minutes(minutes)}" for day, minutes in summary.daily_mowing_minutes],
             "",
-            "Bestätigte Flächenabschlüsse werden ausschließlich aus dem Husqvarna-EPOS-Feld "
-            "lastTimeCompleted ermittelt. Mähzeit und Heimfahrten gelten nicht als Abschluss.",
+            AREA_COMPLETION_NOTE,
         ]
     )
     html_body = f"""<!doctype html>
@@ -1391,7 +1469,7 @@ def build_message(
 {adaptive_html}
 <tr><td style="padding-top:25px;font-size:13px;font-weight:800;color:#285EA7;">MÄHZEITEN – LETZTE 7 TAGE</td></tr>
 <tr><td><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">{daily_rows}</table></td></tr>
-<tr><td style="padding-top:22px;color:{APP_MUTED};font-size:12px;line-height:1.55;">Bestätigte Flächenabschlüsse werden ausschließlich aus dem Husqvarna-EPOS-Feld lastTimeCompleted ermittelt. Mähzeit, Heimfahrten und automatische Neustarts gelten nicht als Abschluss.</td></tr>
+<tr><td style="padding-top:22px;color:{APP_MUTED};font-size:12px;line-height:1.55;">{html.escape(AREA_COMPLETION_NOTE)}</td></tr>
 <tr><td style="padding-top:24px;color:{APP_MUTED};font-size:12px;">Automatischer, ausschließlich lesender Bericht aus Azure · Schönwalder SV 1953 e.V.</td></tr>
 </table></td></tr></table></body></html>"""
     message = EmailMessage()
@@ -1487,6 +1565,8 @@ def process_daily_report(
             "cycles_24h": summary.cycle_count_24h,
             "mowing_minutes_7d": summary.mowing_minutes_7d,
             "completed_area_cycles_7d": summary.completed_area_cycles_7d,
+            "inferred_area_cycles_7d": summary.inferred_area_cycles_7d,
+            "estimated_area_cycles_7d": summary.estimated_area_cycles_7d,
             "adaptive_status": adaptive.latest_status,
             "adaptive_execution_enabled": adaptive.execution_enabled,
             "weather_fresh_percent_24h": adaptive.weather_fresh_percent_24h,

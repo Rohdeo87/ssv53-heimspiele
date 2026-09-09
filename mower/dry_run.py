@@ -282,8 +282,10 @@ def run_read_only_cycle(
                 ).strip()
                 or None,
             )
+            relays = hydrawise_status.get("relays")
             hydrawise_label = (
-                f"live ({len(hydrawise_status.get('relays', []))} Zonen)"
+                f"live ({len(relays)} Zonen)" if isinstance(relays, list)
+                else "live (unvollständige Zonenantwort)"
             )
         except HydrawiseError as exc:
             hydrawise_label = "Abruf fehlgeschlagen"
@@ -297,12 +299,20 @@ def run_read_only_cycle(
             environment.get("HYDRAWISE_STATUS_MAX_AGE_SECONDS", "180")
         ),
     )
+    # The safety assessment owns validation. Malformed or incomplete data must
+    # remain an explicit unknown and must not crash the less strict display /
+    # legacy calendar parsers after it has already been rejected for control.
+    planning_hydrawise_status = (
+        hydrawise_status
+        if hydrawise_safety.available and hydrawise_safety.relay_set_valid
+        else None
+    )
     hydrawise_zones = selected_zone_schedule(
-        hydrawise_status,
+        planning_hydrawise_status,
         hydrawise_config,
     )
     hydrawise_zone_observations = selected_zone_observations(
-        hydrawise_status,
+        planning_hydrawise_status,
         hydrawise_config,
     )
 
@@ -372,7 +382,7 @@ def run_read_only_cycle(
     plans, merged_blocks = create_plan(
         config,
         match_blocks,
-        hydrawise_status,
+        planning_hydrawise_status,
         now_local.date(),
         planning_horizon_days,
         effective_cancellations,
@@ -442,7 +452,7 @@ def run_read_only_cycle(
                 mower_state=snapshot.state,
                 error_code=snapshot.error_code,
                 hydrawise_success_utc=(
-                    now_utc if hydrawise_safety.fresh else None
+                    now_utc if hydrawise_safety.available and hydrawise_safety.fresh else None
                 ),
                 hydrawise_observed_utc=_parse_utc(
                     hydrawise_safety.observed_at_utc
@@ -452,7 +462,10 @@ def run_read_only_cycle(
                     and hydrawise_safety.fresh
                     and hydrawise_safety.clear_now
                 ),
-                hydrawise_active_count=hydrawise_safety.active_zone_count,
+                hydrawise_active_count=(
+                    hydrawise_safety.active_zone_count
+                    if hydrawise_safety.available and hydrawise_safety.fresh else None
+                ),
             )
             release_confirmation = evaluate_continuous_clear_confirmation(
                 available=hydrawise_safety.available,
@@ -461,8 +474,13 @@ def run_read_only_cycle(
                 physical_reason=hydrawise_safety.reason,
                 clear_since_utc=projected_state.hydrawise_clear_since_utc,
                 now_utc=now_utc,
-                required_clear_minutes=required_clear_minutes,
+                required_clear_minutes=(
+                    max(150, int(environment.get("POST_IRRIGATION_DRYING_MINUTES", "150")))
+                    if projected_state.hydrawise_drying_since_utc else required_clear_minutes
+                ),
                 persistent_state_available=True,
+                drying_since_utc=projected_state.hydrawise_drying_since_utc,
+                telemetry_confirmation_minutes=int(environment.get("HYDRAWISE_DATA_GAP_CONFIRMATION_MINUTES", "2")),
             )
             decision = _apply_hydrawise_gate(
                 decision=base_decision,
@@ -517,10 +535,74 @@ def run_read_only_cycle(
                 if projected_state is not None
                 else None
             ),
+            "hydrawise_drying_since_utc": (
+                projected_state.hydrawise_drying_since_utc if projected_state is not None else None
+            ),
             "persisted": state_persisted,
             "error": state_error,
         }
     else:
+        if settings.control_mode in {ControlMode.FULL_FAILSAFE, ControlMode.FULL_MOWER}:
+            # Read-only callers (including the app) need the persisted physical
+            # hold as well as the current response. Project the observation with
+            # the same transition rules as the controller, but never advance a
+            # confirmation chain, a revision or a device intent in storage.
+            projected_state = None
+            original_state = None
+            state_error = None
+            telemetry_minutes = int(environment.get(
+                "FULL_MOWER_HYDRAWISE_CLEAR_CONFIRMATION_MINUTES"
+                if settings.control_mode is ControlMode.FULL_MOWER
+                else "HYDRAWISE_DATA_GAP_CONFIRMATION_MINUTES",
+                "10" if settings.control_mode is ControlMode.FULL_MOWER else "2",
+            ))
+            try:
+                original_state = state_store_factory(environment).load()
+                trusted_hydrawise = (
+                    hydrawise_safety.available and hydrawise_safety.fresh
+                    and hydrawise_safety.relay_set_valid
+                )
+                projected_state = original_state.record_cycle(
+                    started_utc=now_utc,
+                    success=True,
+                    decision_code=base_decision.code,
+                    hydrawise_success_utc=now_utc if trusted_hydrawise else None,
+                    hydrawise_observed_utc=_parse_utc(hydrawise_safety.observed_at_utc),
+                    hydrawise_clear=bool(trusted_hydrawise and hydrawise_safety.clear_now),
+                    hydrawise_active_count=(
+                        hydrawise_safety.active_zone_count if trusted_hydrawise else None
+                    ),
+                )
+            except Exception as exc:
+                state_error = f"{type(exc).__name__}: {exc}"
+            release_confirmation = evaluate_continuous_clear_confirmation(
+                available=hydrawise_safety.available,
+                fresh=hydrawise_safety.fresh,
+                clear_now=hydrawise_safety.clear_now,
+                physical_reason=hydrawise_safety.reason,
+                clear_since_utc=projected_state.hydrawise_clear_since_utc if projected_state else None,
+                now_utc=now_utc,
+                required_clear_minutes=(
+                    max(150, int(environment.get("POST_IRRIGATION_DRYING_MINUTES", "150")))
+                    if projected_state and projected_state.hydrawise_drying_since_utc
+                    else telemetry_minutes
+                ),
+                persistent_state_available=projected_state is not None,
+                drying_since_utc=projected_state.hydrawise_drying_since_utc if projected_state else None,
+                telemetry_confirmation_minutes=telemetry_minutes,
+            )
+            automation_state_details = {
+                "revision": original_state.revision if original_state else None,
+                "hydrawise_clear_since_utc": projected_state.hydrawise_clear_since_utc if projected_state else None,
+                "hydrawise_drying_since_utc": projected_state.hydrawise_drying_since_utc if projected_state else None,
+                "read_only": True,
+                "projection_only": True,
+                "persisted": False,
+                "error": state_error,
+            }
+        # Keep the device controller's instantaneous planning input separate:
+        # FULL modes recompute the authoritative release against their own CAS
+        # state immediately before deciding or issuing any device action.
         decision = _apply_hydrawise_gate(
             decision=base_decision,
             hydrawise_clear=hydrawise_safety.clear_now,

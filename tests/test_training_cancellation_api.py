@@ -32,6 +32,9 @@ def request(
 
 class TrainingCancellationApiTests(unittest.TestCase):
     def setUp(self) -> None:
+        auth = patch.object(function_app, "_authorize_occupancy_write", side_effect=lambda req, body, now: body)
+        auth.start()
+        self.addCleanup(auth.stop)
         self.store = InMemoryCancellationStore()
         self.store_patch = patch.object(
             function_app.AzureTableCancellationStore,

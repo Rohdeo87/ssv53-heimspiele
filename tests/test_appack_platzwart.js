@@ -60,9 +60,9 @@ test("Platzwart-Seite ist syntaktisch gültig und enthält keine Zugangsdaten", 
   assert.match(html, /\.btn:disabled\{background:#eef1f5!important;color:#929cab!important/);
   assert.match(html, /id="mower-next-start"/);
   assert.match(html, /class="next-start-fact hidden"/);
-  assert.match(html, /Geschätzt:/);
-  assert.match(html, /Nach Plan:/);
-  assert.match(html, /Nach bestätigtem Beregnungsende \+ 120 Min\./);
+  assert.doesNotMatch(html, /target-battery/);
+  assert.match(html, /Früheste Prüfung:/);
+  assert.match(html, /Nach bestätigtem Ende und serverseitiger Trocknungsfrist/);
   assert.match(html, /startButton\.classList\.toggle\("hidden"/);
   assert.match(html, /parkButton\.classList\.toggle\("hidden"/);
   assert.match(html, /function mowerActions\(s\)/);
@@ -86,7 +86,7 @@ test("Platzwart-Seite ist syntaktisch gültig und enthält keine Zugangsdaten", 
   assert.match(html, /\.occupancy-list>li\{display:block!important;width:100%!important/);
   assert.match(html, /SET_CUTTING_HEIGHT/);
   assert.match(html, /Mäherstatistiken/);
-  assert.match(html, /Gemähte Rasenflächen · 7 Tage/);
+  assert.match(html, /Geschätzter Flächenumfang · 7 Tage/);
   assert.match(html, /Mähzeit heute/);
   assert.match(html, /Ø Heimfahrdauer · 7 Tage/);
   assert.match(html, /id="water-stats-open"/);
@@ -386,19 +386,19 @@ test("Mäheraktionen sind für Fahren, Laden, Sperren und manuelle Bedienung ein
   assert.equal(charging.startLabel, "Mäher starten");
   assert.match(charging.startQuestion, /lädt noch bei 70 %/);
 
-  const blocked = actions({ mower: { activity: "CHARGING", connected: true, errorCode: 0 }, irrigation: { safety: safe }, automation: {}, occupancy: { current: { title: "Training" } } });
+  const blocked = actions({ mower: { activity: "CHARGING", connected: true, errorCode: 0 }, irrigation: { safety: safe }, automation: {}, occupancy: { overrideAllowed: true, current: { title: "Training" } } });
   assert.equal(blocked.showPark, false);
   assert.equal(blocked.showStart, false);
 
-  const occupied = actions({ mower: { activity: "PARKED_IN_CS", connected: true, errorCode: 0 }, irrigation: { safety: safe }, automation: {}, occupancy: { current: { title: "Training A", start: "2026-08-20T18:00:00+02:00", end: "2026-08-20T20:00:00+02:00", source: "training" }, parking: { title: "Training A" } } });
+  const occupied = actions({ mower: { activity: "PARKED_IN_CS", connected: true, errorCode: 0 }, irrigation: { safety: safe }, automation: {}, occupancy: { overrideAllowed: true, current: { title: "Training A", start: "2026-08-20T18:00:00+02:00", end: "2026-08-20T20:00:00+02:00", source: "training" }, parking: { title: "Training A" } } });
   assert.equal(occupied.showStart, true);
   assert.equal(occupied.occupancyOverrideKey, "2026-08-20T18:00:00+02:00|2026-08-20T20:00:00+02:00|training");
   assert.match(occupied.startQuestion, /Beregnungs- und Gerätesperren bleiben aktiv/);
 
-  const irrigationUnsafe = actions({ mower: { activity: "PARKED_IN_CS", connected: true, errorCode: 0 }, irrigation: { safety: { ...safe, clear_now: false } }, automation: {}, occupancy: { current: { title: "Training", start: "a", end: "b", source: "training" } } });
+  const irrigationUnsafe = actions({ mower: { activity: "PARKED_IN_CS", connected: true, errorCode: 0 }, irrigation: { safety: { ...safe, clear_now: false } }, automation: {}, occupancy: { overrideAllowed: true, current: { title: "Training", start: "a", end: "b", source: "training" } } });
   assert.equal(irrigationUnsafe.showStart, false);
 
-  const manual = actions({ overall: { code: "EXTERNAL_OVERRIDE" }, mower: { activity: "CHARGING", connected: true, errorCode: 0 }, irrigation: { safety: safe }, automation: {}, occupancy: { current: { title: "Training", start: "2026-08-20T18:00:00+02:00", end: "2026-08-20T20:00:00+02:00", source: "training" } } });
+  const manual = actions({ overall: { code: "EXTERNAL_OVERRIDE" }, mower: { activity: "CHARGING", connected: true, errorCode: 0 }, irrigation: { safety: safe }, automation: {}, occupancy: { overrideAllowed: true, current: { title: "Training", start: "2026-08-20T18:00:00+02:00", end: "2026-08-20T20:00:00+02:00", source: "training" } } });
   assert.equal(manual.showStart, true);
   assert.equal(manual.startLabel, "Mäher starten");
   assert.ok(manual.occupancyOverrideKey);
@@ -424,7 +424,7 @@ test("Mäheraktionen sind für Fahren, Laden, Sperren und manuelle Bedienung ein
   const activeSkip = actions({ mower: { activity: "PARKED_IN_CS", connected: true, errorCode: 0 }, irrigation: { safety: safe }, irrigationSchedule: { override: { kind: "SKIP_NEXT", status: "ACTIVE" } }, automation: { parkedByAutomation: true }, occupancy: {} });
   assert.equal(activeSkip.showStart, true);
 
-  const irrigationBlock = actions({ mower: { activity: "PARKED_IN_CS", connected: true, errorCode: 0 }, irrigation: { safety: safe }, automation: {}, occupancy: { current: { title: "Mischblock", start: "a", end: "b", source: "training+irrigation" } } });
+  const irrigationBlock = actions({ mower: { activity: "PARKED_IN_CS", connected: true, errorCode: 0 }, irrigation: { safety: safe }, automation: {}, occupancy: { overrideAllowed: true, current: { title: "Mischblock", start: "a", end: "b", source: "training+irrigation" } } });
   assert.equal(irrigationBlock.showStart, false);
 
   const disconnected = actions({ mower: { activity: "MOWING", connected: false, errorCode: 0 }, irrigation: { safety: safe }, automation: {}, occupancy: {} });
@@ -436,39 +436,20 @@ test("Mäheraktionen sind für Fahren, Laden, Sperren und manuelle Bedienung ein
   assert.equal(displayOnly.showStart, false);
 });
 
-test("nächster Mäherstart unterscheidet Plan, Beregnung und Ladeschätzung", () => {
+test("Startanzeige verwendet Serverfrist und erfindet kein Ladeende", () => {
   const names = ["localDay(value)", "calendarTime(v,referenceValue)", "time(v)", "isSearching(m)", "nextMowerStart(s)"];
-  const source = names.map((name) => html.split("\n").find((line) => line.includes(`function ${name}`))).join("\n");
+  const source = names.map(name => html.split("\n").find(line => line.includes(`function ${name}`))).join("\n");
   const nextStart = new Function(`var EVENT_TIME_ZONE="Europe/Berlin";\n${source}\nreturn nextMowerStart;`)();
-  const generatedAt = "2026-08-20T16:25:00Z";
-  const currentShortWindow = {
-    start: "2026-08-20T16:00:00Z",
-    command_deadline: "2026-08-20T16:50:00Z",
-    minimum_mowing_minutes: 30,
-  };
-  const afterTraining = {
-    start: "2026-08-20T19:00:00Z",
-    command_deadline: "2026-08-20T20:50:00Z",
-    minimum_mowing_minutes: 30,
-  };
-  const longCurrentWindow = {
-    start: "2026-08-20T16:00:00Z",
-    command_deadline: "2026-08-20T18:00:00Z",
-    minimum_mowing_minutes: 30,
-  };
-
-  assert.equal(nextStart({ generatedAt, mower: { activity: "CHARGING", connected: true, errorCode: 0, batteryPercent: 99, restartBatteryPercent: 90 }, automation: { continuousMowingOwned: true }, occupancy: { safeWindows: [longCurrentWindow] } }), "Startet in Kürze");
-  assert.match(nextStart({ generatedAt, mower: { activity: "CHARGING", connected: true, errorCode: 0, batteryPercent: 99, restartBatteryPercent: 90 }, automation: { continuousMowingOwned: true }, occupancy: { safeWindows: [currentShortWindow, afterTraining] } }), /^Nach Plan: .*21:00 Uhr$/);
-  assert.match(nextStart({ generatedAt, mower: { activity: "CHARGING", connected: true, errorCode: 0, batteryPercent: 70, restartBatteryPercent: 90 }, automation: { continuousMowingOwned: true }, occupancy: { safeWindows: [longCurrentWindow] } }), /^Geschätzt: /);
-  assert.match(nextStart({ generatedAt, mower: { activity: "CHARGING", connected: true, errorCode: 0, batteryPercent: 99, restartBatteryPercent: 90 }, automation: { continuousMowingOwned: true, hydrawiseClearSince: "2026-08-20T16:25:00Z", hydrawiseClearOrigin: "DATA_GAP" }, occupancy: { safeWindows: [longCurrentWindow] } }), /^Nach Sicherheitsprüfung: .*18:27 Uhr$/);
-  assert.match(nextStart({ generatedAt, mower: { activity: "CHARGING", connected: true, errorCode: 0, batteryPercent: 99, restartBatteryPercent: 90 }, automation: { continuousMowingOwned: true, hydrawiseClearSince: "2026-08-20T16:25:00Z", hydrawiseClearOrigin: "IRRIGATION_END" }, occupancy: { safeWindows: [{ ...longCurrentWindow, command_deadline: "2026-08-20T20:00:00Z" }] } }), /^Nach Sicherheitsprüfung: .*20:25 Uhr$/);
-  assert.equal(nextStart({ mower: { activity: "PARKED_IN_CS" }, automation: { irrigationPhase: "RUNNING" }, occupancy: {} }), "Nach bestätigtem Beregnungsende + 120 Min.");
-  assert.equal(nextStart({ mower: { activity: "MOWING" }, automation: {}, occupancy: {} }), null);
-  assert.equal(nextStart({ mower: { activity: "LEAVING" }, automation: {}, occupancy: {} }), null);
-  assert.equal(nextStart({ mower: { activity: "GOING_HOME" }, automation: {}, occupancy: {} }), null);
-  assert.equal(nextStart({ mower: { activity: "CHARGING", connected: false }, automation: {}, occupancy: {} }), null);
-  assert.equal(nextStart({ overall: { code: "EXTERNAL_OVERRIDE" }, mower: { activity: "CHARGING", connected: true, errorCode: 0 }, automation: {}, occupancy: {} }), "Nach Einschalten der Automatik");
-  assert.equal(nextStart({ mower: { activity: "CHARGING", connected: true, errorCode: 0, batteryPercent: null }, automation: {}, occupancy: {} }), "Wartet auf aktuellen Akkustand");
+  const snapshot = {generatedAt:"2026-09-09T10:00:00Z",mower:{activity:"PARKED_IN_CS",connected:true,errorCode:0},automation:{},coordination:{releaseNotBefore:"2026-09-09T12:30:00Z"},occupancy:{safeWindows:[{start:"2026-09-09T10:00:00Z",command_deadline:"2026-09-09T14:00:00Z",minimum_mowing_minutes:30}]}};
+  assert.match(nextStart(snapshot), /^Früheste Prüfung:/);
+  assert.match(nextStart(snapshot), /14:30 Uhr/);
+  for(const batteryPercent of [null,70,90,99,100]) assert.equal(nextStart({...snapshot,mower:{activity:"CHARGING",batteryPercent}}), "Nach Ladefreigabe des Geräts; Ladeende unbekannt");
+  assert.equal(nextStart({...snapshot,coordination:undefined}), "Wartet auf aktuelle serverseitige Freigabeprüfung");
+  assert.equal(nextStart({...snapshot,automation:{irrigationPhase:"RUNNING"}}), "Nach bestätigtem Ende und serverseitiger Trocknungsfrist");
+  assert.equal(nextStart({...snapshot,automation:{mowerStartOutcomeUnconfirmed:true}}), "Ungeklärten Start zuerst manuell abgleichen");
+  assert.equal(nextStart({...snapshot,automation:{irrigationPhase:"COMPLETE_HOLD"},coordination:{}}), "Wartet auf bestätigte Trocknungsfrist");
+  assert.equal(nextStart({...snapshot,coordination:{blockers:[{code:"CONTROLLER_STALE"}]}}), "Wartet auf Klärung der angezeigten Sperrgründe");
+  assert.equal(nextStart({...snapshot,mower:{activity:"MOWING"}}), null);
 });
 
 test("Beregnungsaktionen erscheinen nur im passenden Zustand", () => {

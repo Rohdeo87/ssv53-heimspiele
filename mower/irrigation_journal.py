@@ -65,6 +65,7 @@ def observation_entity(result: CycleResult) -> dict[str, Any]:
     hydrawise = _as_dict(details.get("hydrawise"))
     safety = _as_dict(hydrawise.get("safety"))
     state = _as_dict(details.get("automation_state"))
+    release = _as_dict(details.get("hydrawise_release_gate")) or _as_dict(hydrawise.get("release_confirmation"))
     weather = _as_dict(details.get("weather"))
     adaptive = _as_dict(details.get("adaptive_planning"))
     selected = _as_dict(adaptive.get("selected"))
@@ -93,6 +94,12 @@ def observation_entity(result: CycleResult) -> dict[str, Any]:
         ),
         "hydrawise_available": bool(safety.get("available")),
         "hydrawise_fresh": bool(safety.get("fresh")),
+        "hydrawise_drying_since_utc": str(state.get("hydrawise_drying_since_utc") or ""),
+        "hydrawise_dry_until_utc": str(release.get("dry_until_utc") or ""),
+        "hydrawise_release_at_utc": str(release.get("release_at_utc") or ""),
+        "hydrawise_telemetry_confirmed": bool(release.get("telemetry_confirmed")),
+        "mower_start_pending_since_utc": str(state.get("mower_start_pending_since_utc") or ""),
+        "mower_start_pending_deadline_utc": str(state.get("mower_start_pending_deadline_utc") or ""),
         "weather_enabled": bool(weather.get("enabled")),
         "weather_available": bool(weather.get("available")),
         "weather_fresh": bool(weather.get("fresh")),
@@ -178,6 +185,14 @@ def read_irrigation_observations(
                         "park_confirmed_observations": entity.get(
                             "park_confirmed_observations"
                         ),
+                        "hydrawise_available": entity.get("hydrawise_available"),
+                        "hydrawise_fresh": entity.get("hydrawise_fresh"),
+                        "hydrawise_drying_since_utc": entity.get("hydrawise_drying_since_utc"),
+                        "hydrawise_dry_until_utc": entity.get("hydrawise_dry_until_utc"),
+                        "hydrawise_release_at_utc": entity.get("hydrawise_release_at_utc"),
+                        "hydrawise_telemetry_confirmed": entity.get("hydrawise_telemetry_confirmed"),
+                        "mower_start_pending_since_utc": entity.get("mower_start_pending_since_utc"),
+                        "mower_start_pending_deadline_utc": entity.get("mower_start_pending_deadline_utc"),
                         "weather_available": entity.get("weather_available"),
                         "weather_fresh": entity.get("weather_fresh"),
                         "weather_provider": entity.get("weather_provider"),

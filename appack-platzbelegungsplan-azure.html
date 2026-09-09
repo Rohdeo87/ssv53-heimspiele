@@ -1860,6 +1860,15 @@ const TRAINING_CANCELLATION_API_URL =
 "https://func-ssv53platzpflege-prod-q7kbw54s.azurewebsites.net/api/training-cancellations";
 const TRAINER_OCCUPANCY_API_URL =
 "https://func-ssv53platzpflege-prod-q7kbw54s.azurewebsites.net/api/trainer-occupancies";
+function occupancyWriteHeaders() {
+let session = null;
+try { session = JSON.parse(sessionStorage.getItem("ssv53_platzwart_session_v1") || "null"); } catch (error) { session = null; }
+if (!session || !session.token || !session.expiresAt || new Date(session.expiresAt).getTime() <= Date.now() || !Number.isFinite(new Date(session.expiresAt).getTime())) {
+throw new Error("Für Belegungsänderungen ist eine aktuelle Platzwart-Anmeldung erforderlich. Bitte im Bereich Platzpflege anmelden. Trainerrollen allein erteilen keine Backendfreigabe.");
+}
+return {"Accept": "application/json", "Content-Type": "application/json", "Authorization": "Bearer " + session.token};
+}
+
 const OCCUPANCY_FETCH_TIMEOUT = 15000;
 const OCCUPANCY_FETCH_RETRIES = 2;
 const OCCUPANCY_RETRY_DELAY = 500;
@@ -6412,7 +6421,7 @@ confirmation: "TRAINER_BELEGUNG_VERSCHIEBEN"
 };
 const sendRequest = function () { return fetch(TRAINER_OCCUPANCY_API_URL, {
 method: "POST", mode: "cors", cache: "no-store", credentials: "omit",
-headers: {"Accept": "application/json", "Content-Type": "text/plain;charset=UTF-8"},
+headers: occupancyWriteHeaders(),
 body: JSON.stringify(requestBody)
 }); };
 let response = await sendRequest();
@@ -6469,7 +6478,7 @@ const randomPart = window.crypto && typeof window.crypto.randomUUID === "functio
 ? window.crypto.randomUUID() : Date.now().toString(36);
 const response = await fetch(TRAINER_OCCUPANCY_API_URL, {
 method: "POST", mode: "cors", cache: "no-store", credentials: "omit",
-headers: {"Accept": "application/json", "Content-Type": "text/plain;charset=UTF-8"},
+headers: occupancyWriteHeaders(),
 body: JSON.stringify({
 action: "delete",
 commandId: "trainer-delete:" + randomPart,
@@ -6525,10 +6534,7 @@ method: "POST",
 mode: "cors",
 cache: "no-store",
 credentials: "omit",
-headers: {
-"Accept": "application/json",
-"Content-Type": "text/plain;charset=UTF-8"
-},
+headers: occupancyWriteHeaders(),
 body: JSON.stringify({
 action: "delete",
 commandId: "trainer-delete:" + randomPart,
@@ -6555,11 +6561,7 @@ method: "POST",
 mode: "cors",
 cache: "no-store",
 credentials: "omit",
-headers: {
-"Accept": "application/json",
-
-"Content-Type": "text/plain;charset=UTF-8"
-},
+headers: occupancyWriteHeaders(),
 body: JSON.stringify({
 action: cancelled ? "restore" : "cancel",
 eventId: event.extendedProps.occurrenceId,
@@ -6802,10 +6804,7 @@ method: "POST",
 mode: "cors",
 cache: "no-store",
 credentials: "omit",
-headers: {
-"Accept": "application/json",
-"Content-Type": "text/plain;charset=UTF-8"
-},
+headers: occupancyWriteHeaders(),
 body: JSON.stringify(requestBody)
 }); };
 let response = await sendRequest();

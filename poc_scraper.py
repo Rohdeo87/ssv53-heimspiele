@@ -24,7 +24,7 @@ from zoneinfo import ZoneInfo
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import Any, Callable, Iterable
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlsplit
 
 import requests
 from bs4 import BeautifulSoup, Tag
@@ -52,7 +52,34 @@ STATUS_TERMS = (
     "Abbruch",
     "vorläufiges Spiel",
 )
+NON_OCCUPANCY_STATUS_TERMS = (
+    "Absetzung",
+    "Spielabsetzung",
+    "Ausfall",
+    "Spielausfall",
+    "Nichtantritt HEIM",
+    "Nichtantritt GAST",
+    "Nichtantritt BEIDE",
+    "Annullierung",
+    "Annuliert",
+)
 MATCH_ROW_CLASSES = {"row-competition", "row-festival", "row-tournament"}
+ALLOWED_SOURCE_HOST = "www.fussball.de"
+MAX_SOURCE_FIELD_LENGTHS: dict[str, int] = {
+    "external_id": 128,
+    "match_number": 32,
+    "team_id": 128,
+    "team_name": 200,
+    "team_category": 200,
+    "home_team": 200,
+    "away_team": 200,
+    "competition": 300,
+    "match_type": 32,
+    "status": 80,
+    "venue_raw": 500,
+    "detail_url": 2048,
+    "source_url": 2048,
+}
 
 
 class ScrapeError(RuntimeError):
@@ -119,11 +146,57 @@ class Match:
     postponed_to: str = ""
 
 
+def validate_fussball_url(url: str) -> str:
+    """Accept only the intended HTTPS origin, including redirected URLs.
+
+    Source HTML is untrusted.  In particular, an absolute ``/spiel/`` link
+    must never turn the GitHub runner into a client for an arbitrary host.
+    """
+    raw = str(url or "").strip()
+    try:
+        parsed = urlsplit(raw)
+        port = parsed.port
+    except ValueError as exc:
+        raise ScrapeError(f"Ungültige FUSSBALL.DE-Adresse: {raw!r}") from exc
+    if (
+        parsed.scheme.casefold() != "https"
+        or (parsed.hostname or "").casefold() != ALLOWED_SOURCE_HOST
+        or parsed.username is not None
+        or parsed.password is not None
+        or port not in (None, 443)
+        or bool(parsed.fragment)
+    ):
+        raise ScrapeError(
+            "Externe oder unsichere Adresse im Spielplan abgelehnt: " + raw
+        )
+    return raw
+
+
+def validate_match_source_fields(match: Match) -> None:
+    """Reject implausibly large upstream fields instead of truncating them."""
+    for field_name, maximum in MAX_SOURCE_FIELD_LENGTHS.items():
+        value = str(getattr(match, field_name, "") or "")
+        if len(value) > maximum:
+            raise ScrapeError(
+                f"Quelldatenfeld {field_name} überschreitet {maximum} Zeichen"
+            )
+
+
+def is_non_occupancy_status(status: str) -> bool:
+    normalized = normalize_match_text(status)
+    return normalized in {
+        normalize_match_text(value) for value in NON_OCCUPANCY_STATUS_TERMS
+    }
+
+
 class Client:
     """Zurückhaltender HTTP-Client mit fest eingebauten Schutzgrenzen."""
 
     ABSOLUTE_MAX_REQUESTS = 10
     ABSOLUTE_MAX_RETRIES = 1
+    ABSOLUTE_MAX_REDIRECTS = 2
+    ABSOLUTE_MAX_RESPONSE_BYTES = 4 * 1024 * 1024
+    DEFAULT_MAX_RESPONSE_BYTES = 2 * 1024 * 1024
     MIN_DELAY_SECONDS = 3.0
     DEFAULT_RATE_LIMIT_BLOCK_SECONDS = 6 * 60 * 60
     RETRYABLE_STATUS_CODES = {502, 503, 504}
@@ -163,6 +236,21 @@ class Client:
         )
         self.max_requests = min(
             max(configured_limit, 1), self.ABSOLUTE_MAX_REQUESTS
+        )
+        self.max_redirects = min(
+            max(int(request_cfg.get("max_redirects", 2)), 0),
+            self.ABSOLUTE_MAX_REDIRECTS,
+        )
+        self.max_response_bytes = min(
+            max(
+                int(
+                    request_cfg.get(
+                        "max_response_bytes", self.DEFAULT_MAX_RESPONSE_BYTES
+                    )
+                ),
+                1024,
+            ),
+            self.ABSOLUTE_MAX_RESPONSE_BYTES,
         )
         self.state_path = state_path
         self.state = self._load_state()
@@ -394,41 +482,109 @@ class Client:
             return
         time.sleep(5.0)
 
+    def _request_without_unsafe_redirects(
+        self, url: str
+    ) -> tuple[requests.Response, str]:
+        current_url = validate_fussball_url(url)
+        for redirect_count in range(self.max_redirects + 1):
+            self._reserve_request()
+            self._throttle()
+            response = self.session.get(
+                current_url,
+                timeout=self.timeout,
+                allow_redirects=False,
+                stream=True,
+            )
+            self._last_request = time.monotonic()
+            self._record_http_status(response.status_code)
+
+            response_url = str(getattr(response, "url", "") or current_url)
+            validate_fussball_url(response_url)
+            if response.status_code not in {301, 302, 303, 307, 308}:
+                return response, current_url
+
+            location = str(response.headers.get("Location") or "").strip()
+            if not location:
+                raise ScrapeError(
+                    f"Weiterleitung ohne Zieladresse bei {current_url}"
+                )
+            if redirect_count >= self.max_redirects:
+                raise ScrapeError(
+                    f"Zu viele Weiterleitungen beim Abruf von {url}"
+                )
+            current_url = validate_fussball_url(urljoin(current_url, location))
+        raise ScrapeError(f"Zu viele Weiterleitungen beim Abruf von {url}")
+
+    def _read_limited_html(self, response: requests.Response, url: str) -> str:
+        content_type = str(response.headers.get("Content-Type") or "").casefold()
+        if content_type and not any(
+            allowed in content_type
+            for allowed in ("text/html", "application/xhtml+xml")
+        ):
+            raise ScrapeError(
+                f"Unerwarteter Inhaltstyp bei {url}: {content_type}"
+            )
+
+        raw_length = str(response.headers.get("Content-Length") or "").strip()
+        if raw_length.isdigit() and int(raw_length) > self.max_response_bytes:
+            raise ScrapeError(
+                f"Antwort von {url} ist größer als die erlaubten "
+                f"{self.max_response_bytes} Bytes"
+            )
+
+        buffered = getattr(response, "_content", False)
+        if isinstance(buffered, (bytes, bytearray)):
+            payload = bytes(buffered)
+            if len(payload) > self.max_response_bytes:
+                raise ScrapeError(
+                    f"Antwort von {url} überschreitet die erlaubten "
+                    f"{self.max_response_bytes} Bytes"
+                )
+        else:
+            chunks: list[bytes] = []
+            total = 0
+            for chunk in response.iter_content(chunk_size=64 * 1024):
+                if not chunk:
+                    continue
+                total += len(chunk)
+                if total > self.max_response_bytes:
+                    raise ScrapeError(
+                        f"Antwort von {url} überschreitet die erlaubten "
+                        f"{self.max_response_bytes} Bytes"
+                    )
+                chunks.append(chunk)
+            payload = b"".join(chunks)
+        response._content = payload
+        response._content_consumed = True
+        encoding = response.encoding or "utf-8"
+        return payload.decode(encoding, errors="replace")
+
     def get_text(self, url: str) -> str:
         """Maximal ein Retry, ausschließlich bei Timeout oder 502/503/504."""
+        validated_url = validate_fussball_url(url)
         last_error: Exception | None = None
         attempts = self.max_retries + 1
 
         for attempt in range(attempts):
             response: requests.Response | None = None
             try:
-                self._reserve_request()
-                self._throttle()
-                response = self.session.get(url, timeout=self.timeout)
-                self._last_request = time.monotonic()
-                self._record_http_status(response.status_code)
+                response, final_url = self._request_without_unsafe_redirects(
+                    validated_url
+                )
 
                 if response.status_code == 429:
-                    self._handle_rate_limit(response, url)
+                    self._handle_rate_limit(response, final_url)
 
                 if response.status_code in self.SECURITY_STATUS_CODES:
                     self._activate_security_lock(
                         reason=f"HTTP {response.status_code}",
-                        url=url,
-                        status_code=response.status_code,
-                    )
-
-                challenge_reason = self._detect_challenge(response)
-                if challenge_reason:
-                    self._activate_security_lock(
-                        reason=challenge_reason,
-                        url=url,
+                        url=final_url,
                         status_code=response.status_code,
                     )
 
                 if response.status_code in self.RETRYABLE_STATUS_CODES:
                     last_error = ScrapeError(
-                        f"Vorübergehender HTTP-Fehler {response.status_code} bei {url}"
+                        f"Vorübergehender HTTP-Fehler {response.status_code} bei {final_url}"
                     )
                     if attempt + 1 < attempts:
                         self._wait_before_retry(response)
@@ -439,12 +595,20 @@ class Client:
                     # 403/406 wurden bereits global gesperrt; andere 4xx
                     # werden ebenfalls niemals wiederholt.
                     raise ScrapeError(
-                        f"Nicht wiederholbarer HTTP-Fehler {response.status_code} bei {url}"
+                        f"Nicht wiederholbarer HTTP-Fehler {response.status_code} bei {final_url}"
                     )
 
-                if not response.text.strip():
-                    raise ScrapeError(f"Leere Antwort von {url}")
-                return response.text
+                text = self._read_limited_html(response, final_url)
+                challenge_reason = self._detect_challenge(response)
+                if challenge_reason:
+                    self._activate_security_lock(
+                        reason=challenge_reason,
+                        url=final_url,
+                        status_code=response.status_code,
+                    )
+                if not text.strip():
+                    raise ScrapeError(f"Leere Antwort von {final_url}")
+                return text
 
             except requests.Timeout as exc:
                 last_error = exc
@@ -828,7 +992,10 @@ def team_id_for_club_element(element: Tag | None) -> str:
     link = element if element.name == "a" else element.find_parent("a") or element.find("a")
     if not isinstance(link, Tag):
         return ""
-    return extract_team_id(urljoin(BASE_URL, str(link.get("href") or "")))
+    href = str(link.get("href") or "").strip()
+    if not href:
+        return ""
+    return extract_team_id(validate_fussball_url(urljoin(BASE_URL, href)))
 
 
 def determine_club_team(
@@ -1035,7 +1202,7 @@ def recalculate_event_times(match: Match, config: dict[str, Any]) -> None:
 
 
 def _festival_birth_year(match: Match) -> int | None:
-    """Return one unambiguous birth year from the official team identity."""
+    """Return one unambiguous birth year from official team-facing fields."""
     for text in (match.team_name, match.detail_url, match.home_team, match.away_team):
         years = {
             int(value)
@@ -1048,43 +1215,48 @@ def _festival_birth_year(match: Match) -> int | None:
     return None
 
 
-def apply_festival_round_assignment_rules(
-    matches: list[Match],
-    config: dict[str, Any],
-) -> list[dict[str, Any]]:
-    """Assign festival rounds by birth year without changing official slot times.
+def _is_festival_match(match: Match) -> bool:
+    combined = normalize_match_text(
+        " ".join((match.team_name, match.team_category, match.competition,
+                  match.home_team, match.away_team))
+    )
+    return bool(
+        re.search(
+            r"\b(?:kinderfussball|festival|spielfest|spielenachmittag)\b",
+            combined,
+        )
+    )
 
-    Some club match-plan responses associate the earlier slot with the older
-    festival team and the later slot with the younger team. For SSV53
-    festivals the younger birth year belongs to the earlier round. The rule is
-    applied only to an unambiguous block containing distinct years and distinct
-    kickoffs. Explicit per-match kickoffs take precedence for exceptional,
-    subsequently confirmed allocations.
-    """
+
+def apply_festival_round_assignment_rules(
+    matches: list[Match], config: dict[str, Any]
+) -> list[dict[str, Any]]:
+    """Assign official round slots to birth years without inventing times."""
     settings = config.get("festival_round_assignment")
     if not isinstance(settings, dict):
         return []
-    strategy = str(settings.get("strategy") or "").strip()
-    if strategy != "younger_birth_year_first":
+    if str(settings.get("strategy") or "").strip() != "younger_birth_year_first":
         return []
-
     try:
         max_gap_minutes = int(settings.get("max_round_gap_minutes", 180))
     except (TypeError, ValueError) as exc:
-        raise ScrapeError("festival_round_assignment.max_round_gap_minutes ist ungültig") from exc
+        raise ScrapeError(
+            "festival_round_assignment.max_round_gap_minutes ist ungültig"
+        ) from exc
     if max_gap_minutes < 1 or max_gap_minutes > 360:
         raise ScrapeError(
             "festival_round_assignment.max_round_gap_minutes muss zwischen 1 und 360 liegen"
         )
-
     raw_overrides = settings.get("explicit_kickoffs") or {}
     if not isinstance(raw_overrides, dict):
-        raise ScrapeError("festival_round_assignment.explicit_kickoffs muss ein Objekt sein")
+        raise ScrapeError(
+            "festival_round_assignment.explicit_kickoffs muss ein Objekt sein"
+        )
     overrides = {str(key): str(value) for key, value in raw_overrides.items()}
 
     grouped: dict[tuple[str, str, str, str], list[tuple[datetime, Match, int]]] = {}
     for match in matches:
-        if match.competition_format != "festival" or not match.kickoff:
+        if not _is_festival_match(match) or not match.kickoff:
             continue
         year = _festival_birth_year(match)
         if year is None:
@@ -1104,7 +1276,9 @@ def apply_festival_round_assignment_rules(
     audit: list[dict[str, Any]] = []
     max_gap = timedelta(minutes=max_gap_minutes)
     for key, candidates in grouped.items():
-        ordered = sorted(candidates, key=lambda item: (item[0], item[2], item[1].external_id))
+        ordered = sorted(
+            candidates, key=lambda item: (item[0], item[2], item[1].external_id)
+        )
         clusters: list[list[tuple[datetime, Match, int]]] = []
         for candidate in ordered:
             if not clusters or candidate[0] - clusters[-1][-1][0] > max_gap:
@@ -1113,14 +1287,18 @@ def apply_festival_round_assignment_rules(
                 clusters[-1].append(candidate)
 
         for cluster in clusters:
-            if len(cluster) < 2:
-                continue
             years = [item[2] for item in cluster]
-            slot_values = sorted({item[0] for item in cluster})
-            if len(set(years)) != len(cluster) or len(slot_values) != len(cluster):
+            slots = sorted({item[0] for item in cluster})
+            if (
+                len(cluster) < 2
+                or len(set(years)) != len(cluster)
+                or len(slots) != len(cluster)
+            ):
                 continue
 
-            override_members = [item for item in cluster if item[1].external_id in overrides]
+            override_members = [
+                item for item in cluster if item[1].external_id in overrides
+            ]
             method = "younger_birth_year_first"
             assigned: dict[str, datetime] = {}
             if override_members:
@@ -1141,14 +1319,15 @@ def apply_festival_round_assignment_rules(
                             f"Festival-Sonderzeit für {match.external_id} benötigt eine Zeitzone"
                         )
                     assigned[match.external_id] = value
-                if set(assigned.values()) != set(slot_values):
+                if set(assigned.values()) != set(slots):
                     raise ScrapeError(
                         "Festival-Sonderzeiten müssen den offiziellen Rundenzeiten entsprechen"
                     )
             else:
+                # A larger birth year is the younger team and receives the
+                # earlier official slot.  No kickoff is created or guessed.
                 for (_, match, _), slot in zip(
-                    sorted(cluster, key=lambda item: item[2], reverse=True),
-                    slot_values,
+                    sorted(cluster, key=lambda item: item[2], reverse=True), slots
                 ):
                     assigned[match.external_id] = slot
 
@@ -1161,12 +1340,7 @@ def apply_festival_round_assignment_rules(
             after = {item[1].external_id: item[1].kickoff for item in cluster}
             audit.append({
                 "method": method,
-                "group": {
-                    "date": key[0],
-                    "venue": key[1],
-                    "team_category": key[2],
-                    "competition": key[3],
-                },
+                "group": {"date": key[0], "venue": key[1]},
                 "assignments": [
                     {
                         "external_id": match.external_id,
@@ -1175,7 +1349,9 @@ def apply_festival_round_assignment_rules(
                         "before": before[match.external_id],
                         "after": after[match.external_id],
                     }
-                    for _, match, year in sorted(cluster, key=lambda item: item[2], reverse=True)
+                    for _, match, year in sorted(
+                        cluster, key=lambda item: item[2], reverse=True
+                    )
                 ],
                 "changed": before != after,
             })
@@ -1445,6 +1621,8 @@ def parse_club_matchplan(
     config: dict[str, Any],
     audit: dict[str, Any] | None = None,
     duplicate_resolver: Callable[[str, list[Match], dict[str, Any]], Match | None] | None = None,
+    *,
+    defer_duplicate_resolution: bool = False,
 ) -> list[Match]:
     soup = BeautifulSoup(html_text, "lxml")
     competition_rows = soup.select(
@@ -1453,6 +1631,14 @@ def parse_club_matchplan(
     if not competition_rows:
         # Leere Zeitfenster sind zulässig, solange eine Spielplantabelle vorhanden ist.
         if "club-matchplan-table" in html_text or soup.select_one(".club-matchplan-table"):
+            if source_detail_ids(soup) or any(
+                extract_festival_group_id(str(link.get("href") or ""))
+                for link in soup.select('a[href*="/staffel/"]')
+            ):
+                raise ScrapeError(
+                    "Spiel-/Festival-Links ohne erkennbare Spielzeilen; "
+                    "geändertes Quellformat ist kein leerer Spielplan."
+                )
             if audit is not None:
                 audit.update({
                     "source_url": source_url,
@@ -1505,12 +1691,14 @@ def parse_club_matchplan(
         for link in links:
             href = str(link.get("href") or "")
             if href:
-                detail_url = urljoin(BASE_URL, href)
+                detail_url = validate_fussball_url(urljoin(BASE_URL, href))
                 break
 
         if not detail_url and is_festival:
             for link in select_from_rows(rows, 'a[href*="/staffel/"]'):
-                candidate = urljoin(BASE_URL, str(link.get("href") or ""))
+                candidate = validate_fussball_url(
+                    urljoin(BASE_URL, str(link.get("href") or ""))
+                )
                 if extract_festival_group_id(candidate):
                     detail_url = candidate
                     break
@@ -1568,9 +1756,8 @@ def parse_club_matchplan(
                 recalculate_event_times(match, config)
             except MatchTimingError as exc:
                 match.warnings.append(str(exc))
+        validate_match_source_fields(match)
         matches.append(match)
-
-    festival_round_assignments = apply_festival_round_assignment_rules(matches, config)
 
     source_ids = source_detail_ids(soup)
     parsed_ids_before_merge = {
@@ -1585,12 +1772,25 @@ def parse_club_matchplan(
     } - {""}
     parsed_festivals = {extract_festival_group_id(item.detail_url) for item in matches} - {""}
     missing_festivals = sorted(source_festivals - parsed_festivals)
-    (
-        merged_matches,
-        collapsed_duplicate_ids,
-        duplicate_conflicts,
-        duplicate_resolutions,
-    ) = collapse_duplicate_detail_ids(matches, duplicate_resolver)
+    # A published relocation may end in another accepted date window. The
+    # season importer resolves identities only after all windows were read;
+    # standalone parsing keeps the stricter complete-response behaviour.
+    if defer_duplicate_resolution:
+        merged_matches = matches
+        collapsed_duplicate_ids = []
+        duplicate_conflicts = []
+        duplicate_resolutions = []
+        festival_round_assignments = []
+    else:
+        (
+            merged_matches,
+            collapsed_duplicate_ids,
+            duplicate_conflicts,
+            duplicate_resolutions,
+        ) = collapse_duplicate_detail_ids(matches, duplicate_resolver)
+        festival_round_assignments = apply_festival_round_assignment_rules(
+            merged_matches, config
+        )
     conflicting_duplicate_ids = sorted(
         str(item.get("detail_id") or "")
         for item in duplicate_conflicts
@@ -1618,6 +1818,7 @@ def parse_club_matchplan(
             "collapsed_duplicate_detail_ids": collapsed_duplicate_ids,
             "duplicate_conflicts": duplicate_conflicts,
             "duplicate_resolutions": duplicate_resolutions,
+            "duplicate_resolution_deferred": defer_duplicate_resolution,
             "has_more": has_more_results(html_text),
         })
     if missing_ids:
@@ -1645,7 +1846,20 @@ def apply_venue_rules(
     default_decision: str,
     local_venue_pattern: str = "",
 ) -> None:
-    if "spielfrei" in normalize_match_text(match.home_team + " " + match.away_team):
+    if is_non_occupancy_status(match.status):
+        match.decision = "exclude"
+        match.calendar = ""
+        match.venue_rule = f"Nicht stattfindend: {match.status}"
+        match.warnings = [
+            warning
+            for warning in match.warnings
+            if warning
+            not in {
+                "Spielstätte fehlt",
+                "Keine automatische Platzzuordnung möglich",
+            }
+        ]
+    elif "spielfrei" in normalize_match_text(match.home_team + " " + match.away_team):
         match.decision = "exclude"
         match.calendar = ""
         match.venue_rule = "Spielfrei"
@@ -1935,11 +2149,15 @@ def evaluate_quality(
         ):
             if not getattr(match, field_name):
                 missing.append(field_name)
-        if (
-            match.competition_format != "festival"
-            and (not match.detail_url or not extract_detail_id(match.detail_url))
-        ):
-            missing.append("detail_id")
+        has_official_source_id = bool(
+            match.detail_url
+            and (
+                extract_detail_id(match.detail_url)
+                or extract_festival_group_id(match.detail_url)
+            )
+        )
+        if not has_official_source_id:
+            missing.append("official_source_id")
         if missing:
             invalid_included.append({
                 "external_id": match.external_id,
@@ -2066,6 +2284,7 @@ def run(
                 config,
                 audit=audit,
                 duplicate_resolver=duplicate_resolver,
+                defer_duplicate_resolution=True,
             )
             audit["request_count_after_parse"] = client.request_count
             truncated = bool(audit.get("has_more")) or int(audit.get("competition_rows", 0)) >= response_limit
@@ -2097,15 +2316,35 @@ def run(
             for match in window_matches:
                 if match.kickoff and not (window_from <= match.kickoff[:10] <= window_to):
                     continue
-                apply_venue_rules(match, rules, default_decision, local_venue_pattern)
                 accepted_matches.append(match)
             audit["accepted"] = True
             window_audits.append(audit)
 
-        matches = deduplicate(accepted_matches)
+        (
+            merged_matches,
+            collapsed_ids,
+            duplicate_conflicts,
+            duplicate_resolutions,
+        ) = collapse_duplicate_detail_ids(accepted_matches, duplicate_resolver)
+        if duplicate_conflicts:
+            raise ScrapeError(
+                "Widersprüchliche Spiel-IDs nach Zusammenführung aller Zeitfenster: "
+                + ", ".join(str(item["detail_id"]) for item in duplicate_conflicts)
+            )
+        festival_round_assignments = apply_festival_round_assignment_rules(
+            merged_matches, config
+        )
+        matches = deduplicate(merged_matches)
+        for match in matches:
+            apply_venue_rules(match, rules, default_decision, local_venue_pattern)
         previous_registry = load_previous_registry(registry_path)
         registry = build_team_registry(matches, previous_registry, extract_club_id(config))
         quality = evaluate_quality(matches, window_audits, config, client.request_count)
+        quality["cross_window_resolution"] = {
+            "collapsed_duplicate_detail_ids": collapsed_ids,
+            "duplicate_resolutions": duplicate_resolutions,
+            "festival_round_assignments": festival_round_assignments,
+        }
         write_outputs(output_dir, matches, quality, registry)
         write_failed_teams(output_dir, failed)
 

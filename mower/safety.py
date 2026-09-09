@@ -4,8 +4,44 @@ import hashlib
 import json
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from typing import Any, Mapping
 
 from mower.state import AutomationState
+
+
+def occupancy_override_allowed(block: Mapping[str, Any] | None) -> bool:
+    """Only an explicit training/match exception can ever be requested.
+
+    Special events currently discard their binding event type on conversion
+    to mower blocks. They therefore cannot safely be classified as optional.
+    Inspect merged nested blocks as well so a fail-closed source cannot be
+    hidden inside an otherwise ordinary occupancy interval.
+    """
+
+    allowed_sources = {"training", "match"}
+    if not isinstance(block, Mapping):
+        return False
+    sources = {part.strip().lower() for part in str(block.get("source") or "").split("+") if part.strip()}
+    if not sources or not sources.issubset(allowed_sources):
+        return False
+    pending: list[Any] = [block]
+    inspected = 0
+    while pending:
+        inspected += 1
+        if inspected > 1024:
+            return False
+        item = pending.pop()
+        if isinstance(item, Mapping):
+            if any(item.get(key) for key in ("fail_closed", "security_lock", "securityLock", "bindingClosure")):
+                return False
+            if "source" in item:
+                nested_sources = {part.strip().lower() for part in str(item["source"] or "").split("+") if part.strip()}
+                if not nested_sources or not nested_sources.issubset(allowed_sources):
+                    return False
+            pending.extend(value for value in item.values() if isinstance(value, (Mapping, list, tuple)))
+        elif isinstance(item, (list, tuple)):
+            pending.extend(item)
+    return True
 
 
 @dataclass(frozen=True)
@@ -89,6 +125,13 @@ def evaluate_command_gate(
             False,
             "MAINTENANCE_MODE",
             "Wartungsmodus ist aktiv; Steuerbefehle sind gesperrt.",
+        )
+
+    if intent.normalized_action == "START" and state.mower_start_pending_since_utc:
+        return CommandGateDecision(
+            False,
+            "MOWER_START_OUTCOME_UNCONFIRMED",
+            "Die Wirkung eines früheren Startbefehls ist ungeklärt; keine automatische Wiederholung.",
         )
 
     if intent.not_before_utc is not None:

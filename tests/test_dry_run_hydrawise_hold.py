@@ -19,7 +19,7 @@ NOW = datetime(2026, 8, 12, 8, 0, tzinfo=timezone.utc)
 
 
 class DryRunHydrawiseHoldTests(unittest.TestCase):
-    def test_clear_chain_is_persisted_and_releases_only_after_ten_minutes(self) -> None:
+    def test_cold_start_requires_physical_hold_even_with_ten_minute_data_setting(self) -> None:
         config = {
             "timezone": "Europe/Berlin",
             "planning": {
@@ -128,7 +128,7 @@ class DryRunHydrawiseHoldTests(unittest.TestCase):
                 )
                 self.assertTrue(first.details["automation_state"]["persisted"])
 
-                for minute in range(1, 11):
+                for minute in range(1, 151):
                     cycle_time = NOW + timedelta(minutes=minute)
                     fetch_status.return_value = hydrawise_status(cycle_time)
                     second = run_read_only_cycle(
@@ -139,7 +139,7 @@ class DryRunHydrawiseHoldTests(unittest.TestCase):
                         source="test",
                         state_store_factory=lambda _environment: store,
                     )
-                    if minute < 10:
+                    if minute < 150:
                         self.assertFalse(
                             second.details["hydrawise"]
                             ["release_confirmation"]

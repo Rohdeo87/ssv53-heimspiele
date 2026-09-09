@@ -45,6 +45,7 @@ class AutomationState:
     last_hydrawise_observed_utc: str | None = None
     hydrawise_clear_since_utc: str | None = None
     hydrawise_clear_origin: str | None = None
+    hydrawise_drying_since_utc: str | None = None
     last_hydrawise_active_count: int | None = None
     next_irrigation_start_utc: str | None = None
     parked_by_automation: bool = False
@@ -55,6 +56,8 @@ class AutomationState:
     park_confirmed_observations: int = 0
     automation_park_until_utc: str | None = None
     last_start_command_utc: str | None = None
+    mower_start_pending_since_utc: str | None = None
+    mower_start_pending_deadline_utc: str | None = None
     continuous_mowing_owned: bool = False
     continuous_mowing_work_area_id: int | None = None
     continuous_mowing_window_end_utc: str | None = None
@@ -122,11 +125,14 @@ class AutomationState:
             "last_hydrawise_success_utc",
             "last_hydrawise_observed_utc",
             "hydrawise_clear_since_utc",
+            "hydrawise_drying_since_utc",
             "next_irrigation_start_utc",
             "park_command_sent_utc",
             "park_confirmed_utc",
             "automation_park_until_utc",
             "last_start_command_utc",
+            "mower_start_pending_since_utc",
+            "mower_start_pending_deadline_utc",
             "continuous_mowing_window_end_utc",
             "irrigation_zone_start_reserved_utc",
             "irrigation_suspension_until_utc",
@@ -191,6 +197,10 @@ class AutomationState:
             hydrawise_clear_origin=_normalize_optional_text(
                 values.get("hydrawise_clear_origin")
             ),
+            hydrawise_drying_since_utc=_require_utc_iso(
+                _normalize_optional_text(values.get("hydrawise_drying_since_utc")),
+                "hydrawise_drying_since_utc",
+            ),
             last_hydrawise_active_count=_normalize_optional_int(
                 values.get("last_hydrawise_active_count")
             ),
@@ -227,6 +237,14 @@ class AutomationState:
             last_start_command_utc=_require_utc_iso(
                 _normalize_optional_text(values.get("last_start_command_utc")),
                 "last_start_command_utc",
+            ),
+            mower_start_pending_since_utc=_require_utc_iso(
+                _normalize_optional_text(values.get("mower_start_pending_since_utc")),
+                "mower_start_pending_since_utc",
+            ),
+            mower_start_pending_deadline_utc=_require_utc_iso(
+                _normalize_optional_text(values.get("mower_start_pending_deadline_utc")),
+                "mower_start_pending_deadline_utc",
             ),
             continuous_mowing_owned=bool(
                 values.get("continuous_mowing_owned", False)
@@ -412,6 +430,13 @@ class AutomationState:
             )
 
         hydrawise_fresh = hydrawise is not None or hydrawise_active_count is not None
+        previous_success = (
+            datetime.fromisoformat(
+                self.last_hydrawise_success_utc.replace("Z", "+00:00")
+            ).astimezone(timezone.utc)
+            if self.last_hydrawise_success_utc
+            else None
+        )
         previous_next_irrigation = (
             datetime.fromisoformat(
                 self.next_irrigation_start_utc.replace("Z", "+00:00")
@@ -419,17 +444,41 @@ class AutomationState:
             if self.next_irrigation_start_utc
             else None
         )
+        full_hold_origins = {
+            "IRRIGATION_ACTIVE", "IRRIGATION_END", "POSSIBLE_IRRIGATION_DURING_GAP"
+        }
+        # Migrate the old physical-end evidence without backdating beyond its
+        # own persisted proof. Data confidence is tracked separately below.
+        drying_since = self.hydrawise_drying_since_utc
+        if drying_since is None and (
+            self.hydrawise_clear_origin in full_hold_origins
+            or self.irrigation_phase == "COMPLETE_HOLD"
+        ):
+            drying_since = self.hydrawise_clear_since_utc
+        gap_seconds = (
+            (started - previous_success).total_seconds()
+            if previous_success is not None
+            else None
+        )
+        possible_irrigation_during_gap = (
+            (
+                previous_success is None
+                and self.hydrawise_clear_since_utc is None
+                and self.hydrawise_drying_since_utc is None
+            )
+            or (previous_success is not None and (
+                gap_seconds < 0
+                or gap_seconds > hydrawise_continuity_max_gap_seconds
+                or (
+                    previous_next_irrigation is not None
+                    and previous_success < previous_next_irrigation <= started
+                )
+            ))
+        )
         if hydrawise_clear is True:
             # Die Bestätigung beginnt mit dem tatsächlichen Abrufzyklus und
             # niemals rückdatiert mit dem Zeitstempel des API-Payloads. Eine
             # Lücke in den Kontrollzyklen unterbricht die Kette ebenfalls.
-            previous_success = (
-                datetime.fromisoformat(
-                    self.last_hydrawise_success_utc.replace("Z", "+00:00")
-                ).astimezone(timezone.utc)
-                if self.last_hydrawise_success_utc
-                else None
-            )
             continuity_preserved = (
                 self.hydrawise_clear_since_utc is not None
                 and previous_success is not None
@@ -442,20 +491,27 @@ class AutomationState:
                 if continuity_preserved
                 else started.isoformat()
             )
-            if continuity_preserved and self.hydrawise_clear_origin:
-                clear_origin = self.hydrawise_clear_origin
-            elif (
+            if (
                 self.hydrawise_clear_origin == "IRRIGATION_ACTIVE"
                 or int(self.last_hydrawise_active_count or 0) > 0
-                or self.irrigation_phase == "COMPLETE_HOLD"
             ):
                 clear_origin = "IRRIGATION_END"
-            elif (
-                previous_success is not None
-                and previous_next_irrigation is not None
-                and previous_success < previous_next_irrigation <= started
-            ):
+                drying_since = started.isoformat()
+            elif possible_irrigation_during_gap:
                 clear_origin = "POSSIBLE_IRRIGATION_DURING_GAP"
+                drying_since = started.isoformat()
+                clear_since = started.isoformat()
+            elif drying_since is not None:
+                clear_origin = (
+                    self.hydrawise_clear_origin
+                    if self.hydrawise_clear_origin in full_hold_origins
+                    else "IRRIGATION_END"
+                )
+            elif self.irrigation_phase == "COMPLETE_HOLD":
+                clear_origin = "IRRIGATION_END"
+                drying_since = started.isoformat()
+            elif continuity_preserved and self.hydrawise_clear_origin:
+                clear_origin = self.hydrawise_clear_origin
             else:
                 clear_origin = "DATA_GAP"
         else:
@@ -463,6 +519,9 @@ class AutomationState:
             clear_since = None
             if hydrawise_fresh and int(hydrawise_active_count or 0) > 0:
                 clear_origin = "IRRIGATION_ACTIVE"
+            elif hydrawise_fresh and possible_irrigation_during_gap:
+                clear_origin = "POSSIBLE_IRRIGATION_DURING_GAP"
+                drying_since = started.isoformat()
             elif self.hydrawise_clear_origin in {
                 "IRRIGATION_ACTIVE",
                 "IRRIGATION_END",
@@ -478,6 +537,16 @@ class AutomationState:
         previous_mower_state = str(self.last_mower_state or "").strip().upper()
         park_confirmed = self.park_confirmed_utc
         park_observations = int(self.park_confirmed_observations or 0)
+        previous_cycle = (
+            datetime.fromisoformat(self.last_cycle_started_utc.replace("Z", "+00:00")).astimezone(timezone.utc)
+            if self.last_cycle_started_utc else None
+        )
+        park_gap_seconds = (started - previous_cycle).total_seconds() if previous_cycle is not None else None
+        if park_gap_seconds is not None and not 0 <= park_gap_seconds <= 180:
+            # No physical station claim survives an unobserved long interval.
+            # In particular, a later PAUSED event cannot revive an old dock.
+            park_confirmed = None
+            park_observations = 0
         parked_activities = {"PARKED_IN_CS", "CHARGING"}
         paused_after_confirmed_dock = (
             self.parked_by_automation
@@ -494,7 +563,7 @@ class AutomationState:
                 )
             )
         )
-        if self.parked_by_automation and (
+        if self.parked_by_automation and int(error_code or 0) == 0 and (
             parked_activity in parked_activities
             or paused_after_confirmed_dock
         ):
@@ -511,7 +580,8 @@ class AutomationState:
                 and park_observations > 0
             )
             if continuity:
-                park_observations += 1
+                if park_gap_seconds != 0:
+                    park_observations += 1
             elif park_confirmed is not None:
                 # Abwärtskompatible Migration eines bereits persistenten
                 # Parkzeitpunkts: Die Zeit bleibt erhalten, zählt aber ohne
@@ -548,6 +618,7 @@ class AutomationState:
             ),
             hydrawise_clear_since_utc=clear_since,
             hydrawise_clear_origin=clear_origin,
+            hydrawise_drying_since_utc=drying_since,
             last_hydrawise_active_count=(
                 hydrawise_active_count
                 if hydrawise_fresh
@@ -556,7 +627,7 @@ class AutomationState:
             next_irrigation_start_utc=(
                 next_irrigation.isoformat()
                 if next_irrigation is not None
-                else None
+                else (None if hydrawise_fresh else self.next_irrigation_start_utc)
             ),
             park_confirmed_utc=park_confirmed,
             park_confirmed_observations=park_observations,

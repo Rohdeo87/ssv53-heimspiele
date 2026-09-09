@@ -2932,6 +2932,8 @@ class FullFailsafeTests(unittest.TestCase):
         ]
         initial = AutomationState(
             operator_request_id="custom-1",
+            last_hydrawise_success_utc=(NOW - timedelta(minutes=1)).isoformat(),
+            hydrawise_clear_since_utc=(NOW - timedelta(minutes=10)).isoformat(),
             operator_request_action="CUSTOMIZE_NEXT_IRRIGATION",
             operator_requested_utc=(NOW - timedelta(seconds=10)).isoformat(),
             operator_request_expires_utc=(NOW + timedelta(minutes=10)).isoformat(),
@@ -3000,7 +3002,10 @@ class FullFailsafeTests(unittest.TestCase):
             now=NOW + timedelta(minutes=60),
             zone=lambda *args: zone_calls.append(args) or {"ok": True},
         )
-        if reserved.decision_code == "IRRIGATION_ZONE_START_RESERVED":
+        if reserved.decision_code in {"IRRIGATION_ZONE_START_RESERVED", "IRRIGATION_WAIT_FOR_CONFIRMED_PARK"}:
+            # The deliberately skipped 43 minutes cannot count as observed
+            # dock continuity. Reconfirm before any deferred watering start.
+            self.assertEqual(zone_calls, [])
             started, _ = self._continue(
                 store,
                 suspended_result(activity="PARKED_IN_CS"),
@@ -3176,6 +3181,9 @@ class FullFailsafeTests(unittest.TestCase):
                 "hydrawise_clear_since_utc": (
                     NOW - timedelta(minutes=149)
                 ).isoformat(),
+                "hydrawise_drying_since_utc": (
+                    NOW - timedelta(minutes=149)
+                ).isoformat(),
                 "last_hydrawise_success_utc": (
                     NOW - timedelta(minutes=1)
                 ).isoformat(),
@@ -3193,6 +3201,9 @@ class FullFailsafeTests(unittest.TestCase):
             {
                 **store.load().to_dict(),
                 "hydrawise_clear_since_utc": (
+                    NOW - timedelta(minutes=150)
+                ).isoformat(),
+                "hydrawise_drying_since_utc": (
                     NOW - timedelta(minutes=150)
                 ).isoformat(),
                 "last_hydrawise_success_utc": (

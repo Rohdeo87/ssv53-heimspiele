@@ -29,6 +29,59 @@ def status(*relays: dict, observed: datetime = NOW) -> dict:
 
 
 class HydrawiseSafetyTests(unittest.TestCase):
+    def test_missing_or_malformed_zone_values_never_release(self) -> None:
+        for changes in (
+            {"time": None}, {"run": None}, {"time": ""}, {"run": ""},
+            {"time": True}, {"run": False}, {"time": "NaN"},
+            {"time": "inf"}, {"time": -1}, {"run": -1},
+            {"time": 1.5}, {"relay_id": "bad"}, {"relay_id": 1.5},
+            {"relay_id": True}, {"time": 1e30}, {"time": 3600, "run": 0},
+        ):
+            with self.subTest(changes=changes):
+                snapshot = evaluate_safety_status(
+                    status({"relay_id": 1, "time": 0, "run": 900, **changes}),
+                    CONFIG, now_utc=NOW,
+                )
+                self.assertFalse(snapshot.clear_now)
+        for absent_key in ("time", "run"):
+            relay = {"relay_id": 1, "time": 0, "run": 900}
+            del relay[absent_key]
+            self.assertFalse(evaluate_safety_status(status(relay), CONFIG, now_utc=NOW).clear_now)
+
+    def test_running_signal_blocks_even_with_zero_remaining_runtime(self) -> None:
+        snapshot = evaluate_safety_status(
+            status({"relay_id": 1, "time": 1, "run": 0}), CONFIG, now_utc=NOW,
+        )
+        self.assertFalse(snapshot.clear_now)
+        self.assertEqual(snapshot.active_relay_ids, (1,))
+
+    def test_malformed_relays_container_or_entry_never_releases(self) -> None:
+        for relays in (None, {}, "invalid", [None], [{"relay_id": 1, "time": 0, "run": 900}, None]):
+            with self.subTest(relays=relays):
+                self.assertFalse(evaluate_safety_status(
+                    {"time": int(NOW.timestamp()), "relays": relays}, CONFIG, now_utc=NOW,
+                ).clear_now)
+
+    def test_physical_drying_deadline_and_data_confirmation_are_independent(self) -> None:
+        base = dict(
+            available=True, fresh=True, clear_now=True, physical_reason="frei",
+            clear_since_utc=(NOW - timedelta(minutes=2)).isoformat(),
+            drying_since_utc=(NOW - timedelta(minutes=150)).isoformat(),
+            now_utc=NOW, required_clear_minutes=150,
+            telemetry_confirmation_minutes=2, persistent_state_available=True,
+        )
+        self.assertTrue(evaluate_continuous_clear_confirmation(**base).allowed)
+        for change in (
+            {"clear_since_utc": (NOW - timedelta(minutes=1)).isoformat()},
+            {"drying_since_utc": (NOW - timedelta(minutes=149)).isoformat()},
+            {"fresh": False}, {"available": False}, {"clear_now": False},
+            {"persistent_state_available": False},
+            {"drying_since_utc": "invalid"},
+            {"drying_since_utc": (NOW + timedelta(minutes=1)).isoformat()},
+        ):
+            with self.subTest(change=change):
+                self.assertFalse(evaluate_continuous_clear_confirmation(**{**base, **change}).allowed)
+
     def test_suspended_zone_remains_observable_but_leaves_upcoming_schedule(self) -> None:
         payload = status(
             {
@@ -52,6 +105,18 @@ class HydrawiseSafetyTests(unittest.TestCase):
         self.assertFalse(observations[0]["scheduled"])
         self.assertEqual(observations[0]["run_seconds"], 900)
         self.assertEqual([zone["relay_id"] for zone in schedule], [2])
+
+    def test_missing_current_poll_keeps_known_physical_deadline_without_release(self) -> None:
+        snapshot = evaluate_continuous_clear_confirmation(
+            available=False, fresh=False, clear_now=False, physical_reason="Status fehlt",
+            clear_since_utc=None, drying_since_utc=(NOW - timedelta(minutes=149)).isoformat(),
+            now_utc=NOW, required_clear_minutes=150, telemetry_confirmation_minutes=2,
+            persistent_state_available=True,
+        )
+        self.assertFalse(snapshot.allowed)
+        self.assertFalse(snapshot.telemetry_confirmed)
+        self.assertIsNone(snapshot.release_at_utc)
+        self.assertEqual(snapshot.dry_until_utc, (NOW + timedelta(minutes=1)).isoformat())
 
     def test_malformed_zone_identifiers_are_reported_invalid_not_raised(self) -> None:
         payload = status(

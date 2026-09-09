@@ -101,6 +101,7 @@ def _state_details(
         "park_command_sent_utc": state.park_command_sent_utc,
         "park_confirmed_utc": state.park_confirmed_utc,
         "hydrawise_clear_since_utc": state.hydrawise_clear_since_utc,
+        "hydrawise_drying_since_utc": state.hydrawise_drying_since_utc,
         "last_hydrawise_active_count": state.last_hydrawise_active_count,
         "persisted": persisted,
         "error": error,
@@ -157,7 +158,11 @@ def _record_cycle_state(
     hydrawise = _as_dict(details.get("hydrawise"))
     hydrawise_safety = _as_dict(hydrawise.get("safety"))
     observed = _parse_time(hydrawise_safety.get("observed_at_utc"))
-    hydrawise_fresh = bool(hydrawise_safety.get("fresh"))
+    hydrawise_fresh = (
+        bool(hydrawise_safety.get("available"))
+        and bool(hydrawise_safety.get("fresh"))
+        and hydrawise_safety.get("relay_set_valid") is not False
+    )
     clear_now = bool(hydrawise_safety.get("clear_now"))
     active_count = int(hydrawise_safety.get("active_zone_count") or 0)
     current_plan = _as_dict(details.get("current_plan"))
@@ -186,7 +191,7 @@ def _record_cycle_state(
             and clear_now
             and not irrigation_block_active
         ),
-        hydrawise_active_count=active_count,
+        hydrawise_active_count=active_count if hydrawise_fresh else None,
         next_irrigation_start_utc=_next_irrigation_start(details),
     )
 
@@ -233,6 +238,7 @@ def _hydrawise_release_confirmation(
     details: dict[str, Any],
     now_utc: datetime,
     confirmation_minutes: int,
+    telemetry_confirmation_minutes: int,
 ) -> HydrawiseContinuousClearSnapshot:
     safety = _as_dict(_as_dict(details.get("hydrawise")).get("safety"))
     return evaluate_continuous_clear_confirmation(
@@ -246,6 +252,8 @@ def _hydrawise_release_confirmation(
         now_utc=now_utc,
         required_clear_minutes=confirmation_minutes,
         persistent_state_available=True,
+        drying_since_utc=cycle_state.hydrawise_drying_since_utc,
+        telemetry_confirmation_minutes=telemetry_confirmation_minutes,
     )
 
 
@@ -518,6 +526,13 @@ def run_full_mower_cycle(
         details=details,
         now_utc=now_utc,
         confirmation_minutes=confirmation_minutes,
+        telemetry_confirmation_minutes=_positive_int(
+            environment,
+            "FULL_MOWER_HYDRAWISE_CLEAR_CONFIRMATION_MINUTES",
+            10,
+            minimum=1,
+            maximum=1440,
+        ),
     )
     details["hydrawise_release_gate"] = {
         **hydrawise_release.to_dict(),

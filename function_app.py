@@ -4,6 +4,8 @@ import hashlib
 import json
 import logging
 import os
+from functools import lru_cache
+from pathlib import Path
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
@@ -59,6 +61,20 @@ app = func.FunctionApp()
 LOGGER = logging.getLogger("ssv53.azure.platzpflege")
 
 
+@lru_cache(maxsize=1)
+def _build_provenance() -> dict:
+    """Identify loaded entrypoint/package metadata without claiming device rollout."""
+    root = Path(__file__).resolve().parent
+    evidence = {"entrypoint_sha256": None, "package_manifest_sha256": None,
+                "all_installed_files_verified": False}
+    for name, key in (("function_app.py", "entrypoint_sha256"), ("package-manifest.json", "package_manifest_sha256")):
+        try:
+            evidence[key] = hashlib.sha256((root / name).read_bytes()).hexdigest()
+        except OSError:
+            pass
+    return evidence
+
+
 @app.timer_trigger(
     schedule="%TIMER_SCHEDULE%",
     arg_name="timer",
@@ -82,6 +98,7 @@ def ssv53_mower_timer(
         past_due=bool(timer.past_due),
     )
     payload = result.to_dict()
+    payload["build_provenance"] = _build_provenance()
     payload["invocation_id"] = context.invocation_id
 
     retry_context = getattr(context, "retry_context", None)
@@ -310,7 +327,7 @@ def _occupancy_headers(*, cache: bool) -> dict[str, str]:
     return {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Headers": "Authorization, Content-Type",
         "Cache-Control": "public, max-age=60" if cache else "no-store",
         "X-Content-Type-Options": "nosniff",
     }
@@ -679,6 +696,23 @@ def _platzwart_token(req: func.HttpRequest) -> str:
             401,
         )
     return authorization[7:].strip()
+
+
+def _authorize_occupancy_write(req: func.HttpRequest, body: dict, now_utc: datetime) -> dict:
+    """Temporary operator bridge; never derive write authority from Appack JSON.
+
+    Until a verified trainer identity provider is integrated, only an enrolled,
+    PIN-authenticated Platzwart session may change occupancy. Public reads remain
+    available. The session subject, not a submitted role/creator ID, is authoritative.
+    """
+    session = require_platzwart_session(_platzwart_token(req), os.environ, now_utc)
+    device_id = str(session.get("did") or "").strip()
+    if not device_id:
+        raise PlatzwartError("SESSION_INVALID", "Die Anmeldung enthält keine gültige Gerätekennung.", 401)
+    subject = "platzwart:" + device_id
+    creator = dict(body.get("creator") or {}) if isinstance(body.get("creator"), dict) else {}
+    creator["id"] = subject
+    return {**body, "requesterId": subject, "isAppAdministrator": True, "creator": creator}
 
 
 @app.route(
@@ -1100,6 +1134,7 @@ def ssv53_trainer_occupancies(req: func.HttpRequest) -> func.HttpResponse:
                 "REQUEST_INVALID",
                 "Der Request muss ein JSON-Objekt enthalten.",
             )
+        body = _authorize_occupancy_write(req, body, datetime.now(timezone.utc))
         action = str(body.get("action") or "create").strip().lower()
         expected_confirmation = {
             "create": "TRAINER_BELEGUNG_SPEICHERN",
@@ -1350,7 +1385,7 @@ def ssv53_trainer_occupancies(req: func.HttpRequest) -> func.HttpResponse:
             command["event"]["resourceId"],
         )
         return _trainer_occupancy_response(result, status_code=200)
-    except SpecialOccupancyError as exc:
+    except (SpecialOccupancyError, PlatzwartError) as exc:
         LOGGER.warning("SSV53_TRAINER_OCCUPANCY_REJECTED code=%s", exc.code)
         return _trainer_occupancy_response(
             {"ok": False, "code": exc.code, "error": str(exc)},
@@ -1406,6 +1441,9 @@ def ssv53_training_cancellations(req: func.HttpRequest) -> func.HttpResponse:
     )
 
     try:
+        if req.method.upper() == "POST":
+            verified_identity = _authorize_occupancy_write(req, {}, now_utc)
+            actor_hash = hashlib.sha256(str(verified_identity.get("requesterId") or "").encode()).hexdigest()[:16]
         if req.method.upper() == "GET":
             if req.params.get("start"):
                 start_day = datetime.fromisoformat(req.params["start"]).date()
@@ -1492,7 +1530,7 @@ def ssv53_training_cancellations(req: func.HttpRequest) -> func.HttpResponse:
                 now_utc=now_utc,
                 release_delay_minutes=delay,
             )
-            LOGGER.warning("SSV53_TRAINING_CANCELLED event_id=%s", event_id)
+            LOGGER.warning("SSV53_TRAINING_CANCELLED event_id=%s actor_hash=%s", event_id, actor_hash)
             return _training_cancellation_response(
                 {
                     "ok": True,
@@ -1509,9 +1547,10 @@ def ssv53_training_cancellations(req: func.HttpRequest) -> func.HttpResponse:
         ):
             restored = store.restore(event_id, now_utc=now_utc)
             LOGGER.warning(
-                "SSV53_TRAINING_RESTORED event_id=%s restored=%s",
+                "SSV53_TRAINING_RESTORED event_id=%s restored=%s actor_hash=%s",
                 event_id,
                 restored,
+                actor_hash,
             )
             return _training_cancellation_response(
                 {
@@ -1522,6 +1561,8 @@ def ssv53_training_cancellations(req: func.HttpRequest) -> func.HttpResponse:
                 }
             )
         raise ValueError("Aktion oder Bestätigung ist ungültig.")
+    except PlatzwartError as exc:
+        return _training_cancellation_response({"code": exc.code, "error": str(exc)}, exc.status_code)
     except ValueError as exc:
         return _training_cancellation_response({"error": str(exc)}, 400)
     except Exception:

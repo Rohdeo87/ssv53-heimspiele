@@ -35,6 +35,7 @@ from mower.cutting_height import (
 from mower.runtime import RuntimeSettings
 from mower.state import AutomationState
 from mower.state_store import AzureTableStateStore, StateConflictError
+from mower.safety import occupancy_override_allowed
 from mower.irrigation_schedule import (
     IrrigationScheduleValidationError,
     SCHEDULE_ACTIONS,
@@ -608,12 +609,83 @@ def _state_payload(state: AutomationState) -> dict[str, Any]:
         "irrigationCompletedAt": state.irrigation_completed_utc,
         "hydrawiseClearSince": state.hydrawise_clear_since_utc,
         "hydrawiseClearOrigin": state.hydrawise_clear_origin,
+        "hydrawiseDryingSince": state.hydrawise_drying_since_utc,
+        "mowerStartOutcomeUnconfirmed": state.mower_start_pending_since_utc is not None,
         "pendingAction": state.operator_request_action if state.operator_request_status == "PENDING" else None,
         "pendingRequestedAt": state.operator_requested_utc if state.operator_request_status == "PENDING" else None,
         "lastOperatorAction": state.operator_request_action,
         "lastOperatorStatus": state.operator_request_status,
         "lastOperatorRequestedAt": state.operator_requested_utc,
         "lastOperatorResult": state.operator_request_result,
+    }
+
+
+def _coordination_payload(details, state, current_plan, environment, now_utc, data_quality):
+    """Read-only explanation of simultaneous conditions; never a start permit."""
+    now = now_utc.astimezone(timezone.utc)
+    mower = dict(details.get("mower") or {})
+    water = dict(details.get("hydrawise") or {})
+    safety = dict(water.get("safety") or {})
+    release = dict(water.get("release_confirmation") or {})
+    inputs = dict(details.get("input_files") or {})
+    blockers = []
+
+    def age(value, *, milliseconds=False):
+        try:
+            stamp = datetime.fromtimestamp(float(value) / 1000, timezone.utc) if milliseconds else datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+            if stamp.tzinfo is None:
+                return None
+            elapsed = (now - stamp.astimezone(timezone.utc)).total_seconds()
+            return round(elapsed) if elapsed >= -30 else None
+        except (ValueError, TypeError, OverflowError, OSError):
+            return None
+
+    def add(code, label, condition, until=None):
+        blockers.append({"code": code, "label": label, "resolution": condition, "until": until})
+
+    if state.maintenance_mode or state.last_decision_code == "OPERATOR_PARK_HOLD" or (state.automation_park_source == "operator" and not state.automation_restart_allowed):
+        add("MANUAL_STOP", "Manuelle Stoppsperre", "Ausdrückliche Freigabe durch den Platzwart und erneute Sicherheitsprüfung.")
+    if state.mower_start_pending_since_utc is not None:
+        add("START_UNCONFIRMED", "Wirkung eines Mäherstarts ungeklärt", "Gerätewarteschlange, nativen Zeitplan und sicheren Parkzustand vor manueller Freigabe abgleichen. Eine Parkmeldung allein hebt die Sperre nicht auf.")
+    if _mower_error_active(mower):
+        add("MOWER_ERROR", _mower_error_message(mower) or "Mäherstörung", "Fehler beheben; frische fehlerfreie Gerätemeldung erforderlich.")
+    mower_age = age(mower.get("status_timestamp_ms"), milliseconds=True)
+    if mower.get("connected") is not True or mower_age is None or mower_age > int(environment.get("MOWER_STATUS_MAX_AGE_SECONDS", "180")):
+        add("MOWER_TELEMETRY", "Mäherzustand nicht aktuell bestätigt", "Neue, verbundene Gerätemeldung innerhalb der Altersgrenze.")
+    for block in (current_plan.get("blocked_now"), current_plan.get("parking_block")):
+        if block and not any(item["code"] == "OCCUPANCY" for item in blockers):
+            add("OCCUPANCY", str(block.get("title") or "Platzsperre einschließlich Vorlauf"), "Verbindliche Belegung und Schutzpuffer müssen beendet sein.", block.get("end"))
+    if data_quality.get("displayOnly"):
+        add("DATA_QUALITY", "Sicherheitsdaten nicht vollständig verfügbar", "Frischer validierter Plan und erreichbarer Automatikzustand.")
+    if safety.get("available") is not True or safety.get("fresh") is not True:
+        add("IRRIGATION_TELEMETRY", "Bewässerungszustand unbekannt", "Vollständige aktuelle Meldung aller freigegebenen Zonen.")
+    elif safety.get("clear_now") is not True:
+        add("IRRIGATION_ACTIVE_OR_DUE", "Bewässerung läuft oder steht bevor", "Bestätigtes Ende aller Zonen und Ablauf der Schutzzeiten.")
+    if state.irrigation_phase and state.irrigation_phase != "COMPLETE_HOLD":
+        add("IRRIGATION_SEQUENCE", "Bewässerungsablauf: " + state.irrigation_phase, "Sicherer Stationszustand, bestätigter Ablaufabschluss; bei Fehler manuelle Klärung.")
+    if release and not release.get("allowed"):
+        add("DRYING_OR_CONFIRMATION", "Trocknung oder erneute Datenbestätigung", "Physische Trocknungsfrist und aktuelle Datenbestätigung müssen beide erfüllt sein.", release.get("release_at_utc"))
+    if mower.get("activity") == "CHARGING":
+        add("CHARGING", "Akku wird geladen", "Geräteeigene Ladefreigabe und alle Sicherheitsbedingungen; Ladeende ist unbekannt.")
+    controller_age = age(state.last_cycle_started_utc)
+    if controller_age is None or controller_age > 180:
+        add("CONTROLLER_STALE", "Letzte Steuerungsentscheidung nicht aktuell", "Erfolgreicher neuer Steuerungszyklus; Geräte können ihren eigenen Zustand beibehalten.")
+    action_status = str(state.operator_request_status or "NONE")
+    action_labels = {"PENDING": "Angefordert", "ACCEPTED": "Vom Dienst angenommen", "COMPLETE": "Dienstverarbeitung abgeschlossen", "COMPLETED": "Dienstverarbeitung abgeschlossen", "SUCCEEDED": "Dienstverarbeitung abgeschlossen", "SENT_UNCONFIRMED": "Gesendet, Wirkung ungeklärt", "FAILED": "Fehlgeschlagen", "EXPIRED": "Abgelaufen", "REJECTED": "Abgewiesen"}
+    return {
+        "explanationOnly": True, "primaryBlocker": blockers[0] if blockers else None,
+        "blockers": blockers, "dryingMinutes": int(environment.get("POST_IRRIGATION_DRYING_MINUTES", "150")),
+        "dryUntil": release.get("dry_until_utc"), "releaseNotBefore": release.get("release_at_utc"),
+        "telemetryConfirmed": release.get("telemetry_confirmed"),
+        "chargingEndEstimate": None,
+        "dataAgeSeconds": {"mower": mower_age, "irrigation": age(safety.get("observed_at_utc")),
+                           "controller": controller_age, "safetyBundle": age(inputs.get("published_at_utc"))},
+        "importObservedAt": None,
+        "lastAction": {"action": state.operator_request_action, "status": action_status,
+                       "label": action_labels.get(action_status, "Kein bestätigter Abschluss"),
+                       "requestedAt": state.operator_requested_utc,
+                       "deviceExecutionConfirmed": False},
+        "note": "Zeitangaben sind früheste Prüfzeitpunkte. Eine Befehlsannahme bestätigt keine physische Ausführung.",
     }
 
 
@@ -1118,7 +1190,8 @@ def live_status(environment: Mapping[str, str], now_utc: datetime) -> dict[str, 
         "bladeUsageSeconds": device_statistics.get("cutting_blade_usage_seconds"),
         "totalRunningSeconds": device_statistics.get("total_running_seconds"),
     }
-    completed_cycles = statistics.get("completedAreaCycles7d")
+    completed_cycles = statistics.get("estimatedAreaCycles7d", statistics.get("completedAreaCycles7d"))
+    statistics["mownAreaEquivalentsEstimated"] = True
     current_progress = statistics.get("currentAreaProgress")
     if completed_cycles is not None and current_progress is not None:
         statistics["mownAreaEquivalents7d"] = round(
@@ -1191,12 +1264,14 @@ def live_status(environment: Mapping[str, str], now_utc: datetime) -> dict[str, 
             "zones": zones, "releaseConfirmation": hydrawise.get("release_confirmation"),
         },
         "occupancy": {
+            "overrideAllowed": occupancy_override_allowed(current_plan.get("blocked_now")),
             "current": current_plan.get("blocked_now"), "next": current_plan.get("next_block"),
             "parking": current_plan.get("parking_block"),
             "upcoming": current_plan.get("upcoming_blocks") or [],
             "safeWindows": current_plan.get("safe_mowing_windows") or [],
         },
         "automation": _state_payload(state),
+        "coordination": _coordination_payload(details, state, current_plan, environment, now_utc, data_quality),
         "statistics": statistics,
         "irrigationStatistics": irrigation_statistics,
         "irrigationSchedule": _irrigation_schedule_payload(
@@ -1297,6 +1372,12 @@ def request_action(
             "OCCUPANCY_OVERRIDE_INVALID",
             "Die bestätigte Belegung ist ungültig.",
         )
+    if occupancy_override_requested:
+        # The actual block is revalidated by the controller immediately before
+        # action. Reject binding/unknown source types at the request boundary too.
+        parts = normalized_override_key.rsplit("|", 1)
+        if len(parts) != 2 or not occupancy_override_allowed({"source": parts[-1]}):
+            raise PlatzwartError("OCCUPANCY_OVERRIDE_FORBIDDEN", "Verbindliche oder unbekannte Platzsperren können nicht übersteuert werden.", 409)
     schedule_json: str | None = None
     if normalized in SCHEDULE_ACTIONS:
         try:

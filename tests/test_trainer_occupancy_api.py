@@ -32,6 +32,11 @@ def request(body: dict) -> func.HttpRequest:
 
 class TrainerOccupancyApiTests(unittest.TestCase):
     def setUp(self) -> None:
+        # Business rules below use a verified principal; authentication and
+        # spoofed role/creator claims are exercised without this stub separately.
+        auth = patch.object(function_app, "_authorize_occupancy_write", side_effect=lambda req, body, now: body)
+        auth.start()
+        self.addCleanup(auth.stop)
         self.store = InMemorySpecialOccupancyStore()
         self.cancellation_store = InMemoryCancellationStore()
         self.store_patch = patch.object(

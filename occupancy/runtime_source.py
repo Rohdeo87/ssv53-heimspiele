@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from hashlib import sha256
 import json
@@ -51,6 +51,34 @@ def _validate_age(value: datetime, now_utc: datetime, max_age_minutes: int) -> N
 
 def _age_minutes(value: datetime, now_utc: datetime) -> int:
     return max(0, int((now_utc - value).total_seconds() // 60))
+
+
+def _packaged_source(
+    path: str, *, now_utc: datetime, environment: Mapping[str, str]
+) -> OccupancyMatchSource:
+    """Rendering a package does not refresh the age of its underlying feed."""
+    result = OccupancyMatchSource(path, "package", fresh=False)
+    if Path(path).suffix.casefold() != ".json":
+        return result  # A legacy ICS has no verified feed acquisition timestamp.
+    try:
+        data = Path(path).read_bytes()
+        payload = json.loads(data.decode("utf-8"))
+        generated_at = _parse_utc(str(payload["generatedAt"]), "generatedAt")
+        _validate_feed(data, expected_generated_at=generated_at)
+        result = replace(
+            result,
+            source_generated_at_utc=generated_at.isoformat(),
+            age_minutes=_age_minutes(generated_at, now_utc),
+        )
+        maximum = int(environment.get("SSV53_OCCUPANCY_MAX_AGE_MINUTES", "720"))
+        if 60 <= maximum <= 10080:
+            _validate_age(generated_at, now_utc, maximum)
+            result = replace(result, fresh=True)
+    except (OSError, UnicodeError, ValueError, TypeError, KeyError):
+        # The service performs full content validation. Missing provenance is
+        # exposed as unknown/stale, never as a fresh acquisition.
+        pass
+    return result
 
 
 def _safe_blob_path(value: Any, label: str) -> str:
@@ -236,7 +264,7 @@ def resolve_occupancy_match_source(
         environment.get("OCCUPANCY_MATCHES_PATH") or "public/matches.json"
     ).strip()
     if not _truthy(environment.get("SSV53_DYNAMIC_CONFIG_ENABLED", "false")):
-        return OccupancyMatchSource(packaged, "package")
+        return _packaged_source(packaged, now_utc=now_utc, environment=environment)
 
     account_url = str(environment.get("SSV53_CONFIG_STORAGE_ACCOUNT_URL") or "").strip()
     container_name = str(environment.get("SSV53_CONFIG_CONTAINER") or "").strip()
