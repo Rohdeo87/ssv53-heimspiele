@@ -177,6 +177,112 @@ class ChangeReportTests(unittest.TestCase):
         self.assertFalse(result["confirmed"])
         self.assertEqual(1, result["confirmations"])
 
+    def test_corrupt_confirmation_state_cannot_manufacture_a_confirmation(self):
+        now = datetime(2026, 9, 1, 10, tzinfo=timezone.utc)
+        items = [{"kind": "removed", "id": "dfb:1", "before": {}, "after": None}]
+        corruptions = {
+            "schema": lambda value: value.update(schemaVersion=2),
+            "inflated count": lambda value: value.update(confirmations=999),
+            "string count": lambda value: value.update(confirmations="1"),
+            "different items": lambda value: value.update(items=[]),
+            "invalid first time": lambda value: value.update(firstSeenAt="invalid"),
+            "future last time": lambda value: value.update(
+                lastCountedAt=(now + timedelta(hours=2)).isoformat()
+            ),
+            "impossible cadence": lambda value: value.update(confirmations=2),
+        }
+        for label, corrupt in corruptions.items():
+            with self.subTest(label=label), tempfile.TemporaryDirectory() as tmp:
+                state = Path(tmp) / "confirmation.json"
+                report_changes.confirm_safety_decrease(
+                    items,
+                    state_path=state,
+                    now=now,
+                    required_confirmations=3,
+                    minimum_interval=timedelta(minutes=60),
+                )
+                payload = json.loads(state.read_text(encoding="utf-8"))
+                corrupt(payload)
+                state.write_text(json.dumps(payload), encoding="utf-8")
+                result = report_changes.confirm_safety_decrease(
+                    items,
+                    state_path=state,
+                    now=now + timedelta(minutes=60),
+                    required_confirmations=3,
+                    minimum_interval=timedelta(minutes=60),
+                )
+                self.assertFalse(result["confirmed"])
+                self.assertEqual(1, result["confirmations"])
+
+    def test_main_uses_source_observation_time_so_replay_does_not_confirm(self):
+        now = datetime.now(timezone.utc)
+        observed_at = now - timedelta(hours=2)
+        future_kickoff = (now + timedelta(days=1)).isoformat()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            before = root / "before.json"
+            after = root / "after.json"
+            state = root / "confirmation.json"
+            output_json = root / "report.json"
+            output_md = root / "report.md"
+            before.write_text(
+                json.dumps({"matches": [match("dfb:1", kickoff=future_kickoff)]}),
+                encoding="utf-8",
+            )
+            after.write_text(
+                json.dumps({"generatedAt": observed_at.isoformat(), "matches": []}),
+                encoding="utf-8",
+            )
+            arguments = [
+                "report_changes.py",
+                "--before", str(before),
+                "--after", str(after),
+                "--json", str(output_json),
+                "--markdown", str(output_md),
+                "--confirmation-state", str(state),
+                "--minimum-confirmation-minutes", "60",
+            ]
+            old_argv = report_changes.os.sys.argv
+            try:
+                report_changes.os.sys.argv = arguments
+                self.assertEqual(2, report_changes.main())
+                first = json.loads(output_json.read_text(encoding="utf-8"))
+                report_changes.os.sys.argv = arguments
+                self.assertEqual(2, report_changes.main())
+                replay = json.loads(output_json.read_text(encoding="utf-8"))
+            finally:
+                report_changes.os.sys.argv = old_argv
+            self.assertEqual(1, first["guard"]["safetyConfirmation"]["confirmations"])
+            self.assertEqual(1, replay["guard"]["safetyConfirmation"]["confirmations"])
+            self.assertFalse(replay["guard"]["safetyConfirmation"]["confirmed"])
+
+    def test_main_rejects_safety_decrease_without_source_observation_time(self):
+        now = datetime.now(timezone.utc)
+        future_kickoff = (now + timedelta(days=1)).isoformat()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            before = root / "before.json"
+            after = root / "after.json"
+            before.write_text(
+                json.dumps({"matches": [match("dfb:1", kickoff=future_kickoff)]}),
+                encoding="utf-8",
+            )
+            after.write_text(json.dumps({"matches": []}), encoding="utf-8")
+            old_argv = report_changes.os.sys.argv
+            report_changes.os.sys.argv = [
+                "report_changes.py",
+                "--before", str(before),
+                "--after", str(after),
+                "--json", str(root / "report.json"),
+                "--markdown", str(root / "report.md"),
+            ]
+            try:
+                with self.assertRaises(SystemExit) as caught:
+                    report_changes.main()
+            finally:
+                report_changes.os.sys.argv = old_argv
+            self.assertEqual(2, caught.exception.code)
+
     def test_main_writes_report_and_public_copy(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
