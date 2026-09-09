@@ -1,0 +1,38 @@
+{
+  "local_feed_validation": "passed",
+  "generated_at_utc": "2026-09-09T06:04:44.516735+00:00",
+  "count": 46,
+  "added_ids": [
+    "dfb:031MFGE2PG000000VS5489BUVVKNMR0J"
+  ],
+  "changed_ids": [],
+  "removed_ids": [],
+  "safety_decreasing_changes": [],
+  "relocated_match_in_occupancy": {
+    "id": "match:031MFGE2PG000000VS5489BUVVKNMR0J",
+    "title": "Schönwalder SV (9er) – SV Dallgow 47 (9er)",
+    "start": "2026-10-08T18:00:00+02:00",
+    "end": "2026-10-08T19:25:00+02:00",
+    "resourceId": "rasen",
+    "source": "match",
+    "season": null,
+    "team": "Schönwalder SV (9er)",
+    "teamCategory": "C-Junioren | 2.Kreisklasse",
+    "teamRole": "home",
+    "homeTeam": "Schönwalder SV (9er)",
+    "awayTeam": "SV Dallgow 47 (9er)",
+    "competition": "Do, | C-Junioren | 2.Kreisklasse",
+    "competitionFormat": "league",
+    "matchType": "ME",
+    "matchDurationMinutes": 85,
+    "durationRule": "flb-jugendordnung-2025-12-13-c-2x35+halftime-15",
+    "kickoff": "2026-10-08T18:00:00+02:00",
+    "area": "vorne & hinten",
+    "description": "C-Junioren · 2.Kreisklasse",
+    "detailLink": "https://www.fussball.de/spiel/schoenwalder-sv-9er-sv-dallgow-47-i-9er/-/spiel/031MFGE2PG000000VS5489BUVVKNMR0J",
+    "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+    "occupancyStart": "2026-10-08T17:00:00+02:00",
+    "occupancyEnd": "2026-10-08T20:25:00+02:00"
+  },
+  "publication": "not performed"
+}

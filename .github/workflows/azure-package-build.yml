@@ -9,12 +9,16 @@ on:
       - "function_app.py"
       - "host.json"
       - "requirements.txt"
+      - "requirements-test.txt"
+      - "tests/**"
       - "mower/**"
       - "occupancy/**"
       - "public/rasen.ics"
       - "public/kunstrasen.ics"
       - "public/matches.json"
       - "scripts/build_azure_source_package.py"
+      - "scripts/build_azure_full_failsafe_package.py"
+      - "scripts/verify_full_failsafe_delivery.py"
       - "tests/test_azure_package.py"
       - ".github/workflows/azure-package-build.yml"
   pull_request:
@@ -22,12 +26,16 @@ on:
       - "function_app.py"
       - "host.json"
       - "requirements.txt"
+      - "requirements-test.txt"
+      - "tests/**"
       - "mower/**"
       - "occupancy/**"
       - "public/rasen.ics"
       - "public/kunstrasen.ics"
       - "public/matches.json"
       - "scripts/build_azure_source_package.py"
+      - "scripts/build_azure_full_failsafe_package.py"
+      - "scripts/verify_full_failsafe_delivery.py"
       - "tests/test_azure_package.py"
       - ".github/workflows/azure-package-build.yml"
 
@@ -47,6 +55,8 @@ jobs:
     steps:
       - name: Repository laden
         uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Python einrichten
         uses: actions/setup-python@v6
@@ -58,14 +68,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python -m pip install --disable-pip-version-check -r requirements.txt pytest
+          python -m pip install --disable-pip-version-check -r requirements-test.txt
 
       - name: Repository- und Sicherheitstests
         shell: bash
         run: |
           set -euo pipefail
           python -m compileall -q mower function_app.py scripts
-          python -m unittest discover -s tests -p "test_*.py" -v
+          python -m pytest -q tests
 
       - name: Geprüftes Quellpaket bauen
         shell: bash
@@ -146,6 +156,26 @@ jobs:
           retention-days: 14
           compression-level: 0
 
+      - name: FULL_FAILSAFE-Quellbytes isoliert prüfen
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/verify_full_failsafe_delivery.py \
+            --commit "$(git rev-parse HEAD)" \
+            --output dist/ssv53-platzpflege-full-failsafe-source.zip \
+            --report dist/full-failsafe-delivery.json
+
+      - name: FULL_FAILSAFE-Entwicklungspaket archivieren
+        uses: actions/upload-artifact@v7
+        with:
+          name: ssv53-full-failsafe-source-${{ github.run_number }}
+          path: |
+            dist/ssv53-platzpflege-full-failsafe-source.zip
+            dist/full-failsafe-delivery.json
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
       - name: Ergebnis zusammenfassen
         shell: bash
         run: |
@@ -154,7 +184,9 @@ jobs:
             echo
             echo "- Tests: **erfolgreich**"
             echo "- Sicherheitsstufe: **DRY_RUN_READ_ONLY**"
-            echo "- Gerätebefehle im Paket: **keine**"
+            echo "- Gerätebefehle im DRY_RUN-Paket: **keine**"
+            echo "- Zusätzliches FULL_FAILSAFE-Quellpaket: **bytegeprüft und ohne Netzwerk importiert**"
+            echo "- Befehlsfähige Module nur im FULL_FAILSAFE-Paket; Gerätebefehle ausgeführt: **keine**"
             echo "- Azure-Übertragung: **keine**"
             echo "- Remote Build bei späterer Bereitstellung erforderlich: **ja**"
             echo "- Artefaktaufbewahrung: **14 Tage**"

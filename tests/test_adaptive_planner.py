@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from mower.adaptive_planner import build_adaptive_plan
-from mower.planner import Block
+from mower.planner import Block, merge_blocks
 from mower.weather import WeatherPoint, WeatherSnapshot
 
 
@@ -71,6 +71,53 @@ ENV = {
 
 
 class AdaptivePlannerTests(unittest.TestCase):
+    def _plan(self, blocks):
+        return build_adaptive_plan(
+            now_utc=NOW, timezone_name="Europe/Berlin", blocks=blocks,
+            zones=zones(), weather_snapshot=None, weather_fresh=False, environment=ENV,
+        )
+
+    def test_generator_preserves_full_horizon_occupancy(self) -> None:
+        block = Block(NOW, NOW + timedelta(hours=48), "training", "Belegt")
+        self.assertEqual(self._plan(iter([block])).status, "NO_SAFE_WINDOW")
+
+    def test_generator_preserves_sperre_after_fail_closed_quality_check(self) -> None:
+        block = Block(NOW, NOW + timedelta(hours=48), "special", "Unbekannt", {"fail_closed": True})
+        plan = self._plan(iter([block]))
+        self.assertTrue(plan.input_quality["occupancy_fail_closed"])
+        self.assertEqual(plan.status, "NO_SAFE_WINDOW")
+
+    def test_merged_irrigation_keeps_exact_occupancy_without_old_water_margin(self) -> None:
+        # A 48h old-water interval is deliberately extreme to make the
+        # distinction visible. The actual one-hour sports block never moves.
+        water = Block(NOW, NOW + timedelta(hours=48), "irrigation", "Altes Wasserfenster")
+        training = Block(NOW + timedelta(hours=15), NOW + timedelta(hours=16), "training", "Training")
+        plan = self._plan(merge_blocks([water, training]))
+        exact = self._plan([training])
+        self.assertEqual(plan.selected, exact.selected)
+        self.assertEqual(plan.rejected_conflicts, exact.rejected_conflicts)
+
+    def test_invalid_or_incomplete_merged_provenance_retains_full_sperre(self) -> None:
+        for details in ({}, {"items": []}, {"items": [{"start": "bad"}]},
+                        {"fail_closed": True, "items": []}):
+            with self.subTest(details=details):
+                block = Block(NOW, NOW + timedelta(hours=48), "irrigation+training", "Belegt", details)
+                self.assertEqual(self._plan([block]).status, "NO_SAFE_WINDOW")
+
+    def test_provenance_with_gap_cannot_remove_merged_occupancy(self) -> None:
+        water = Block(NOW, NOW + timedelta(hours=48), "irrigation", "Wasser")
+        training = Block(NOW + timedelta(hours=15), NOW + timedelta(hours=16), "training", "Training")
+        merged = merge_blocks([water, training])[0]
+        merged.details["items"][0]["end"] = (NOW + timedelta(hours=1)).isoformat()
+        self.assertEqual(self._plan([merged]).status, "NO_SAFE_WINDOW")
+
+    def test_merged_fail_closed_provenance_retains_full_sperre_and_quality_flag(self) -> None:
+        water = Block(NOW, NOW + timedelta(hours=48), "irrigation", "Wasser")
+        unknown = Block(NOW + timedelta(hours=15), NOW + timedelta(hours=16), "special", "Unbekannt", {"fail_closed": True})
+        plan = self._plan(merge_blocks([water, unknown]))
+        self.assertEqual(plan.status, "NO_SAFE_WINDOW")
+        self.assertTrue(plan.input_quality["occupancy_fail_closed"])
+
     def test_adaptive_execution_cannot_be_enabled_in_shadow_package(self) -> None:
         with self.assertRaises(ValueError):
             build_adaptive_plan(

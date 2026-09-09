@@ -4,7 +4,9 @@ import json
 from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterable
+from collections.abc import Mapping
 from zoneinfo import ZoneInfo
+from occupancy.training_calendar import TrainingBatch, validate_batch_for_range
 
 from occupancy.match_model import (
     normalize_legacy_ics_description,
@@ -48,7 +50,24 @@ def _parse_request_datetime(value: str, tz: ZoneInfo) -> datetime:
         raise ValueError("Datum darf nicht leer sein.")
     parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
     if parsed.tzinfo is None:
+        candidates = {
+            candidate.astimezone(timezone.utc)
+            for fold in (0, 1)
+            for candidate in (parsed.replace(tzinfo=tz, fold=fold),)
+            if candidate.astimezone(timezone.utc).astimezone(tz).replace(tzinfo=None)
+            == parsed
+        }
+        if len(candidates) != 1:
+            raise ValueError("Lokale Uhrzeit ist wegen Zeitumstellung unklar; UTC-Offset angeben.")
         parsed = parsed.replace(tzinfo=tz)
+    return parsed.astimezone(tz)
+
+
+def _parse_match_datetime(value: Any, tz: ZoneInfo) -> datetime:
+    raw = str(value or "").strip()
+    parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise ValueError("Strukturierte Spielzeiten müssen eine explizite Zeitzone enthalten.")
     return parsed.astimezone(tz)
 
 
@@ -136,8 +155,12 @@ def _training_events(
             occurrence_key = (schedule_id, day.isoformat())
             if occurrence_key in statically_cancelled:
                 continue
-            start = datetime.combine(day, _clock(session["start"]), tzinfo=tz)
-            end = datetime.combine(day, _clock(session["end"]), tzinfo=tz)
+            start = _parse_request_datetime(
+                datetime.combine(day, _clock(session["start"])).isoformat(), tz
+            )
+            end = _parse_request_datetime(
+                datetime.combine(day, _clock(session["end"])).isoformat(), tz
+            )
             if end <= start:
                 end += timedelta(days=1)
             event = {
@@ -189,29 +212,41 @@ def _parse_ics_datetime(key: str, value: str, default_tz: ZoneInfo) -> datetime:
     if value.endswith("Z"):
         return datetime.strptime(value, "%Y%m%dT%H%M%SZ").replace(tzinfo=timezone.utc).astimezone(default_tz)
     if "T" not in value:
-        return datetime.strptime(value, "%Y%m%d").replace(tzinfo=tz)
-    return datetime.strptime(value, "%Y%m%dT%H%M%S").replace(tzinfo=tz).astimezone(default_tz)
+        return _parse_request_datetime(datetime.strptime(value, "%Y%m%d").isoformat(), tz)
+    return _parse_request_datetime(
+        datetime.strptime(value, "%Y%m%dT%H%M%S").isoformat(), tz
+    ).astimezone(default_tz)
 
 
 def _iter_ics_events(path: str | Path) -> Iterable[dict[str, str]]:
     source = Path(path)
     if not source.is_file():
-        return []
+        raise ValueError("Die Belegungsquelle fehlt; fehlende Daten sind keine Platzfreigabe.")
+    lines = [line for line in _unfold_ics(source.read_text(encoding="utf-8")) if line]
+    if not lines or lines[0] != "BEGIN:VCALENDAR" or lines[-1] != "END:VCALENDAR":
+        raise ValueError("Die Belegungsquelle enthält keinen vollständigen ICS-Kalender.")
     parsed: list[dict[str, str]] = []
     current: dict[str, str] | None = None
-    for line in _unfold_ics(source.read_text(encoding="utf-8")):
+    for line in lines:
         if line == "BEGIN:VEVENT":
+            if current is not None:
+                raise ValueError("Verschachtelte oder unvollständige ICS-Belegung.")
             current = {}
             continue
         if line == "END:VEVENT":
-            if current is not None:
-                parsed.append(current)
+            if current is None:
+                raise ValueError("ICS-Belegung endet ohne gültigen Beginn.")
+            parsed.append(current)
             current = None
             continue
         if current is None or ":" not in line:
             continue
         key, value = line.split(":", 1)
+        if key in current:
+            raise ValueError("Doppelte Eigenschaft in einer ICS-Belegung.")
         current[key] = value
+    if current is not None:
+        raise ValueError("Eine ICS-Belegung ist unvollständig.")
     return parsed
 
 
@@ -228,20 +263,28 @@ def _legacy_ics_match_events(
     before = timedelta(minutes=int(match_config.get("buffer_before_minutes", 0)))
     after = timedelta(minutes=int(match_config.get("buffer_after_minutes", 0)))
     events: list[dict[str, Any]] = []
+    seen_ids: set[str] = set()
 
     for raw in _iter_ics_events(matches_path):
         start_key = next((key for key in raw if key.upper().startswith("DTSTART")), None)
         end_key = next((key for key in raw if key.upper().startswith("DTEND")), None)
         if not start_key or not end_key:
-            continue
+            raise ValueError("ICS-Belegung benötigt Beginn und Ende.")
+        if any(key.split(";", 1)[0].upper() in {"RRULE", "RDATE", "EXDATE", "RECURRENCE-ID"} for key in raw):
+            raise ValueError("Serientermine werden in der Spiel-ICS nicht unterstützt.")
         blocked_start = _parse_ics_datetime(start_key, raw[start_key], tz)
         blocked_end = _parse_ics_datetime(end_key, raw[end_key], tz)
-        display_start = blocked_start + before
-        display_end = blocked_end - after
-        if display_end <= display_start:
+        if blocked_end.astimezone(timezone.utc) <= blocked_start.astimezone(timezone.utc):
+            raise ValueError("ICS-Belegung besitzt kein gültiges Sperrintervall.")
+        display_start = (blocked_start.astimezone(timezone.utc) + before).astimezone(tz)
+        display_end = (blocked_end.astimezone(timezone.utc) - after).astimezone(tz)
+        if display_end.astimezone(timezone.utc) <= display_start.astimezone(timezone.utc):
             display_start = blocked_start
             display_end = blocked_end
         uid = _ics_unescape(raw.get("UID", ""))
+        if not uid.strip() or uid in seen_ids:
+            raise ValueError("ICS-Belegungen benötigen eindeutige, nicht leere IDs.")
+        seen_ids.add(uid)
         title, team = normalize_legacy_ics_summary(
             _ics_unescape(raw.get("SUMMARY", "Heimspiel"))
         )
@@ -293,41 +336,50 @@ def _structured_match_events(
         minutes=int(match_config.get("buffer_after_minutes", 60))
     )
     events: list[dict[str, Any]] = []
+    seen_ids: set[str] = set()
     for item in payload["matches"]:
         if not isinstance(item, dict):
             raise ValueError("matches.json enthält einen ungültigen Eintrag.")
         calendar = str(item.get("calendar") or "").strip()
         place = str(item.get("place") or "").strip().casefold()
+        match_id = str(item.get("id") or "").strip().removeprefix("dfb:")
+        if not match_id or match_id in seen_ids:
+            raise ValueError("Strukturierte Spiele benötigen eindeutige, nicht leere IDs.")
+        seen_ids.add(match_id)
         resource_id = {
             "Rasen": "rasen",
             "Kunstrasen": "kunstrasen",
         }.get(calendar, place)
         if resource_id not in {"rasen", "kunstrasen"}:
             raise ValueError(f"Unbekannte Spielressource: {calendar or place!r}")
+        if (calendar and calendar not in {"Rasen", "Kunstrasen"}) or (place and place != resource_id):
+            raise ValueError("calendar und place widersprechen sich im Spielbestand.")
 
-        display_start = _parse_request_datetime(str(item.get("start") or ""), tz)
-        display_end = _parse_request_datetime(str(item.get("end") or ""), tz)
-        kickoff = _parse_request_datetime(str(item.get("kickoff") or ""), tz)
-        blocked_start = _parse_request_datetime(
+        display_start = _parse_match_datetime(item.get("start"), tz)
+        display_end = _parse_match_datetime(item.get("end"), tz)
+        kickoff = _parse_match_datetime(item.get("kickoff"), tz)
+        blocked_start = _parse_match_datetime(
             str(item.get("occupancyStart") or ""), tz
         )
-        blocked_end = _parse_request_datetime(
+        blocked_end = _parse_match_datetime(
             str(item.get("occupancyEnd") or ""), tz
         )
         duration_minutes = int(item.get("matchDurationMinutes") or 0)
-        if display_end <= display_start or duration_minutes <= 0:
+        start_utc = display_start.astimezone(timezone.utc)
+        end_utc = display_end.astimezone(timezone.utc)
+        if end_utc <= start_utc or duration_minutes <= 0:
             raise ValueError("matches.json enthält eine ungültige sichtbare Spielzeit.")
-        if display_end - display_start != timedelta(minutes=duration_minutes):
+        if end_utc - start_utc != timedelta(minutes=duration_minutes):
             raise ValueError("Match-Dauer und sichtbare Spielzeit widersprechen sich.")
-        if kickoff != display_start:
+        if kickoff.astimezone(timezone.utc) != start_utc:
             raise ValueError("Anstoß und Beginn der sichtbaren Spielzeit widersprechen sich.")
-        if display_start - blocked_start != required_before:
+        if start_utc - blocked_start.astimezone(timezone.utc) != required_before:
             raise ValueError("Der verpflichtende 60-Minuten-Spielvorlauf fehlt.")
-        if blocked_end - display_end != required_after:
+        if blocked_end.astimezone(timezone.utc) - end_utc != required_after:
             raise ValueError("Der verpflichtende 60-Minuten-Spielnachlauf fehlt.")
 
         event = {
-            "id": "match:" + str(item.get("id") or "").removeprefix("dfb:"),
+            "id": "match:" + match_id,
             "title": str(item.get("title") or "Heimspiel"),
             "start": display_start.isoformat(),
             "end": display_end.isoformat(),
@@ -425,21 +477,27 @@ def build_occupancy_payload(
     season: str | None = None,
     generated_at: datetime | None = None,
     cancelled_occurrences: set[tuple[str, str]] | None = None,
+    training_batch: TrainingBatch | None = None,
 ) -> dict[str, Any]:
     config = load_config(config_path)
     tz = ZoneInfo(str(config.get("timezone", "Europe/Berlin")))
     range_start, range_end = parse_range(start, end, tz)
     selected_season = resolve_season(config, season)
-
-    events = [
-        *_training_events(
+    if training_batch is not None:
+        validate_batch_for_range(training_batch, range_start, range_end)
+        training_events = [event for event in training_batch.app_events()
+                           if _event_overlaps(event, range_start, range_end)]
+    else:
+        training_events = _training_events(
             config,
             season=selected_season,
             range_start=range_start,
             range_end=range_end,
             tz=tz,
             cancelled_occurrences=cancelled_occurrences,
-        ),
+        )
+    events = [
+        *training_events,
         *_match_events(
             config,
             matches_path=matches_path,
@@ -475,18 +533,18 @@ def build_training_occurrences(
     start: str,
     end: str,
     season: str | None = None,
+    training_batch: TrainingBatch | None = None,
 ) -> list[dict[str, Any]]:
     """Erzeugt gültige Trainingsvorkommen ohne dynamischen Absagefilter."""
     config = load_config(config_path)
     tz = ZoneInfo(str(config.get("timezone", "Europe/Berlin")))
     range_start, range_end = parse_range(start, end, tz)
     selected_season = resolve_season(config, season)
-    events = _training_events(
-        config,
-        season=selected_season,
-        range_start=range_start,
-        range_end=range_end,
-        tz=tz,
-    )
+    if training_batch is not None:
+        validate_batch_for_range(training_batch, range_start, range_end)
+        events = [event for event in training_batch.app_events()
+                  if _event_overlaps(event, range_start, range_end)]
+    else:
+        events = _training_events(config, season=selected_season, range_start=range_start, range_end=range_end, tz=tz)
     events.sort(key=lambda item: (item["start"], item["resourceId"], item["title"]))
     return events

@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "generated_from": "tests/test_coordination_execution_replay.py",
+  "scope": "Offline minute-resolution fake plant; no network, cloud, scheduler, or device calls.",
+  "model_semantics": {
+    "mower_dock": "The park fake makes the next source read report PARKED_IN_CS; the real FSM still requires its own fresh, continuous station confirmations before water starts.",
+    "provider_suspend": "An accepted suspend shifts that relay's provider next-start beyond suspend_until; the separate synthetic native-due model also checks the accepted horizon at every original start.",
+    "zone_start": "The start fake reports the selected relay active until exactly start plus run_seconds; only later fresh reads confirm running and physical end."
+  },
+  "source_occurrence": {
+    "original_start_utc": "2026-08-13T02:55:00+00:00",
+    "original_end_utc": "2026-08-13T05:35:00+00:00",
+    "selected_start_utc": "2026-08-13T02:45:00+00:00",
+    "zone_count": 7,
+    "total_water_seconds": 9600,
+    "run_seconds": [1200, 1200, 1200, 1200, 1200, 1800, 1800],
+    "first_to_second_physical_gap_seconds": 180
+  },
+  "fsm_transitions": [
+    {"at_utc": "2026-08-13T02:00:00+00:00", "decision": "COORDINATION_EXECUTION_RESERVED", "phase": null},
+    {"at_utc": "2026-08-13T02:01:00+00:00", "decision": "COORDINATION_EXECUTION_SCHEDULED", "phase": null},
+    {"at_utc": "2026-08-13T02:02:00+00:00", "decision": "IRRIGATION_SCHEDULE_VERIFYING", "phase": null},
+    {"first_at_utc": "2026-08-13T02:03:00+00:00", "last_at_utc": "2026-08-13T02:09:00+00:00", "decision": "IRRIGATION_SCHEDULE_ZONE_UPDATED", "count": 7},
+    {"at_utc": "2026-08-13T02:10:00+00:00", "decision": "IRRIGATION_SCHEDULE_CONFIRMING", "phase": null},
+    {"at_utc": "2026-08-13T02:12:00+00:00", "decision": "PARK_COMMAND_SENT", "phase": "READY"},
+    {"at_utc": "2026-08-13T02:13:00+00:00", "decision": "IRRIGATION_WAIT_FOR_CONFIRMED_PARK", "phase": "READY"},
+    {"at_utc": "2026-08-13T02:45:00+00:00", "decision": "IRRIGATION_ZONE_START_SENT", "phase": "START_RESERVED", "relay_id": 9104894},
+    {"at_utc": "2026-08-13T03:05:00+00:00", "decision": "IRRIGATION_CONFIRM_ZONE_END", "phase": "RUNNING", "relay_id": 9104894},
+    {"at_utc": "2026-08-13T03:07:00+00:00", "decision": "IRRIGATION_ZONE_CONFIRMED_COMPLETE", "phase": "READY"},
+    {"at_utc": "2026-08-13T03:08:00+00:00", "decision": "IRRIGATION_ZONE_START_SENT", "phase": "START_RESERVED", "relay_id": 9104906},
+    {"at_utc": "2026-08-13T05:45:00+00:00", "decision": "IRRIGATION_ALL_ZONES_CONFIRMED_COMPLETE", "phase": "COMPLETE_HOLD"}
+  ],
+  "device_fake_calls": {
+    "park_at_utc": ["2026-08-13T02:12:00+00:00"],
+    "suspend_relays": [9104894, 9104906, 9104909, 9104911, 9104913, 9104920, 9104921],
+    "suspend_until_utc": "2026-08-13T08:35:00+00:00",
+    "coordinated_runs": [
+      {"relay_id": 9104894, "start_utc": "2026-08-13T02:45:00+00:00", "physical_end_utc": "2026-08-13T03:05:00+00:00", "run_seconds": 1200},
+      {"relay_id": 9104906, "start_utc": "2026-08-13T03:08:00+00:00", "physical_end_utc": "2026-08-13T03:28:00+00:00", "run_seconds": 1200},
+      {"relay_id": 9104909, "start_utc": "2026-08-13T03:31:00+00:00", "physical_end_utc": "2026-08-13T03:51:00+00:00", "run_seconds": 1200},
+      {"relay_id": 9104911, "start_utc": "2026-08-13T03:54:00+00:00", "physical_end_utc": "2026-08-13T04:14:00+00:00", "run_seconds": 1200},
+      {"relay_id": 9104913, "start_utc": "2026-08-13T04:17:00+00:00", "physical_end_utc": "2026-08-13T04:37:00+00:00", "run_seconds": 1200},
+      {"relay_id": 9104920, "start_utc": "2026-08-13T04:40:00+00:00", "physical_end_utc": "2026-08-13T05:10:00+00:00", "run_seconds": 1800},
+      {"relay_id": 9104921, "start_utc": "2026-08-13T05:13:00+00:00", "physical_end_utc": "2026-08-13T05:43:00+00:00", "run_seconds": 1800}
+    ]
+  },
+  "synthetic_native_source_model": {
+    "meaning": "At each original due time the fake provider checks the accepted relay suspend horizon before it can physically start.",
+    "physical_starts": [],
+    "suppressed_relays": [9104894, 9104906, 9104909, 9104911, 9104913, 9104920, 9104921]
+  },
+  "persistence": {
+    "serialized_restarts_after": ["COORDINATION_EXECUTION_RESERVED", "COORDINATION_EXECUTION_SCHEDULED"],
+    "irrigation_completed_utc": "2026-08-13T05:45:00+00:00",
+    "physical_drying_since_utc": "2026-08-13T05:43:00+00:00",
+    "physical_dry_until_utc": "2026-08-13T08:13:00+00:00"
+  },
+  "variants": {
+    "lost_first_start_response": {
+      "physical_start_utc": "2026-08-13T02:45:00+00:00",
+      "start_calls_for_relay": 1,
+      "post_restart_decision": "IRRIGATION_ZONE_CONFIRMED_RUNNING"
+    },
+    "authorization_revoked_before_zone_2": {
+      "starts": [9104894],
+      "decision": "COORDINATION_EXECUTION_START_BLOCKED"
+    },
+    "first_start_delayed_by_mower_proof": {
+      "delay_seconds": 180,
+      "zone_1_start_utc": "2026-08-13T02:48:00+00:00",
+      "zone_1_physical_end_utc": "2026-08-13T03:08:00+00:00",
+      "restart_after_zone_1_confirmation": true,
+      "zone_2_start_utc": "2026-08-13T03:31:00+00:00",
+      "physical_gap_seconds": 180
+    }
+  }
+}

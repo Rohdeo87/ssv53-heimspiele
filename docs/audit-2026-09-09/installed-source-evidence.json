@@ -1,0 +1,391 @@
+{
+  "checked_at_utc": "2026-09-09T14:48:40.293458+00:00",
+  "method": "GET Azure Functions admin/vfs with existing host key; no writes or permissions changes",
+  "manifest_sha256": "fddd6e84bc1d2ef56548251dbca4347b0d672a01a59bf6a484792fa38e0d2445",
+  "migration_base_sha": "9c2d0fc9c010b366cd49b58b8086b27f9d59a0dd",
+  "manifest_file_count": 46,
+  "downloaded_count": 46,
+  "manifest_matching_count": 46,
+  "base_matching_count": 3,
+  "dependency_wheel_bytes_verified": false,
+  "devices_accepted": false,
+  "files": [
+    {
+      "path": "daily_safety_report.py",
+      "bytes": 63368,
+      "sha256": "8b9e60ac3dbb11a81d4160047ea154f3af73bf4e5cdcfd4d35ceffae855cb5b1",
+      "manifest_match": true,
+      "migration_base_byte_match": false,
+      "migration_base_equal_after_lf_normalization": true
+    },
+    {
+      "path": "function_app.py",
+      "bytes": 64155,
+      "sha256": "27f30303efa21dc946765ff0a0049c433b4898cee6ae9d2bf14ee7a9c8baaf4b",
+      "manifest_match": true,
+      "migration_base_byte_match": false,
+      "migration_base_equal_after_lf_normalization": true
+    },
+    {
+      "path": "host.json",
+      "bytes": 530,
+      "sha256": "cd0632409eca63c01b6e03a46fe59ed50a8f4325ce97b6b276e1d7302907cb25",
+      "manifest_match": true,
+      "migration_base_byte_match": false,
+      "migration_base_equal_after_lf_normalization": true
+    },
+    {
+      "path": "mower/__init__.py",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "manifest_match": true,
+      "migration_base_byte_match": true,
+      "migration_base_equal_after_lf_normalization": true
+    },
+    {
+      "path": "mower/adaptive_planner.py",
+      "bytes": 18811,
+      "sha256": "2d020e96583503c15132a47d2d5656d09c819267fe0495b3c9404ece02a37fbe",
+      "manifest_match": true,
+      "migration_base_byte_match": false,
+      "migration_base_equal_after_lf_normalization": true
+    },
+    {
+      "path": "mower/config.json",
+      "bytes": 2224,
+      "sha256": "4b5305a96a79431c195f1b5590f9982b58412a549ea48b8a9915cbed6e3f87b8",
+      "manifest_match": true,
+      "migration_base_byte_match": false,
+      "migration_base_equal_after_lf_normalization": true
+    },
+    {
+      "path": "mower/config_source.py",
+      "bytes": 10471,
+      "sha256": "43b3d9615429783ef12cc67699e0aa664ee79701eb0ff6346d03c9080022469a",
+      "manifest_match": true,
+      "migration_base_byte_match": false,
+      "migration_base_equal_after_lf_normalization": true
+    },
+    {
+      "path": "mower/controller.py",
+      "bytes": 6108,
+      "sha256": "1644eb3b170372ec4f2eee3826781be88ba3b361f4551316bce2a354dec1d787",
+      "manifest_match": true,
+      "migration_base_byte_match": false,
+      "migration_base_equal_after_lf_normalization": true
+    },
+    {
+      "path": "mower/cutting_height.py",
+      "bytes": 1117,
+      "sha256": "3286466737e9f12f069cb41ba9668c6b5758cc48c269ce19046df4c381ff8c62",
+      "manifest_match": true,
+      "migration_base_byte_match": false,
+      "migration_base_equal_after_lf_normalization": true
+    },
+    {
+      "path": "mower/decision.py",
+      "bytes": 13045,
+      "sha256": "9198125a473bdd8156d31aeeff4ddc513540078f2428b8681f6f19bfdd1fc85d",
+      "manifest_match": true,
+      "migration_base_byte_match": false,
+      "migration_base_equal_after_lf_normalization": true
+    },
+    {
+      "path": "mower/dry_run.py",
+      "bytes": 22643,
+      "sha256": "2702d1e9a36bac07980505c6d41fe7aa5c5507cdf1e4512756ad0744c2c04558",
+      "manifest_match": true,
+      "migration_base_byte_match": false,
+      "migration_base_equal_after_lf_normalization": true
+    },
+    {
+      "path": "mower/full_failsafe.py",
+      "bytes": 232794,
+      "sha256": "2dc36343d6c81f55138b1f61bea03cc7eb5f1080803c8d21bb7f9634b275ae02",
+      "manifest_match": true,
+      "migration_base_byte_match": false,
+      "migration_base_equal_after_lf_normalization": true
+    },
+    {
+      "path": "mower/full_mower.py",
+      "bytes": 25929,
+      "sha256": "fb654eea18b92ff62d7d321efca6e2be91af6f6fa43b72bc3651b4021fd70890",
+      "manifest_match": true,
+      "migration_base_byte_match": false,
+      "migration_base_equal_after_lf_normalization": true
+    },
+    {
+      "path": "mower/husqvarna.py",
+      "bytes": 11147,
+      "sha256": "7037e8827e441953c19164a3171869cb490811b80c13b685c51be8fd59181e6d",
+      "manifest_match": true,
+      "migration_base_byte_match": false,
+      "migration_base_equal_after_lf_normalization": true
+    },
+    {
+      "path": "mower/husqvarna_actions.py",
+      "bytes": 2362,
+      "sha256": "cbfc6987258a530f00fcabcaf774bdbb93dd5a394f88ff65491f9dc4183ac8c7",
+      "manifest_match": true,
+      "migration_base_byte_match": false,
+      "migration_base_equal_after_lf_normalization": true
+    },
+    {
+      "path": "mower/husqvarna_cutting_height_actions.py",
+      "bytes": 2853,
+      "sha256": "4fbfed907a344f8fac29905e03dc5bba9ef5940657f3f72e849790692396b6b5",
+      "manifest_match": true,
+      "migration_base_byte_match": false,
+      "migration_base_equal_after_lf_normalization": true
+    },
+    {
+      "path": "mower/husqvarna_start_actions.py",
+      "bytes": 2991,
+      "sha256": "67e9c1b71d325766dc03a7abd5597e68779163e621e6ee1ae23fe506ae1b4155",
+      "manifest_match": true,
+      "migration_base_byte_match": false,
+      "migration_base_equal_after_lf_normalization": true
+    },
+    {
+      "path": "mower/husqvarna_statistics_actions.py",
+      "bytes": 2066,
+      "sha256": "4ffd156e9154bbafbe8af55541ae389159256d845a2fc1f3d034729a2b70ad2a",
+      "manifest_match": true,
+      "migration_base_byte_match": false,
+      "migration_base_equal_after_lf_normalization": true
+    },
+    {
+      "path": "mower/hydrawise.py",
+      "bytes": 20432,
+      "sha256": "17531ec7768bda1e7d83b53f1947b73db7f29037091b18cee7c81fb4934f7580",
+      "manifest_match": true,
+      "migration_base_byte_match": false,
+      "migration_base_equal_after_lf_normalization": true
+    },
+    {
+      "path": "mower/hydrawise_actions.py",
+      "bytes": 3266,
+      "sha256": "d6ae3365fce0af077a8ef3364c8a54b30dbcc9800af78e556fc93728c325c180",
+      "manifest_match": true,
+      "migration_base_byte_match": false,
+      "migration_base_equal_after_lf_normalization": true
+    },
+    {
+      "path": "mower/irrigation_journal.py",
+      "bytes": 8835,
+      "sha256": "537e738479bfbc3c564337a7545e670c7b71ad1d6fb75769e78ab3bbe2310df2",
+      "manifest_match": true,
+      "migration_base_byte_match": false,
+      "migration_base_equal_after_lf_normalization": true
+    },
+    {
+      "path": "mower/irrigation_recovery.py",
+      "bytes": 12206,
+      "sha256": "01f05294a48950e92ad993eb5829258fcbca1a6a15f61b923706d8e39aa71c15",
+      "manifest_match": true,
+      "migration_base_byte_match": false,
+      "migration_base_equal_after_lf_normalization": true
+    },
+    {
+      "path": "mower/irrigation_schedule.py",
+      "bytes": 7280,
+      "sha256": "70113ce936dc2426ef2999da7fd0fc08d78cf675a8ec83e65a55922a162bec7b",
+      "manifest_match": true,
+      "migration_base_byte_match": false,
+      "migration_base_equal_after_lf_normalization": true
+    },
+    {
+      "path": "mower/park_only.py",
+      "bytes": 11053,
+      "sha256": "2afa6d3ec70a5b9b22f6120fa6a7f2d2ebc5ead67cd88571b90d5689872266ed",
+      "manifest_match": true,
+      "migration_base_byte_match": false,
+      "migration_base_equal_after_lf_normalization": true
+    },
+    {
+      "path": "mower/planner.py",
+      "bytes": 16832,
+      "sha256": "53a0d78d51ec7564aa18fcfc005c7ef4faa576fc2b946f3a3c6ed86b7188b079",
+      "manifest_match": true,
+      "migration_base_byte_match": false,
+      "migration_base_equal_after_lf_normalization": true
+    },
+    {
+      "path": "mower/runtime.py",
+      "bytes": 6642,
+      "sha256": "3470b04f368b42aa1d4a76f7f5bacb63cb2e1731b4f2f16216932777aa6f4b0d",
+      "manifest_match": true,
+      "migration_base_byte_match": false,
+      "migration_base_equal_after_lf_normalization": true
+    },
+    {
+      "path": "mower/safety.py",
+      "bytes": 5602,
+      "sha256": "af0774cf572c5d464bc601ab0d7d8caff06e01c26a23e1fb48664d2fca69879f",
+      "manifest_match": true,
+      "migration_base_byte_match": false,
+      "migration_base_equal_after_lf_normalization": true
+    },
+    {
+      "path": "mower/state.py",
+      "bytes": 29103,
+      "sha256": "435144dcadcd5702ff456432e225a3678df5065da72eaded9f3153e734f8cc13",
+      "manifest_match": true,
+      "migration_base_byte_match": false,
+      "migration_base_equal_after_lf_normalization": true
+    },
+    {
+      "path": "mower/state_store.py",
+      "bytes": 7013,
+      "sha256": "cdd168a2ab2efc8d8699cc6bd336a5a7a2d238dd2a4e7259d92d84e006183741",
+      "manifest_match": true,
+      "migration_base_byte_match": false,
+      "migration_base_equal_after_lf_normalization": true
+    },
+    {
+      "path": "mower/weather.py",
+      "bytes": 13396,
+      "sha256": "d357390f711f926c39d71fddcfdc0a6f1d0b2ac6040eed1a580c586a578cdd90",
+      "manifest_match": true,
+      "migration_base_byte_match": false,
+      "migration_base_equal_after_lf_normalization": true
+    },
+    {
+      "path": "mower/weather_service.py",
+      "bytes": 6437,
+      "sha256": "fff8be997d0255a1405e0a8c2b3cbcb9dd2a48c46baffb7255f466b42711d0e8",
+      "manifest_match": true,
+      "migration_base_byte_match": false,
+      "migration_base_equal_after_lf_normalization": true
+    },
+    {
+      "path": "mower/weather_store.py",
+      "bytes": 15390,
+      "sha256": "b6ed67f9a0b5167af9d6ab02e55d9676d9496fb4034b083c3629dd00b5f5890a",
+      "manifest_match": true,
+      "migration_base_byte_match": false,
+      "migration_base_equal_after_lf_normalization": true
+    },
+    {
+      "path": "occupancy/__init__.py",
+      "bytes": 79,
+      "sha256": "1bbd93c2e8156f9121811eed5b93210c0cfc709f051cbda336ea8b213f52a3fc",
+      "manifest_match": true,
+      "migration_base_byte_match": false,
+      "migration_base_equal_after_lf_normalization": true
+    },
+    {
+      "path": "occupancy/config.json",
+      "bytes": 6962,
+      "sha256": "9595bd6b0d648896b0b4393e1d9319af7a91354bc6e778d75ca9709f9546a4fe",
+      "manifest_match": true,
+      "migration_base_byte_match": false,
+      "migration_base_equal_after_lf_normalization": true
+    },
+    {
+      "path": "occupancy/match_model.py",
+      "bytes": 7159,
+      "sha256": "f1d72634c68d71b4b2fd5d015210759eeb285ec04f70485b55950c3065ac1f04",
+      "manifest_match": true,
+      "migration_base_byte_match": false,
+      "migration_base_equal_after_lf_normalization": true
+    },
+    {
+      "path": "occupancy/runtime_source.py",
+      "bytes": 12720,
+      "sha256": "1b40fdc4b6db2672088a51ebac0db4947b7368d188face96f12e8ef88883bb4e",
+      "manifest_match": true,
+      "migration_base_byte_match": false,
+      "migration_base_equal_after_lf_normalization": true
+    },
+    {
+      "path": "occupancy/service.py",
+      "bytes": 18532,
+      "sha256": "e4219ec24610b924ee519122d46a451d710b3b514a716c7a86eb49c79e9037b4",
+      "manifest_match": true,
+      "migration_base_byte_match": false,
+      "migration_base_equal_after_lf_normalization": true
+    },
+    {
+      "path": "occupancy_notifications.py",
+      "bytes": 22272,
+      "sha256": "4c4e68c10272ad2674dfca29968779c8145453df3e9bfe7a18c11cc57a423bde",
+      "manifest_match": true,
+      "migration_base_byte_match": false,
+      "migration_base_equal_after_lf_normalization": true
+    },
+    {
+      "path": "order_mail.py",
+      "bytes": 36632,
+      "sha256": "a3ea4f1be3cd0b939cd26478de86b110a0fa6363a9b2204b4358b203ad25bd6b",
+      "manifest_match": true,
+      "migration_base_byte_match": false,
+      "migration_base_equal_after_lf_normalization": true
+    },
+    {
+      "path": "platzwart_console.py",
+      "bytes": 59205,
+      "sha256": "1be1c971f36628044d1c191dd8b14339e718b078da85741d5efd09bf602befb6",
+      "manifest_match": true,
+      "migration_base_byte_match": false,
+      "migration_base_equal_after_lf_normalization": true
+    },
+    {
+      "path": "public/kunstrasen.ics",
+      "bytes": 2983,
+      "sha256": "03ea038ebd952d61fd0a82d535741c9ab73c8235dbf6c15e388db66ac13106a6",
+      "manifest_match": true,
+      "migration_base_byte_match": true,
+      "migration_base_equal_after_lf_normalization": true
+    },
+    {
+      "path": "public/matches.json",
+      "bytes": 55739,
+      "sha256": "4f5603da62a2571ee5a21e03342fd78156556f328fb4304bc2be737198a1a90d",
+      "manifest_match": true,
+      "migration_base_byte_match": false,
+      "migration_base_equal_after_lf_normalization": true
+    },
+    {
+      "path": "public/rasen.ics",
+      "bytes": 21458,
+      "sha256": "1ab8e35ca03729877d6785b0a156dcc580eb3c4475d9a69b1b184fbc943f8dc7",
+      "manifest_match": true,
+      "migration_base_byte_match": true,
+      "migration_base_equal_after_lf_normalization": true
+    },
+    {
+      "path": "requirements.txt",
+      "bytes": 160,
+      "sha256": "e3e4f50349f2d9d7ac42cea4d02dc9c1dbdb9a533e369b8e692a8b699984b6e0",
+      "manifest_match": true,
+      "migration_base_byte_match": false,
+      "migration_base_equal_after_lf_normalization": true
+    },
+    {
+      "path": "special_occupancy.py",
+      "bytes": 43624,
+      "sha256": "d96ccc172c8c8c96ca428f7c5489db2f0868d13f25a2e2ea68fd8873c95c0bc2",
+      "manifest_match": true,
+      "migration_base_byte_match": false,
+      "migration_base_equal_after_lf_normalization": true
+    },
+    {
+      "path": "training_cancellations.py",
+      "bytes": 12540,
+      "sha256": "a2ad7b0ab68b8467e2985dd260401bbdf5f1c931b860e16401eea9ba5146f91a",
+      "manifest_match": true,
+      "migration_base_byte_match": false,
+      "migration_base_equal_after_lf_normalization": true
+    }
+  ],
+  "base_equal_after_lf_normalization_count": 46,
+  "local_source_backup": {
+    "path": "dist/ssv53-installed-20260906-source-backup.zip",
+    "sha256": "3c69f856ab3a8379b13a21ee2d78b91067d039ae3df9083996fb825d6235abe9",
+    "contains_dependency_wheels": false,
+    "contains_runtime_state_or_native_schedules": false,
+    "requires_remote_build": true,
+    "devices_or_application_state_restored": false
+  }
+}

@@ -185,17 +185,18 @@ class AzureTableStateStore:
 
         if self._etag is None and expected_revision == 0:
             try:
-                self._table_client.create_entity(entity=entity)
+                response = self._table_client.create_entity(entity=entity)
             except ResourceExistsError as exc:
                 raise StateConflictError("Zustand wurde parallel angelegt.") from exc
             self._loaded_revision = state.revision
+            self._etag = str((response or {}).get("etag") or "").strip() or None
             return
 
         if not self._etag:
             raise StateConflictError("ETag für optimistische Zustandsprüfung fehlt.")
 
         try:
-            self._table_client.update_entity(
+            response = self._table_client.update_entity(
                 entity=entity,
                 mode=UpdateMode.REPLACE,
                 etag=self._etag,
@@ -206,4 +207,8 @@ class AzureTableStateStore:
                 raise StateConflictError("Zustand wurde parallel verändert.") from exc
             raise
         self._loaded_revision = state.revision
+        # Azure returns the ETag of the committed entity. Reusing the loaded
+        # ETag would make the next reservation/recovery write conflict with
+        # our own successful update. Missing metadata requires a fresh load.
+        self._etag = str((response or {}).get("etag") or "").strip() or None
 

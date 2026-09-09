@@ -1,6 +1,16 @@
 name: SSV53 Heimspiele aktualisieren
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/update-matches.yml
+      - poc_scraper.py
+      - create_feed.py
+      - publish_matches.py
+      - report_changes.py
+      - config.json
+      - occupancy/match_model.py
   workflow_dispatch:
     inputs:
       skip_start_delay:
@@ -39,7 +49,7 @@ jobs:
 
     steps:
       - name: Dateien laden
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
 
@@ -52,7 +62,7 @@ jobs:
           git reset --hard "origin/${{ github.event.repository.default_branch }}"
 
       - name: Python einrichten
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: "3.12"
           cache: "pip"
@@ -108,11 +118,8 @@ jobs:
         shell: bash
         run: |
           mkdir -p .run-state
-          if [ -f public/matches.json ]; then
-            cp public/matches.json .run-state/previous-matches.json
-          else
-            echo '{"matches": []}' > .run-state/previous-matches.json
-          fi
+          # Refuse to overwrite a concurrent publication with an older baseline.
+          git rev-parse HEAD:public > .run-state/previous-public-tree
 
       - name: Heimspiele zurückhaltend abrufen
         id: scrape
@@ -129,7 +136,7 @@ jobs:
       - name: Veröffentlichbaren Feed erstellen
         id: feed
         if: steps.scrape.outcome == 'success'
-        run: python create_feed.py --input generated --output public
+        run: python create_feed.py --input generated --output generated/candidate
 
       - name: Änderungen auswerten und Sicherheitsgrenze prüfen
         id: changes
@@ -140,16 +147,18 @@ jobs:
           ALLOW_DESTRUCTIVE_CHANGE: ${{ github.event_name == 'workflow_dispatch' && inputs.allow_destructive_change }}
         run: |
           ARGS=(
-            --before .run-state/previous-matches.json
-            --after public/matches.json
+            --before public
+            --candidate generated/candidate
+            --output generated/publication
             --json generated/change_report.json
             --markdown generated/change_report.md
-            --public-json public/change_report.json
+            --required-confirmations 2
+            --minimum-confirmation-minutes 60
           )
           if [ "$ALLOW_DESTRUCTIVE_CHANGE" = "true" ]; then
             ARGS+=(--allow-destructive)
           fi
-          python report_changes.py "${ARGS[@]}"
+          python publish_matches.py "${ARGS[@]}"
 
       - name: Testlauf in der Zusammenfassung kennzeichnen
         if: ${{ always() && steps.timing_confirm.outputs.should_run == 'true' && github.ref_name != github.event.repository.default_branch }}
@@ -167,7 +176,7 @@ jobs:
 
       - name: Diagnoseergebnis bereitstellen
         if: ${{ always() && steps.timing_confirm.outputs.should_run == 'true' }}
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: dfbnet-diagnose-${{ github.run_number }}
           path: generated
@@ -184,11 +193,14 @@ jobs:
           TEMP_DIR="$(mktemp -d)"
           mkdir -p "$TEMP_DIR/state"
           cp state/request_state.json "$TEMP_DIR/state/request_state.json"
+          cp .run-state/previous-public-tree "$TEMP_DIR/previous-public-tree"
 
           SAVE_PUBLIC=false
           SAVE_REGISTRY=false
           if [ "${{ steps.feed.outcome }}" = "success" ] && [ "${{ steps.changes.outcome }}" = "success" ]; then
-            cp -a public "$TEMP_DIR/public"
+            # JSON, both ICS files, source evidence and per-interval confirmation
+            # state are always persisted together in the same Git commit.
+            cp -a generated/publication "$TEMP_DIR/public"
             SAVE_PUBLIC=true
           fi
           if [ "${{ steps.scrape.outcome }}" = "success" ] && [ -f generated/team_registry.json ]; then
@@ -200,6 +212,12 @@ jobs:
           # Deshalb zuerst auf den neuesten Branch-Stand wechseln und danach
           # ausschließlich die erzeugten Daten zurückkopieren.
           git fetch origin "$TARGET_BRANCH"
+          CURRENT_PUBLIC_TREE="$(git rev-parse "origin/$TARGET_BRANCH:public")"
+          PREVIOUS_PUBLIC_TREE="$(cat "$TEMP_DIR/previous-public-tree")"
+          if [ "$SAVE_PUBLIC" = "true" ] && [ "$CURRENT_PUBLIC_TREE" != "$PREVIOUS_PUBLIC_TREE" ]; then
+            echo "Der veröffentlichte Bestand wurde parallel geändert. Erneuter vollständiger Vergleich erforderlich."
+            exit 1
+          fi
           git reset --hard "origin/$TARGET_BRANCH"
 
           mkdir -p state

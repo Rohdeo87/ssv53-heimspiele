@@ -76,6 +76,14 @@ class RuntimeSettings:
 
     @classmethod
     def from_mapping(cls, values: Mapping[str, str]) -> "RuntimeSettings":
+        control_mode = ControlMode.parse(values.get("CONTROL_MODE"))
+        status_cache_mode = str(values.get("HYDRAWISE_STATUS_CACHE_MODE") or "OFF").strip().upper()
+        if status_cache_mode not in {"OFF", "AZURE_TABLE"}:
+            raise ValueError("HYDRAWISE_STATUS_CACHE_MODE muss OFF oder AZURE_TABLE sein.")
+        if status_cache_mode != "OFF" and control_mode.allows_park:
+            # The remaining device confirmation chains count independent
+            # cycles; they must not count a reused read as new physical proof.
+            raise ValueError("Der gemeinsame Statuscache ist bislang nur für befehlsfreie Betriebsarten geprüft.")
         timer_schedule = values.get("TIMER_SCHEDULE", "0 * * * * *").strip()
         timezone_name = values.get("SSV53_TIMEZONE", "Europe/Berlin").strip()
         if not timer_schedule:
@@ -97,7 +105,7 @@ class RuntimeSettings:
             )
 
         return cls(
-            control_mode=ControlMode.parse(values.get("CONTROL_MODE")),
+            control_mode=control_mode,
             timer_schedule=timer_schedule,
             timezone_name=timezone_name,
             enable_live_reads=_parse_bool(

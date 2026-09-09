@@ -1,0 +1,13 @@
+{
+  "fetched_at_utc": "2026-09-09T05:52:40.521478+00:00",
+  "date_from": "2026-07-01",
+  "date_to": "2026-09-30",
+  "source_url": "https://www.fussball.de/ajax.club.matchplan/-/id/00ES8GNBL0000049VV0AG08LVUPGND5I/mode/PAGE/show-filter/false/show-venues/true/mime-type/HTML/datum-von/2026-07-01/datum-bis/2026-09-30/max/50",
+  "response_utf8_sha256": "a69b13c20edb9ff363a9c91b598a1495859e1e7a22d91548fad40aa9ba9d85eb",
+  "response_bytes": 101675,
+  "status": "failed",
+  "error_type": "ScrapeError",
+  "error": "Verlegung 031MFGE2PG000000VS5489BUVVKNMR0J: Ziel fehlt oder zyklische Verlegung",
+  "http_status": 200,
+  "request_count": 1
+}

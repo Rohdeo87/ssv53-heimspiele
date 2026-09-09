@@ -1,0 +1,1168 @@
+{
+  "evidence_kind": "SYNTHETIC_CODE_REPLAY_NOT_OPERATIONAL_MEASUREMENT",
+  "base_commit": "9c2d0fc9c010b366cd49b58b8086b27f9d59a0dd",
+  "baseline_source_sha256": {
+    "mower/state.py": "45ff8f805004e15b718c8e90a14705a581312d3ac6adee9e7748f0ffb9dadff9",
+    "mower/hydrawise.py": "3bfeeaa84d0246d447f0c74e35340277e764511c4cda9578511841870ffc8189"
+  },
+  "updated_source_sha256": {
+    "mower/state.py": "9fea4e9ef82e5a223b1fa076f4a3e1b3bd36baa8290f7709c1186a8f029e74aa",
+    "mower/hydrawise.py": "725c8f691996ceae027ff7211cef6dd3d3dbbfc8852d8b5979bfd57861978f63"
+  },
+  "assumptions": [
+    "Observed irrigation end at 07:00 UTC; no further actual irrigation in this synthetic trace.",
+    "One-minute polls, persisted state, 150-minute physical rule, two-minute data confirmation, 180-second gap bound.",
+    "No mower, charging, occupancy, hydraulic sensors or manufacturer queue is simulated; a release is not productive mowing.",
+    "During a 240-second data gap unobserved irrigation remains possible even though this synthetic trace inserts no new water event."
+  ],
+  "cases": [
+    {
+      "name": "internal_one_failed_poll_near_end",
+      "failed_minutes": [
+        149
+      ],
+      "internal_complete_hold": true,
+      "baseline": {
+        "first_release_minutes_after_end": 300,
+        "first_release_utc": "2026-09-09T12:00:00+00:00",
+        "samples": [
+          {
+            "at_utc": "2026-09-09T09:28:00+00:00",
+            "available": true,
+            "origin": "IRRIGATION_END",
+            "clear_since_utc": "2026-09-09T07:00:00+00:00",
+            "drying_since_utc": null,
+            "release": {
+              "allowed": false,
+              "physical_clear_now": true,
+              "persistent_state_available": true,
+              "required_clear_minutes": 150,
+              "clear_since_utc": "2026-09-09T07:00:00+00:00",
+              "confirmed_for_seconds": 8880,
+              "release_at_utc": "2026-09-09T09:30:00+00:00",
+              "reason": "Hydrawise meldet erst seit 148.0 Minuten fortlaufend frei; benötigt werden 150 Minuten."
+            }
+          },
+          {
+            "at_utc": "2026-09-09T09:29:00+00:00",
+            "available": false,
+            "origin": "IRRIGATION_END",
+            "clear_since_utc": null,
+            "drying_since_utc": null,
+            "release": {
+              "allowed": false,
+              "physical_clear_now": false,
+              "persistent_state_available": true,
+              "required_clear_minutes": 150,
+              "clear_since_utc": null,
+              "confirmed_for_seconds": 0,
+              "release_at_utc": null,
+              "reason": "synthetic missing poll"
+            }
+          },
+          {
+            "at_utc": "2026-09-09T09:30:00+00:00",
+            "available": true,
+            "origin": "IRRIGATION_END",
+            "clear_since_utc": "2026-09-09T09:30:00+00:00",
+            "drying_since_utc": null,
+            "release": {
+              "allowed": false,
+              "physical_clear_now": true,
+              "persistent_state_available": true,
+              "required_clear_minutes": 150,
+              "clear_since_utc": "2026-09-09T09:30:00+00:00",
+              "confirmed_for_seconds": 0,
+              "release_at_utc": "2026-09-09T12:00:00+00:00",
+              "reason": "Hydrawise meldet erst seit 0.0 Minuten fortlaufend frei; benötigt werden 150 Minuten."
+            }
+          },
+          {
+            "at_utc": "2026-09-09T09:32:00+00:00",
+            "available": true,
+            "origin": "IRRIGATION_END",
+            "clear_since_utc": "2026-09-09T09:30:00+00:00",
+            "drying_since_utc": null,
+            "release": {
+              "allowed": false,
+              "physical_clear_now": true,
+              "persistent_state_available": true,
+              "required_clear_minutes": 150,
+              "clear_since_utc": "2026-09-09T09:30:00+00:00",
+              "confirmed_for_seconds": 120,
+              "release_at_utc": "2026-09-09T12:00:00+00:00",
+              "reason": "Hydrawise meldet erst seit 2.0 Minuten fortlaufend frei; benötigt werden 150 Minuten."
+            }
+          },
+          {
+            "at_utc": "2026-09-09T12:00:00+00:00",
+            "available": true,
+            "origin": "IRRIGATION_END",
+            "clear_since_utc": "2026-09-09T09:30:00+00:00",
+            "drying_since_utc": null,
+            "release": {
+              "allowed": true,
+              "physical_clear_now": true,
+              "persistent_state_available": true,
+              "required_clear_minutes": 150,
+              "clear_since_utc": "2026-09-09T09:30:00+00:00",
+              "confirmed_for_seconds": 9000,
+              "release_at_utc": "2026-09-09T12:00:00+00:00",
+              "reason": "Hydrawise hat das Beregnungsende fortlaufend für mindestens 150 Minuten bestätigt."
+            }
+          }
+        ]
+      },
+      "updated": {
+        "first_release_minutes_after_end": 152,
+        "first_release_utc": "2026-09-09T09:32:00+00:00",
+        "samples": [
+          {
+            "at_utc": "2026-09-09T09:28:00+00:00",
+            "available": true,
+            "origin": "IRRIGATION_END",
+            "clear_since_utc": "2026-09-09T07:00:00+00:00",
+            "drying_since_utc": "2026-09-09T07:00:00+00:00",
+            "release": {
+              "allowed": false,
+              "physical_clear_now": true,
+              "persistent_state_available": true,
+              "required_clear_minutes": 150,
+              "clear_since_utc": "2026-09-09T07:00:00+00:00",
+              "confirmed_for_seconds": 8880,
+              "release_at_utc": "2026-09-09T09:30:00+00:00",
+              "reason": "Trocknung bis 2026-09-09T09:30:00+00:00; aktuelle Datenbestätigung benötigt 2 Minuten.",
+              "drying_since_utc": "2026-09-09T07:00:00+00:00",
+              "dry_until_utc": "2026-09-09T09:30:00+00:00",
+              "telemetry_confirmed": true,
+              "telemetry_required_minutes": 2
+            }
+          },
+          {
+            "at_utc": "2026-09-09T09:29:00+00:00",
+            "available": false,
+            "origin": "IRRIGATION_END",
+            "clear_since_utc": null,
+            "drying_since_utc": "2026-09-09T07:00:00+00:00",
+            "release": {
+              "allowed": false,
+              "physical_clear_now": false,
+              "persistent_state_available": true,
+              "required_clear_minutes": 150,
+              "clear_since_utc": null,
+              "confirmed_for_seconds": 0,
+              "release_at_utc": null,
+              "reason": "synthetic missing poll",
+              "drying_since_utc": "2026-09-09T07:00:00+00:00",
+              "dry_until_utc": "2026-09-09T09:30:00+00:00",
+              "telemetry_confirmed": false,
+              "telemetry_required_minutes": 2
+            }
+          },
+          {
+            "at_utc": "2026-09-09T09:30:00+00:00",
+            "available": true,
+            "origin": "IRRIGATION_END",
+            "clear_since_utc": "2026-09-09T09:30:00+00:00",
+            "drying_since_utc": "2026-09-09T07:00:00+00:00",
+            "release": {
+              "allowed": false,
+              "physical_clear_now": true,
+              "persistent_state_available": true,
+              "required_clear_minutes": 150,
+              "clear_since_utc": "2026-09-09T09:30:00+00:00",
+              "confirmed_for_seconds": 0,
+              "release_at_utc": "2026-09-09T09:32:00+00:00",
+              "reason": "Trocknung bis 2026-09-09T09:30:00+00:00; aktuelle Datenbestätigung benötigt 2 Minuten.",
+              "drying_since_utc": "2026-09-09T07:00:00+00:00",
+              "dry_until_utc": "2026-09-09T09:30:00+00:00",
+              "telemetry_confirmed": false,
+              "telemetry_required_minutes": 2
+            }
+          },
+          {
+            "at_utc": "2026-09-09T09:32:00+00:00",
+            "available": true,
+            "origin": "IRRIGATION_END",
+            "clear_since_utc": "2026-09-09T09:30:00+00:00",
+            "drying_since_utc": "2026-09-09T07:00:00+00:00",
+            "release": {
+              "allowed": true,
+              "physical_clear_now": true,
+              "persistent_state_available": true,
+              "required_clear_minutes": 150,
+              "clear_since_utc": "2026-09-09T09:30:00+00:00",
+              "confirmed_for_seconds": 120,
+              "release_at_utc": "2026-09-09T09:32:00+00:00",
+              "reason": "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt.",
+              "drying_since_utc": "2026-09-09T07:00:00+00:00",
+              "dry_until_utc": "2026-09-09T09:30:00+00:00",
+              "telemetry_confirmed": true,
+              "telemetry_required_minutes": 2
+            }
+          },
+          {
+            "at_utc": "2026-09-09T12:00:00+00:00",
+            "available": true,
+            "origin": "IRRIGATION_END",
+            "clear_since_utc": "2026-09-09T09:30:00+00:00",
+            "drying_since_utc": "2026-09-09T07:00:00+00:00",
+            "release": {
+              "allowed": true,
+              "physical_clear_now": true,
+              "persistent_state_available": true,
+              "required_clear_minutes": 150,
+              "clear_since_utc": "2026-09-09T09:30:00+00:00",
+              "confirmed_for_seconds": 9000,
+              "release_at_utc": "2026-09-09T09:32:00+00:00",
+              "reason": "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt.",
+              "drying_since_utc": "2026-09-09T07:00:00+00:00",
+              "dry_until_utc": "2026-09-09T09:30:00+00:00",
+              "telemetry_confirmed": true,
+              "telemetry_required_minutes": 2
+            }
+          }
+        ]
+      },
+      "release_shift_minutes_later": -148
+    },
+    {
+      "name": "external_one_failed_poll_early",
+      "failed_minutes": [
+        20
+      ],
+      "internal_complete_hold": false,
+      "baseline": {
+        "first_release_minutes_after_end": 23,
+        "first_release_utc": "2026-09-09T07:23:00+00:00",
+        "samples": [
+          {
+            "at_utc": "2026-09-09T07:19:00+00:00",
+            "available": true,
+            "origin": "IRRIGATION_END",
+            "clear_since_utc": "2026-09-09T07:00:00+00:00",
+            "drying_since_utc": null,
+            "release": {
+              "allowed": false,
+              "physical_clear_now": true,
+              "persistent_state_available": true,
+              "required_clear_minutes": 150,
+              "clear_since_utc": "2026-09-09T07:00:00+00:00",
+              "confirmed_for_seconds": 1140,
+              "release_at_utc": "2026-09-09T09:30:00+00:00",
+              "reason": "Hydrawise meldet erst seit 19.0 Minuten fortlaufend frei; benötigt werden 150 Minuten."
+            }
+          },
+          {
+            "at_utc": "2026-09-09T07:20:00+00:00",
+            "available": false,
+            "origin": "IRRIGATION_END",
+            "clear_since_utc": null,
+            "drying_since_utc": null,
+            "release": {
+              "allowed": false,
+              "physical_clear_now": false,
+              "persistent_state_available": true,
+              "required_clear_minutes": 150,
+              "clear_since_utc": null,
+              "confirmed_for_seconds": 0,
+              "release_at_utc": null,
+              "reason": "synthetic missing poll"
+            }
+          },
+          {
+            "at_utc": "2026-09-09T07:21:00+00:00",
+            "available": true,
+            "origin": "DATA_GAP",
+            "clear_since_utc": "2026-09-09T07:21:00+00:00",
+            "drying_since_utc": null,
+            "release": {
+              "allowed": false,
+              "physical_clear_now": true,
+              "persistent_state_available": true,
+              "required_clear_minutes": 2,
+              "clear_since_utc": "2026-09-09T07:21:00+00:00",
+              "confirmed_for_seconds": 0,
+              "release_at_utc": "2026-09-09T07:23:00+00:00",
+              "reason": "Hydrawise meldet erst seit 0.0 Minuten fortlaufend frei; benötigt werden 2 Minuten."
+            }
+          },
+          {
+            "at_utc": "2026-09-09T07:23:00+00:00",
+            "available": true,
+            "origin": "DATA_GAP",
+            "clear_since_utc": "2026-09-09T07:21:00+00:00",
+            "drying_since_utc": null,
+            "release": {
+              "allowed": true,
+              "physical_clear_now": true,
+              "persistent_state_available": true,
+              "required_clear_minutes": 2,
+              "clear_since_utc": "2026-09-09T07:21:00+00:00",
+              "confirmed_for_seconds": 120,
+              "release_at_utc": "2026-09-09T07:23:00+00:00",
+              "reason": "Hydrawise hat das Beregnungsende fortlaufend für mindestens 2 Minuten bestätigt."
+            }
+          },
+          {
+            "at_utc": "2026-09-09T09:30:00+00:00",
+            "available": true,
+            "origin": "DATA_GAP",
+            "clear_since_utc": "2026-09-09T07:21:00+00:00",
+            "drying_since_utc": null,
+            "release": {
+              "allowed": true,
+              "physical_clear_now": true,
+              "persistent_state_available": true,
+              "required_clear_minutes": 2,
+              "clear_since_utc": "2026-09-09T07:21:00+00:00",
+              "confirmed_for_seconds": 7740,
+              "release_at_utc": "2026-09-09T07:23:00+00:00",
+              "reason": "Hydrawise hat das Beregnungsende fortlaufend für mindestens 2 Minuten bestätigt."
+            }
+          },
+          {
+            "at_utc": "2026-09-09T09:32:00+00:00",
+            "available": true,
+            "origin": "DATA_GAP",
+            "clear_since_utc": "2026-09-09T07:21:00+00:00",
+            "drying_since_utc": null,
+            "release": {
+              "allowed": true,
+              "physical_clear_now": true,
+              "persistent_state_available": true,
+              "required_clear_minutes": 2,
+              "clear_since_utc": "2026-09-09T07:21:00+00:00",
+              "confirmed_for_seconds": 7860,
+              "release_at_utc": "2026-09-09T07:23:00+00:00",
+              "reason": "Hydrawise hat das Beregnungsende fortlaufend für mindestens 2 Minuten bestätigt."
+            }
+          },
+          {
+            "at_utc": "2026-09-09T12:00:00+00:00",
+            "available": true,
+            "origin": "DATA_GAP",
+            "clear_since_utc": "2026-09-09T07:21:00+00:00",
+            "drying_since_utc": null,
+            "release": {
+              "allowed": true,
+              "physical_clear_now": true,
+              "persistent_state_available": true,
+              "required_clear_minutes": 2,
+              "clear_since_utc": "2026-09-09T07:21:00+00:00",
+              "confirmed_for_seconds": 16740,
+              "release_at_utc": "2026-09-09T07:23:00+00:00",
+              "reason": "Hydrawise hat das Beregnungsende fortlaufend für mindestens 2 Minuten bestätigt."
+            }
+          }
+        ]
+      },
+      "updated": {
+        "first_release_minutes_after_end": 150,
+        "first_release_utc": "2026-09-09T09:30:00+00:00",
+        "samples": [
+          {
+            "at_utc": "2026-09-09T07:19:00+00:00",
+            "available": true,
+            "origin": "IRRIGATION_END",
+            "clear_since_utc": "2026-09-09T07:00:00+00:00",
+            "drying_since_utc": "2026-09-09T07:00:00+00:00",
+            "release": {
+              "allowed": false,
+              "physical_clear_now": true,
+              "persistent_state_available": true,
+              "required_clear_minutes": 150,
+              "clear_since_utc": "2026-09-09T07:00:00+00:00",
+              "confirmed_for_seconds": 1140,
+              "release_at_utc": "2026-09-09T09:30:00+00:00",
+              "reason": "Trocknung bis 2026-09-09T09:30:00+00:00; aktuelle Datenbestätigung benötigt 2 Minuten.",
+              "drying_since_utc": "2026-09-09T07:00:00+00:00",
+              "dry_until_utc": "2026-09-09T09:30:00+00:00",
+              "telemetry_confirmed": true,
+              "telemetry_required_minutes": 2
+            }
+          },
+          {
+            "at_utc": "2026-09-09T07:20:00+00:00",
+            "available": false,
+            "origin": "IRRIGATION_END",
+            "clear_since_utc": null,
+            "drying_since_utc": "2026-09-09T07:00:00+00:00",
+            "release": {
+              "allowed": false,
+              "physical_clear_now": false,
+              "persistent_state_available": true,
+              "required_clear_minutes": 150,
+              "clear_since_utc": null,
+              "confirmed_for_seconds": 0,
+              "release_at_utc": null,
+              "reason": "synthetic missing poll",
+              "drying_since_utc": "2026-09-09T07:00:00+00:00",
+              "dry_until_utc": "2026-09-09T09:30:00+00:00",
+              "telemetry_confirmed": false,
+              "telemetry_required_minutes": 2
+            }
+          },
+          {
+            "at_utc": "2026-09-09T07:21:00+00:00",
+            "available": true,
+            "origin": "IRRIGATION_END",
+            "clear_since_utc": "2026-09-09T07:21:00+00:00",
+            "drying_since_utc": "2026-09-09T07:00:00+00:00",
+            "release": {
+              "allowed": false,
+              "physical_clear_now": true,
+              "persistent_state_available": true,
+              "required_clear_minutes": 150,
+              "clear_since_utc": "2026-09-09T07:21:00+00:00",
+              "confirmed_for_seconds": 0,
+              "release_at_utc": "2026-09-09T09:30:00+00:00",
+              "reason": "Trocknung bis 2026-09-09T09:30:00+00:00; aktuelle Datenbestätigung benötigt 2 Minuten.",
+              "drying_since_utc": "2026-09-09T07:00:00+00:00",
+              "dry_until_utc": "2026-09-09T09:30:00+00:00",
+              "telemetry_confirmed": false,
+              "telemetry_required_minutes": 2
+            }
+          },
+          {
+            "at_utc": "2026-09-09T07:23:00+00:00",
+            "available": true,
+            "origin": "IRRIGATION_END",
+            "clear_since_utc": "2026-09-09T07:21:00+00:00",
+            "drying_since_utc": "2026-09-09T07:00:00+00:00",
+            "release": {
+              "allowed": false,
+              "physical_clear_now": true,
+              "persistent_state_available": true,
+              "required_clear_minutes": 150,
+              "clear_since_utc": "2026-09-09T07:21:00+00:00",
+              "confirmed_for_seconds": 120,
+              "release_at_utc": "2026-09-09T09:30:00+00:00",
+              "reason": "Trocknung bis 2026-09-09T09:30:00+00:00; aktuelle Datenbestätigung benötigt 2 Minuten.",
+              "drying_since_utc": "2026-09-09T07:00:00+00:00",
+              "dry_until_utc": "2026-09-09T09:30:00+00:00",
+              "telemetry_confirmed": true,
+              "telemetry_required_minutes": 2
+            }
+          },
+          {
+            "at_utc": "2026-09-09T09:30:00+00:00",
+            "available": true,
+            "origin": "IRRIGATION_END",
+            "clear_since_utc": "2026-09-09T07:21:00+00:00",
+            "drying_since_utc": "2026-09-09T07:00:00+00:00",
+            "release": {
+              "allowed": true,
+              "physical_clear_now": true,
+              "persistent_state_available": true,
+              "required_clear_minutes": 150,
+              "clear_since_utc": "2026-09-09T07:21:00+00:00",
+              "confirmed_for_seconds": 7740,
+              "release_at_utc": "2026-09-09T09:30:00+00:00",
+              "reason": "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt.",
+              "drying_since_utc": "2026-09-09T07:00:00+00:00",
+              "dry_until_utc": "2026-09-09T09:30:00+00:00",
+              "telemetry_confirmed": true,
+              "telemetry_required_minutes": 2
+            }
+          },
+          {
+            "at_utc": "2026-09-09T09:32:00+00:00",
+            "available": true,
+            "origin": "IRRIGATION_END",
+            "clear_since_utc": "2026-09-09T07:21:00+00:00",
+            "drying_since_utc": "2026-09-09T07:00:00+00:00",
+            "release": {
+              "allowed": true,
+              "physical_clear_now": true,
+              "persistent_state_available": true,
+              "required_clear_minutes": 150,
+              "clear_since_utc": "2026-09-09T07:21:00+00:00",
+              "confirmed_for_seconds": 7860,
+              "release_at_utc": "2026-09-09T09:30:00+00:00",
+              "reason": "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt.",
+              "drying_since_utc": "2026-09-09T07:00:00+00:00",
+              "dry_until_utc": "2026-09-09T09:30:00+00:00",
+              "telemetry_confirmed": true,
+              "telemetry_required_minutes": 2
+            }
+          },
+          {
+            "at_utc": "2026-09-09T12:00:00+00:00",
+            "available": true,
+            "origin": "IRRIGATION_END",
+            "clear_since_utc": "2026-09-09T07:21:00+00:00",
+            "drying_since_utc": "2026-09-09T07:00:00+00:00",
+            "release": {
+              "allowed": true,
+              "physical_clear_now": true,
+              "persistent_state_available": true,
+              "required_clear_minutes": 150,
+              "clear_since_utc": "2026-09-09T07:21:00+00:00",
+              "confirmed_for_seconds": 16740,
+              "release_at_utc": "2026-09-09T09:30:00+00:00",
+              "reason": "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt.",
+              "drying_since_utc": "2026-09-09T07:00:00+00:00",
+              "dry_until_utc": "2026-09-09T09:30:00+00:00",
+              "telemetry_confirmed": true,
+              "telemetry_required_minutes": 2
+            }
+          }
+        ]
+      },
+      "release_shift_minutes_later": 127
+    },
+    {
+      "name": "internal_240_second_gap_near_end",
+      "failed_minutes": [
+        147,
+        148,
+        149
+      ],
+      "internal_complete_hold": true,
+      "baseline": {
+        "first_release_minutes_after_end": 300,
+        "first_release_utc": "2026-09-09T12:00:00+00:00",
+        "samples": [
+          {
+            "at_utc": "2026-09-09T09:26:00+00:00",
+            "available": true,
+            "origin": "IRRIGATION_END",
+            "clear_since_utc": "2026-09-09T07:00:00+00:00",
+            "drying_since_utc": null,
+            "release": {
+              "allowed": false,
+              "physical_clear_now": true,
+              "persistent_state_available": true,
+              "required_clear_minutes": 150,
+              "clear_since_utc": "2026-09-09T07:00:00+00:00",
+              "confirmed_for_seconds": 8760,
+              "release_at_utc": "2026-09-09T09:30:00+00:00",
+              "reason": "Hydrawise meldet erst seit 146.0 Minuten fortlaufend frei; benötigt werden 150 Minuten."
+            }
+          },
+          {
+            "at_utc": "2026-09-09T09:27:00+00:00",
+            "available": false,
+            "origin": "IRRIGATION_END",
+            "clear_since_utc": null,
+            "drying_since_utc": null,
+            "release": {
+              "allowed": false,
+              "physical_clear_now": false,
+              "persistent_state_available": true,
+              "required_clear_minutes": 150,
+              "clear_since_utc": null,
+              "confirmed_for_seconds": 0,
+              "release_at_utc": null,
+              "reason": "synthetic missing poll"
+            }
+          },
+          {
+            "at_utc": "2026-09-09T09:28:00+00:00",
+            "available": false,
+            "origin": "IRRIGATION_END",
+            "clear_since_utc": null,
+            "drying_since_utc": null,
+            "release": {
+              "allowed": false,
+              "physical_clear_now": false,
+              "persistent_state_available": true,
+              "required_clear_minutes": 150,
+              "clear_since_utc": null,
+              "confirmed_for_seconds": 0,
+              "release_at_utc": null,
+              "reason": "synthetic missing poll"
+            }
+          },
+          {
+            "at_utc": "2026-09-09T09:29:00+00:00",
+            "available": false,
+            "origin": "IRRIGATION_END",
+            "clear_since_utc": null,
+            "drying_since_utc": null,
+            "release": {
+              "allowed": false,
+              "physical_clear_now": false,
+              "persistent_state_available": true,
+              "required_clear_minutes": 150,
+              "clear_since_utc": null,
+              "confirmed_for_seconds": 0,
+              "release_at_utc": null,
+              "reason": "synthetic missing poll"
+            }
+          },
+          {
+            "at_utc": "2026-09-09T09:30:00+00:00",
+            "available": true,
+            "origin": "IRRIGATION_END",
+            "clear_since_utc": "2026-09-09T09:30:00+00:00",
+            "drying_since_utc": null,
+            "release": {
+              "allowed": false,
+              "physical_clear_now": true,
+              "persistent_state_available": true,
+              "required_clear_minutes": 150,
+              "clear_since_utc": "2026-09-09T09:30:00+00:00",
+              "confirmed_for_seconds": 0,
+              "release_at_utc": "2026-09-09T12:00:00+00:00",
+              "reason": "Hydrawise meldet erst seit 0.0 Minuten fortlaufend frei; benötigt werden 150 Minuten."
+            }
+          },
+          {
+            "at_utc": "2026-09-09T09:32:00+00:00",
+            "available": true,
+            "origin": "IRRIGATION_END",
+            "clear_since_utc": "2026-09-09T09:30:00+00:00",
+            "drying_since_utc": null,
+            "release": {
+              "allowed": false,
+              "physical_clear_now": true,
+              "persistent_state_available": true,
+              "required_clear_minutes": 150,
+              "clear_since_utc": "2026-09-09T09:30:00+00:00",
+              "confirmed_for_seconds": 120,
+              "release_at_utc": "2026-09-09T12:00:00+00:00",
+              "reason": "Hydrawise meldet erst seit 2.0 Minuten fortlaufend frei; benötigt werden 150 Minuten."
+            }
+          },
+          {
+            "at_utc": "2026-09-09T12:00:00+00:00",
+            "available": true,
+            "origin": "IRRIGATION_END",
+            "clear_since_utc": "2026-09-09T09:30:00+00:00",
+            "drying_since_utc": null,
+            "release": {
+              "allowed": true,
+              "physical_clear_now": true,
+              "persistent_state_available": true,
+              "required_clear_minutes": 150,
+              "clear_since_utc": "2026-09-09T09:30:00+00:00",
+              "confirmed_for_seconds": 9000,
+              "release_at_utc": "2026-09-09T12:00:00+00:00",
+              "reason": "Hydrawise hat das Beregnungsende fortlaufend für mindestens 150 Minuten bestätigt."
+            }
+          }
+        ]
+      },
+      "updated": {
+        "first_release_minutes_after_end": 300,
+        "first_release_utc": "2026-09-09T12:00:00+00:00",
+        "samples": [
+          {
+            "at_utc": "2026-09-09T09:26:00+00:00",
+            "available": true,
+            "origin": "IRRIGATION_END",
+            "clear_since_utc": "2026-09-09T07:00:00+00:00",
+            "drying_since_utc": "2026-09-09T07:00:00+00:00",
+            "release": {
+              "allowed": false,
+              "physical_clear_now": true,
+              "persistent_state_available": true,
+              "required_clear_minutes": 150,
+              "clear_since_utc": "2026-09-09T07:00:00+00:00",
+              "confirmed_for_seconds": 8760,
+              "release_at_utc": "2026-09-09T09:30:00+00:00",
+              "reason": "Trocknung bis 2026-09-09T09:30:00+00:00; aktuelle Datenbestätigung benötigt 2 Minuten.",
+              "drying_since_utc": "2026-09-09T07:00:00+00:00",
+              "dry_until_utc": "2026-09-09T09:30:00+00:00",
+              "telemetry_confirmed": true,
+              "telemetry_required_minutes": 2
+            }
+          },
+          {
+            "at_utc": "2026-09-09T09:27:00+00:00",
+            "available": false,
+            "origin": "IRRIGATION_END",
+            "clear_since_utc": null,
+            "drying_since_utc": "2026-09-09T07:00:00+00:00",
+            "release": {
+              "allowed": false,
+              "physical_clear_now": false,
+              "persistent_state_available": true,
+              "required_clear_minutes": 150,
+              "clear_since_utc": null,
+              "confirmed_for_seconds": 0,
+              "release_at_utc": null,
+              "reason": "synthetic missing poll",
+              "drying_since_utc": "2026-09-09T07:00:00+00:00",
+              "dry_until_utc": "2026-09-09T09:30:00+00:00",
+              "telemetry_confirmed": false,
+              "telemetry_required_minutes": 2
+            }
+          },
+          {
+            "at_utc": "2026-09-09T09:28:00+00:00",
+            "available": false,
+            "origin": "IRRIGATION_END",
+            "clear_since_utc": null,
+            "drying_since_utc": "2026-09-09T07:00:00+00:00",
+            "release": {
+              "allowed": false,
+              "physical_clear_now": false,
+              "persistent_state_available": true,
+              "required_clear_minutes": 150,
+              "clear_since_utc": null,
+              "confirmed_for_seconds": 0,
+              "release_at_utc": null,
+              "reason": "synthetic missing poll",
+              "drying_since_utc": "2026-09-09T07:00:00+00:00",
+              "dry_until_utc": "2026-09-09T09:30:00+00:00",
+              "telemetry_confirmed": false,
+              "telemetry_required_minutes": 2
+            }
+          },
+          {
+            "at_utc": "2026-09-09T09:29:00+00:00",
+            "available": false,
+            "origin": "IRRIGATION_END",
+            "clear_since_utc": null,
+            "drying_since_utc": "2026-09-09T07:00:00+00:00",
+            "release": {
+              "allowed": false,
+              "physical_clear_now": false,
+              "persistent_state_available": true,
+              "required_clear_minutes": 150,
+              "clear_since_utc": null,
+              "confirmed_for_seconds": 0,
+              "release_at_utc": null,
+              "reason": "synthetic missing poll",
+              "drying_since_utc": "2026-09-09T07:00:00+00:00",
+              "dry_until_utc": "2026-09-09T09:30:00+00:00",
+              "telemetry_confirmed": false,
+              "telemetry_required_minutes": 2
+            }
+          },
+          {
+            "at_utc": "2026-09-09T09:30:00+00:00",
+            "available": true,
+            "origin": "POSSIBLE_IRRIGATION_DURING_GAP",
+            "clear_since_utc": "2026-09-09T09:30:00+00:00",
+            "drying_since_utc": "2026-09-09T09:30:00+00:00",
+            "release": {
+              "allowed": false,
+              "physical_clear_now": true,
+              "persistent_state_available": true,
+              "required_clear_minutes": 150,
+              "clear_since_utc": "2026-09-09T09:30:00+00:00",
+              "confirmed_for_seconds": 0,
+              "release_at_utc": "2026-09-09T12:00:00+00:00",
+              "reason": "Trocknung bis 2026-09-09T12:00:00+00:00; aktuelle Datenbestätigung benötigt 2 Minuten.",
+              "drying_since_utc": "2026-09-09T09:30:00+00:00",
+              "dry_until_utc": "2026-09-09T12:00:00+00:00",
+              "telemetry_confirmed": false,
+              "telemetry_required_minutes": 2
+            }
+          },
+          {
+            "at_utc": "2026-09-09T09:32:00+00:00",
+            "available": true,
+            "origin": "POSSIBLE_IRRIGATION_DURING_GAP",
+            "clear_since_utc": "2026-09-09T09:30:00+00:00",
+            "drying_since_utc": "2026-09-09T09:30:00+00:00",
+            "release": {
+              "allowed": false,
+              "physical_clear_now": true,
+              "persistent_state_available": true,
+              "required_clear_minutes": 150,
+              "clear_since_utc": "2026-09-09T09:30:00+00:00",
+              "confirmed_for_seconds": 120,
+              "release_at_utc": "2026-09-09T12:00:00+00:00",
+              "reason": "Trocknung bis 2026-09-09T12:00:00+00:00; aktuelle Datenbestätigung benötigt 2 Minuten.",
+              "drying_since_utc": "2026-09-09T09:30:00+00:00",
+              "dry_until_utc": "2026-09-09T12:00:00+00:00",
+              "telemetry_confirmed": true,
+              "telemetry_required_minutes": 2
+            }
+          },
+          {
+            "at_utc": "2026-09-09T12:00:00+00:00",
+            "available": true,
+            "origin": "POSSIBLE_IRRIGATION_DURING_GAP",
+            "clear_since_utc": "2026-09-09T09:30:00+00:00",
+            "drying_since_utc": "2026-09-09T09:30:00+00:00",
+            "release": {
+              "allowed": true,
+              "physical_clear_now": true,
+              "persistent_state_available": true,
+              "required_clear_minutes": 150,
+              "clear_since_utc": "2026-09-09T09:30:00+00:00",
+              "confirmed_for_seconds": 9000,
+              "release_at_utc": "2026-09-09T12:00:00+00:00",
+              "reason": "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt.",
+              "drying_since_utc": "2026-09-09T09:30:00+00:00",
+              "dry_until_utc": "2026-09-09T12:00:00+00:00",
+              "telemetry_confirmed": true,
+              "telemetry_required_minutes": 2
+            }
+          }
+        ]
+      },
+      "release_shift_minutes_later": 0
+    },
+    {
+      "name": "external_240_second_gap_early",
+      "failed_minutes": [
+        20,
+        21,
+        22
+      ],
+      "internal_complete_hold": false,
+      "baseline": {
+        "first_release_minutes_after_end": 25,
+        "first_release_utc": "2026-09-09T07:25:00+00:00",
+        "samples": [
+          {
+            "at_utc": "2026-09-09T07:19:00+00:00",
+            "available": true,
+            "origin": "IRRIGATION_END",
+            "clear_since_utc": "2026-09-09T07:00:00+00:00",
+            "drying_since_utc": null,
+            "release": {
+              "allowed": false,
+              "physical_clear_now": true,
+              "persistent_state_available": true,
+              "required_clear_minutes": 150,
+              "clear_since_utc": "2026-09-09T07:00:00+00:00",
+              "confirmed_for_seconds": 1140,
+              "release_at_utc": "2026-09-09T09:30:00+00:00",
+              "reason": "Hydrawise meldet erst seit 19.0 Minuten fortlaufend frei; benötigt werden 150 Minuten."
+            }
+          },
+          {
+            "at_utc": "2026-09-09T07:20:00+00:00",
+            "available": false,
+            "origin": "IRRIGATION_END",
+            "clear_since_utc": null,
+            "drying_since_utc": null,
+            "release": {
+              "allowed": false,
+              "physical_clear_now": false,
+              "persistent_state_available": true,
+              "required_clear_minutes": 150,
+              "clear_since_utc": null,
+              "confirmed_for_seconds": 0,
+              "release_at_utc": null,
+              "reason": "synthetic missing poll"
+            }
+          },
+          {
+            "at_utc": "2026-09-09T07:21:00+00:00",
+            "available": false,
+            "origin": "IRRIGATION_END",
+            "clear_since_utc": null,
+            "drying_since_utc": null,
+            "release": {
+              "allowed": false,
+              "physical_clear_now": false,
+              "persistent_state_available": true,
+              "required_clear_minutes": 150,
+              "clear_since_utc": null,
+              "confirmed_for_seconds": 0,
+              "release_at_utc": null,
+              "reason": "synthetic missing poll"
+            }
+          },
+          {
+            "at_utc": "2026-09-09T07:22:00+00:00",
+            "available": false,
+            "origin": "IRRIGATION_END",
+            "clear_since_utc": null,
+            "drying_since_utc": null,
+            "release": {
+              "allowed": false,
+              "physical_clear_now": false,
+              "persistent_state_available": true,
+              "required_clear_minutes": 150,
+              "clear_since_utc": null,
+              "confirmed_for_seconds": 0,
+              "release_at_utc": null,
+              "reason": "synthetic missing poll"
+            }
+          },
+          {
+            "at_utc": "2026-09-09T07:23:00+00:00",
+            "available": true,
+            "origin": "DATA_GAP",
+            "clear_since_utc": "2026-09-09T07:23:00+00:00",
+            "drying_since_utc": null,
+            "release": {
+              "allowed": false,
+              "physical_clear_now": true,
+              "persistent_state_available": true,
+              "required_clear_minutes": 2,
+              "clear_since_utc": "2026-09-09T07:23:00+00:00",
+              "confirmed_for_seconds": 0,
+              "release_at_utc": "2026-09-09T07:25:00+00:00",
+              "reason": "Hydrawise meldet erst seit 0.0 Minuten fortlaufend frei; benötigt werden 2 Minuten."
+            }
+          },
+          {
+            "at_utc": "2026-09-09T07:25:00+00:00",
+            "available": true,
+            "origin": "DATA_GAP",
+            "clear_since_utc": "2026-09-09T07:23:00+00:00",
+            "drying_since_utc": null,
+            "release": {
+              "allowed": true,
+              "physical_clear_now": true,
+              "persistent_state_available": true,
+              "required_clear_minutes": 2,
+              "clear_since_utc": "2026-09-09T07:23:00+00:00",
+              "confirmed_for_seconds": 120,
+              "release_at_utc": "2026-09-09T07:25:00+00:00",
+              "reason": "Hydrawise hat das Beregnungsende fortlaufend für mindestens 2 Minuten bestätigt."
+            }
+          },
+          {
+            "at_utc": "2026-09-09T09:30:00+00:00",
+            "available": true,
+            "origin": "DATA_GAP",
+            "clear_since_utc": "2026-09-09T07:23:00+00:00",
+            "drying_since_utc": null,
+            "release": {
+              "allowed": true,
+              "physical_clear_now": true,
+              "persistent_state_available": true,
+              "required_clear_minutes": 2,
+              "clear_since_utc": "2026-09-09T07:23:00+00:00",
+              "confirmed_for_seconds": 7620,
+              "release_at_utc": "2026-09-09T07:25:00+00:00",
+              "reason": "Hydrawise hat das Beregnungsende fortlaufend für mindestens 2 Minuten bestätigt."
+            }
+          },
+          {
+            "at_utc": "2026-09-09T09:32:00+00:00",
+            "available": true,
+            "origin": "DATA_GAP",
+            "clear_since_utc": "2026-09-09T07:23:00+00:00",
+            "drying_since_utc": null,
+            "release": {
+              "allowed": true,
+              "physical_clear_now": true,
+              "persistent_state_available": true,
+              "required_clear_minutes": 2,
+              "clear_since_utc": "2026-09-09T07:23:00+00:00",
+              "confirmed_for_seconds": 7740,
+              "release_at_utc": "2026-09-09T07:25:00+00:00",
+              "reason": "Hydrawise hat das Beregnungsende fortlaufend für mindestens 2 Minuten bestätigt."
+            }
+          },
+          {
+            "at_utc": "2026-09-09T12:00:00+00:00",
+            "available": true,
+            "origin": "DATA_GAP",
+            "clear_since_utc": "2026-09-09T07:23:00+00:00",
+            "drying_since_utc": null,
+            "release": {
+              "allowed": true,
+              "physical_clear_now": true,
+              "persistent_state_available": true,
+              "required_clear_minutes": 2,
+              "clear_since_utc": "2026-09-09T07:23:00+00:00",
+              "confirmed_for_seconds": 16620,
+              "release_at_utc": "2026-09-09T07:25:00+00:00",
+              "reason": "Hydrawise hat das Beregnungsende fortlaufend für mindestens 2 Minuten bestätigt."
+            }
+          }
+        ]
+      },
+      "updated": {
+        "first_release_minutes_after_end": 173,
+        "first_release_utc": "2026-09-09T09:53:00+00:00",
+        "samples": [
+          {
+            "at_utc": "2026-09-09T07:19:00+00:00",
+            "available": true,
+            "origin": "IRRIGATION_END",
+            "clear_since_utc": "2026-09-09T07:00:00+00:00",
+            "drying_since_utc": "2026-09-09T07:00:00+00:00",
+            "release": {
+              "allowed": false,
+              "physical_clear_now": true,
+              "persistent_state_available": true,
+              "required_clear_minutes": 150,
+              "clear_since_utc": "2026-09-09T07:00:00+00:00",
+              "confirmed_for_seconds": 1140,
+              "release_at_utc": "2026-09-09T09:30:00+00:00",
+              "reason": "Trocknung bis 2026-09-09T09:30:00+00:00; aktuelle Datenbestätigung benötigt 2 Minuten.",
+              "drying_since_utc": "2026-09-09T07:00:00+00:00",
+              "dry_until_utc": "2026-09-09T09:30:00+00:00",
+              "telemetry_confirmed": true,
+              "telemetry_required_minutes": 2
+            }
+          },
+          {
+            "at_utc": "2026-09-09T07:20:00+00:00",
+            "available": false,
+            "origin": "IRRIGATION_END",
+            "clear_since_utc": null,
+            "drying_since_utc": "2026-09-09T07:00:00+00:00",
+            "release": {
+              "allowed": false,
+              "physical_clear_now": false,
+              "persistent_state_available": true,
+              "required_clear_minutes": 150,
+              "clear_since_utc": null,
+              "confirmed_for_seconds": 0,
+              "release_at_utc": null,
+              "reason": "synthetic missing poll",
+              "drying_since_utc": "2026-09-09T07:00:00+00:00",
+              "dry_until_utc": "2026-09-09T09:30:00+00:00",
+              "telemetry_confirmed": false,
+              "telemetry_required_minutes": 2
+            }
+          },
+          {
+            "at_utc": "2026-09-09T07:21:00+00:00",
+            "available": false,
+            "origin": "IRRIGATION_END",
+            "clear_since_utc": null,
+            "drying_since_utc": "2026-09-09T07:00:00+00:00",
+            "release": {
+              "allowed": false,
+              "physical_clear_now": false,
+              "persistent_state_available": true,
+              "required_clear_minutes": 150,
+              "clear_since_utc": null,
+              "confirmed_for_seconds": 0,
+              "release_at_utc": null,
+              "reason": "synthetic missing poll",
+              "drying_since_utc": "2026-09-09T07:00:00+00:00",
+              "dry_until_utc": "2026-09-09T09:30:00+00:00",
+              "telemetry_confirmed": false,
+              "telemetry_required_minutes": 2
+            }
+          },
+          {
+            "at_utc": "2026-09-09T07:22:00+00:00",
+            "available": false,
+            "origin": "IRRIGATION_END",
+            "clear_since_utc": null,
+            "drying_since_utc": "2026-09-09T07:00:00+00:00",
+            "release": {
+              "allowed": false,
+              "physical_clear_now": false,
+              "persistent_state_available": true,
+              "required_clear_minutes": 150,
+              "clear_since_utc": null,
+              "confirmed_for_seconds": 0,
+              "release_at_utc": null,
+              "reason": "synthetic missing poll",
+              "drying_since_utc": "2026-09-09T07:00:00+00:00",
+              "dry_until_utc": "2026-09-09T09:30:00+00:00",
+              "telemetry_confirmed": false,
+              "telemetry_required_minutes": 2
+            }
+          },
+          {
+            "at_utc": "2026-09-09T07:23:00+00:00",
+            "available": true,
+            "origin": "POSSIBLE_IRRIGATION_DURING_GAP",
+            "clear_since_utc": "2026-09-09T07:23:00+00:00",
+            "drying_since_utc": "2026-09-09T07:23:00+00:00",
+            "release": {
+              "allowed": false,
+              "physical_clear_now": true,
+              "persistent_state_available": true,
+              "required_clear_minutes": 150,
+              "clear_since_utc": "2026-09-09T07:23:00+00:00",
+              "confirmed_for_seconds": 0,
+              "release_at_utc": "2026-09-09T09:53:00+00:00",
+              "reason": "Trocknung bis 2026-09-09T09:53:00+00:00; aktuelle Datenbestätigung benötigt 2 Minuten.",
+              "drying_since_utc": "2026-09-09T07:23:00+00:00",
+              "dry_until_utc": "2026-09-09T09:53:00+00:00",
+              "telemetry_confirmed": false,
+              "telemetry_required_minutes": 2
+            }
+          },
+          {
+            "at_utc": "2026-09-09T07:25:00+00:00",
+            "available": true,
+            "origin": "POSSIBLE_IRRIGATION_DURING_GAP",
+            "clear_since_utc": "2026-09-09T07:23:00+00:00",
+            "drying_since_utc": "2026-09-09T07:23:00+00:00",
+            "release": {
+              "allowed": false,
+              "physical_clear_now": true,
+              "persistent_state_available": true,
+              "required_clear_minutes": 150,
+              "clear_since_utc": "2026-09-09T07:23:00+00:00",
+              "confirmed_for_seconds": 120,
+              "release_at_utc": "2026-09-09T09:53:00+00:00",
+              "reason": "Trocknung bis 2026-09-09T09:53:00+00:00; aktuelle Datenbestätigung benötigt 2 Minuten.",
+              "drying_since_utc": "2026-09-09T07:23:00+00:00",
+              "dry_until_utc": "2026-09-09T09:53:00+00:00",
+              "telemetry_confirmed": true,
+              "telemetry_required_minutes": 2
+            }
+          },
+          {
+            "at_utc": "2026-09-09T09:30:00+00:00",
+            "available": true,
+            "origin": "POSSIBLE_IRRIGATION_DURING_GAP",
+            "clear_since_utc": "2026-09-09T07:23:00+00:00",
+            "drying_since_utc": "2026-09-09T07:23:00+00:00",
+            "release": {
+              "allowed": false,
+              "physical_clear_now": true,
+              "persistent_state_available": true,
+              "required_clear_minutes": 150,
+              "clear_since_utc": "2026-09-09T07:23:00+00:00",
+              "confirmed_for_seconds": 7620,
+              "release_at_utc": "2026-09-09T09:53:00+00:00",
+              "reason": "Trocknung bis 2026-09-09T09:53:00+00:00; aktuelle Datenbestätigung benötigt 2 Minuten.",
+              "drying_since_utc": "2026-09-09T07:23:00+00:00",
+              "dry_until_utc": "2026-09-09T09:53:00+00:00",
+              "telemetry_confirmed": true,
+              "telemetry_required_minutes": 2
+            }
+          },
+          {
+            "at_utc": "2026-09-09T09:32:00+00:00",
+            "available": true,
+            "origin": "POSSIBLE_IRRIGATION_DURING_GAP",
+            "clear_since_utc": "2026-09-09T07:23:00+00:00",
+            "drying_since_utc": "2026-09-09T07:23:00+00:00",
+            "release": {
+              "allowed": false,
+              "physical_clear_now": true,
+              "persistent_state_available": true,
+              "required_clear_minutes": 150,
+              "clear_since_utc": "2026-09-09T07:23:00+00:00",
+              "confirmed_for_seconds": 7740,
+              "release_at_utc": "2026-09-09T09:53:00+00:00",
+              "reason": "Trocknung bis 2026-09-09T09:53:00+00:00; aktuelle Datenbestätigung benötigt 2 Minuten.",
+              "drying_since_utc": "2026-09-09T07:23:00+00:00",
+              "dry_until_utc": "2026-09-09T09:53:00+00:00",
+              "telemetry_confirmed": true,
+              "telemetry_required_minutes": 2
+            }
+          },
+          {
+            "at_utc": "2026-09-09T12:00:00+00:00",
+            "available": true,
+            "origin": "POSSIBLE_IRRIGATION_DURING_GAP",
+            "clear_since_utc": "2026-09-09T07:23:00+00:00",
+            "drying_since_utc": "2026-09-09T07:23:00+00:00",
+            "release": {
+              "allowed": true,
+              "physical_clear_now": true,
+              "persistent_state_available": true,
+              "required_clear_minutes": 150,
+              "clear_since_utc": "2026-09-09T07:23:00+00:00",
+              "confirmed_for_seconds": 16620,
+              "release_at_utc": "2026-09-09T09:53:00+00:00",
+              "reason": "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt.",
+              "drying_since_utc": "2026-09-09T07:23:00+00:00",
+              "dry_until_utc": "2026-09-09T09:53:00+00:00",
+              "telemetry_confirmed": true,
+              "telemetry_required_minutes": 2
+            }
+          }
+        ]
+      },
+      "release_shift_minutes_later": 148
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "recorded_at_utc": "2026-09-09T09:28:37.111526+00:00",
+  "source_commit": "325a5564a1af71ff2a3d3b73241da2771f16f431",
+  "review_pr": "https://github.com/Rohdeo87/ssv53-heimspiele/pull/47",
+  "previous_audit_head": "cc477f1937dfe66b00248aa49b47f982ad407129",
+  "local_tests": {
+    "python_passed": 739,
+    "python_subtests_passed": 406,
+    "appack_passed": 88,
+    "device_commands": false
+  },
+  "package": {
+    "path": "dist/ssv53-platzpflege-simple-ui-20260909-source.zip",
+    "sha256": "d2c763b5e052dcc61a8383285e76a5847eea8e78ce006d6165ddd2cac27d43e3",
+    "file_count": 47,
+    "manifest_sha256": "cce27c13b6e82bf0aefbd088ac11863bb78d7aa797588705f03fc8702ac7f342",
+    "all_file_hashes_verified": true,
+    "source_files_match_commit_ignoring_line_endings": true,
+    "remote_build_required": true,
+    "deployed": false,
+    "installed": false
+  },
+  "template": {
+    "path": "appack-platzwart-dashboard.html",
+    "sha256": "b73d7a0bd08594dd7c0b8817b4fc88ec79e6e0c065c549acf97746f1d012d714",
+    "txt_identical": true,
+    "cms_published": false
+  },
+  "browser": {
+    "synthetic": true,
+    "viewports": [
+      [
+        390,
+        844
+      ],
+      [
+        320,
+        740
+      ],
+      [
+        1200,
+        900
+      ]
+    ],
+    "network": "blocked by CSP",
+    "native_device_acceptance": false
+  },
+  "shadow_observed": false,
+  "live_proven": false,
+  "ci": {
+    "checks_url": "https://github.com/Rohdeo87/ssv53-heimspiele/pull/47/checks",
+    "note": "Live CI results belong to the published PR head. This file records local source and package verification. The CI read-only package differs from this FULL_FAILSAFE source package."
+  }
+}

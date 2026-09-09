@@ -62,6 +62,71 @@ def _source_parts(source: str) -> frozenset[str]:
     )
 
 
+def _contains_fail_closed(details: Mapping[str, Any]) -> bool:
+    if details.get("fail_closed"):
+        return True
+    items = details.get("items")
+    if not isinstance(items, list):
+        return False
+    try:
+        return any(
+            isinstance(item, Mapping)
+            and isinstance(item.get("details"), Mapping)
+            and _contains_fail_closed(item["details"])
+            for item in items
+        )
+    except RecursionError:
+        return True
+
+
+def _occupancy_blocks(block: Block) -> list[Block]:
+    """Recover source intervals only from a complete, valid merged-block record.
+
+    The existing schedule deliberately merges irrigation with occupancy. Using
+    that whole span as sports occupancy would prevent the shadow planner from
+    considering an alternative irrigation slot. Incomplete or inconsistent
+    provenance retains the full original block, including all safety margins.
+    """
+    parts = _source_parts(block.source)
+    if not parts & OCCUPANCY_SOURCES:
+        return [block] if _contains_fail_closed(block.details) else []
+    if _contains_fail_closed(block.details) or "irrigation" not in parts:
+        return [block]
+    raw_items = block.details.get("items")
+    if not isinstance(raw_items, list) or not raw_items:
+        return [block]
+    try:
+        items: list[Block] = []
+        for item in raw_items:
+            if not isinstance(item, dict) or not isinstance(item.get("details"), dict):
+                return [block]
+            items.append(
+                Block(
+                    start=datetime.fromisoformat(item["start"]),
+                    end=datetime.fromisoformat(item["end"]),
+                    source=item["source"],
+                    title=item["title"],
+                    details=item["details"],
+                )
+            )
+        source_union = frozenset(part for item in items for part in _source_parts(item.source))
+        if source_union != parts or any(item.details.get("fail_closed") for item in items):
+            return [block]
+        ordered = sorted(items, key=lambda item: item.start.astimezone(timezone.utc))
+        cursor = block.start.astimezone(timezone.utc)
+        for item in ordered:
+            start = item.start.astimezone(timezone.utc)
+            end = item.end.astimezone(timezone.utc)
+            if start > cursor or start < block.start.astimezone(timezone.utc) or end > block.end.astimezone(timezone.utc):
+                return [block]
+            cursor = max(cursor, end)
+        if cursor != block.end.astimezone(timezone.utc):
+            return [block]
+        return [leaf for item in items for leaf in _occupancy_blocks(item)]
+    except (KeyError, TypeError, ValueError, AttributeError, RecursionError):
+        return [block]
+
+
 @dataclass(frozen=True)
 class AdaptivePlannerSettings:
     enabled: bool
@@ -281,6 +346,9 @@ def build_adaptive_plan(
 ) -> AdaptivePlan:
     settings = AdaptivePlannerSettings.from_mapping(environment)
     now = now_utc.astimezone(timezone.utc)
+    # ``blocks`` is an Iterable contract: materialize once before quality checks.
+    # A generator otherwise loses occupancy while ``any`` consumes its input.
+    normalized_blocks = list(blocks)
     quality = {
         "weather_available": weather_snapshot is not None,
         "weather_fresh": bool(weather_fresh),
@@ -288,7 +356,7 @@ def build_adaptive_plan(
             weather_snapshot.provider if weather_snapshot is not None else None
         ),
         "occupancy_fail_closed": any(
-            bool(block.details.get("fail_closed")) for block in blocks
+            _contains_fail_closed(block.details) for block in normalized_blocks
         ),
     }
     if not settings.enabled:
@@ -330,9 +398,9 @@ def build_adaptive_plan(
         )
 
     occupancy_blocks = [
-        block
-        for block in blocks
-        if _source_parts(block.source) & OCCUPANCY_SOURCES
+        occupancy
+        for block in normalized_blocks
+        for occupancy in _occupancy_blocks(block)
     ]
     duration = timedelta(seconds=run_seconds)
     drying = timedelta(minutes=settings.post_irrigation_drying_minutes)

@@ -1,0 +1,146 @@
+{
+  "schema_version": 1,
+  "checked_at_utc": "2026-09-09T10:46:05.639073+00:00",
+  "branch": "audit/platzpflege-20260909",
+  "source_commit": "285d0018b9064ca7fe05c5822af9f808d4e16d03",
+  "implementation_commits": [
+    "50caf2ba15e61435ee489964f854a60c898cfd05",
+    "285d0018b9064ca7fe05c5822af9f808d4e16d03"
+  ],
+  "pull_request": "https://github.com/Rohdeo87/ssv53-heimspiele/pull/47",
+  "conditional_user_authorization": "Ok wenn wirklich alle Optimierungen umgesetzt sind kann es live gehen",
+  "all_optimizations_implemented": false,
+  "production_condition_met": false,
+  "production_actions_performed": [],
+  "new_software_installed": false,
+  "new_shadow_operation_observed": false,
+  "live_pilot_performed": false,
+  "package": {
+    "source_commit": "285d0018b9064ca7fe05c5822af9f808d4e16d03",
+    "source_method": "git show commit:path bytes, no working-tree newline conversion; every packaged source byte compared",
+    "artifact_path": "dist/ssv53-platzpflege-follow-up-20260909-source.zip",
+    "sha256": "e3c216df8c0a885a27caed3054dd55384b32c5fca8fd41eabc9bd5479549d4a3",
+    "file_count": 51,
+    "file_manifest_count": 50,
+    "manifest_sha256": "f1d7a6d38882fd243bb2f4af956d8c227a75f7b41a106b7ebd2bcdfe26d48296",
+    "entrypoint_sha256": "af02766b2fdc0b28baf54d8afe8ffc815be44393b8a4bef2b9608a8cb9469773",
+    "manifest_check": {
+      "entrypoint_sha256": "af02766b2fdc0b28baf54d8afe8ffc815be44393b8a4bef2b9608a8cb9469773",
+      "package_manifest_sha256": "f1d7a6d38882fd243bb2f4af956d8c227a75f7b41a106b7ebd2bcdfe26d48296",
+      "manifest_files_verified": true,
+      "manifest_file_count": 50,
+      "verified_file_count": 50,
+      "all_installed_files_verified": false,
+      "remote_build_dependencies_verified": false,
+      "verification_error": null
+    },
+    "isolated_import_without_network": true,
+    "remote_build_required": true,
+    "adaptive_execution_locked": true,
+    "not_installed": true
+  },
+  "tests": {
+    "python": {
+      "passed": 917,
+      "subtests_passed": 425,
+      "failed": 0,
+      "duration_seconds": 18.81,
+      "command": "python -X utf8 -m pytest -q --junitxml=docs/audit-2026-09-09/follow-up-tests.xml",
+      "report": "docs/audit-2026-09-09/follow-up-tests.xml",
+      "report_sha256": "650dcc84ed9fa89fb403f331f78627d26af1d378a43ca2f0a0d5a1af7ac82f33",
+      "junit_suites": [
+        {
+          "name": "pytest",
+          "errors": "0",
+          "failures": "0",
+          "skipped": "0",
+          "tests": "1342",
+          "time": "18.011",
+          "timestamp": "2026-09-09T12:42:08.234612+02:00",
+          "hostname": "DESKTOP-PRL8B18"
+        }
+      ]
+    },
+    "appack": {
+      "passed": 88,
+      "failed": 0,
+      "report": "docs/audit-2026-09-09/follow-up-appack-tests.txt",
+      "report_sha256": "f4addf64547ca6b1470736a1b994fb1254447fb4608e0ecd8a73109a7dfb8ee4",
+      "templates_changed_since_this_run": false
+    },
+    "compileall": "passed",
+    "git_diff_check": "passed",
+    "default_tests_send_real_device_commands": false,
+    "ci": {
+      "status": "success",
+      "tested_pr_head": "695f8b6d39e9876fabfec4eba2b3f0b8044f6aeb",
+      "source_commit": "285d0018b9064ca7fe05c5822af9f808d4e16d03",
+      "evidence": "docs/audit-2026-09-09/follow-up-ci-evidence.json",
+      "later_metadata_commits_are_not_this_checked_head": true
+    }
+  },
+  "independent_reviews": [
+    {
+      "scope": "I03 additive publisher and consumer",
+      "tests_passed": 112,
+      "additional": "actual legacy and new full builders, 10 injected corruptions",
+      "open_p1_p2_in_reviewed_scope": 0
+    },
+    {
+      "scope": "A01 read cache and caller gates",
+      "tests_passed": 89,
+      "subtests_passed": 53,
+      "device_integration_complete": false
+    },
+    {
+      "scope": "training model and shadow safety",
+      "status": "operator stop, incomplete parent provenance and reversed vendor timestamp regressions fixed"
+    },
+    {
+      "scope": "package provenance and replay bounds",
+      "status": "independent findings corrected; final hash-budget regression verified by root",
+      "parity_cycles": 108,
+      "decisions_identical": true
+    }
+  ],
+  "implementation_status": {
+    "I03": "implemented and tested; consumer must precede publisher; not published",
+    "O01": "shared model/projections/validator prepared; disabled; approved season and holiday rules and complete runtime integration missing",
+    "A01": "read paths opt-in; default OFF; cache blocked in device modes until all confirmation chains use independent source observations",
+    "P01": "optional complete input capture and local comparison; no productive execution adapter or new live shadow observations",
+    "V01": "declared source byte verification developed; does not attest loaded code, remote build dependencies or devices",
+    "U01": "simple app and empirical charging end prepared earlier; not published; screenshots use synthetic data"
+  },
+  "quantification": {
+    "new_shadow_fixture": {
+      "synthetic": true,
+      "potential_freed_field_minutes_upper_bound": 90,
+      "with_60_minutes_overlapping_sport": 30,
+      "productive_mowing_gain_minutes": null
+    },
+    "prior_daily_energy_model": {
+      "synthetic": true,
+      "baseline_productive_minutes": 642,
+      "coordinated_productive_minutes": 720,
+      "gain_is_live_verified": false
+    },
+    "api_savings": {
+      "two_concurrent_test_readers_get_requests": 1,
+      "live_requests_or_costs_saved": null
+    }
+  },
+  "remaining_release_conditions": [
+    "Complete O01 and device confirmation/coordination integrations after required rules and manufacturer/device evidence are available",
+    "Verify actual installed source/build, Appack session roles and real app rendering",
+    "Reconcile all schedulers, native programs, pending commands and the sender of recorded movement during a drying hold",
+    "Verify station, paths, valve behavior, return failures and local stop/recovery on site",
+    "Observe command-free planning and an explicitly bounded supervised pilot before widening automation"
+  ],
+  "initial_read_only_operational_check": "docs/ui-2026-09-09/release-readiness.json",
+  "later_main_observation": {
+    "observed_at_utc": "2026-09-09T10:33:00+00:00",
+    "sha": "3486f76c67e96575700bd74db5883a77e59bac1a",
+    "change": "state/request_state.json only; scheduled import guard update"
+  },
+  "documentation": "docs/ui-2026-09-09/release-readiness.md"
+}

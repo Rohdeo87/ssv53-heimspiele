@@ -1,0 +1,658 @@
+TAP version 13
+# Subtest: Ü40-Pokalspiel zeigt ausschließlich den Ü40-Ansprechpartner
+ok 1 - Ü40-Pokalspiel zeigt ausschließlich den Ü40-Ansprechpartner
+  ---
+  duration_ms: 15.5404
+  type: 'test'
+  ...
+# Subtest: E2-Heimspiel wertet keine Jugendkennung des Gegners aus
+ok 2 - E2-Heimspiel wertet keine Jugendkennung des Gegners aus
+  ---
+  duration_ms: 4.439
+  type: 'test'
+  ...
+# Subtest: Training E2 behält die bestehende Ansprechpartnerzuordnung
+ok 3 - Training E2 behält die bestehende Ansprechpartnerzuordnung
+  ---
+  duration_ms: 3.2824
+  type: 'test'
+  ...
+# Subtest: C-Jugend-Kontakt aus hierarchischer Appack-Kategorie wird gefunden
+ok 4 - C-Jugend-Kontakt aus hierarchischer Appack-Kategorie wird gefunden
+  ---
+  duration_ms: 8.4325
+  type: 'test'
+  ...
+# Subtest: C-Junioren finden die im ursprünglichen Code genutzte Jahrgangszuordnung
+ok 5 - C-Junioren finden die im ursprünglichen Code genutzte Jahrgangszuordnung
+  ---
+  duration_ms: 6.0371
+  type: 'test'
+  ...
+# Subtest: D-Junioren finden Kontakt über D-Kategorie und Jahrgänge
+ok 6 - D-Junioren finden Kontakt über D-Kategorie und Jahrgänge
+  ---
+  duration_ms: 3.5742
+  type: 'test'
+  ...
+# Subtest: Erstellerkontakt wird auch ohne Fußball-Mannschaft vollständig aufgelöst
+ok 7 - Erstellerkontakt wird auch ohne Fußball-Mannschaft vollständig aufgelöst
+  ---
+  duration_ms: 30.0125
+  type: 'test'
+  ...
+# Subtest: Match-Erkennung hängt nicht am reservierten FullCalendar-source-Feld
+ok 8 - Match-Erkennung hängt nicht am reservierten FullCalendar-source-Feld
+  ---
+  duration_ms: 1.7226
+  type: 'test'
+  ...
+# Subtest: Platzsperre und Platzpflege bleiben von Ansprechpartnern ausgeschlossen
+ok 9 - Platzsperre und Platzpflege bleiben von Ansprechpartnern ausgeschlossen
+  ---
+  duration_ms: 2.1793
+  type: 'test'
+  ...
+# Subtest: Heimspiel ohne eigenes team rät nicht anhand des Gegners
+ok 10 - Heimspiel ohne eigenes team rät nicht anhand des Gegners
+  ---
+  duration_ms: 1.9923
+  type: 'test'
+  ...
+# Subtest: Herren-Spiel ohne Workbook-Kontakt bleibt eligible und zeigt den Leerzustand
+ok 11 - Herren-Spiel ohne Workbook-Kontakt bleibt eligible und zeigt den Leerzustand
+  ---
+  duration_ms: 2.7577
+  type: 'test'
+  ...
+# Subtest: Ungeklärte Koordination RESERVED bietet keine neue Freigabe an
+ok 12 - Ungeklärte Koordination RESERVED bietet keine neue Freigabe an
+  ---
+  duration_ms: 51.312
+  type: 'test'
+  ...
+# Subtest: Ungeklärte Koordination SCHEDULED bietet keine neue Freigabe an
+ok 13 - Ungeklärte Koordination SCHEDULED bietet keine neue Freigabe an
+  ---
+  duration_ms: 0.9691
+  type: 'test'
+  ...
+# Subtest: Ungeklärte Koordination REVALIDATION_FAILED bietet keine neue Freigabe an
+ok 14 - Ungeklärte Koordination REVALIDATION_FAILED bietet keine neue Freigabe an
+  ---
+  duration_ms: 0.8569
+  type: 'test'
+  ...
+# Subtest: Ungeklärte Koordination DISABLED_HOLD bietet keine neue Freigabe an
+ok 15 - Ungeklärte Koordination DISABLED_HOLD bietet keine neue Freigabe an
+  ---
+  duration_ms: 0.8257
+  type: 'test'
+  ...
+# Subtest: Ungeklärte Koordination DISABLED_READY_HOLD bietet keine neue Freigabe an
+ok 16 - Ungeklärte Koordination DISABLED_READY_HOLD bietet keine neue Freigabe an
+  ---
+  duration_ms: 0.8284
+  type: 'test'
+  ...
+# Subtest: Ungeklärte Koordination COMMAND_RESERVATION_FAILED bietet keine neue Freigabe an
+ok 17 - Ungeklärte Koordination COMMAND_RESERVATION_FAILED bietet keine neue Freigabe an
+  ---
+  duration_ms: 0.8277
+  type: 'test'
+  ...
+# Subtest: Ungeklärte Koordination COMMAND_UNCERTAIN bietet keine neue Freigabe an
+ok 18 - Ungeklärte Koordination COMMAND_UNCERTAIN bietet keine neue Freigabe an
+  ---
+  duration_ms: 0.8062
+  type: 'test'
+  ...
+# Subtest: Ungeklärte Koordination START_BLOCKED bietet keine neue Freigabe an
+ok 19 - Ungeklärte Koordination START_BLOCKED bietet keine neue Freigabe an
+  ---
+  duration_ms: 0.7372
+  type: 'test'
+  ...
+# Subtest: Ungeklärte Koordination GAP_INVALID bietet keine neue Freigabe an
+ok 20 - Ungeklärte Koordination GAP_INVALID bietet keine neue Freigabe an
+  ---
+  duration_ms: 0.8487
+  type: 'test'
+  ...
+# Subtest: Bewegung auf einem gesperrten Platz hat Vorrang vor der Vormerkung
+ok 21 - Bewegung auf einem gesperrten Platz hat Vorrang vor der Vormerkung
+  ---
+  duration_ms: 0.7841
+  type: 'test'
+  ...
+# Subtest: Bestätigte Zonenpause zeigt die nächste vorgesehene Uhrzeit als Schätzung
+ok 22 - Bestätigte Zonenpause zeigt die nächste vorgesehene Uhrzeit als Schätzung
+  ---
+  duration_ms: 4.8196
+  type: 'test'
+  ...
+# Subtest: Der tatsächliche Plan-Renderer sperrt konkurrierende Änderungen
+ok 23 - Der tatsächliche Plan-Renderer sperrt konkurrierende Änderungen
+  ---
+  duration_ms: 5.3056
+  type: 'test'
+  ...
+# Subtest: Hilfeseite ist vollständiges und syntaktisch gültiges Appack-HTML
+ok 24 - Hilfeseite ist vollständiges und syntaktisch gültiges Appack-HTML
+  ---
+  duration_ms: 3.6152
+  type: 'test'
+  ...
+# Subtest: Hilfeseite erklärt Bedienung, DFB-Daten und die drei Spielzeiten
+ok 25 - Hilfeseite erklärt Bedienung, DFB-Daten und die drei Spielzeiten
+  ---
+  duration_ms: 0.7553
+  type: 'test'
+  ...
+# Subtest: Hilfeseite dokumentiert Kontakte und Trainingsabsage vollständig
+ok 26 - Hilfeseite dokumentiert Kontakte und Trainingsabsage vollständig
+  ---
+  duration_ms: 0.4138
+  type: 'test'
+  ...
+# Subtest: Hilfeseite beschreibt Mäherpuffer und manuelle Bedienung korrekt
+ok 27 - Hilfeseite beschreibt Mäherpuffer und manuelle Bedienung korrekt
+  ---
+  duration_ms: 0.3142
+  type: 'test'
+  ...
+# Subtest: Hilfeseite hat zugängliche Akkordeons und keine Datenzugriffe
+ok 28 - Hilfeseite hat zugängliche Akkordeons und keine Datenzugriffe
+  ---
+  duration_ms: 2.3878
+  type: 'test'
+  ...
+# Subtest: Verbindlicher Trainingskalender zeigt beide Plätze ohne Saisonwahl
+ok 29 - Verbindlicher Trainingskalender zeigt beide Plätze ohne Saisonwahl
+  ---
+  duration_ms: 6.149
+  type: 'test'
+  ...
+# Subtest: Unklare Trainingstermine nennen den Platzwart und behalten die Sperre
+ok 30 - Unklare Trainingstermine nennen den Platzwart und behalten die Sperre
+  ---
+  duration_ms: 1.1018
+  type: 'test'
+  ...
+# Subtest: Bedienelemente wechseln nur bei echtem Überlauf in den Großtextmodus
+ok 31 - Bedienelemente wechseln nur bei echtem Überlauf in den Großtextmodus
+  ---
+  duration_ms: 0.8812
+  type: 'test'
+  ...
+# Subtest: kurz verzögerte Spieldaten lassen den Kalender sichtbar
+ok 32 - kurz verzögerte Spieldaten lassen den Kalender sichtbar
+  ---
+  duration_ms: 0.344
+  type: 'test'
+  ...
+# Subtest: Azure-Zeiten werden auf einem US-Gerät als Berliner Vereinszeit angezeigt
+ok 33 - Azure-Zeiten werden auf einem US-Gerät als Berliner Vereinszeit angezeigt
+  ---
+  duration_ms: 154.1631
+  type: 'test'
+  ...
+# Subtest: Spiel blockiert occupancyStart bis occupancyEnd, zeigt aber start bis end
+ok 34 - Spiel blockiert occupancyStart bis occupancyEnd, zeigt aber start bis end
+  ---
+  duration_ms: 44.3586
+  type: 'test'
+  ...
+# Subtest: FullCalendar-Transformation erzwingt occupancyStart bis occupancyEnd
+ok 35 - FullCalendar-Transformation erzwingt occupancyStart bis occupancyEnd
+  ---
+  duration_ms: 3.0102
+  type: 'test'
+  ...
+# Subtest: reale C- und D-Juniorenspiele behalten jeweils Spiel- und Sperrzeit
+ok 36 - reale C- und D-Juniorenspiele behalten jeweils Spiel- und Sperrzeit
+  ---
+  duration_ms: 8.8791
+  type: 'test'
+  ...
+# Subtest: Training behält seine Berliner Kalendergeometrie und den echten Zeitpunkt
+ok 37 - Training behält seine Berliner Kalendergeometrie und den echten Zeitpunkt
+  ---
+  duration_ms: 1.7311
+  type: 'test'
+  ...
+# Subtest: öffentliche Erstellerdaten werden vor der Kalenderanzeige strikt minimiert
+ok 38 - öffentliche Erstellerdaten werden vor der Kalenderanzeige strikt minimiert
+  ---
+  duration_ms: 2.2678
+  type: 'test'
+  ...
+# Subtest: minimierte Appack-IDs und Rollen behalten die Backend-Vertragslänge
+ok 39 - minimierte Appack-IDs und Rollen behalten die Backend-Vertragslänge
+  ---
+  duration_ms: 0.9758
+  type: 'test'
+  ...
+# Subtest: abgesagtes Training bleibt grau mit Status und stabiler Termin-ID sichtbar
+ok 40 - abgesagtes Training bleibt grau mit Status und stabiler Termin-ID sichtbar
+  ---
+  duration_ms: 3.2459
+  type: 'test'
+  ...
+# Subtest: Absageaktionen gelten für reguläre und verlegte Trainings
+ok 41 - Absageaktionen gelten für reguläre und verlegte Trainings
+  ---
+  duration_ms: 0.9139
+  type: 'test'
+  ...
+# Subtest: Spiel ohne gültigen Sicherheitsblock wird abgelehnt
+ok 42 - Spiel ohne gültigen Sicherheitsblock wird abgelehnt
+  ---
+  duration_ms: 1.7895
+  type: 'test'
+  ...
+# Subtest: Spiel mit verkürztem Puffer wird abgelehnt
+ok 43 - Spiel mit verkürztem Puffer wird abgelehnt
+  ---
+  duration_ms: 0.964
+  type: 'test'
+  ...
+# Subtest: Anzeige- und Schreibvertrag auf Host UTC
+ok 44 - Anzeige- und Schreibvertrag auf Host UTC
+  ---
+  duration_ms: 383.7862
+  type: 'test'
+  ...
+# Subtest: Anzeige- und Schreibvertrag auf Host Europe/Berlin
+ok 45 - Anzeige- und Schreibvertrag auf Host Europe/Berlin
+  ---
+  duration_ms: 267.9786
+  type: 'test'
+  ...
+# Subtest: Anzeige- und Schreibvertrag auf Host America/New_York
+ok 46 - Anzeige- und Schreibvertrag auf Host America/New_York
+  ---
+  duration_ms: 241.2307
+  type: 'test'
+  ...
+# Subtest: Platzwart-Seite bleibt syntaktisch gültig, geschützt und vollständig als Appack-Kopie
+ok 47 - Platzwart-Seite bleibt syntaktisch gültig, geschützt und vollständig als Appack-Kopie
+  ---
+  duration_ms: 111.3241
+  type: 'test'
+  ...
+# Subtest: Großtextmodus reagiert nur auf echten Überlauf
+ok 48 - Großtextmodus reagiert nur auf echten Überlauf
+  ---
+  duration_ms: 2.5026
+  type: 'test'
+  ...
+# Subtest: EPOS-Suchzustand bleibt verbunden und wird als Satellitensuche angezeigt
+ok 49 - EPOS-Suchzustand bleibt verbunden und wird als Satellitensuche angezeigt
+  ---
+  duration_ms: 1.4314
+  type: 'test'
+  ...
+# Subtest: Pausierter Mäher zeigt nur eine tatsächlich verfügbare Handlung
+ok 50 - Pausierter Mäher zeigt nur eine tatsächlich verfügbare Handlung
+  ---
+  duration_ms: 16.721
+  type: 'test'
+  ...
+# Subtest: Platzbelegung nutzt echte Zeiten und trennt Termine innerhalb eines Sperrblocks
+ok 51 - Platzbelegung nutzt echte Zeiten und trennt Termine innerhalb eines Sperrblocks
+  ---
+  duration_ms: 57.3091
+  type: 'test'
+  ...
+# Subtest: nur aktive Rollen werden geprüft und requestedRoles bleiben unberücksichtigt
+ok 52 - nur aktive Rollen werden geprüft und requestedRoles bleiben unberücksichtigt
+  ---
+  duration_ms: 0.4557
+  type: 'test'
+  ...
+# Subtest: Vereinsheimtermine werden kompakt in Berliner Zeit dargestellt
+ok 53 - Vereinsheimtermine werden kompakt in Berliner Zeit dargestellt
+  ---
+  duration_ms: 5.2846
+  type: 'test'
+  ...
+# Subtest: heutige Platzbelegung wird als Heute mit Uhrzeit dargestellt
+ok 54 - heutige Platzbelegung wird als Heute mit Uhrzeit dargestellt
+  ---
+  duration_ms: 4.4499
+  type: 'test'
+  ...
+# Subtest: Mäheraktionen sind für Fahren, Laden, Sperren und manuelle Bedienung eindeutig
+ok 55 - Mäheraktionen sind für Fahren, Laden, Sperren und manuelle Bedienung eindeutig
+  ---
+  duration_ms: 4.5258
+  type: 'test'
+  ...
+# Subtest: Bewässerungsaktionen erscheinen nur im passenden Zustand
+ok 56 - Bewässerungsaktionen erscheinen nur im passenden Zustand
+  ---
+  duration_ms: 1.7883
+  type: 'test'
+  ...
+# Subtest: Anzeige bleibt bei Sicherheitsplan- oder Lesefehlern bedienungslos verfügbar
+ok 57 - Anzeige bleibt bei Sicherheitsplan- oder Lesefehlern bedienungslos verfügbar
+  ---
+  duration_ms: 0.5022
+  type: 'test'
+  ...
+# Subtest: eine bestätigte Klingenlaufzeit von null hebt eine alte Reset-Fehlermeldung auf
+ok 58 - eine bestätigte Klingenlaufzeit von null hebt eine alte Reset-Fehlermeldung auf
+  ---
+  duration_ms: 0.7746
+  type: 'test'
+  ...
+# Subtest: gemähte Rasenflächen werden mit deutschem Dezimalkomma angezeigt
+ok 59 - gemähte Rasenflächen werden mit deutschem Dezimalkomma angezeigt
+  ---
+  duration_ms: 8.0274
+  type: 'test'
+  ...
+# Subtest: Winter-Schalter trennt heutigen Plan und bestätigte Änderung ab morgen
+ok 60 - Winter-Schalter trennt heutigen Plan und bestätigte Änderung ab morgen
+  ---
+  duration_ms: 46.5343
+  type: 'test'
+  ...
+# Subtest: Fehlender Trainingsstand erlaubt keine Änderung und behauptet keinen Sommerplan
+ok 61 - Fehlender Trainingsstand erlaubt keine Änderung und behauptet keinen Sommerplan
+  ---
+  duration_ms: 0.5819
+  type: 'test'
+  ...
+# Subtest: Unpassende Bewässerungszeit zeigt Handlung statt einer alten Startzusage
+ok 62 - Unpassende Bewässerungszeit zeigt Handlung statt einer alten Startzusage
+  ---
+  duration_ms: 1.7504
+  type: 'test'
+  ...
+# Subtest: Laufendes Wasser außerhalb der erlaubten Zeit verlangt eine klare Handlung
+ok 63 - Laufendes Wasser außerhalb der erlaubten Zeit verlangt eine klare Handlung
+  ---
+  duration_ms: 3.6546
+  type: 'test'
+  ...
+# Subtest: Veralteter Belegungsplan verspricht keinen sicheren physischen Mäherstopp
+ok 64 - Veralteter Belegungsplan verspricht keinen sicheren physischen Mäherstopp
+  ---
+  duration_ms: 0.7409
+  type: 'test'
+  ...
+# Subtest: Startzeit berücksichtigt Laden, Wartezeit und das nächste ausreichend lange Fenster
+ok 65 - Startzeit berücksichtigt Laden, Wartezeit und das nächste ausreichend lange Fenster
+  ---
+  duration_ms: 3.6693
+  type: 'test'
+  ...
+# Subtest: Parkvorlauf wird in der angezeigten Startzeit berücksichtigt
+ok 66 - Parkvorlauf wird in der angezeigten Startzeit berücksichtigt
+  ---
+  duration_ms: 0.858
+  type: 'test'
+  ...
+# Subtest: Ohne belastbares Ladeende entsteht aus dem Akkustand keine Startuhrzeit
+ok 67 - Ohne belastbares Ladeende entsteht aus dem Akkustand keine Startuhrzeit
+  ---
+  duration_ms: 0.5916
+  type: 'test'
+  ...
+# Subtest: Fehlende Freigaben und unbestätigte Aktionen unterdrücken die Startprognose
+ok 68 - Fehlende Freigaben und unbestätigte Aktionen unterdrücken die Startprognose
+  ---
+  duration_ms: 0.6651
+  type: 'test'
+  ...
+# Subtest: Manueller Stopp bleibt als Pause sichtbar, auch mit berechenbarem Ladeende
+ok 69 - Manueller Stopp bleibt als Pause sichtbar, auch mit berechenbarem Ladeende
+  ---
+  duration_ms: 0.8738
+  type: 'test'
+  ...
+# Subtest: Fehler und Sicherheitskonflikte erhalten eine klare Handlung ohne Rohmeldungen
+ok 70 - Fehler und Sicherheitskonflikte erhalten eine klare Handlung ohne Rohmeldungen
+  ---
+  duration_ms: 1.7333
+  type: 'test'
+  ...
+# Subtest: Bewässerung von geräteeigenen Zeitplänen erscheint als laufend und bei Ausfällen unbekannt
+ok 71 - Bewässerung von geräteeigenen Zeitplänen erscheint als laufend und bei Ausfällen unbekannt
+  ---
+  duration_ms: 1.0094
+  type: 'test'
+  ...
+# Subtest: Planänderungen werden erst nach Bestätigung als gültig angezeigt
+ok 72 - Planänderungen werden erst nach Bestätigung als gültig angezeigt
+  ---
+  duration_ms: 1.81
+  type: 'test'
+  ...
+# Subtest: Unzulässige künftige Wasserzeiten werden nicht als nächster Start versprochen
+ok 73 - Unzulässige künftige Wasserzeiten werden nicht als nächster Start versprochen
+  ---
+  duration_ms: 1.4155
+  type: 'test'
+  ...
+# Subtest: Fehlermeldungen und Fortschritt unterscheiden Anfrage und tatsächliche Ausführung
+ok 74 - Fehlermeldungen und Fortschritt unterscheiden Anfrage und tatsächliche Ausführung
+  ---
+  duration_ms: 0.8153
+  type: 'test'
+  ...
+# Subtest: Uhrzeiten und Datumseingaben bleiben Berliner Zeit bei Gerätezeitzone UTC
+ok 75 - Uhrzeiten und Datumseingaben bleiben Berliner Zeit bei Gerätezeitzone UTC
+  ---
+  duration_ms: 166.2212
+  type: 'test'
+  ...
+# Subtest: Uhrzeiten und Datumseingaben bleiben Berliner Zeit bei Gerätezeitzone Europe/Berlin
+ok 76 - Uhrzeiten und Datumseingaben bleiben Berliner Zeit bei Gerätezeitzone Europe/Berlin
+  ---
+  duration_ms: 125.3389
+  type: 'test'
+  ...
+# Subtest: Uhrzeiten und Datumseingaben bleiben Berliner Zeit bei Gerätezeitzone America/Los_Angeles
+ok 77 - Uhrzeiten und Datumseingaben bleiben Berliner Zeit bei Gerätezeitzone America/Los_Angeles
+  ---
+  duration_ms: 108.595
+  type: 'test'
+  ...
+# Subtest: Akkusperre verhindert eine Startuhrzeit auch bei geparktem Mäher
+ok 78 - Akkusperre verhindert eine Startuhrzeit auch bei geparktem Mäher
+  ---
+  duration_ms: 0.6846
+  type: 'test'
+  ...
+# Subtest: Vorbereitung behauptet keinen Stationsaufenthalt während der Fahrt
+ok 79 - Vorbereitung behauptet keinen Stationsaufenthalt während der Fahrt
+  ---
+  duration_ms: 0.1901
+  type: 'test'
+  ...
+# Subtest: Eine Sperre über Mitternacht zeigt das Datum des Endes
+ok 80 - Eine Sperre über Mitternacht zeigt das Datum des Endes
+  ---
+  duration_ms: 1.1262
+  type: 'test'
+  ...
+# Subtest: Planfehler und laufendes Wasser bleiben vor allgemeinen Pausehinweisen sichtbar
+ok 81 - Planfehler und laufendes Wasser bleiben vor allgemeinen Pausehinweisen sichtbar
+  ---
+  duration_ms: 0.3241
+  type: 'test'
+  ...
+# Subtest: alle eingebetteten Appack-Skripte sind syntaktisch gültig
+ok 82 - alle eingebetteten Appack-Skripte sind syntaktisch gültig
+  ---
+  duration_ms: 9.1283
+  type: 'test'
+  ...
+# Subtest: HTML und Kopierfassung des Belegungsplans sind byte-identisch
+ok 83 - HTML und Kopierfassung des Belegungsplans sind byte-identisch
+  ---
+  duration_ms: 1.1348
+  type: 'test'
+  ...
+# Subtest: aktive technische Trainerrolle TR wird freigeschaltet
+ok 84 - aktive technische Trainerrolle TR wird freigeschaltet
+  ---
+  duration_ms: 4.2279
+  type: 'test'
+  ...
+# Subtest: aktive ausgeschriebene Trainer- oder Mitarbeiterrolle wird erkannt
+ok 85 - aktive ausgeschriebene Trainer- oder Mitarbeiterrolle wird erkannt
+  ---
+  duration_ms: 0.5391
+  type: 'test'
+  ...
+# Subtest: beantragte Rolle, Vorstand und fehlendes Profil bleiben verborgen
+ok 86 - beantragte Rolle, Vorstand und fehlendes Profil bleiben verborgen
+  ---
+  duration_ms: 0.3788
+  type: 'test'
+  ...
+# Subtest: App-Administrator und Profildaten werden aus dem aktiven Appack-Profil gelesen
+ok 87 - App-Administrator und Profildaten werden aus dem aktiven Appack-Profil gelesen
+  ---
+  duration_ms: 2.7595
+  type: 'test'
+  ...
+# Subtest: strukturierter Vor- und Nachname gewinnt gegen Appacks Nachname-Fallback
+ok 88 - strukturierter Vor- und Nachname gewinnt gegen Appacks Nachname-Fallback
+  ---
+  duration_ms: 0.4092
+  type: 'test'
+  ...
+# Subtest: fremde öffentliche Erstellerdaten liefern nur Identität und Workbook-Kontakt
+ok 89 - fremde öffentliche Erstellerdaten liefern nur Identität und Workbook-Kontakt
+  ---
+  duration_ms: 1.8558
+  type: 'test'
+  ...
+# Subtest: Neuanlage übernimmt die stabile Workbook-Referenz statt nur der Profil-ID
+ok 90 - Neuanlage übernimmt die stabile Workbook-Referenz statt nur der Profil-ID
+  ---
+  duration_ms: 1.3823
+  type: 'test'
+  ...
+# Subtest: bestehende Ü40-Buchung findet Ersteller über jede bekannte Workbook-ID
+ok 91 - bestehende Ü40-Buchung findet Ersteller über jede bekannte Workbook-ID
+  ---
+  duration_ms: 0.8815
+  type: 'test'
+  ...
+# Subtest: fremde Person ohne Workbook-Kontakt bleibt als sauberer Name ohne Kontaktdaten sichtbar
+ok 92 - fremde Person ohne Workbook-Kontakt bleibt als sauberer Name ohne Kontaktdaten sichtbar
+  ---
+  duration_ms: 0.7523
+  type: 'test'
+  ...
+# Subtest: nur die eindeutig eigene Person wird aus profile_json ergänzt
+ok 93 - nur die eindeutig eigene Person wird aus profile_json ergänzt
+  ---
+  duration_ms: 0.879
+  type: 'test'
+  ...
+# Subtest: Belegungsplan nutzt Appacks profile_json und prüft auch den Handler
+ok 94 - Belegungsplan nutzt Appacks profile_json und prüft auch den Handler
+  ---
+  duration_ms: 1.2244
+  type: 'test'
+  ...
+# Subtest: Trainingsabsage übermittelt ausschließlich eine aktuelle angemeldete Session
+ok 95 - Trainingsabsage übermittelt ausschließlich eine aktuelle angemeldete Session
+  ---
+  duration_ms: 1.7727
+  type: 'test'
+  ...
+# Subtest: Belegungsänderungen geben fehlende, kaputte und abgelaufene Sitzungen nicht weiter
+ok 96 - Belegungsänderungen geben fehlende, kaputte und abgelaufene Sitzungen nicht weiter
+  ---
+  duration_ms: 1.9756
+  type: 'test'
+  ...
+# Subtest: Absageaktion ist rot und zeigt zustandsabhängige Symbole
+ok 97 - Absageaktion ist rot und zeigt zustandsabhängige Symbole
+  ---
+  duration_ms: 0.8496
+  type: 'test'
+  ...
+# Subtest: Verlegen ist eine eigenständige blaue Aktion und nicht rot
+ok 98 - Verlegen ist eine eigenständige blaue Aktion und nicht rot
+  ---
+  duration_ms: 1.3893
+  type: 'test'
+  ...
+# Subtest: Detaildialog ordnet Verschieben links und Absagen rechts ohne unteren Schließen-Button an
+ok 99 - Detaildialog ordnet Verschieben links und Absagen rechts ohne unteren Schließen-Button an
+  ---
+  duration_ms: 1.016
+  type: 'test'
+  ...
+# Subtest: nur Trainer können eine Appack-Belegung anlegen
+ok 100 - nur Trainer können eine Appack-Belegung anlegen
+  ---
+  duration_ms: 1.9472
+  type: 'test'
+  ...
+# Subtest: realer mehrfach verlegter F-Termin behält den normalen Absagebutton
+ok 101 - realer mehrfach verlegter F-Termin behält den normalen Absagebutton
+  ---
+  duration_ms: 1.1865
+  type: 'test'
+  ...
+# Subtest: Trainerbelegung schreibt nur validierte strukturierte Felder
+ok 102 - Trainerbelegung schreibt nur validierte strukturierte Felder
+  ---
+  duration_ms: 1.6088
+  type: 'test'
+  ...
+# Subtest: verlegte Trainings behalten Teamkontakte und zeigen die verschiebende Person separat
+ok 103 - verlegte Trainings behalten Teamkontakte und zeigen die verschiebende Person separat
+  ---
+  duration_ms: 0.5639
+  type: 'test'
+  ...
+# Subtest: Kalender öffnet die heutige Woche und Heute behält die gewählte Ansicht
+ok 104 - Kalender öffnet die heutige Woche und Heute behält die gewählte Ansicht
+  ---
+  duration_ms: 0.8236
+  type: 'test'
+  ...
+# Subtest: Appack übermittelt keine Trainer-Kontakte für Kollisionsmails
+ok 105 - Appack übermittelt keine Trainer-Kontakte für Kollisionsmails
+  ---
+  duration_ms: 0.3265
+  type: 'test'
+  ...
+# Subtest: Anlegen und Verlegen senden nur die minimierte Appack-Identität an Azure
+ok 106 - Anlegen und Verlegen senden nur die minimierte Appack-Identität an Azure
+  ---
+  duration_ms: 0.491
+  type: 'test'
+  ...
+# Subtest: Aktionsbestätigungen funktionieren ohne native WebView-Dialoge
+ok 107 - Aktionsbestätigungen funktionieren ohne native WebView-Dialoge
+  ---
+  duration_ms: 1.1059
+  type: 'test'
+  ...
+# Subtest: Verlegen, Absagen und Anlegen nutzen den WebView-sicheren Bestätigungsdialog
+ok 108 - Verlegen, Absagen und Anlegen nutzen den WebView-sicheren Bestätigungsdialog
+  ---
+  duration_ms: 0.6262
+  type: 'test'
+  ...
+1..108
+# tests 108
+# suites 0
+# pass 108
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1116.4087

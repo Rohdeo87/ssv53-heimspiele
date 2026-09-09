@@ -11,7 +11,9 @@ from mower.irrigation_schedule import (
 )
 
 
-NOW = datetime(2026, 8, 21, 12, 0, tzinfo=timezone.utc)
+# 02:00 Europe/Berlin: the accepted custom schedule at +2h starts inside
+# the mandatory 03:30--08:00 local irrigation window.
+NOW = datetime(2026, 8, 21, 0, 0, tzinfo=timezone.utc)
 
 
 def requested_zones(*, selected: bool = True) -> list[dict]:

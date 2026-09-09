@@ -15,7 +15,10 @@ USER_AGENT = "SSV53-Maehplan-Dry-Run/1.0 (+https://www.ssv53.de)"
 
 
 class HydrawiseError(RuntimeError):
-    pass
+    def __init__(self, message: str, *, http_status: int | None = None, retry_after: str | None = None) -> None:
+        super().__init__(message)
+        self.http_status = http_status
+        self.retry_after = retry_after
 
 
 @dataclass(frozen=True)
@@ -94,6 +97,11 @@ class HydrawiseContinuousClearSnapshot:
     confirmed_for_seconds: int
     release_at_utc: str | None
     reason: str
+    drying_since_utc: str | None = None
+    dry_until_utc: str | None = None
+    telemetry_confirmed: bool = False
+    telemetry_required_minutes: int | None = None
+    confirmation_observed_until_utc: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -109,12 +117,15 @@ def evaluate_continuous_clear_confirmation(
     now_utc: datetime,
     required_clear_minutes: int,
     persistent_state_available: bool,
+    drying_since_utc: str | None = None,
+    telemetry_confirmation_minutes: int | None = None,
+    confirmation_observed_until_utc: str | None = None,
 ) -> HydrawiseContinuousClearSnapshot:
-    """Release only after an uninterrupted, persistently stored clear period.
+    """Require current data confidence and the separate physical drying hold.
 
-    A missing or invalid state is deliberately interpreted fail-closed. The
-    clear period starts with the first successful control cycle after the last
-    active/imminent irrigation status; it is never backdated from API data.
+    Legacy callers without physical-end evidence retain the full continuous
+    confirmation rule. A short failed poll may reset telemetry confirmation,
+    but must neither erase nor restart a known physical drying period.
     """
 
     if now_utc.tzinfo is None or now_utc.utcoffset() is None:
@@ -123,8 +134,14 @@ def evaluate_continuous_clear_confirmation(
         raise ValueError(
             "required_clear_minutes muss zwischen 1 und 1440 liegen."
         )
+    telemetry_minutes = (
+        required_clear_minutes
+        if telemetry_confirmation_minutes is None or drying_since_utc is None
+        else telemetry_confirmation_minutes
+    )
+    if not 1 <= telemetry_minutes <= 1440:
+        raise ValueError("telemetry_confirmation_minutes muss zwischen 1 und 1440 liegen.")
 
-    required_seconds = required_clear_minutes * 60
     common = {
         "physical_clear_now": bool(available and fresh and clear_now),
         "persistent_state_available": persistent_state_available,
@@ -132,7 +149,32 @@ def evaluate_continuous_clear_confirmation(
         "clear_since_utc": clear_since_utc,
         "confirmed_for_seconds": 0,
         "release_at_utc": None,
+        "drying_since_utc": drying_since_utc,
+        "dry_until_utc": None,
+        "telemetry_confirmed": False,
+        "telemetry_required_minutes": telemetry_minutes,
+        "confirmation_observed_until_utc": confirmation_observed_until_utc,
     }
+    now = now_utc.astimezone(timezone.utc)
+    dry_until = None
+    if drying_since_utc is not None:
+        try:
+            drying_since = datetime.fromisoformat(drying_since_utc.replace("Z", "+00:00"))
+            if drying_since.tzinfo is None or drying_since.utcoffset() is None:
+                raise ValueError
+            drying_since = drying_since.astimezone(timezone.utc)
+            if drying_since > now:
+                raise ValueError
+        except (AttributeError, TypeError, ValueError):
+            return HydrawiseContinuousClearSnapshot(
+                allowed=False,
+                reason="Der gespeicherte Beginn der Trocknung ist ungültig.",
+                **common,
+            )
+        dry_until = drying_since + timedelta(minutes=required_clear_minutes)
+        # The last known physical hold remains visible during data loss. It
+        # never supplies a release time or permission without current evidence.
+        common["dry_until_utc"] = dry_until.isoformat()
     if not available or not fresh or not clear_now:
         return HydrawiseContinuousClearSnapshot(
             allowed=False,
@@ -169,7 +211,6 @@ def evaluate_continuous_clear_confirmation(
             **common,
         )
 
-    now = now_utc.astimezone(timezone.utc)
     if clear_since > now:
         return HydrawiseContinuousClearSnapshot(
             allowed=False,
@@ -177,13 +218,38 @@ def evaluate_continuous_clear_confirmation(
             **common,
         )
 
-    confirmed_seconds = int((now - clear_since).total_seconds())
-    release_at = clear_since + timedelta(minutes=required_clear_minutes)
-    confirmed = confirmed_seconds >= required_seconds
+    confirmed_until = now
+    if confirmation_observed_until_utc is not None:
+        try:
+            confirmed_until = datetime.fromisoformat(confirmation_observed_until_utc.replace("Z", "+00:00"))
+            if confirmed_until.tzinfo is None or confirmed_until.utcoffset() is None:
+                raise ValueError
+            confirmed_until = confirmed_until.astimezone(timezone.utc)
+            if confirmed_until > now + timedelta(seconds=30):
+                raise ValueError
+            confirmed_until = min(confirmed_until, now)
+        except (AttributeError, TypeError, ValueError):
+            return HydrawiseContinuousClearSnapshot(
+                allowed=False, reason="Der Zeitpunkt der letzten echten Hydrawise-Abfrage ist ungültig.", **common,
+            )
+    confirmed_seconds = max(0, int((confirmed_until - clear_since).total_seconds()))
+    telemetry_release_at = clear_since + timedelta(minutes=telemetry_minutes)
+    telemetry_confirmed = confirmed_until >= telemetry_release_at
+    if dry_until is not None:
+        release_at = max(dry_until, telemetry_release_at)
+    else:
+        release_at = clear_since + timedelta(minutes=required_clear_minutes)
+    confirmed = now >= release_at and telemetry_confirmed
     if confirmed:
         reason = (
-            "Hydrawise hat das Beregnungsende fortlaufend für "
-            f"mindestens {required_clear_minutes} Minuten bestätigt."
+            "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt."
+            if dry_until is not None
+            else f"Hydrawise ist seit mindestens {required_clear_minutes} Minuten bestätigt frei."
+        )
+    elif dry_until is not None:
+        reason = (
+            f"Trocknung bis {dry_until.isoformat()}; "
+            f"aktuelle Datenbestätigung benötigt {telemetry_minutes} Minuten."
         )
     else:
         reason = (
@@ -200,6 +266,11 @@ def evaluate_continuous_clear_confirmation(
         confirmed_for_seconds=confirmed_seconds,
         release_at_utc=release_at.isoformat(),
         reason=reason,
+        drying_since_utc=drying_since_utc,
+        dry_until_utc=dry_until.isoformat() if dry_until is not None else None,
+        telemetry_confirmed=telemetry_confirmed,
+        telemetry_required_minutes=telemetry_minutes,
+        confirmation_observed_until_utc=confirmation_observed_until_utc,
     )
 
 
@@ -217,8 +288,8 @@ def _relay_selected(
         for pattern in hydrawise_config.get("zone_name_patterns", [])
     ]
     try:
-        relay_id = int(relay.get("relay_id", -1))
-    except (TypeError, ValueError):
+        relay_id = _status_integer(relay.get("relay_id"))
+    except (TypeError, ValueError, OverflowError):
         relay_id = -1
     name = str(relay.get("name", f"Zone {relay.get('relay', '?')}"))
     return (
@@ -226,6 +297,16 @@ def _relay_selected(
         or relay_id in relay_ids
         or any(pattern.search(name) for pattern in patterns)
     )
+
+
+def _status_integer(value: Any) -> int:
+    """Decode the documented whole-number status fields without truncation."""
+    if isinstance(value, bool) or value in (None, ""):
+        raise ValueError("Missing or boolean Hydrawise integer")
+    number = float(value)
+    if not number.is_integer() or number < 0:
+        raise ValueError("Invalid Hydrawise integer")
+    return int(number)
 
 
 def evaluate_safety_status(
@@ -288,10 +369,10 @@ def evaluate_safety_status(
 
     try:
         observed = datetime.fromtimestamp(
-            int(status["time"]),
+            _status_integer(status["time"]),
             tz=timezone.utc,
         )
-    except (KeyError, TypeError, ValueError, OSError):
+    except (KeyError, TypeError, ValueError, OSError, OverflowError):
         observed = None
 
     age_seconds = None
@@ -304,22 +385,26 @@ def evaluate_safety_status(
 
     observed_relay_ids: list[int] = []
     selected: list[dict[str, Any]] = []
-    for raw_relay in status.get("relays", []):
+    raw_relays = status.get("relays")
+    malformed_relays = not isinstance(raw_relays, list)
+    for raw_relay in raw_relays if isinstance(raw_relays, list) else []:
         if not isinstance(raw_relay, dict):
+            malformed_relays = True
             continue
         try:
-            observed_relay_ids.append(int(raw_relay.get("relay_id", -1)))
-        except (TypeError, ValueError):
+            observed_relay_ids.append(_status_integer(raw_relay.get("relay_id")))
+        except (TypeError, ValueError, OverflowError):
             observed_relay_ids.append(-1)
         if _relay_selected(raw_relay, hydrawise_config):
             selected.append(raw_relay)
 
     observed_relay_set = tuple(sorted(observed_relay_ids))
     relay_set_valid = (
-        not expected_relay_ids
-        or (
+        not malformed_relays
+        and (
             len(observed_relay_set) == len(set(observed_relay_set))
-            and observed_relay_set == expected_relay_ids
+            and all(relay_id > 0 for relay_id in observed_relay_set)
+            and (not expected_relay_ids or observed_relay_set == expected_relay_ids)
         )
     )
 
@@ -329,28 +414,43 @@ def evaluate_safety_status(
     )
     active_ids: list[int] = []
     imminent_ids: list[int] = []
+    invalid_zone_status = malformed_relays
     for relay in selected:
-        relay_id = int(relay.get("relay_id", -1))
+        relay_id = -1
         try:
-            seconds_until = int(float(relay.get("time", 0) or 0))
-            run_seconds = int(float(relay.get("run", 0) or 0))
-        except (TypeError, ValueError):
+            relay_id = _status_integer(relay["relay_id"])
+            if relay_id <= 0:
+                raise ValueError
+            # Missing, fractional, nonfinite and boolean values are unknown,
+            # never a synthetic inactive valve.
+            seconds_until = _status_integer(relay["time"])
+            run_seconds = _status_integer(relay["run"])
+            if observed is not None:
+                # Reject unrepresentable future times before downstream
+                # calendar/display parsers use them as datetime offsets.
+                observed + timedelta(seconds=seconds_until + run_seconds)
+        except (KeyError, TypeError, ValueError, OverflowError):
             # Ein unverständlicher ausgewählter Zonenstatus darf niemals als
             # bestätigte Freigabe interpretiert werden.
             imminent_ids.append(relay_id)
-            continue
-        if run_seconds <= 0 or seconds_until <= 0:
+            invalid_zone_status = True
             continue
         if seconds_until == 1:
+            # The documented active signal wins even if remaining runtime is
+            # zero or inconsistent during a controller transition.
             active_ids.append(relay_id)
-        elif seconds_until <= before_seconds:
+        elif seconds_until > 0 and run_seconds <= 0:
+            invalid_zone_status = True
+            imminent_ids.append(relay_id)
+        elif 0 < seconds_until <= before_seconds:
             imminent_ids.append(relay_id)
 
-    available = observed is not None and bool(selected)
+    available = observed is not None and bool(selected) and not invalid_zone_status
     clear_now = (
         available
         and fresh
         and relay_set_valid
+        and not invalid_zone_status
         and not active_ids
         and not imminent_ids
     )
@@ -367,6 +467,8 @@ def evaluate_safety_status(
             "Die von Hydrawise gemeldeten Relay-IDs entsprechen nicht exakt "
             "der freigegebenen Sieben-Zonen-Liste."
         )
+    elif invalid_zone_status:
+        reason = "Hydrawise enthält unvollständige oder ungültige Zonenstatuswerte."
     elif active_ids:
         reason = "Mindestens eine Hydrawise-Zone läuft aktuell."
     elif imminent_ids:
@@ -525,8 +627,10 @@ def _get_json(endpoint: str, parameters: dict[str, str | int], timeout: int = 20
             payload = response.read().decode("utf-8")
     except HTTPError as exc:
         if exc.code == 429:
-            raise HydrawiseError("Hydrawise-Rate-Limit erreicht (HTTP 429).") from exc
-        raise HydrawiseError(f"Hydrawise antwortete mit HTTP {exc.code}.") from exc
+            raise HydrawiseError("Hydrawise-Rate-Limit erreicht (HTTP 429).", http_status=429,
+                                 retry_after=exc.headers.get("Retry-After") if exc.headers else None) from exc
+        raise HydrawiseError(f"Hydrawise antwortete mit HTTP {exc.code}.", http_status=exc.code,
+                             retry_after=exc.headers.get("Retry-After") if exc.headers else None) from exc
     except URLError as exc:
         raise HydrawiseError(f"Hydrawise ist nicht erreichbar: {exc.reason}") from exc
 

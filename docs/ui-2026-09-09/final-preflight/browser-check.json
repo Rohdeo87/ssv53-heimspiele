@@ -1,0 +1,61 @@
+{
+  "synthetic": true,
+  "productionRequestsAllowed": false,
+  "deviceAcceptance": false,
+  "records": [
+    {
+      "name": "stale-plan-390",
+      "width": 390,
+      "expected": "Belegungsplan nicht aktuell",
+      "content": "JETZT\nBelegungsplan nicht aktuell\nBitte den Mäher vor Ort prüfen und den Platzwart informieren. Den Platz erst nach bestätigtem Mäherstopp nutzen.",
+      "next": "Noch offen",
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "name": "water-missing-320",
+      "width": 320,
+      "expected": "Bewässerungsstand fehlt",
+      "content": "JETZT\nBewässerungsstand fehlt\nBitte aktualisieren und die Bewässerungsanlage prüfen. Keine Geräte starten.",
+      "next": "Noch offen",
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "name": "charging-390",
+      "width": 390,
+      "expected": "Rasen trocknet",
+      "content": "JETZT\nRasen trocknet\nDer Mäher wartet nach der Bewässerung.",
+      "next": "Heute, 14:30 Uhr",
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "name": "stale-plan-1120",
+      "width": 1120,
+      "expected": "Belegungsplan nicht aktuell",
+      "content": "JETZT\nBelegungsplan nicht aktuell\nBitte den Mäher vor Ort prüfen und den Platzwart informieren. Den Platz erst nach bestätigtem Mäherstopp nutzen.",
+      "next": "Noch offen",
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "name": "winter-planned-320",
+      "width": 320,
+      "expected": "Rasen trocknet",
+      "content": "JETZT\nRasen trocknet\nDer Mäher wartet nach der Bewässerung.",
+      "next": "Heute, 14:30 Uhr",
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "name": "winter-planned-390",
+      "width": 390,
+      "expected": "Rasen trocknet",
+      "content": "JETZT\nRasen trocknet\nDer Mäher wartet nach der Bewässerung.",
+      "next": "Heute, 14:30 Uhr",
+      "overflow": false,
+      "errors": []
+    }
+  ]
+}

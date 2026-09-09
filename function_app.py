@@ -4,6 +4,8 @@ import hashlib
 import json
 import logging
 import os
+from functools import lru_cache
+from pathlib import Path
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
@@ -12,12 +14,23 @@ import azure.functions as func
 from daily_safety_report import process_daily_report
 
 from mower.controller import run_control_cycle
+from mower.build_provenance import inspect_installed_package
 from mower.irrigation_journal import record_irrigation_observation
 from mower.irrigation_recovery import (
     IrrigationRecoveryError,
     reset_failed_irrigation,
 )
-from occupancy.service import build_occupancy_payload, build_training_occurrences
+from occupancy.service import build_occupancy_payload, build_training_occurrences, parse_range
+from occupancy.training_runtime import (
+    RuntimeTraining, TrainingSourceUnavailable, resolve_training_file, training_mode,
+)
+from occupancy.training_control import (
+    TrainingControlChanged,
+    initialize_training_control,
+    resolve_training_control,
+    snapshot_from_state as training_control_from_state,
+)
+from mower.state_store import AzureTableStateStore, StateConflictError
 from occupancy.runtime_source import (
     OccupancyMatchSource,
     resolve_occupancy_match_source,
@@ -57,6 +70,13 @@ from platzwart_console import (
 
 app = func.FunctionApp()
 LOGGER = logging.getLogger("ssv53.azure.platzpflege")
+TRAINING_INITIALIZATION_CONFIRMATION = "INITIALIZE_WINTER_TRAINING_CONTROL"
+
+
+@lru_cache(maxsize=1)
+def _build_provenance() -> dict:
+    """One source-directory check per process; not a remote-build/device proof."""
+    return inspect_installed_package(Path(__file__).resolve().parent)
 
 
 @app.timer_trigger(
@@ -82,6 +102,7 @@ def ssv53_mower_timer(
         past_due=bool(timer.past_due),
     )
     payload = result.to_dict()
+    payload["build_provenance"] = _build_provenance()
     payload["invocation_id"] = context.invocation_id
 
     retry_context = getattr(context, "retry_context", None)
@@ -306,11 +327,41 @@ def _occupancy_matches_path() -> tuple[str, str]:
     return source.matches_path, source.source_kind
 
 
+def _shared_training_for_app(*, config_path, start: str, end: str, now_utc: datetime,
+                             match_source=None, cancellations=(),
+                             control_snapshot=None) -> RuntimeTraining:
+    if (
+        training_mode(os.environ) == "OFF"
+        and str(os.environ.get("WINTER_TRAINING_CONTROL_ENABLED", "false")).strip().casefold()
+        not in {"1", "true", "yes", "on"}
+    ):
+        return RuntimeTraining("OFF")
+    if match_source is None:
+        match_source = _occupancy_match_source(now_utc=now_utc)
+    config = json.loads(Path(config_path).read_text(encoding="utf-8"))
+    first, last = parse_range(start, end, ZoneInfo("Europe/Berlin"))
+    if control_snapshot is None:
+        control_snapshot = resolve_training_control(
+            os.environ, now_utc=now_utc
+        )
+    result = resolve_training_file(
+        match_source.matches_path, consumer="occupancy", environment=os.environ,
+        legacy_config=config, range_start=first, range_end=last, now_utc=now_utc,
+        cancellations=cancellations,
+        source_fresh=match_source.fresh and not match_source.fallback_used,
+        control_snapshot=control_snapshot,
+    )
+    if result.blocking_required:
+        LOGGER.error("SSV53_SHARED_TRAINING_UNAVAILABLE %s", json.dumps(result.metadata(), sort_keys=True))
+    result.require_available()
+    return result
+
+
 def _occupancy_headers(*, cache: bool) -> dict[str, str]:
     return {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Headers": "Authorization, Content-Type",
         "Cache-Control": "public, max-age=60" if cache else "no-store",
         "X-Content-Type-Options": "nosniff",
     }
@@ -436,35 +487,28 @@ def ssv53_occupancy(req: func.HttpRequest) -> func.HttpResponse:
             "OCCUPANCY_CONFIG_PATH",
             "occupancy/config.json",
         )
-        payload = build_occupancy_payload(
-            config_path=config_path,
-            matches_path=matches_path,
-            start=start,
-            end=end,
-            season=season,
-            generated_at=now_utc,
-        )
         cancellation_error = None
+        cancellations = []
+        range_start, range_end = parse_range(start, end, ZoneInfo("Europe/Berlin"))
         try:
-            range_start = datetime.fromisoformat(payload["range"]["start"])
-            range_end = datetime.fromisoformat(payload["range"]["end"])
             store = AzureTableCancellationStore.from_environment(os.environ)
-            cancellations = store.list_active(range_start.date(), range_end.date())
-            cancelled = {item.occurrence_key for item in cancellations}
-            if cancelled:
-                payload = build_occupancy_payload(
-                    config_path=config_path,
-                    matches_path=matches_path,
-                    start=start,
-                    end=end,
-                    season=season,
-                    generated_at=now_utc,
-                    cancelled_occurrences=cancelled,
-                )
+            cancellations = store.list_active(
+                range_start.date() - timedelta(days=int(training_mode(os.environ) != "OFF")), range_end.date(),
+            )
         except Exception as exc:
             # Fail closed: Ein Speicherfehler darf niemals Trainingszeit freigeben.
             cancellation_error = f"{type(exc).__name__}: {exc}"
             LOGGER.exception("SSV53_TRAINING_CANCELLATION_READ_ERROR")
+        training = _shared_training_for_app(
+            config_path=config_path, start=start, end=end, now_utc=now_utc,
+            match_source=match_source, cancellations=cancellations,
+        )
+        payload = build_occupancy_payload(
+            config_path=config_path, matches_path=matches_path, start=start, end=end,
+            season=season, generated_at=now_utc, training_batch=training.batch,
+            cancelled_occurrences={item.occurrence_key for item in cancellations},
+        )
+        payload["training_calendar"] = training.metadata()
         payload["training_cancellations"] = {
             "available": cancellation_error is None,
             "fail_closed": cancellation_error is not None,
@@ -524,6 +568,8 @@ def ssv53_occupancy(req: func.HttpRequest) -> func.HttpResponse:
             charset="utf-8",
             headers=_occupancy_headers(cache=match_source.fresh),
         )
+    except TrainingSourceUnavailable as exc:
+        return _json_response({"code": "TRAINING_SOURCE_UNAVAILABLE", "error": str(exc)}, status_code=503)
     except ValueError as exc:
         return func.HttpResponse(
             json.dumps(
@@ -681,6 +727,23 @@ def _platzwart_token(req: func.HttpRequest) -> str:
     return authorization[7:].strip()
 
 
+def _authorize_occupancy_write(req: func.HttpRequest, body: dict, now_utc: datetime) -> dict:
+    """Temporary operator bridge; never derive write authority from Appack JSON.
+
+    Until a verified trainer identity provider is integrated, only an enrolled,
+    PIN-authenticated Platzwart session may change occupancy. Public reads remain
+    available. The session subject, not a submitted role/creator ID, is authoritative.
+    """
+    session = require_platzwart_session(_platzwart_token(req), os.environ, now_utc)
+    device_id = str(session.get("did") or "").strip()
+    if not device_id:
+        raise PlatzwartError("SESSION_INVALID", "Die Anmeldung enthält keine gültige Gerätekennung.", 401)
+    subject = "platzwart:" + device_id
+    creator = dict(body.get("creator") or {}) if isinstance(body.get("creator"), dict) else {}
+    creator["id"] = subject
+    return {**body, "requesterId": subject, "isAppAdministrator": True, "creator": creator}
+
+
 @app.route(
     route="platzwart/enroll",
     methods=["POST", "OPTIONS"],
@@ -813,6 +876,12 @@ def ssv53_platzwart_action(req: func.HttpRequest) -> func.HttpResponse:
                 if isinstance(body.get("schedule"), dict)
                 else None
             ),
+            winter_training_enabled=body.get("winterTrainingEnabled"),
+            training_revision=(
+                str(body.get("trainingRevision") or "")
+                if "trainingRevision" in body
+                else None
+            ),
         )
         LOGGER.warning(
             "SSV53_PLATZWART_ACTION_ACCEPTED action=%s request_id=%s device=%s",
@@ -845,12 +914,30 @@ def _trainer_occupancy_conflicts(
     resource_id: str,
     store,
     ignored_event_ids: set[str] | None = None,
+    now_utc: datetime | None = None,
+    control_snapshot=None,
 ) -> list[dict]:
     """Prüft denselben physischen Platz gegen Plan, Spiele und Sondertermine."""
     config_path = os.environ.get("OCCUPANCY_CONFIG_PATH", "occupancy/config.json")
-    matches_path = _occupancy_match_source(
-        now_utc=datetime.now(timezone.utc),
-    ).matches_path
+    now_utc = now_utc or datetime.now(timezone.utc)
+    match_source = _occupancy_match_source(now_utc=now_utc)
+    matches_path = match_source.matches_path
+    range_start = start.date().isoformat()
+    range_end = (end.date() + timedelta(days=1)).isoformat()
+    cancellations = []
+    if training_mode(os.environ) != "OFF":
+        try:
+            cancellations = AzureTableCancellationStore.from_environment(os.environ).list_active(
+                start.date() - timedelta(days=1), end.date() + timedelta(days=1),
+            )
+        except Exception:
+            LOGGER.exception("SSV53_TRAINER_CONFLICT_CANCELLATIONS_UNAVAILABLE")
+    training = _shared_training_for_app(
+        config_path=config_path, start=range_start, end=range_end,
+        now_utc=now_utc, match_source=match_source, cancellations=cancellations,
+        control_snapshot=control_snapshot,
+    )
+
     candidates: dict[str, dict] = {}
     ignored = {
         str(value or "").strip().lower()
@@ -864,12 +951,20 @@ def _trainer_occupancy_conflicts(
         payload = build_occupancy_payload(
             config_path=config_path,
             matches_path=matches_path,
-            start=start.date().isoformat(),
-            end=(end.date() + timedelta(days=1)).isoformat(),
+            start=range_start,
+            end=range_end,
             season=season,
-            generated_at=datetime.now(timezone.utc),
+            generated_at=now_utc,
+            training_batch=training.batch,
         )
+        if training.batch is not None:
+            payload = merge_public_special_events(payload, store.list_active(
+                datetime.fromisoformat(range_start).replace(tzinfo=ZoneInfo("Europe/Berlin")),
+                datetime.fromisoformat(range_end).replace(tzinfo=ZoneInfo("Europe/Berlin")),
+            ))
         for item in payload.get("events", []):
+            if training.batch is not None and item.get("blocking") is False:
+                continue
             if str(item.get("id") or "").strip().lower() in ignored:
                 continue
             if str(item.get("resourceId") or "") != resource_id:
@@ -907,11 +1002,151 @@ def _trainer_occupancy_conflicts(
     ]
 
 
+def _training_initialization_enabled(environment) -> bool:
+    return str(
+        environment.get("WINTER_TRAINING_INITIALIZATION_ENABLED", "false")
+    ).strip().casefold() in {"1", "true", "yes", "on"}
+
+
+def _training_initialization_response(payload: dict, status_code: int) -> func.HttpResponse:
+    return func.HttpResponse(
+        json.dumps(payload, ensure_ascii=False, sort_keys=True),
+        status_code=status_code,
+        mimetype="application/json",
+        charset="utf-8",
+        headers={
+            "Cache-Control": "no-store",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
+@app.route(
+    route="training-control/initialize",
+    methods=["GET", "POST"],
+    auth_level=func.AuthLevel.ADMIN,
+)
+def ssv53_training_control_initialize(req: func.HttpRequest) -> func.HttpResponse:
+    """Admin-only read/one-time CAS initialization; never controls equipment."""
+
+    if not _training_initialization_enabled(os.environ):
+        return _training_initialization_response(
+            {
+                "code": "TRAINING_CONTROL_INITIALIZATION_DISABLED",
+                "error": "Die Trainingsplan-Initialisierung ist serverseitig gesperrt.",
+            },
+            403,
+        )
+    now_utc = datetime.now(timezone.utc)
+    if req.method.upper() == "GET":
+        try:
+            state = AzureTableStateStore.from_environment(os.environ).load()
+            snapshot = training_control_from_state(state, now_utc=now_utc)
+            return _training_initialization_response(
+                {
+                    "stateRevision": state.revision,
+                    "initialized": (
+                        state.winter_training_history_valid_from_utc is not None
+                        and bool(
+                            str(
+                                state.winter_training_history_approval_reference
+                                or ""
+                            ).strip()
+                        )
+                    ),
+                    "trainingControl": snapshot.public_payload(),
+                },
+                200,
+            )
+        except Exception:
+            LOGGER.exception("SSV53_TRAINING_CONTROL_INITIALIZATION_INSPECT_ERROR")
+            return _training_initialization_response(
+                {
+                    "code": "TRAINING_CONTROL_STATE_UNAVAILABLE",
+                    "error": "Der Trainingsplan-Zustand ist nicht verfügbar.",
+                },
+                503,
+            )
+    try:
+        body = req.get_json()
+        required = {
+            "initialPlan", "historyValidFrom", "approvalReference",
+            "requestId", "expectedStateRevision", "confirmation",
+        }
+        if not isinstance(body, dict) or set(body) != required:
+            raise ValueError("TRAINING_CONTROL_INITIALIZATION_SCHEMA_INVALID")
+        if body["initialPlan"] not in {"Sommer", "Winter"}:
+            raise ValueError("TRAINING_CONTROL_INITIAL_PLAN_INVALID")
+        if body["confirmation"] != TRAINING_INITIALIZATION_CONFIRMATION:
+            raise ValueError("TRAINING_CONTROL_INITIALIZATION_CONFIRMATION_INVALID")
+        if not isinstance(body["approvalReference"], str) or not isinstance(
+            body["requestId"], str
+        ):
+            raise ValueError("TRAINING_CONTROL_INITIALIZATION_TEXT_INVALID")
+        history_day = datetime.fromisoformat(str(body["historyValidFrom"])).date()
+        if body["historyValidFrom"] != history_day.isoformat():
+            raise ValueError("TRAINING_CONTROL_HISTORY_DATE_INVALID")
+        expected_revision = body["expectedStateRevision"]
+        if type(expected_revision) is not int or expected_revision < 1:
+            raise ValueError("TRAINING_CONTROL_STATE_REVISION_INVALID")
+        snapshot = initialize_training_control(
+            os.environ,
+            initial_enabled=body["initialPlan"] == "Winter",
+            history_valid_from_day=history_day,
+            approval_reference=body["approvalReference"],
+            request_id=body["requestId"],
+            expected_state_revision=expected_revision,
+            now_utc=now_utc,
+        )
+        return _training_initialization_response(
+            {
+                "initialized": True,
+                "trainingControl": snapshot.public_payload(),
+            },
+            200,
+        )
+    except (ValueError, TypeError, KeyError):
+        return _training_initialization_response(
+            {
+                "code": "TRAINING_CONTROL_INITIALIZATION_INVALID",
+                "error": "Die Initialisierungsanfrage ist ungültig.",
+            },
+            400,
+        )
+    except (TrainingControlChanged, StateConflictError) as exc:
+        return _training_initialization_response(
+            {
+                "code": "TRAINING_CONTROL_CHANGED",
+                "error": "Der Trainingsplan-Zustand wurde bereits oder zwischenzeitlich geändert.",
+            },
+            409,
+        )
+    except RuntimeError:
+        LOGGER.exception("SSV53_TRAINING_CONTROL_INITIALIZATION_STATE_INVALID")
+        return _training_initialization_response(
+            {
+                "code": "TRAINING_CONTROL_STATE_INVALID",
+                "error": "Der Trainingsplan-Zustand kann nicht sicher initialisiert werden.",
+            },
+            409,
+        )
+    except Exception:
+        LOGGER.exception("SSV53_TRAINING_CONTROL_INITIALIZATION_ERROR")
+        return _training_initialization_response(
+            {
+                "code": "TRAINING_CONTROL_STATE_UNAVAILABLE",
+                "error": "Der Trainingsplan-Zustand ist nicht verfügbar.",
+            },
+            503,
+        )
+
+
 def _trainer_move_source(
     body: dict,
     store,
     *,
     now_utc: datetime,
+    control_snapshot=None,
 ) -> tuple[dict, str, str]:
     """Löst eine Verlegung serverseitig auf; Client-Zeiten sind nie maßgeblich."""
 
@@ -919,7 +1154,9 @@ def _trainer_move_source(
     requester_id = str(body.get("requesterId") or "").strip()
     is_admin = bool(body.get("isAppAdministrator"))
     if source_id.startswith("training:"):
-        occurrence = _trainer_training_occurrence(source_id)
+        occurrence = _trainer_training_occurrence(
+            source_id, control_snapshot=control_snapshot, now_utc=now_utc
+        )
         event_id = "trainer-move-" + hashlib.sha256(source_id.encode("utf-8")).hexdigest()[:32]
         moved_by = body.get("creator") if isinstance(body.get("creator"), dict) else {}
         event = {
@@ -1026,7 +1263,9 @@ def _trainer_move_source(
     return event, source_id, existing.resource_id
 
 
-def _trainer_training_occurrence(event_id: str) -> dict:
+def _trainer_training_occurrence(
+    event_id: str, *, control_snapshot=None, now_utc: datetime | None = None
+) -> dict:
     """Löst ausschließlich eine konfigurierte, konkrete Trainingsinstanz auf."""
 
     source_id = str(event_id or "").strip().lower()
@@ -1045,11 +1284,18 @@ def _trainer_training_occurrence(event_id: str) -> dict:
             "Der Trainingstermin wurde nicht gefunden.",
             status_code=404,
         ) from exc
+    config_path = os.environ.get("OCCUPANCY_CONFIG_PATH", "occupancy/config.json")
+    resolved_now = now_utc or datetime.now(timezone.utc)
+    training = _shared_training_for_app(
+        config_path=config_path, start=day.isoformat(), end=(day + timedelta(days=1)).isoformat(),
+        now_utc=resolved_now, control_snapshot=control_snapshot,
+    )
     occurrences = build_training_occurrences(
-        config_path=os.environ.get("OCCUPANCY_CONFIG_PATH", "occupancy/config.json"),
+        config_path=config_path,
         start=day.isoformat(),
         end=(day + timedelta(days=1)).isoformat(),
         season=parts[1].capitalize(),
+        training_batch=training.batch,
     )
     occurrence = next(
         (
@@ -1100,6 +1346,7 @@ def ssv53_trainer_occupancies(req: func.HttpRequest) -> func.HttpResponse:
                 "REQUEST_INVALID",
                 "Der Request muss ein JSON-Objekt enthalten.",
             )
+        body = _authorize_occupancy_write(req, body, datetime.now(timezone.utc))
         action = str(body.get("action") or "create").strip().lower()
         expected_confirmation = {
             "create": "TRAINER_BELEGUNG_SPEICHERN",
@@ -1118,6 +1365,9 @@ def ssv53_trainer_occupancies(req: func.HttpRequest) -> func.HttpResponse:
             )
 
         now_utc = datetime.now(timezone.utc)
+        request_training_control = resolve_training_control(
+            os.environ, now_utc=now_utc
+        )
         store = AzureTableSpecialOccupancyStore.from_environment(os.environ)
         if action == "delete":
             event_id = str(body.get("eventId") or "").removeprefix("one-off:").strip().lower()
@@ -1139,7 +1389,9 @@ def ssv53_trainer_occupancies(req: func.HttpRequest) -> func.HttpResponse:
                 # Ersatztermin entfernen. Ein Teilfehler bleibt so fail-closed:
                 # Der Platz wird niemals versehentlich vorzeitig freigegeben.
                 occurrence = _trainer_training_occurrence(
-                    existing.replaced_training_event_id
+                    existing.replaced_training_event_id,
+                    control_snapshot=request_training_control,
+                    now_utc=now_utc,
                 )
                 delay = int(
                     os.environ.get(
@@ -1169,6 +1421,7 @@ def ssv53_trainer_occupancies(req: func.HttpRequest) -> func.HttpResponse:
                 body,
                 store,
                 now_utc=now_utc,
+                control_snapshot=request_training_control,
             )
             target_resource = str(body.get("targetResourceId") or "").strip().lower()
             if target_resource not in {"rasen", "kunstrasen"}:
@@ -1256,6 +1509,8 @@ def ssv53_trainer_occupancies(req: func.HttpRequest) -> func.HttpResponse:
                     "one-off:" + str(event["id"]),
                     str(event.get("replacesTrainingEventId") or ""),
                 },
+                now_utc=now_utc,
+                control_snapshot=request_training_control,
             )
             if conflicts and body.get("overlapConfirmation") != "UEBERSCHNEIDUNG_TROTZDEM_SPEICHERN":
                 return _trainer_occupancy_response(
@@ -1318,7 +1573,8 @@ def ssv53_trainer_occupancies(req: func.HttpRequest) -> func.HttpResponse:
         end = end.astimezone(ZoneInfo("Europe/Berlin"))
         resource_id = str(body.get("resourceId") or "").strip().lower()
         conflicts = _trainer_occupancy_conflicts(
-            start=start, end=end, resource_id=resource_id, store=store
+            start=start, end=end, resource_id=resource_id, store=store,
+            now_utc=now_utc, control_snapshot=request_training_control,
         )
         if conflicts and body.get("overlapConfirmation") != "UEBERSCHNEIDUNG_TROTZDEM_SPEICHERN":
             return _trainer_occupancy_response(
@@ -1350,7 +1606,7 @@ def ssv53_trainer_occupancies(req: func.HttpRequest) -> func.HttpResponse:
             command["event"]["resourceId"],
         )
         return _trainer_occupancy_response(result, status_code=200)
-    except SpecialOccupancyError as exc:
+    except (SpecialOccupancyError, PlatzwartError) as exc:
         LOGGER.warning("SSV53_TRAINER_OCCUPANCY_REJECTED code=%s", exc.code)
         return _trainer_occupancy_response(
             {"ok": False, "code": exc.code, "error": str(exc)},
@@ -1406,6 +1662,9 @@ def ssv53_training_cancellations(req: func.HttpRequest) -> func.HttpResponse:
     )
 
     try:
+        if req.method.upper() == "POST":
+            verified_identity = _authorize_occupancy_write(req, {}, now_utc)
+            actor_hash = hashlib.sha256(str(verified_identity.get("requesterId") or "").encode()).hexdigest()[:16]
         if req.method.upper() == "GET":
             if req.params.get("start"):
                 start_day = datetime.fromisoformat(req.params["start"]).date()
@@ -1420,11 +1679,16 @@ def ssv53_training_cancellations(req: func.HttpRequest) -> func.HttpResponse:
                     "Erlaubt sind heutige und zukünftige Termine innerhalb von 63 Tagen."
                 )
 
+        training = _shared_training_for_app(
+            config_path=config_path, start=start_day.isoformat(),
+            end=(end_day + timedelta(days=1)).isoformat(), now_utc=now_utc,
+        )
         occurrences = build_training_occurrences(
             config_path=config_path,
             start=start_day.isoformat(),
             end=(end_day + timedelta(days=1)).isoformat(),
             season=season,
+            training_batch=training.batch,
         )
         now_local = now_utc.astimezone(tz)
         occurrences = [
@@ -1447,6 +1711,7 @@ def ssv53_training_cancellations(req: func.HttpRequest) -> func.HttpResponse:
                     {
                         **occurrence,
                         "cancelled": cancellation is not None,
+                        "blocking": cancellation is None or not cancellation.is_effective(now_utc),
                         "cancelledAtUtc": (
                             cancellation.cancelled_at_utc.isoformat()
                             if cancellation
@@ -1492,7 +1757,7 @@ def ssv53_training_cancellations(req: func.HttpRequest) -> func.HttpResponse:
                 now_utc=now_utc,
                 release_delay_minutes=delay,
             )
-            LOGGER.warning("SSV53_TRAINING_CANCELLED event_id=%s", event_id)
+            LOGGER.warning("SSV53_TRAINING_CANCELLED event_id=%s actor_hash=%s", event_id, actor_hash)
             return _training_cancellation_response(
                 {
                     "ok": True,
@@ -1509,9 +1774,10 @@ def ssv53_training_cancellations(req: func.HttpRequest) -> func.HttpResponse:
         ):
             restored = store.restore(event_id, now_utc=now_utc)
             LOGGER.warning(
-                "SSV53_TRAINING_RESTORED event_id=%s restored=%s",
+                "SSV53_TRAINING_RESTORED event_id=%s restored=%s actor_hash=%s",
                 event_id,
                 restored,
+                actor_hash,
             )
             return _training_cancellation_response(
                 {
@@ -1522,6 +1788,10 @@ def ssv53_training_cancellations(req: func.HttpRequest) -> func.HttpResponse:
                 }
             )
         raise ValueError("Aktion oder Bestätigung ist ungültig.")
+    except PlatzwartError as exc:
+        return _training_cancellation_response({"code": exc.code, "error": str(exc)}, exc.status_code)
+    except TrainingSourceUnavailable as exc:
+        return _training_cancellation_response({"code": "TRAINING_SOURCE_UNAVAILABLE", "error": str(exc)}, 503)
     except ValueError as exc:
         return _training_cancellation_response({"error": str(exc)}, 400)
     except Exception:

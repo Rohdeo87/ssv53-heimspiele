@@ -22,7 +22,8 @@ test("Hilfeseite ist vollständiges und syntaktisch gültiges Appack-HTML", () =
 test("Hilfeseite erklärt Bedienung, DFB-Daten und die drei Spielzeiten", () => {
   assert.match(html, /Belegungsplan bedienen/);
   assert.match(html, /Sommer\/Winter/);
-  assert.match(html, /automatisch aus den strukturierten DFB-Daten übernommen/);
+  assert.match(html, /öffentlichen FUSSBALL.DE-Vereinsspielplan übernommen/);
+  assert.match(html, /aktuelle Platzwart-Anmeldung/);
   assert.match(html, /Anstoß/);
   assert.match(html, /nominelle Spielzeit/);
   assert.match(html, /Platz gesperrt/);

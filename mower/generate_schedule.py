@@ -3,13 +3,15 @@ from __future__ import annotations
 import argparse
 import json
 import os
-from datetime import date, datetime
+from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from mower.hydrawise import HydrawiseError, fetch_status
+from mower.hydrawise import HydrawiseError, fetch_status, parse_relay_id_allowlist
 from mower.planner import create_plan, load_json, plan_to_dict, read_match_blocks
+from mower.status_cache import cache_mode, read_status_cached
+from occupancy.training_runtime import resolve_runtime_training
 
 
 WEEKDAY_DE = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"]
@@ -130,6 +132,7 @@ def main() -> int:
     warnings: list[str] = []
     hydrawise_status: dict[str, Any] | None = None
     hydrawise_label = "nicht konfiguriert"
+    hydrawise_cache_metadata: dict[str, Any] | None = None
     hydrawise_config = config.get("hydrawise", {})
     api_key = os.environ.get("HYDRAWISE_API_KEY", "").strip()
     if not args.no_hydrawise and hydrawise_config.get("enabled", True) and api_key:
@@ -139,10 +142,29 @@ def main() -> int:
         )
         controller_id = os.environ.get(controller_env, "").strip()
         try:
-            hydrawise_status = fetch_status(api_key, controller_id or None)
+            if cache_mode(os.environ) == "OFF":
+                hydrawise_status = fetch_status(api_key, controller_id or None)
+            else:
+                configured_ids = hydrawise_config.get("expected_relay_ids") or hydrawise_config.get("relay_ids", [])
+                expected_ids = parse_relay_id_allowlist(
+                    os.environ.get("HYDRAWISE_EXPECTED_RELAY_IDS") or ",".join(str(value) for value in configured_ids),
+                    expected_count=int(os.environ.get("HYDRAWISE_EXPECTED_ZONE_COUNT") or
+                                       hydrawise_config.get("expected_zone_count", 7)),
+                    required=True,
+                )
+                cached = read_status_cached(
+                    api_key, controller_id or None, environment=os.environ,
+                    hydrawise_config={**hydrawise_config, "expected_relay_ids": list(expected_ids)},
+                    now_utc=datetime.now(timezone.utc), fetcher=fetch_status,
+                )
+                hydrawise_cache_metadata = cached.metadata()
+                hydrawise_status = cached.status
+                if hydrawise_status is None:
+                    raise HydrawiseError(f"Kein aktueller gemeinsamer Status verfügbar ({cached.quality}).")
             relay_count = len(hydrawise_status.get("relays", []))
-            hydrawise_label = f"live verbunden ({relay_count} Zonen gelesen)"
-        except HydrawiseError as exc:
+            hydrawise_label = (f"gemeinsamer Status ({relay_count} Zonen gelesen)" if hydrawise_cache_metadata is not None
+                               else f"live verbunden ({relay_count} Zonen gelesen)")
+        except (HydrawiseError, ValueError, TypeError) as exc:
             hydrawise_label = "Abruf fehlgeschlagen"
             warnings.append(f"Hydrawise konnte nicht gelesen werden: {exc}")
     elif hydrawise_config.get("enabled", True) and not args.no_hydrawise:
@@ -157,12 +179,20 @@ def main() -> int:
             f"Spielkalender {args.matches} fehlt; Heimspiele sind nicht enthalten."
         )
 
+    horizon_start = datetime.combine(start_day, time.min, tzinfo=tz)
+    training = resolve_runtime_training(
+        config, consumer="mower", environment=os.environ, legacy_config=config,
+        range_start=horizon_start, range_end=horizon_start + timedelta(days=days),
+        now_utc=datetime.now(timezone.utc),
+    )
+    training.require_available()
     plans, merged = create_plan(
         config,
         match_blocks,
         hydrawise_status,
         start_day,
         days,
+        training_batch=training.batch,
     )
     end_day = date.fromordinal(start_day.toordinal() + days - 1)
     metadata = {
@@ -176,6 +206,9 @@ def main() -> int:
         ),
         "hydrawise_status": hydrawise_label,
         "matches_loaded": len(match_blocks),
+        "training_calendar": training.metadata(),
+        "control_authority": False,
+        **({"hydrawise_cache": hydrawise_cache_metadata} if hydrawise_cache_metadata is not None else {}),
     }
     result = plan_to_dict(plans, merged, warnings, metadata)
 

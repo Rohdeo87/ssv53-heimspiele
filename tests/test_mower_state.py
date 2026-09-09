@@ -156,6 +156,25 @@ class AutomationStateTests(unittest.TestCase):
         self.assertIsNone(failed.park_confirmed_utc)
         self.assertEqual(failed.park_confirmed_observations, 0)
 
+    def test_dock_confirmation_does_not_survive_long_control_gap_or_duplicate_cycle(self) -> None:
+        first = AutomationState(parked_by_automation=True).record_cycle(
+            started_utc=NOW, success=True, decision_code="DOCK",
+            mower_activity="CHARGING", mower_state="IN_OPERATION",
+        )
+        duplicate = first.record_cycle(
+            started_utc=NOW, success=True, decision_code="DOCK",
+            mower_activity="CHARGING", mower_state="IN_OPERATION",
+        )
+        self.assertEqual(duplicate.park_confirmed_observations, 1)
+        for activity, mower_state in (("CHARGING", "IN_OPERATION"), ("NOT_APPLICABLE", "PAUSED")):
+            with self.subTest(activity=activity):
+                later = duplicate.record_cycle(
+                    started_utc=NOW + timedelta(minutes=4), success=True, decision_code="RECOVERED",
+                    mower_activity=activity, mower_state=mower_state,
+                )
+                self.assertEqual(later.park_confirmed_observations, 1 if activity == "CHARGING" else 0)
+                self.assertEqual(later.park_confirmed_utc, (NOW + timedelta(minutes=4)).isoformat() if activity == "CHARGING" else None)
+
     def test_hydrawise_clear_confirmation_starts_at_poll_time(self) -> None:
         state = AutomationState().record_cycle(
             started_utc=NOW,
@@ -167,7 +186,8 @@ class AutomationStateTests(unittest.TestCase):
             hydrawise_active_count=0,
         )
         self.assertEqual(state.hydrawise_clear_since_utc, NOW.isoformat())
-        self.assertEqual(state.hydrawise_clear_origin, "DATA_GAP")
+        self.assertEqual(state.hydrawise_clear_origin, "POSSIBLE_IRRIGATION_DURING_GAP")
+        self.assertEqual(state.hydrawise_drying_since_utc, NOW.isoformat())
 
         interrupted = state.record_cycle(
             started_utc=NOW + timedelta(minutes=1),
@@ -213,7 +233,7 @@ class AutomationStateTests(unittest.TestCase):
             after_gap.hydrawise_clear_since_utc,
             (NOW + timedelta(minutes=4)).isoformat(),
         )
-        self.assertEqual(after_gap.hydrawise_clear_origin, "DATA_GAP")
+        self.assertEqual(after_gap.hydrawise_clear_origin, "POSSIBLE_IRRIGATION_DURING_GAP")
 
     def test_gap_crossing_known_irrigation_start_is_not_treated_as_harmless(self) -> None:
         first = AutomationState(
@@ -234,6 +254,74 @@ class AutomationStateTests(unittest.TestCase):
             recovered.hydrawise_clear_origin,
             "POSSIBLE_IRRIGATION_DURING_GAP",
         )
+
+    def test_short_failed_poll_preserves_physical_end_for_internal_and_external_runs(self) -> None:
+        for phase in (None, "COMPLETE_HOLD"):
+            with self.subTest(phase=phase):
+                physical_end = NOW - timedelta(minutes=149)
+                previous = AutomationState(
+                    irrigation_phase=phase,
+                    hydrawise_clear_since_utc=physical_end.isoformat(),
+                    hydrawise_clear_origin="IRRIGATION_END",
+                    last_hydrawise_success_utc=(NOW - timedelta(minutes=1)).isoformat(),
+                    last_hydrawise_active_count=0,
+                )
+                missed = previous.record_cycle(
+                    started_utc=NOW, success=True, decision_code="STATUS_ERROR",
+                    hydrawise_clear=False,
+                )
+                self.assertIsNone(missed.hydrawise_clear_since_utc)
+                self.assertEqual(missed.hydrawise_drying_since_utc, physical_end.isoformat())
+                # Include a process restart/serialization before data recovers.
+                restored = AutomationState.from_mapping(missed.to_dict())
+                recovered = restored.record_cycle(
+                    started_utc=NOW + timedelta(minutes=1), success=True,
+                    decision_code="CLEAR", hydrawise_clear=True,
+                    hydrawise_success_utc=NOW + timedelta(minutes=1),
+                    hydrawise_active_count=0,
+                )
+                self.assertEqual(recovered.hydrawise_drying_since_utc, physical_end.isoformat())
+                self.assertEqual(recovered.hydrawise_clear_origin, "IRRIGATION_END")
+                self.assertEqual(recovered.hydrawise_clear_since_utc, (NOW + timedelta(minutes=1)).isoformat())
+
+    def test_failed_poll_preserves_known_start_until_reconciliation(self) -> None:
+        previous = AutomationState(
+            last_hydrawise_success_utc=NOW.isoformat(),
+            last_hydrawise_active_count=0,
+            next_irrigation_start_utc=(NOW + timedelta(minutes=1)).isoformat(),
+        )
+        missed = previous.record_cycle(
+            started_utc=NOW + timedelta(minutes=1), success=True,
+            decision_code="ERROR", hydrawise_clear=False,
+        )
+        self.assertEqual(missed.next_irrigation_start_utc, previous.next_irrigation_start_utc)
+        recovered = missed.record_cycle(
+            started_utc=NOW + timedelta(minutes=2), success=True,
+            decision_code="CLEAR", hydrawise_clear=True,
+            hydrawise_success_utc=NOW + timedelta(minutes=2),
+            hydrawise_active_count=0,
+        )
+        self.assertEqual(recovered.hydrawise_clear_origin, "POSSIBLE_IRRIGATION_DURING_GAP")
+        self.assertEqual(recovered.hydrawise_drying_since_utc, (NOW + timedelta(minutes=2)).isoformat())
+
+    def test_long_gap_without_known_schedule_still_requires_full_hold(self) -> None:
+        for minutes in (4, 180):
+            with self.subTest(minutes=minutes):
+                previous = AutomationState(
+                    hydrawise_clear_since_utc=(NOW - timedelta(hours=3)).isoformat(),
+                    hydrawise_drying_since_utc=(NOW - timedelta(hours=3)).isoformat(),
+                    hydrawise_clear_origin="IRRIGATION_END",
+                    last_hydrawise_success_utc=NOW.isoformat(),
+                    last_hydrawise_active_count=0,
+                )
+                returned_at = NOW + timedelta(minutes=minutes)
+                recovered = previous.record_cycle(
+                    started_utc=returned_at, success=True, decision_code="CLEAR",
+                    hydrawise_clear=True, hydrawise_success_utc=returned_at,
+                    hydrawise_active_count=0,
+                )
+                self.assertEqual(recovered.hydrawise_clear_origin, "POSSIBLE_IRRIGATION_DURING_GAP")
+                self.assertEqual(recovered.hydrawise_drying_since_utc, returned_at.isoformat())
 
 
 class StateStoreTests(unittest.TestCase):

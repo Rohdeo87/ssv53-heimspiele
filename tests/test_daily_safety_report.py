@@ -73,8 +73,11 @@ def test_summary_counts_only_unique_epos_confirmed_completions():
         now_utc=datetime(2026, 8, 20, 5, 0, tzinfo=timezone.utc),
         exception_count_24h=0,
     )
-    assert summary.mowing_minutes_7d == 2
+    assert summary.mowing_minutes_7d == 1  # LEAVING is transport, not cutting.
     assert summary.completed_area_cycles_7d == 1
+    assert summary.inferred_area_cycles_7d == 0
+    assert summary.estimated_area_cycles_7d == 1
+    assert summary.last_inferred_area_utc is None
     assert summary.current_work_area_progress == 12
     assert summary.last_completed_area_utc is not None
     assert summary.average_daily_mowing_minutes_7d == 0
@@ -97,10 +100,37 @@ def test_dashboard_statistics_reuses_confirmed_seven_day_metrics():
     )
     assert value["available"] is True
     assert value["completedAreaCycles7d"] == 1
+    assert value["inferredAreaCycles7d"] == 0
+    assert value["estimatedAreaCycles7d"] == 1
+    assert value["lastInferredAreaUtc"] is None
+    assert "Schätzungen" in value["areaCompletionNote"]
+    assert "lastTimeCompleted" in value["areaCompletionNote"]
     assert value["mowingMinutes7d"] == 2
     assert value["mowingMinutesToday"] == 2
     assert value["averageReturnMinutes7d"] is None
     assert value["lastCompletedAreaUtc"] is not None
+
+
+def test_dashboard_statistics_marks_progress_reset_as_estimate_only():
+    class DashboardQueries:
+        def execute(self, query, *, timespan):
+            return [
+                row("2026-08-20T04:57:01Z", progress=99),
+                row("2026-08-20T04:58:01Z", progress=99),
+                row("2026-08-20T04:59:01Z", progress=0, activity="GOING_HOME"),
+            ]
+
+    value = dashboard_statistics(
+        datetime(2026, 8, 20, 5, 0, tzinfo=timezone.utc),
+        {},
+        query_client=DashboardQueries(),
+    )
+    assert value["completedAreaCycles7d"] == 0
+    assert value["lastCompletedAreaUtc"] is None
+    assert value["inferredAreaCycles7d"] == 1
+    assert value["lastInferredAreaUtc"] == "2026-08-20T04:59:01+00:00"
+    assert value["estimatedAreaCycles7d"] == 1
+    assert "Zusätzliche Abschlüsse sind Schätzungen" in value["areaCompletionNote"]
 
 
 def test_irrigation_statistics_use_actual_zones_and_confirmed_full_runs():
@@ -365,8 +395,11 @@ def test_summary_infers_epos_completion_from_stable_99_to_zero_transition():
         now_utc=datetime(2026, 8, 20, 17, 0, tzinfo=timezone.utc),
         exception_count_24h=0,
     )
-    assert summary.completed_area_cycles_7d == 1
-    assert summary.last_completed_area_utc == datetime(
+    assert summary.completed_area_cycles_7d == 0
+    assert summary.last_completed_area_utc is None
+    assert summary.inferred_area_cycles_7d == 1
+    assert summary.estimated_area_cycles_7d == 1
+    assert summary.last_inferred_area_utc == datetime(
         2026, 8, 20, 16, 4, 1, tzinfo=timezone.utc
     )
     assert summary.current_work_area_progress == 0
@@ -388,16 +421,21 @@ def test_summary_does_not_infer_completion_from_98_or_single_99_sample():
     )
     assert summary.completed_area_cycles_7d == 0
     assert summary.last_completed_area_utc is None
+    assert summary.inferred_area_cycles_7d == 0
+    assert summary.last_inferred_area_utc is None
+    assert summary.estimated_area_cycles_7d == 0
 
 
-def test_inferred_and_device_confirmed_completion_are_not_counted_twice():
+@pytest.mark.parametrize("device_observed_at", ["16:04:01", "16:30:01"])
+def test_inferred_and_device_confirmed_completion_are_not_counted_twice(device_observed_at):
     completed = int(datetime(2026, 8, 20, 16, 4, tzinfo=timezone.utc).timestamp())
     observations = parse_cycle_rows(
         [
             row("2026-08-20T16:01:01Z", progress=99),
             row("2026-08-20T16:02:01Z", progress=99),
-            row("2026-08-20T16:03:01Z", progress=0, activity="GOING_HOME", completed=completed),
-            row("2026-08-20T16:04:01Z", progress=0, activity="GOING_HOME", completed=completed),
+            row("2026-08-20T16:03:01Z", progress=0, activity="GOING_HOME"),
+            row(f"2026-08-20T{device_observed_at}Z", progress=0, activity="PARKED_IN_CS", completed=completed),
+            row("2026-08-20T16:31:01Z", progress=0, activity="PARKED_IN_CS", completed=completed),
         ]
     )
     summary = summarize_report(
@@ -406,6 +444,50 @@ def test_inferred_and_device_confirmed_completion_are_not_counted_twice():
         exception_count_24h=0,
     )
     assert summary.completed_area_cycles_7d == 1
+    assert summary.last_completed_area_utc == datetime(2026, 8, 20, 16, 4, tzinfo=timezone.utc)
+    assert summary.inferred_area_cycles_7d == 0
+    assert summary.last_inferred_area_utc is None
+    assert summary.estimated_area_cycles_7d == 1
+
+
+def test_device_report_and_separate_estimate_keep_their_own_count_and_time():
+    completed = int(datetime(2026, 8, 20, 15, 0, tzinfo=timezone.utc).timestamp())
+    observations = parse_cycle_rows(
+        [
+            row("2026-08-20T15:00:01Z", completed=completed),
+            row("2026-08-20T15:01:01Z", completed=completed),
+            row("2026-08-20T16:01:01Z", progress=99, completed=completed),
+            row("2026-08-20T16:02:01Z", progress=99, completed=completed),
+            row("2026-08-20T16:03:01Z", progress=0, activity="GOING_HOME", completed=completed),
+            row("2026-08-20T16:05:01Z", progress=99, completed=completed),
+            row("2026-08-20T16:06:01Z", progress=99, completed=completed),
+            row("2026-08-20T16:07:01Z", progress=0, activity="GOING_HOME", completed=completed),
+        ]
+    )
+    summary = summarize_report(
+        observations,
+        now_utc=datetime(2026, 8, 20, 17, 0, tzinfo=timezone.utc),
+        exception_count_24h=0,
+    )
+    assert summary.completed_area_cycles_7d == 1  # repeated device field is one event
+    assert summary.inferred_area_cycles_7d == 1  # nearby reset estimates still dedupe
+    assert summary.estimated_area_cycles_7d == 2
+    assert summary.last_completed_area_utc == datetime(2026, 8, 20, 15, 0, tzinfo=timezone.utc)
+    assert summary.last_inferred_area_utc == datetime(2026, 8, 20, 16, 3, 1, tzinfo=timezone.utc)
+
+
+def test_device_completion_timestamp_must_be_inside_report_period():
+    now = datetime(2026, 8, 20, 17, 0, tzinfo=timezone.utc)
+    period_start = datetime(2026, 8, 13, 22, 0, tzinfo=timezone.utc)
+    timestamps = [period_start - timedelta(seconds=1), period_start, now, now + timedelta(seconds=1)]
+    observations = parse_cycle_rows([
+        row(f"2026-08-20T16:{50 + index}:01Z", completed=int(timestamp.timestamp()))
+        for index, timestamp in enumerate(timestamps)
+    ])
+    summary = summarize_report(observations, now_utc=now, exception_count_24h=0)
+    assert summary.completed_area_cycles_7d == 2
+    assert summary.last_completed_area_utc == now
+    assert summary.inferred_area_cycles_7d == 0
 
 
 def test_summary_calculates_today_mowing_and_average_return_duration():
@@ -414,8 +496,15 @@ def test_summary_calculates_today_mowing_and_average_return_duration():
             row("2026-08-20T08:00:01Z", activity="MOWING"),
             row("2026-08-20T08:01:01Z", activity="MOWING"),
             row("2026-08-20T08:02:01Z", activity="GOING_HOME"),
+            row("2026-08-20T08:03:01Z", activity="GOING_HOME"),
+            row("2026-08-20T08:04:01Z", activity="GOING_HOME"),
             row("2026-08-20T08:05:01Z", activity="PARKED_IN_CS"),
+            row("2026-08-20T09:59:01Z", activity="PARKED_IN_CS"),
             row("2026-08-20T10:00:01Z", activity="GOING_HOME"),
+            row("2026-08-20T10:01:01Z", activity="GOING_HOME"),
+            row("2026-08-20T10:02:01Z", activity="GOING_HOME"),
+            row("2026-08-20T10:03:01Z", activity="GOING_HOME"),
+            row("2026-08-20T10:04:01Z", activity="GOING_HOME"),
             row("2026-08-20T10:05:01Z", activity="CHARGING"),
         ]
     )
@@ -429,6 +518,71 @@ def test_summary_calculates_today_mowing_and_average_return_duration():
     assert summary.median_return_minutes_7d == 4
     assert summary.p95_return_minutes_7d == 5
     assert summary.return_measurements_7d == 2
+
+
+@pytest.mark.parametrize("rows", [
+    [row("2026-09-09T09:00:00Z", activity="GOING_HOME"),
+     row("2026-09-09T09:30:00Z", activity="PARKED_IN_CS")],
+    [row("2026-09-09T09:00:00Z", activity="GOING_HOME"),
+     row("2026-09-09T09:30:00Z", activity="GOING_HOME"),
+     row("2026-09-09T09:31:00Z", activity="CHARGING")],
+    [row("2026-09-09T09:00:00Z", activity="MOWING"),
+     row("2026-09-09T09:30:00Z", activity="GOING_HOME"),
+     row("2026-09-09T09:31:00Z", activity="CHARGING")],
+])
+def test_return_journey_with_missing_telemetry_is_censored_including_its_tail(rows):
+    summary = summarize_report(parse_cycle_rows(rows), now_utc=datetime(2026, 9, 9, 10, tzinfo=timezone.utc), exception_count_24h=0)
+    assert summary.return_measurements_7d == 0
+    assert summary.average_return_minutes_7d is None
+    assert summary.median_return_minutes_7d is None
+    assert summary.p95_return_minutes_7d is None
+
+
+def test_a_new_observed_journey_after_a_censored_journey_is_counted():
+    rows = [row("2026-09-09T09:00:00Z", activity="GOING_HOME"),
+            row("2026-09-09T09:30:00Z", activity="CHARGING"),
+            row("2026-09-09T09:31:00Z", activity="MOWING"),
+            row("2026-09-09T09:32:00Z", activity="GOING_HOME"),
+            row("2026-09-09T09:33:00Z", activity="PARKED_IN_CS")]
+    summary = summarize_report(parse_cycle_rows(rows), now_utc=datetime(2026, 9, 9, 10, tzinfo=timezone.utc), exception_count_24h=0)
+    assert summary.return_measurements_7d == 1
+    assert summary.average_return_minutes_7d == 1
+
+
+def test_command_attempts_survive_later_false_state_samples_in_the_same_minute():
+    rows = [row("2026-09-09T09:00:01Z", sent=True),
+            row("2026-09-09T09:00:40Z", sent=True),
+            row("2026-09-09T09:00:59Z", sent=False)]
+    # Exact duplicate log records are not additional attempts; input order is
+    # irrelevant to the final state minute and to the preserved attempt list.
+    observations = parse_cycle_rows([rows[1], rows[2], rows[0], rows[0]])
+    assert len(observations) == 1
+    assert observations[0].command_sent is False
+    assert observations[0].timestamp_utc == datetime(2026, 9, 9, 9, 0, 59, tzinfo=timezone.utc)
+    summary = summarize_report(observations, now_utc=datetime(2026, 9, 9, 10, tzinfo=timezone.utc), exception_count_24h=0)
+    assert summary.command_count_24h == 2
+
+
+def test_duplicate_invocation_result_is_one_reported_attempt_but_retry_is_distinct():
+    original = {**row("2026-09-09T09:00:01Z", sent=True), "invocation_id": "test-invocation", "retry_count": 0,
+                "executed_at_utc": "2026-09-09T09:00:00Z"}
+    duplicate = {**original, "timestamp": "2026-09-09T09:01:01Z"}
+    retry = {**original, "timestamp": "2026-09-09T09:02:01Z", "retry_count": 1,
+             "executed_at_utc": "2026-09-09T09:02:00Z"}
+    summary = summarize_report(parse_cycle_rows([original, duplicate, retry]),
+                               now_utc=datetime(2026, 9, 9, 10, tzinfo=timezone.utc), exception_count_24h=0)
+    assert summary.command_count_24h == 2
+
+
+def test_command_period_boundaries_use_attempt_time_not_retained_state_minute():
+    rows = [row("2026-09-08T10:00:01Z", sent=True),
+            row("2026-09-08T10:00:59Z", sent=False),
+            row("2026-09-09T10:00:01Z", sent=True),
+            row("2026-09-09T10:00:59Z", sent=False)]
+    summary = summarize_report(parse_cycle_rows(rows), now_utc=datetime(2026, 9, 9, 10, 0, 30, tzinfo=timezone.utc), exception_count_24h=0)
+    # Yesterday's :01 is outside 24h; today's :01 counts despite a retained
+    # later state sample outside the evaluation end.
+    assert summary.command_count_24h == 1
 
 
 def test_paused_mower_does_not_turn_delayed_error_code_into_active_report_error():
@@ -555,13 +709,24 @@ def test_process_sends_once_and_marks_success(monkeypatch):
     assert store.marks == ["sent"]
     assert sent[0]["To"] == "thomas.rohde@ssv53.de"
     plain = sent[0].get_body(preferencelist=("plain",)).get_content()
-    assert "Bestätigte Abschlüsse (7 Tage)" in plain
+    html_body = sent[0].get_body(preferencelist=("html",)).get_content()
+    for body in (plain, html_body):
+        assert "Flächenabschlüsse laut Gerät (7 Tage)" in body
+        assert "Zusätzliche Abschlüsse – Schätzung (7 Tage)" in body
+        assert "Letzter geschätzter Abschluss" in body
+        assert "lastTimeCompleted" in body
+        assert "Zusätzliche Abschlüsse sind Schätzungen" in body
+        assert "Bestätigte Abschlüsse" not in body
+        assert "Bestätigte Flächenabschlüsse" not in body
     assert "Adaptive Planung – Schattenbetrieb" in plain
     assert "keine Gerätebefehle" in plain
     assert "Schattenplan bereit" in plain
     assert "Basisberegnung beibehalten" in plain
     assert "Prognosearchiv: vorübergehend nicht lesbar" in plain
     assert result["adaptive_execution_enabled"] is False
+    assert result["completed_area_cycles_7d"] == 0
+    assert result["inferred_area_cycles_7d"] == 0
+    assert result["estimated_area_cycles_7d"] == 0
 
     duplicate = process_daily_report(
         datetime(2026, 8, 20, 6, 0, tzinfo=timezone.utc),

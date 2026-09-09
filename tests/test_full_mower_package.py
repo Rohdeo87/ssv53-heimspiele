@@ -52,6 +52,8 @@ class FullMowerPackageTests(unittest.TestCase):
                     manifest["hydrawise_write_functions_present"]
                 )
                 self.assertIn("mower/full_mower.py", names)
+                self.assertIn("occupancy/training_calendar.py", names)
+                self.assertIn("occupancy/training_runtime.py", names)
                 self.assertNotIn("mower/full_failsafe.py", names)
                 self.assertIn("mower/husqvarna_start_actions.py", names)
 

@@ -42,6 +42,8 @@ class AzurePackageTests(unittest.TestCase):
                 self.assertIn("package-manifest.json", names)
                 self.assertIn("daily_safety_report.py", names)
                 self.assertIn("mower/irrigation_schedule.py", names)
+                self.assertIn("occupancy/training_calendar.py", names)
+                self.assertIn("occupancy/training_runtime.py", names)
                 self.assertIn("mower/controller.py", names)
                 self.assertIn("public/rasen.ics", names)
                 self.assertIn("public/kunstrasen.ics", names)

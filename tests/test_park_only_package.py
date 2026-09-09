@@ -77,6 +77,8 @@ class ParkOnlyPackageTests(unittest.TestCase):
                 self.assertIn("mower/husqvarna_actions.py", names)
                 self.assertIn("mower/park_only.py", names)
                 self.assertIn("occupancy/match_model.py", names)
+                self.assertIn("occupancy/training_calendar.py", names)
+                self.assertIn("occupancy/training_runtime.py", names)
                 self.assertIn("public/matches.json", names)
                 self.assertIn("public/kunstrasen.ics", names)
 

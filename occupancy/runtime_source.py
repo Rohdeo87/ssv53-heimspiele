@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from hashlib import sha256
 import json
 import os
+import uuid
 from pathlib import Path
 from typing import Any, Callable, Mapping
 
@@ -53,6 +54,34 @@ def _age_minutes(value: datetime, now_utc: datetime) -> int:
     return max(0, int((now_utc - value).total_seconds() // 60))
 
 
+def _packaged_source(
+    path: str, *, now_utc: datetime, environment: Mapping[str, str]
+) -> OccupancyMatchSource:
+    """Rendering a package does not refresh the age of its underlying feed."""
+    result = OccupancyMatchSource(path, "package", fresh=False)
+    if Path(path).suffix.casefold() != ".json":
+        return result  # A legacy ICS has no verified feed acquisition timestamp.
+    try:
+        data = Path(path).read_bytes()
+        payload = json.loads(data.decode("utf-8"))
+        generated_at = _parse_utc(str(payload["generatedAt"]), "generatedAt")
+        _validate_feed(data, expected_generated_at=generated_at)
+        result = replace(
+            result,
+            source_generated_at_utc=generated_at.isoformat(),
+            age_minutes=_age_minutes(generated_at, now_utc),
+        )
+        maximum = int(environment.get("SSV53_OCCUPANCY_MAX_AGE_MINUTES", "720"))
+        if 60 <= maximum <= 10080:
+            _validate_age(generated_at, now_utc, maximum)
+            result = replace(result, fresh=True)
+    except (OSError, UnicodeError, ValueError, TypeError, KeyError):
+        # The service performs full content validation. Missing provenance is
+        # exposed as unknown/stale, never as a fresh acquisition.
+        pass
+    return result
+
+
 def _safe_blob_path(value: Any, label: str) -> str:
     path = str(value or "").strip()
     if not path or path.startswith("/") or ".." in Path(path).parts:
@@ -82,13 +111,23 @@ def _validate_feed(data: bytes, *, expected_generated_at: datetime) -> None:
 
 def _atomic_write(path: Path, data: bytes) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary = path.with_name(path.name + f".{uuid.uuid4().hex}.tmp")
     temporary.write_bytes(data)
     os.replace(temporary, path)
 
 
 def _cache_paths(cache_dir: Path) -> tuple[Path, Path]:
     return cache_dir / "matches.json", cache_dir / "metadata.json"
+
+
+def _immutable_snapshot(cache_dir: Path, data: bytes) -> Path:
+    snapshot_id = _hash(data)
+    path = cache_dir / "snapshots" / snapshot_id / "matches.json"
+    if not path.is_file():
+        _atomic_write(path, data)
+    if path.read_bytes() != data:
+        raise RuntimeError("Inhaltsadressierter Belegungssnapshot ist inkonsistent.")
+    return path
 
 
 def _load_cache(
@@ -120,8 +159,9 @@ def _load_cache(
         if _hash(data) != metadata.get("occupancy_matches_sha256"):
             return None
         _validate_feed(data, expected_generated_at=source_generated_at)
+        snapshot_path = _immutable_snapshot(cache_dir, data)
         return OccupancyMatchSource(
-            matches_path=str(matches_path),
+            matches_path=str(snapshot_path),
             source_kind="azure_blob_cache",
             manifest_etag=metadata.get("manifest_etag"),
             published_at_utc=published_at.isoformat(),
@@ -199,8 +239,9 @@ def _download_current(
             "utf-8"
         ),
     )
+    snapshot_path = _immutable_snapshot(cache_dir, data)
     return OccupancyMatchSource(
-        matches_path=str(matches_path),
+        matches_path=str(snapshot_path),
         source_kind="azure_blob",
         manifest_etag=etag or None,
         published_at_utc=published_at.isoformat(),
@@ -236,7 +277,7 @@ def resolve_occupancy_match_source(
         environment.get("OCCUPANCY_MATCHES_PATH") or "public/matches.json"
     ).strip()
     if not _truthy(environment.get("SSV53_DYNAMIC_CONFIG_ENABLED", "false")):
-        return OccupancyMatchSource(packaged, "package")
+        return _packaged_source(packaged, now_utc=now_utc, environment=environment)
 
     account_url = str(environment.get("SSV53_CONFIG_STORAGE_ACCOUNT_URL") or "").strip()
     container_name = str(environment.get("SSV53_CONFIG_CONTAINER") or "").strip()

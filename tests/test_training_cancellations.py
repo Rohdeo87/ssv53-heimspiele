@@ -181,7 +181,8 @@ class TrainingCancellationTests(unittest.TestCase):
         self.assertIn("TRAINING_WIEDER_AKTIV", source)
         self.assertIn("Daten werden geladen", source)
         self.assertNotIn("api-key", source.casefold())
-        self.assertNotIn("bearer", source.casefold())
+        self.assertIn('"Authorization": "Bearer " + session.token', source)
+        self.assertNotRegex(source, r'Bearer [A-Za-z0-9_-]{20,}')
 
 
 if __name__ == "__main__":

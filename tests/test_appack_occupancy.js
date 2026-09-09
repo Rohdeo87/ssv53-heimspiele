@@ -47,6 +47,7 @@ function harness() {
     "function getContrastColor() { return '#fff'; }",
     "function buildAzureEventDescription(item) { return item.description || ''; }",
     extractFunction("normalizeOccupancyPerson"),
+    extractFunction("getClubWallClockParts"),
     extractFunction("toClubWallClockDate"),
     extractFunction("mapAzureOccupancyEvent"),
     extractFunction("enforceOccupancyGeometry"),
@@ -60,6 +61,47 @@ function harness() {
   ].join("\n\n");
   return new Function(source)();
 }
+
+function wallClock(date) {
+  const pad = (value) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+test("Verbindlicher Trainingskalender zeigt beide Plätze ohne Saisonwahl", () => {
+  const group = {hidden: false, style: {}};
+  const state = {activeSeason: "Winter", activeCalendarId: "kunstrasen", resources: []};
+  const persisted = [];
+  const ui = new Function("state", "document", "storageSet", [
+    "const SUMMER_RESOURCE_IDS=['rasen','kunstrasen']; const WINTER_RESOURCE_IDS=['kunstrasen'];",
+    "function storageKey(k){return k;} function ensureActiveCalendarSelection(){} function updateResources(){} function renderPlaceFilters(){}",
+    extractFunction("getAllowedCalendarIds"), extractFunction("applySharedTrainingCalendar"), extractFunction("setSeason"),
+    "return {applySharedTrainingCalendar, getAllowedCalendarIds, setSeason};"
+  ].join("\n"))(state, {querySelector: () => group}, (...args) => persisted.push(args));
+  ui.applySharedTrainingCalendar({training_calendar: {active: true}});
+  assert.deepEqual(ui.getAllowedCalendarIds(), ["rasen", "kunstrasen"]);
+  assert.equal(state.activeCalendarId, "all");
+  assert.equal(group.hidden, true);
+  assert.equal(group.style.display, "none");
+  ui.setSeason("Sommer");
+  assert.equal(state.activeSeason, "Winter");
+  state.activeCalendarId = "rasen";
+  ui.applySharedTrainingCalendar({training_calendar: {active: true}});
+  assert.equal(state.activeCalendarId, "rasen");
+  assert.equal(persisted.length, 1);
+  ui.applySharedTrainingCalendar({training_calendar: {active: false}});
+  assert.equal(group.hidden, false);
+  assert.equal(group.style.display, "");
+  assert.deepEqual(ui.getAllowedCalendarIds(), ["kunstrasen"]);
+});
+
+test("Unklare Trainingstermine nennen den Platzwart und behalten die Sperre", () => {
+  const text = new Function(extractFunction("getOccupancyFailureText") + ";return getOccupancyFailureText;")();
+  assert.match(text({code: "TRAINING_SOURCE_UNAVAILABLE"}), /Platzwart kontaktieren/);
+  assert.match(text({code: "TRAINING_SOURCE_UNAVAILABLE"}), /nicht freigeben/);
+  assert.doesNotMatch(text({code: "TRAINING_SOURCE_UNAVAILABLE"}), /Azure|SHA|Envelope|Internet/);
+  assert.match(text(new Error("raw technical details")), /erneut versuchen/);
+  assert.doesNotMatch(text(new Error("raw technical details")), /raw technical/);
+});
 
 test("Bedienelemente wechseln nur bei echtem Überlauf in den Großtextmodus", () => {
   assert.match(html, /html\.ssv-large-text #booking-controls/);
@@ -94,9 +136,10 @@ test("kurz verzögerte Spieldaten lassen den Kalender sichtbar", () => {
   assert.match(html, /#calendar-status\[data-state="warning"\]/);
 });
 
-test("Azure-Zeiten werden auf allen Geräten als Berliner Vereinszeit angezeigt", () => {
+test("Azure-Zeiten werden auf einem US-Gerät als Berliner Vereinszeit angezeigt", () => {
   const helper = extractFunction("toClubWallClockDate");
   const script = [
+    extractFunction("getClubWallClockParts"),
     helper,
     "const value = toClubWallClockDate('2026-08-20T18:30:00+02:00');",
     "process.stdout.write([value.getFullYear(), value.getMonth() + 1, value.getDate(), value.getHours(), value.getMinutes()].join('-'));"
@@ -126,8 +169,10 @@ test("Spiel blockiert occupancyStart bis occupancyEnd, zeigt aber start bis end"
     competitionFormat: "cup"
   });
 
-  assert.equal(mapped.start.toISOString(), "2026-08-21T16:00:00.000Z");
-  assert.equal(mapped.end.toISOString(), "2026-08-21T19:30:00.000Z");
+  assert.equal(wallClock(mapped.start), "2026-08-21T18:00");
+  assert.equal(wallClock(mapped.end), "2026-08-21T21:30");
+  assert.equal(mapped.extendedProps.occupancyStart, "2026-08-21T16:00:00.000Z");
+  assert.equal(mapped.extendedProps.occupancyEnd, "2026-08-21T19:30:00.000Z");
   assert.equal(mapped.extendedProps.eventKind, "match");
   assert.equal(Object.hasOwn(mapped, "source"), false);
   const visible = api.getVisibleEventTimes({
@@ -135,8 +180,8 @@ test("Spiel blockiert occupancyStart bis occupancyEnd, zeigt aber start bis end"
     end: mapped.end,
     extendedProps: mapped.extendedProps
   });
-  assert.equal(visible.start.toISOString(), "2026-08-21T17:00:00.000Z");
-  assert.equal(visible.end.toISOString(), "2026-08-21T18:30:00.000Z");
+  assert.equal(wallClock(visible.start), "2026-08-21T19:00");
+  assert.equal(wallClock(visible.end), "2026-08-21T20:30");
   assert.equal(
     api.getPopupTimeText({ start: mapped.start, end: mapped.end, extendedProps: mapped.extendedProps }),
     "Anstoß: 19:00 Uhr · Spielzeit: 19:00–20:30 Uhr · Platz gesperrt: 18:00–21:30 Uhr"
@@ -164,8 +209,8 @@ test("FullCalendar-Transformation erzwingt occupancyStart bis occupancyEnd", () 
     }
   });
 
-  assert.equal(transformed.start.toISOString(), "2026-08-21T16:00:00.000Z");
-  assert.equal(transformed.end.toISOString(), "2026-08-21T19:30:00.000Z");
+  assert.equal(wallClock(transformed.start), "2026-08-21T18:00");
+  assert.equal(wallClock(transformed.end), "2026-08-21T21:30");
   assert.match(html, /eventDataTransform:\s*enforceOccupancyGeometry/);
 });
 
@@ -182,22 +227,24 @@ test("reale C- und D-Juniorenspiele behalten jeweils Spiel- und Sperrzeit", () =
       resourceId: item.place,
       source: "match"
     });
-    assert.equal(mapped.start.toISOString(), new Date(item.occupancyStart).toISOString());
-    assert.equal(mapped.end.toISOString(), new Date(item.occupancyEnd).toISOString());
+    assert.equal(wallClock(mapped.start), item.occupancyStart.slice(0, 16));
+    assert.equal(wallClock(mapped.end), item.occupancyEnd.slice(0, 16));
+    assert.equal(mapped.extendedProps.occupancyStart, new Date(item.occupancyStart).toISOString());
+    assert.equal(mapped.extendedProps.occupancyEnd, new Date(item.occupancyEnd).toISOString());
     const event = {
       start: mapped.start,
       end: mapped.end,
       extendedProps: mapped.extendedProps
     };
     assert.equal(
-      api.getVisibleEventTimes(event).start.toISOString(),
-      new Date(item.start).toISOString()
+      wallClock(api.getVisibleEventTimes(event).start),
+      item.start.slice(0, 16)
     );
     assert.match(api.getPopupTimeText(event), /Platz gesperrt:/);
   });
 });
 
-test("Training behält seine echte Kalendergeometrie", () => {
+test("Training behält seine Berliner Kalendergeometrie und den echten Zeitpunkt", () => {
   const api = harness();
   const mapped = api.mapAzureOccupancyEvent({
     id: "training:1",
@@ -207,8 +254,10 @@ test("Training behält seine echte Kalendergeometrie", () => {
     start: "2026-08-21T17:00:00+02:00",
     end: "2026-08-21T18:30:00+02:00"
   });
-  assert.equal(mapped.start.toISOString(), "2026-08-21T15:00:00.000Z");
-  assert.equal(mapped.end.toISOString(), "2026-08-21T16:30:00.000Z");
+  assert.equal(wallClock(mapped.start), "2026-08-21T17:00");
+  assert.equal(wallClock(mapped.end), "2026-08-21T18:30");
+  assert.equal(mapped.extendedProps.displayStart, "2026-08-21T15:00:00.000Z");
+  assert.equal(mapped.extendedProps.displayEnd, "2026-08-21T16:30:00.000Z");
 });
 
 test("öffentliche Erstellerdaten werden vor der Kalenderanzeige strikt minimiert", () => {

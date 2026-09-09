@@ -1,0 +1,7 @@
+{
+  "coordination": {
+    "schema_version": 1,
+    "enabled": false,
+    "needs": []
+  }
+}

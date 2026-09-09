@@ -1,0 +1,46 @@
+{
+  "synthetic": true,
+  "deviceAcceptance": false,
+  "productionRequestsAllowed": false,
+  "records": [
+    {
+      "name": "mobile-reserved",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "fragment": "coordination",
+      "content": "JETZT\nBewässerung wird vorbereitet\nBitte warten. Der neue Start wird noch geprüft.",
+      "errors": [],
+      "waterStartVisible": false,
+      "disabledPlanActions": true,
+      "blockedNetworkRequests": 0
+    },
+    {
+      "name": "mobile-blocked",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "fragment": "coordination-blocked",
+      "content": "JETZT\nBewässerung wartet auf Prüfung\nBitte den Belegungsplan und die Bewässerung prüfen. Noch nicht starten.",
+      "errors": [],
+      "waterStartVisible": false,
+      "disabledPlanActions": true,
+      "blockedNetworkRequests": 0
+    },
+    {
+      "name": "desktop-reserved",
+      "viewport": {
+        "width": 1120,
+        "height": 950
+      },
+      "fragment": "coordination",
+      "content": "JETZT\nBewässerung wird vorbereitet\nBitte warten. Der neue Start wird noch geprüft.",
+      "errors": [],
+      "waterStartVisible": false,
+      "disabledPlanActions": true,
+      "blockedNetworkRequests": 0
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "approved_binding_sha256": null,
+  "authorization": "NONE: offline validation never approves, deploys, or activates.",
+  "cannot_be_physically_verified_before_activation": [
+    "installed_bytes",
+    "shadow_observation",
+    "supervised_pilot"
+  ],
+  "decision": "NOT_READY",
+  "errors": [
+    "approved_binding: exact head, ZIP, manifest, calendar, need and window are required",
+    "exact_head_ci: requires a successful receipt for this exact head",
+    "immutable_assumptions.training_calendar: receipt path or checksum is invalid",
+    "immutable_assumptions.approved_watering: receipt path or checksum is invalid",
+    "pre_activation_safety_evidence.field: receipt path or checksum is invalid",
+    "pre_activation_safety_evidence.station: receipt path or checksum is invalid",
+    "pre_activation_safety_evidence.native_schedule: receipt path or checksum is invalid",
+    "pre_activation_safety_evidence.controller_ownership: receipt path or checksum is invalid",
+    "final_operator_approval: must remain PENDING and bind the exact request; this validator never accepts APPROVED or LIVE"
+  ],
+  "full_unattended_rollout_requires": [
+    "installed_bytes",
+    "shadow_observation",
+    "supervised_pilot"
+  ],
+  "offline_limits": [
+    "does not attest installed remote bytes or physical device behavior"
+  ],
+  "operator_approval": "NOT_ACCEPTED",
+  "pre_activation_complete": false,
+  "release_mode": "LIMITED_SUPERVISED_FIRST_ACTIVATION",
+  "schema_version": 2
+}

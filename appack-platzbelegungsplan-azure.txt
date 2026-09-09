@@ -1860,6 +1860,15 @@ const TRAINING_CANCELLATION_API_URL =
 "https://func-ssv53platzpflege-prod-q7kbw54s.azurewebsites.net/api/training-cancellations";
 const TRAINER_OCCUPANCY_API_URL =
 "https://func-ssv53platzpflege-prod-q7kbw54s.azurewebsites.net/api/trainer-occupancies";
+function occupancyWriteHeaders() {
+let session = null;
+try { session = JSON.parse(sessionStorage.getItem("ssv53_platzwart_session_v1") || "null"); } catch (error) { session = null; }
+if (!session || !session.token || !session.expiresAt || new Date(session.expiresAt).getTime() <= Date.now() || !Number.isFinite(new Date(session.expiresAt).getTime())) {
+throw new Error("Für Belegungsänderungen ist eine aktuelle Platzwart-Anmeldung erforderlich. Bitte im Bereich Platzpflege anmelden. Trainerrollen allein erteilen keine Backendfreigabe.");
+}
+return {"Accept": "application/json", "Content-Type": "application/json", "Authorization": "Bearer " + session.token};
+}
+
 const OCCUPANCY_FETCH_TIMEOUT = 15000;
 const OCCUPANCY_FETCH_RETRIES = 2;
 const OCCUPANCY_RETRY_DELAY = 500;
@@ -2506,6 +2515,7 @@ return (month === 10 || month === 11 || month === 0 || month === 1)
 }
 
 function getAllowedCalendarIds() {
+if (state.sharedTrainingCalendar) return SUMMER_RESOURCE_IDS;
 return state.activeSeason === "Winter"
 ? WINTER_RESOURCE_IDS
 : SUMMER_RESOURCE_IDS;
@@ -4393,6 +4403,25 @@ function updateSeasonButtons() {
 updateButtonGroup(state.activeSeason ? elements.seasonButtons : [], "data-season", state.activeSeason);
 }
 
+function applySharedTrainingCalendar(payload) {
+const shared = Boolean(payload && payload.training_calendar && payload.training_calendar.active === true);
+const changed = shared !== Boolean(state.sharedTrainingCalendar);
+state.sharedTrainingCalendar = shared;
+const group = document.querySelector(".ssv-control-group--season");
+if (group) {
+group.hidden = shared;
+group.style.display = shared ? "none" : "";
+}
+if (!changed) return;
+// A previously selected winter view must not hide confirmed grass training.
+state.activeCalendarId = "all";
+storageSet(storageKey("calendar:" + state.activeSeason), "all");
+ensureActiveCalendarSelection();
+updateResources();
+renderPlaceFilters();
+if (state.calendar) state.calendar.setOption("resources", state.resources);
+}
+
 function updateViewButtons() {
 updateButtonGroup(elements.viewButtons, "data-calendar-view", state.activeView);
 }
@@ -4629,7 +4658,9 @@ if (!response.ok) {
 const detail = payload && payload.error
 ? String(payload.error)
 : "HTTP " + response.status;
-throw new Error("Azure-Belegungsdienst: " + detail);
+const failure = new Error("Azure-Belegungsdienst: " + detail);
+failure.code = payload && payload.code;
+throw failure;
 }
 
 if (
@@ -4706,10 +4737,8 @@ rows.push(
 return rows.join("");
 }
 
-function toClubWallClockDate(value) {
-const instant = value instanceof Date ? value : new Date(value);
-if (Number.isNaN(instant.getTime())) return new Date(NaN);
-const parts = new Intl.DateTimeFormat("en-GB", {
+function getClubWallClockParts(instant) {
+return new Intl.DateTimeFormat("en-GB", {
 timeZone: "Europe/Berlin",
 year: "numeric",
 month: "2-digit",
@@ -4722,7 +4751,15 @@ hourCycle: "h23"
 if (part.type !== "literal") result[part.type] = Number(part.value);
 return result;
 }, {});
-return new Date(
+}
+
+function toClubWallClockDate(value) {
+const instant = value instanceof Date ? value : new Date(value);
+if (Number.isNaN(instant.getTime())) return new Date(NaN);
+const parts = getClubWallClockParts(instant);
+// Only the local FullCalendar display uses this wall-clock carrier.
+// It must never be sent as an actual instant to Azure.
+const result = new Date(
 parts.year,
 parts.month - 1,
 parts.day,
@@ -4730,6 +4767,42 @@ parts.hour,
 parts.minute,
 parts.second
 );
+if (result.getFullYear() !== parts.year || result.getMonth() + 1 !== parts.month ||
+result.getDate() !== parts.day || result.getHours() !== parts.hour ||
+result.getMinutes() !== parts.minute || result.getSeconds() !== parts.second) {
+throw new Error("Die Gerätezeitzone kann die Berliner Uhrzeit dieses Termins bei der Zeitumstellung nicht unverändert darstellen.");
+}
+return result;
+}
+
+function parseClubDateTime(value) {
+const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value);
+if (!match) return new Date(NaN);
+const requested = match.slice(1).map(Number);
+const wallTime = Date.UTC(requested[0], requested[1] - 1, requested[2], requested[3], requested[4]);
+const normalized = new Date(wallTime);
+if (normalized.getUTCFullYear() !== requested[0] || normalized.getUTCMonth() + 1 !== requested[1] ||
+normalized.getUTCDate() !== requested[2] || normalized.getUTCHours() !== requested[3] ||
+normalized.getUTCMinutes() !== requested[4]) return new Date(NaN);
+
+// Discover the IANA offsets on both sides of a possible Berlin DST change.
+// A gap has no matching instant; a fold has two. Neither is chosen implicitly.
+const offsets = new Set();
+[-1, 0, 1].forEach(function (day) {
+const sample = new Date(wallTime + day * 24 * 60 * 60 * 1000);
+const parts = getClubWallClockParts(sample);
+offsets.add(Date.UTC(parts.year, parts.month - 1, parts.day,
+parts.hour, parts.minute, parts.second) - sample.getTime());
+});
+const candidates = [];
+offsets.forEach(function (offset) {
+const instant = new Date(wallTime - offset);
+const parts = getClubWallClockParts(instant);
+if (parts.year === requested[0] && parts.month === requested[1] &&
+parts.day === requested[2] && parts.hour === requested[3] &&
+parts.minute === requested[4] && parts.second === 0) candidates.push(instant);
+});
+return candidates.length === 1 ? candidates[0] : new Date(NaN);
 }
 
 function mapAzureOccupancyEvent(item) {
@@ -4798,6 +4871,9 @@ const publicStart = toClubWallClockDate(publicStartInstant);
 const publicEnd = toClubWallClockDate(publicEndInstant);
 const occupancyStart = toClubWallClockDate(occupancyStartInstant);
 const occupancyEnd = toClubWallClockDate(occupancyEndInstant);
+if (publicEnd <= publicStart || occupancyEnd <= occupancyStart) {
+throw new Error("Die Berliner Uhrzeiten dieses Termins sind im Kalender wegen der Zeitumstellung nicht eindeutig darstellbar.");
+}
 
 const extendedProps = {
 calendarId: resourceId,
@@ -4818,10 +4894,10 @@ team: String(item.team || ""),
 teamCategory: String(item.teamCategory || ""),
 area: String(item.area || ""),
 kickoff: isOfficialMatch ? String(item.kickoff || item.start || "") : "",
-displayStart: publicStart.toISOString(),
-displayEnd: publicEnd.toISOString(),
-occupancyStart: occupancyStart.toISOString(),
-occupancyEnd: occupancyEnd.toISOString(),
+displayStart: publicStartInstant.toISOString(),
+displayEnd: publicEndInstant.toISOString(),
+occupancyStart: occupancyStartInstant.toISOString(),
+occupancyEnd: occupancyEndInstant.toISOString(),
 matchDurationMinutes: Number(item.matchDurationMinutes || 0),
 durationRule: String(item.durationRule || ""),
 competitionFormat: String(item.competitionFormat || ""),
@@ -4868,7 +4944,10 @@ const end = new Date(props.occupancyEnd || "");
 if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
 throw new Error("Spiel enthält keine gültige Sperrzeit");
 }
-return Object.assign({}, eventData, { start: start, end: end });
+return Object.assign({}, eventData, {
+start: toClubWallClockDate(start),
+end: toClubWallClockDate(end)
+});
 }
 
 function filterMappedEventsToRange(list, rangeStart, rangeEnd) {
@@ -4965,6 +5044,13 @@ state.calendar.updateSize();
 });
 }
 
+function getOccupancyFailureText(error) {
+if (error && error.code === "TRAINING_SOURCE_UNAVAILABLE") {
+return "Die Trainingstermine müssen geprüft werden. Bitte den Platzwart kontaktieren. Den Platz bis dahin nicht freigeben.";
+}
+return "Die Belegungsdaten sind gerade nicht verfügbar. Bitte Internetverbindung prüfen und erneut versuchen.";
+}
+
 async function loadRangeEvents(rangeStart, rangeEnd) {
 const token = ++state.fetchToken;
 setStatus("loading", "Daten werden geladen", false);
@@ -4974,6 +5060,7 @@ const payload = await fetchOccupancyPayload(rangeStart, rangeEnd);
 if (token !== state.fetchToken) return;
 
 updateAzureResourceMetadata(payload.resources);
+applySharedTrainingCalendar(payload);
 const events = payload.events.map(mapAzureOccupancyEvent);
 const visibleEvents = filterMappedEventsToRange(
 deduplicateMappedEvents(events),
@@ -5006,8 +5093,7 @@ updateMatchResourceVisibility(new Set());
 if (state.calendar) state.calendar.removeAllEvents();
 setStatus(
 "error",
-"Die Belegungsdaten konnten nicht von Azure geladen werden. " +
-"Bitte Internetverbindung prüfen und erneut versuchen.",
+getOccupancyFailureText(error),
 true
 );
 
@@ -5048,6 +5134,7 @@ applyFiltersAndReload();
 }
 
 function setSeason(season) {
+if (state.sharedTrainingCalendar) return;
 if (season !== "Sommer" && season !== "Winter") return;
 if (season === state.activeSeason) return;
 
@@ -5141,8 +5228,8 @@ return formatTime(start) + "–" + formatTime(end) + " Uhr";
 function getVisibleEventTimes(event) {
 const props = event && event.extendedProps || {};
 if (props.sourceType === "official-match-feed") {
-const start = new Date(props.displayStart || props.kickoff || "");
-const end = new Date(props.displayEnd || "");
+const start = toClubWallClockDate(props.displayStart || props.kickoff || "");
+const end = toClubWallClockDate(props.displayEnd || "");
 if (!Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime())) {
 return { start: start, end: end };
 }
@@ -5178,8 +5265,8 @@ state.calendar.scrollToTime(TODAY_AFTERNOON_SCROLL_TIME);
 function getOccupancyEventTimes(event) {
 const props = event && event.extendedProps || {};
 if (props.sourceType === "official-match-feed") {
-const start = new Date(props.occupancyStart || "");
-const end = new Date(props.occupancyEnd || "");
+const start = toClubWallClockDate(props.occupancyStart || "");
+const end = toClubWallClockDate(props.occupancyEnd || "");
 if (!Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime())) {
 return { start: start, end: end };
 }
@@ -5193,7 +5280,7 @@ end: event && event.end || null
 function getCalendarEventTimeText(event) {
 const props = event && event.extendedProps || {};
 if (props.sourceType === "official-match-feed") {
-const kickoff = new Date(props.kickoff || props.displayStart || "");
+const kickoff = toClubWallClockDate(props.kickoff || props.displayStart || "");
 if (!Number.isNaN(kickoff.getTime())) {
 return "Anstoß " + formatTime(kickoff) + " Uhr";
 }
@@ -5211,7 +5298,7 @@ if (!visibleTimes.start || !visibleTimes.end) return "";
 
 const props = event && event.extendedProps || {};
 if (props.sourceType === "official-match-feed") {
-const kickoff = new Date(props.kickoff || props.displayStart || "");
+const kickoff = toClubWallClockDate(props.kickoff || props.displayStart || "");
 const occupancy = getOccupancyEventTimes(event);
 if (
 !Number.isNaN(kickoff.getTime()) &&
@@ -6330,15 +6417,23 @@ return (conflicts || []).map(function (item) {
 const conflictStart = new Date(item.start);
 const conflictEnd = new Date(item.end);
 return "• " + item.title + " (" +
-conflictStart.toLocaleString("de-DE", {dateStyle: "short", timeStyle: "short"}) +
-" - " + conflictEnd.toLocaleTimeString("de-DE", {hour: "2-digit", minute: "2-digit"}) + ")";
+conflictStart.toLocaleString("de-DE", {dateStyle: "short", timeStyle: "short", timeZone: "Europe/Berlin"}) +
+" - " + conflictEnd.toLocaleTimeString("de-DE", {hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin"}) + ")";
 }).join("\n");
 }
 
 function openTrainerOccupancyMoveDialog() {
-const event = state.currentDialogEvent;
-if (!event || elements.trainerOccupancyMove.hidden) return;
-const props = event.extendedProps || {};
+const selectedEvent = state.currentDialogEvent;
+if (!selectedEvent || elements.trainerOccupancyMove.hidden) return;
+const props = selectedEvent.extendedProps || {};
+// The move form and duration arithmetic use the original Azure instants,
+// not the local FullCalendar wall-clock dates.
+const event = {
+title: selectedEvent.title,
+start: new Date(props.displayStart),
+end: new Date(props.displayEnd),
+extendedProps: props
+};
 const form = elements.trainerOccupancyForm;
 state.trainerOccupancyMoveEvent = event;
 form.reset();
@@ -6412,7 +6507,7 @@ confirmation: "TRAINER_BELEGUNG_VERSCHIEBEN"
 };
 const sendRequest = function () { return fetch(TRAINER_OCCUPANCY_API_URL, {
 method: "POST", mode: "cors", cache: "no-store", credentials: "omit",
-headers: {"Accept": "application/json", "Content-Type": "text/plain;charset=UTF-8"},
+headers: occupancyWriteHeaders(),
 body: JSON.stringify(requestBody)
 }); };
 let response = await sendRequest();
@@ -6469,7 +6564,7 @@ const randomPart = window.crypto && typeof window.crypto.randomUUID === "functio
 ? window.crypto.randomUUID() : Date.now().toString(36);
 const response = await fetch(TRAINER_OCCUPANCY_API_URL, {
 method: "POST", mode: "cors", cache: "no-store", credentials: "omit",
-headers: {"Accept": "application/json", "Content-Type": "text/plain;charset=UTF-8"},
+headers: occupancyWriteHeaders(),
 body: JSON.stringify({
 action: "delete",
 commandId: "trainer-delete:" + randomPart,
@@ -6525,10 +6620,7 @@ method: "POST",
 mode: "cors",
 cache: "no-store",
 credentials: "omit",
-headers: {
-"Accept": "application/json",
-"Content-Type": "text/plain;charset=UTF-8"
-},
+headers: occupancyWriteHeaders(),
 body: JSON.stringify({
 action: "delete",
 commandId: "trainer-delete:" + randomPart,
@@ -6555,11 +6647,7 @@ method: "POST",
 mode: "cors",
 cache: "no-store",
 credentials: "omit",
-headers: {
-"Accept": "application/json",
-
-"Content-Type": "text/plain;charset=UTF-8"
-},
+headers: occupancyWriteHeaders(),
 body: JSON.stringify({
 action: cancelled ? "restore" : "cancel",
 eventId: event.extendedProps.occurrenceId,
@@ -6660,16 +6748,17 @@ function updateTrainerOccupancyAvailability() {
 elements.trainerAddOccupancy.hidden = !state.canCreateTrainerOccupancies;
 }
 
-function localDateTimeValue(date) {
+function clubDateTimeValue(date) {
+const parts = getClubWallClockParts(date);
 const pad = function (value) { return String(value).padStart(2, "0"); };
 return [
-date.getFullYear(), "-", pad(date.getMonth() + 1), "-", pad(date.getDate()),
-"T", pad(date.getHours()), ":", pad(date.getMinutes())
+parts.year, "-", pad(parts.month), "-", pad(parts.day),
+"T", pad(parts.hour), ":", pad(parts.minute)
 ].join("");
 }
 
 function setTrainerOccupancyDateTime(form, prefix, date) {
-const value = localDateTimeValue(date).split("T");
+const value = clubDateTimeValue(date).split("T");
 form.elements[prefix + "Datum"].value = value[0];
 form.elements[prefix + "Zeit"].value = value[1];
 }
@@ -6677,7 +6766,7 @@ form.elements[prefix + "Zeit"].value = value[1];
 function readTrainerOccupancyDateTime(form, prefix) {
 const date = String(form.elements[prefix + "Datum"].value || "");
 const time = String(form.elements[prefix + "Zeit"].value || "");
-return new Date(date + "T" + time);
+return parseClubDateTime(date + "T" + time);
 }
 
 function suggestTrainerOccupancyEnd() {
@@ -6708,8 +6797,8 @@ item.hidden = false;
 });
 elements.trainerOccupancyTitle.textContent = "Belegung hinzufügen";
 elements.trainerOccupancySubmit.textContent = "Termin anlegen";
-const start = new Date();
-start.setMinutes(Math.ceil(start.getMinutes() / 30) * 30, 0, 0);
+const halfHour = 30 * 60 * 1000;
+const start = new Date(Math.ceil(Date.now() / halfHour) * halfHour);
 const end = new Date(start.getTime() + 60 * 60 * 1000);
 setTrainerOccupancyDateTime(form, "belegungStart", start);
 setTrainerOccupancyDateTime(form, "belegungEnde", end);
@@ -6754,7 +6843,7 @@ Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) ||
 end <= start || end - start > maximumDuration
 ) {
 elements.trainerOccupancyStatus.textContent =
-"Bitte einen gültigen Zeitraum von höchstens 14 Tagen wählen.";
+"Bitte einen gültigen Zeitraum von höchstens 14 Tagen in Berliner Ortszeit wählen. Nicht vorhandene oder doppelte Uhrzeiten bei der Zeitumstellung sind nicht zulässig.";
 elements.trainerOccupancyStatus.dataset.error = "true";
 elements.trainerOccupancyStatus.hidden = false;
 return;
@@ -6802,22 +6891,13 @@ method: "POST",
 mode: "cors",
 cache: "no-store",
 credentials: "omit",
-headers: {
-"Accept": "application/json",
-"Content-Type": "text/plain;charset=UTF-8"
-},
+headers: occupancyWriteHeaders(),
 body: JSON.stringify(requestBody)
 }); };
 let response = await sendRequest();
 let payload = await response.json().catch(function () { return {}; });
 if (response.status === 409 && payload.code === "OCCUPANCY_CONFLICT") {
-const conflictText = (payload.conflicts || []).map(function (item) {
-const conflictStart = new Date(item.start);
-const conflictEnd = new Date(item.end);
-return "• " + item.title + " (" +
-conflictStart.toLocaleString("de-DE", {dateStyle: "short", timeStyle: "short"}) +
-" – " + conflictEnd.toLocaleTimeString("de-DE", {hour: "2-digit", minute: "2-digit"}) + ")";
-}).join("\n");
+const conflictText = formatOccupancyConflicts(payload.conflicts);
 if (!(await requestActionConfirmation(
 "Der Termin überschneidet sich mit:\n\n" + conflictText +
 "\n\nTrotzdem speichern?",
@@ -7276,6 +7356,7 @@ Hinweis (optional)
 <textarea name="belegungBeschreibung" maxlength="500"></textarea>
 </label>
 <p class="trainer-occupancy-hint">
+Alle Uhrzeiten gelten für Schönwalde (Berliner Ortszeit).
 Kunstrasen-Einträge erscheinen in Sommer und Winter. Auf dem Rasen
 wird der Mäher 30 Minuten vorher geparkt und frühestens 30 Minuten
 nach Ende wieder freigegeben.

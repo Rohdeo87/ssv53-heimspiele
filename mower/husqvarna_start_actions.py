@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -13,6 +14,9 @@ from mower.husqvarna import (
 )
 
 
+BeforeSend = Callable[[], int]
+
+
 def start_in_work_area(
     client_id: str,
     client_secret: str,
@@ -21,8 +25,9 @@ def start_in_work_area(
     duration_minutes: int,
     *,
     timeout: int = 30,
+    before_send: BeforeSend | None = None,
 ) -> dict[str, Any]:
-    """Startet genau einen Arbeitsbereich für eine begrenzte Dauer."""
+    """Startet einen Arbeitsbereich; the optional fence runs after OAuth."""
 
     client_id = client_id.strip()
     client_secret = client_secret.strip()
@@ -39,6 +44,16 @@ def start_in_work_area(
         )
 
     token = get_access_token(client_id, client_secret, timeout=timeout)
+
+    # OAuth can take long enough for a previously valid decision or its source
+    # observations to expire.  This hook deliberately runs after token fetch
+    # and immediately before building/sending the action request.
+    if before_send is not None:
+        duration_minutes = before_send()
+    if isinstance(duration_minutes, bool) or not 1 <= int(duration_minutes) <= 1440:
+        raise HusqvarnaError(
+            "Die vor dem Senden bestätigte Startdauer muss zwischen 1 und 1440 Minuten liegen."
+        )
 
     payload = json.dumps(
         {

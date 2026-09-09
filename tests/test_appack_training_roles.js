@@ -277,16 +277,25 @@ test("Belegungsplan nutzt Appacks profile_json und prüft auch den Handler", () 
   assert.match(html, /id="training-cancellation-action"[\s\S]*?hidden/);
 });
 
-test("Trainingsabsage verwendet einen CORS-safelisted POST ohne Preflight", () => {
+test("Trainingsabsage übermittelt ausschließlich eine aktuelle angemeldete Session", () => {
   const cancellationHandler = extractFunction("changeTrainingCancellation");
   assert.match(
     cancellationHandler,
-    /"Content-Type": "text\/plain;charset=UTF-8"/
+    /headers: occupancyWriteHeaders\(\)/
   );
   assert.doesNotMatch(
     cancellationHandler,
     /"Content-Type": "application\/json"/
   );
+});
+
+test("Belegungsänderungen geben fehlende, kaputte und abgelaufene Sitzungen nicht weiter", () => {
+  const readHeaders = value => new Function("sessionStorage", extractFunction("occupancyWriteHeaders") + "\nreturn occupancyWriteHeaders;")({getItem: () => value})();
+  for (const value of [null, "broken", "{}", JSON.stringify({token:"example",expiresAt:"invalid"}), JSON.stringify({token:"example",expiresAt:"2000-01-01T00:00:00Z"})]) {
+    assert.throws(() => readHeaders(value), /aktuelle Platzwart-Anmeldung/);
+  }
+  assert.equal(readHeaders(JSON.stringify({token:"signed-at-login",expiresAt:"2099-01-01T00:00:00Z"})).Authorization, "Bearer signed-at-login");
+  assert.equal((html.match(/headers: occupancyWriteHeaders\(\)/g) || []).length, 5);
 });
 
 test("Absageaktion ist rot und zeigt zustandsabhängige Symbole", () => {
@@ -355,7 +364,7 @@ test("nur Trainer können eine Appack-Belegung anlegen", () => {
   assert.match(opener, /!state\.canCreateTrainerOccupancies/);
   assert.match(saver, /!state\.canCreateTrainerOccupancies/);
   assert.match(saver, /fetch\(TRAINER_OCCUPANCY_API_URL/);
-  assert.match(saver, /"Content-Type": "text\/plain;charset=UTF-8"/);
+  assert.match(saver, /headers: occupancyWriteHeaders\(\)/);
   assert.match(saver, /confirmation: "TRAINER_BELEGUNG_SPEICHERN"/);
   assert.match(saver, /overlapConfirmation = "UEBERSCHNEIDUNG_TROTZDEM_SPEICHERN"/);
   assert.match(html, /id="trainer-occupancy-delete"[^>]*hidden/);

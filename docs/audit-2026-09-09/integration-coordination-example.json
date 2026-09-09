@@ -1,0 +1,189 @@
+{
+  "evidence": "synthetic fixture; no live observations or device calls",
+  "inputs": {
+    "cycle": {
+      "executed_at_utc": "2026-09-15T02:00:00+00:00",
+      "command_sent": false,
+      "details": {
+        "mower": {
+          "mower_id": "m1",
+          "activity": "CHARGING",
+          "connected": true,
+          "error_code": 0,
+          "state": "IN_OPERATION",
+          "status_timestamp_ms": 1789437600000
+        },
+        "hydrawise": {
+          "zones": [
+            {
+              "relay_id": 2,
+              "run_seconds": 600,
+              "scheduled_start_utc": "2026-09-15T03:30:00+00:00"
+            },
+            {
+              "relay_id": 1,
+              "run_seconds": 1200,
+              "scheduled_start_utc": "2026-09-15T04:00:00+00:00"
+            }
+          ],
+          "safety": {
+            "available": true,
+            "fresh": true,
+            "relay_set_valid": true,
+            "active_zone_count": 0,
+            "observed_at_utc": "2026-09-15T02:00:00+00:00"
+          }
+        },
+        "coordination_shadow_input": {
+          "schema_version": 1,
+          "captured_at_utc": "2026-09-15T02:00:00+00:00",
+          "complete_from_utc": "2026-09-15T00:00:00+00:00",
+          "complete_until_utc": "2026-09-16T02:00:00+00:00",
+          "occupancy_complete": true,
+          "state_available": true,
+          "manual_stop": false,
+          "uncertain_start": false,
+          "occupancy": []
+        }
+      }
+    },
+    "previous": {
+      "executed_at_utc": "2026-09-15T01:59:00+00:00",
+      "command_sent": false,
+      "details": {
+        "mower": {
+          "mower_id": "m1",
+          "activity": "CHARGING",
+          "connected": true,
+          "error_code": 0,
+          "state": "IN_OPERATION",
+          "status_timestamp_ms": 1789437540000
+        },
+        "hydrawise": {
+          "zones": [
+            {
+              "relay_id": 2,
+              "run_seconds": 600,
+              "scheduled_start_utc": "2026-09-15T03:30:00+00:00"
+            },
+            {
+              "relay_id": 1,
+              "run_seconds": 1200,
+              "scheduled_start_utc": "2026-09-15T04:00:00+00:00"
+            }
+          ],
+          "safety": {
+            "available": true,
+            "fresh": true,
+            "relay_set_valid": true,
+            "active_zone_count": 0,
+            "observed_at_utc": "2026-09-15T02:00:00+00:00"
+          }
+        },
+        "coordination_shadow_input": {
+          "schema_version": 1,
+          "captured_at_utc": "2026-09-15T02:00:00+00:00",
+          "complete_from_utc": "2026-09-15T00:00:00+00:00",
+          "complete_until_utc": "2026-09-16T02:00:00+00:00",
+          "occupancy_complete": true,
+          "state_available": true,
+          "manual_stop": false,
+          "uncertain_start": false,
+          "occupancy": []
+        }
+      }
+    },
+    "need": {
+      "schema_version": 1,
+      "need_id": "n1",
+      "demand_reference": "approved",
+      "mower_id": "m1",
+      "required": true,
+      "timing_window_approved": true,
+      "station_and_paths_checked": true,
+      "earliest_start_utc": "2026-09-15T02:45:00+00:00",
+      "original_start_utc": "2026-09-15T03:30:00+00:00",
+      "latest_start_utc": "2026-09-15T04:00:00+00:00",
+      "valid_until_utc": "2026-09-15T04:00:00+00:00",
+      "zones": [
+        {
+          "relay_id": 2,
+          "run_seconds": 600,
+          "scheduled_start_utc": "2026-09-15T03:30:00+00:00"
+        },
+        {
+          "relay_id": 1,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-15T04:00:00+00:00"
+        }
+      ],
+      "source_plan_id": "fd7ed01f37dec2627fa9df9571c8adfc3cce2ef138cae868cff97b27bb3417e5"
+    },
+    "charging_end_estimate": {
+      "estimated": true,
+      "source": "OBSERVED_COMPLETED_CHARGING_SECTIONS",
+      "sampleCount": 3,
+      "daysCovered": 2,
+      "at": "2026-09-15T04:00:00+00:00"
+    }
+  },
+  "proposal": {
+    "schema_version": 1,
+    "shadow_only": true,
+    "execution_available": false,
+    "permission_to_start": false,
+    "status": "SHADOW_PROPOSAL",
+    "blockers": [],
+    "potential_freed_field_minutes": 45.0,
+    "productive_mowing_gain_minutes": null,
+    "selected_start_utc": "2026-09-15T02:45:00+00:00",
+    "water_minutes_unchanged": 30.0,
+    "need_id": "n1",
+    "input_sha256": "2c9833af1542cf477a47bc6cd0ca070970bc444efc0505b8d0338f113bb86bf7",
+    "baseline_start_utc": "2026-09-15T03:30:00+00:00",
+    "baseline_dry_until_utc": "2026-09-15T06:50:00+00:00",
+    "proposed_dry_until_utc": "2026-09-15T06:05:00+00:00",
+    "charging_end_estimated_utc": "2026-09-15T04:00:00+00:00",
+    "estimated": true,
+    "interpretation": "Upper bound on freed field time; additional energy, travel and minimum mowing windows are not deducted.",
+    "execution_prerequisites": [
+      "MOWER_RESTART_INHIBITION_CONFIRMED",
+      "ORIGINAL_SCHEDULE_SUPPRESSION_CONFIRMED",
+      "REVALIDATE_IMMEDIATELY_BEFORE_START",
+      "SUPERVISED_PILOT_ACCEPTED"
+    ]
+  },
+  "draft": {
+    "schema_version": 1,
+    "status": "DRAFT",
+    "permission_to_start": false,
+    "execution_available": false,
+    "queued_device_action": null,
+    "request_id": "fe4323c0ab9191762b2f388a0de83990403facbf5325322f21e2afe6c21a0f0c",
+    "need_id": "n1",
+    "source_plan_id": "fd7ed01f37dec2627fa9df9571c8adfc3cce2ef138cae868cff97b27bb3417e5",
+    "selected_start_utc": "2026-09-15T02:45:00+00:00",
+    "valid_until_utc": "2026-09-15T04:00:00+00:00",
+    "drying_minutes": 150,
+    "water_minutes_unchanged": 30.0,
+    "zones": [
+      {
+        "relay_id": 2,
+        "run_seconds": 600,
+        "offset_seconds": 0,
+        "scheduled_start_utc": "2026-09-15T02:45:00+00:00"
+      },
+      {
+        "relay_id": 1,
+        "run_seconds": 1200,
+        "offset_seconds": 1800,
+        "scheduled_start_utc": "2026-09-15T03:15:00+00:00"
+      }
+    ],
+    "required_consumer_gates": [
+      "ORIGINAL_SCHEDULE_SUPPRESSION_CONFIRMED",
+      "MOWER_RESTART_INHIBITION_CONFIRMED",
+      "REVALIDATE_IMMEDIATELY_BEFORE_START"
+    ]
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "source_commit": "1b0fefa1cc9f2f2a5098de2c8bcc107a94bb0e71",
+  "path": "dist/ssv53-platzpflege-audit-20260909-source.zip",
+  "sha256": "2598eee0470262ae5ba84a8c03b1bd0adc14c504cd35cdead9317ed3bea14c33",
+  "file_count": 47,
+  "all_manifest_file_hashes_verified": true,
+  "manifest_sha256": "bcc1d852d4d1bdffb0fe05afda6c9909d8d193279694de9b3505ac69f99d8e93",
+  "entrypoint_sha256": "24c45c1af7eb527eaa2eeb672666787e707f7dbe56a8638f0d5d0a06d148d8fa",
+  "remote_build_required": true,
+  "deployed": false,
+  "installed": false,
+  "new_optimizer_connected": false
+}

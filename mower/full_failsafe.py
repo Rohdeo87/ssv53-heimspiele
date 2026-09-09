@@ -15,6 +15,16 @@ from mower.decision import (
     PARK_OVERRIDE_ACTIONS,
 )
 from mower.dry_run import run_read_only_cycle
+from mower.config_source import InputUnavailable
+from mower.input_failure_guard import run_input_failure_guard
+from mower.coordination_request import canonical_schedule_id as coordination_source_plan_id
+from mower.coordination_execution import (
+    consume_request as consume_coordination_request,
+    enabled as coordination_execution_enabled,
+    mark_terminal as mark_coordination_terminal,
+    reserve as reserve_coordination,
+    start_authorized as coordination_start_authorized,
+)
 from mower.cutting_height import (
     cutting_height_mm_to_percent,
     supports_metric_cutting_height,
@@ -23,6 +33,7 @@ from mower.husqvarna_actions import park_until_further_notice
 from mower.husqvarna_cutting_height_actions import set_work_area_cutting_height
 from mower.husqvarna_statistics_actions import reset_cutting_blade_usage_time
 from mower.husqvarna_start_actions import start_in_work_area
+from mower.start_dispatch_guard import StartDispatchBlocked, prepare_start_dispatch
 from mower.hydrawise import (
     evaluate_continuous_clear_confirmation,
     parse_relay_id_allowlist,
@@ -36,8 +47,14 @@ from mower.irrigation_schedule import (
     parse_utc as parse_irrigation_schedule_utc,
     START_BLOCKING_SCHEDULE_STATUSES,
 )
+from mower.irrigation_operating_window import (
+    OperatingWindowResult,
+    operating_bounds,
+    validate_fresh_start,
+    validate_zone_sequence,
+)
 from mower.runtime import ControlMode, CycleResult, RuntimeSettings
-from mower.safety import CommandIntent, evaluate_command_gate
+from mower.safety import CommandIntent, evaluate_command_gate, occupancy_override_allowed
 from mower.state import AutomationState
 from mower.state_store import AzureTableStateStore, StateConflictError, StateStore
 
@@ -51,6 +68,8 @@ StartZoneSender = Callable[[str, int, int, str | int | None], dict[str, Any]]
 StopZoneSender = Callable[[str, int, str | int | None], dict[str, Any]]
 CuttingHeightSender = Callable[[str, str, str, int, int], dict[str, Any]]
 BladeUsageResetSender = Callable[[str, str, str], dict[str, Any]]
+InputFailureRunner = Callable[..., CycleResult]
+Clock = Callable[[], datetime]
 
 PARKABLE_ACTIVITIES = frozenset({"MOWING", "LEAVING"})
 PARK_COMMAND_ACTIVITIES = frozenset(
@@ -455,6 +474,7 @@ def _validated_upcoming_plan(
     expected_zone_count: int,
     expected_relay_ids: frozenset[int],
     max_lead_minutes: int,
+    preserve_approved_gaps: bool = False,
 ) -> tuple[str, list[dict[str, Any]]]:
     raw_zones = _as_dict(details.get("hydrawise")).get("zones")
     if not isinstance(raw_zones, list) or len(raw_zones) != expected_zone_count:
@@ -510,7 +530,9 @@ def _validated_upcoming_plan(
             raise RuntimeError("Hydrawise-Zonenzeit ist ungültig.")
         if previous_end is not None:
             gap = (start - previous_end).total_seconds()
-            if not -5 <= gap <= 120:
+            if preserve_approved_gaps and gap < 0:
+                raise RuntimeError("Freigegebene Bewässerungszonen dürfen sich nicht überschneiden.")
+            if not preserve_approved_gaps and not -5 <= gap <= 120:
                 raise RuntimeError("Die sieben Hydrawise-Zonen bilden keinen lückenlosen Lauf.")
         previous_end = end
     canonical = json.dumps(zones, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
@@ -657,25 +679,94 @@ def _plan_change_fingerprint(kind: str, payload: Any) -> str:
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
+def _hydrawise_source_observation(
+    details: Mapping[str, Any], *, now_utc: datetime
+) -> datetime | None:
+    """Return one usable Hydrawise source observation, never a cycle timestamp.
+
+    The cache may have been populated by another reader.  Its source timestamp
+    is therefore a valid independent observation for this controller, whereas
+    the local ``new_observation`` flag deliberately is not required here.
+    A source timestamp must agree with the safety projection and may not be
+    future dated.  Callers compare this value with their persisted predecessor
+    before they count it or let a deadline advance.
+    """
+    hydrawise = _as_dict(details.get("hydrawise"))
+    safety = _as_dict(hydrawise.get("safety"))
+    if not (
+        safety.get("available") is True
+        and safety.get("fresh") is True
+        and safety.get("relay_set_valid") is True
+    ):
+        return None
+    observed = _parse_time(safety.get("observed_at_utc"))
+    cache = _as_dict(hydrawise.get("cache"))
+    # Direct reads and cache reads both prove only the manufacturer's time.
+    # A controller tick is never a substitute for a source observation.
+    if not cache:
+        if observed is None or observed > now_utc + timedelta(seconds=30):
+            return None
+        return observed
+    cached_observed = _parse_time(cache.get("source_observed_at_utc"))
+    if cache and (cached_observed is None or cached_observed != observed):
+        return None
+    if observed is None or observed > now_utc + timedelta(seconds=30):
+        return None
+    return observed
+
+
 def _candidate_confirmation(
     state: AutomationState,
     *,
     fingerprint: str,
     now_utc: datetime,
+    observed_utc: datetime | None,
     required_minutes: int,
+    max_gap_minutes: int = 3,
+    not_before_utc: datetime | None = None,
 ) -> tuple[AutomationState, bool]:
+    # A timer tick, cache hit, stale source, or a source from before the
+    # requested effect has no proof value.  Keep the candidate so a later
+    # independent source can still complete the same proof.
+    if observed_utc is None or (
+        not_before_utc is not None and observed_utc <= not_before_utc
+    ):
+        return state, False
     since = _parse_time(state.irrigation_change_candidate_since_utc)
-    if state.irrigation_change_candidate_hash != fingerprint or since is None:
+    last_observed = _parse_time(state.irrigation_change_candidate_observed_utc)
+    if (
+        state.irrigation_change_candidate_hash != fingerprint
+        or since is None
+        or last_observed is None
+    ):
         return (
             replace(
                 state,
                 revision=state.revision + 1,
                 irrigation_change_candidate_hash=fingerprint,
-                irrigation_change_candidate_since_utc=now_utc.isoformat(),
+                irrigation_change_candidate_since_utc=observed_utc.isoformat(),
+                irrigation_change_candidate_observed_utc=observed_utc.isoformat(),
             ),
             False,
         )
-    return state, now_utc - since >= timedelta(minutes=required_minutes)
+    if observed_utc <= last_observed:
+        return state, False
+    if observed_utc - last_observed > timedelta(minutes=max_gap_minutes):
+        return (
+            replace(
+                state,
+                revision=state.revision + 1,
+                irrigation_change_candidate_since_utc=observed_utc.isoformat(),
+                irrigation_change_candidate_observed_utc=observed_utc.isoformat(),
+            ),
+            False,
+        )
+    updated = replace(
+        state,
+        revision=state.revision + 1,
+        irrigation_change_candidate_observed_utc=observed_utc.isoformat(),
+    )
+    return updated, observed_utc - since >= timedelta(minutes=required_minutes)
 
 
 def _clear_change_candidate(state: AutomationState) -> AutomationState:
@@ -689,6 +780,7 @@ def _clear_change_candidate(state: AutomationState) -> AutomationState:
         revision=state.revision + 1,
         irrigation_change_candidate_hash=None,
         irrigation_change_candidate_since_utc=None,
+        irrigation_change_candidate_observed_utc=None,
     )
 
 
@@ -696,15 +788,24 @@ def _record_suspension_revalidation_observation(
     state: AutomationState,
     *,
     now_utc: datetime,
+    observed_utc: datetime | None,
+    not_before_utc: datetime | None = None,
     max_gap_seconds: int,
     required_observations: int,
 ) -> tuple[AutomationState, bool]:
     """Bestätigt eine weiterhin wirksame Suspendierung über getrennte Zyklen."""
 
+    if observed_utc is None or (
+        not_before_utc is not None and observed_utc <= not_before_utc
+    ):
+        return state, False
     last_seen = _parse_time(state.irrigation_suspension_revalidation_last_seen_utc)
+    last_observed = _parse_time(state.irrigation_suspension_revalidation_observed_utc)
+    if last_observed is not None and observed_utc <= last_observed:
+        return state, False
     consecutive = (
         last_seen is not None
-        and timedelta(0) < now_utc - last_seen <= timedelta(seconds=max_gap_seconds)
+        and timedelta(0) < observed_utc - last_seen <= timedelta(seconds=max_gap_seconds)
     )
     observations = (
         int(state.irrigation_suspension_revalidation_observations or 0) + 1
@@ -714,10 +815,51 @@ def _record_suspension_revalidation_observation(
     updated = replace(
         state,
         revision=state.revision + 1,
-        irrigation_suspension_revalidation_last_seen_utc=now_utc.isoformat(),
+        irrigation_suspension_revalidation_last_seen_utc=observed_utc.isoformat(),
+        irrigation_suspension_revalidation_observed_utc=observed_utc.isoformat(),
         irrigation_suspension_revalidation_observations=observations,
     )
     return updated, observations >= required_observations
+
+
+def _record_zone_clear_observation(
+    state: AutomationState,
+    *,
+    observed_utc: datetime | None,
+    not_before_utc: datetime | None,
+) -> tuple[AutomationState, bool]:
+    """Record a distinct post-command clear source, never a control tick."""
+    if observed_utc is None or (
+        not_before_utc is not None and observed_utc <= not_before_utc
+    ):
+        return state, False
+    since = _parse_time(state.irrigation_zone_clear_since_utc)
+    last = _parse_time(state.irrigation_zone_clear_observed_utc)
+    if since is None:
+        return replace(
+            state,
+            revision=state.revision + 1,
+            irrigation_zone_clear_since_utc=observed_utc.isoformat(),
+            irrigation_zone_clear_observed_utc=observed_utc.isoformat(),
+        ), False
+    # Older persisted runs predate the observation-identity field.  Their
+    # already stored clear boundary is retained as a conservative predecessor;
+    # only a later source can migrate it forward.
+    if last is None:
+        last = since
+    if observed_utc <= last:
+        return state, False
+    if observed_utc - last > timedelta(minutes=3):
+        return replace(
+            state, revision=state.revision + 1,
+            irrigation_zone_clear_since_utc=observed_utc.isoformat(),
+            irrigation_zone_clear_observed_utc=observed_utc.isoformat(),
+        ), False
+    return replace(
+        state,
+        revision=state.revision + 1,
+        irrigation_zone_clear_observed_utc=observed_utc.isoformat(),
+    ), True
 
 
 def _reconcile_prestart_plan(
@@ -935,20 +1077,162 @@ def _projected_irrigation_end(
 ) -> datetime:
     """Berechnet konservativ das Ende der bereits übernommenen manuellen Folge."""
 
-    seconds = 0
-    remaining_zone_count = 0
+    # A simple sum loses deliberate native inter-zone pauses.  Advance a
+    # cursor over persisted timestamps for every plan, carrying a real delay
+    # of a preceding zone and each confirmed-end wait forward conservatively.
+    cursor = now_utc.astimezone(timezone.utc)
+    previous_physical_end: datetime | None = None
+    previous_planned_end: datetime | None = None
     for zone in plan:
         relay_id = int(zone["relay_id"])
         if relay_id in completed_relay_ids:
             continue
+        scheduled_start = _parse_time(zone.get("scheduled_start_utc"))
+        if scheduled_start is None:
+            raise RuntimeError("Gespeicherter Beregnungsplan enthält keine Startzeit.")
         duration = int(zone["run_seconds"])
         if relay_id == current_relay_id and current_started_utc is not None:
-            elapsed = max(0, int((now_utc - current_started_utc).total_seconds()))
+            elapsed = max(0, int((cursor - current_started_utc).total_seconds()))
             duration = max(0, duration - elapsed)
-        seconds += duration
-        remaining_zone_count += 1
-    seconds += remaining_zone_count * end_confirmation_minutes * 60
-    return now_utc + timedelta(seconds=seconds)
+        earliest = cursor
+        if previous_physical_end is not None and previous_planned_end is not None:
+            gap = max(timedelta(0), scheduled_start - previous_planned_end)
+            earliest = max(earliest, previous_physical_end + gap)
+        previous_physical_end = earliest + timedelta(seconds=duration)
+        previous_planned_end = scheduled_start + timedelta(seconds=int(zone["run_seconds"]))
+        cursor = previous_physical_end + timedelta(minutes=end_confirmation_minutes)
+    return cursor
+
+
+def _irrigation_operating_window(
+    *,
+    plan: list[dict[str, Any]],
+    completed_relay_ids: set[int],
+    now_utc: datetime,
+    end_confirmation_minutes: int,
+) -> OperatingWindowResult:
+    """Check the unchanged remaining manual sequence against 03:30--08:00.
+
+    The first manually dispatched zone would start at ``now``. Before the
+    local earliest bound, project from 03:30 so callers can wait without
+    shortening a zone or allowing the suppressed native plan to resume.
+    Persisted absolute starts provide every native pause; confirmation waits
+    are carried by ``_projected_irrigation_end`` as existing control time.
+    """
+
+    if (
+        not isinstance(end_confirmation_minutes, int)
+        or isinstance(end_confirmation_minutes, bool)
+        or not 1 <= end_confirmation_minutes <= 10
+    ):
+        return OperatingWindowResult("INVALID", reason="invalid end confirmation")
+    if any(
+        not isinstance(relay_id, int) or isinstance(relay_id, bool)
+        for relay_id in completed_relay_ids
+    ):
+        return OperatingWindowResult("INVALID", reason="invalid completed relay identity")
+    try:
+        remaining = []
+        for zone in plan:
+            if not isinstance(zone, dict):
+                return OperatingWindowResult("INVALID", reason="invalid persisted zone")
+            relay_id = zone.get("relay_id")
+            run_seconds = zone.get("run_seconds")
+            if (
+                not isinstance(relay_id, int) or isinstance(relay_id, bool) or relay_id <= 0
+                or not isinstance(run_seconds, int) or isinstance(run_seconds, bool)
+                or not 1 <= run_seconds <= 7200
+            ):
+                return OperatingWindowResult("INVALID", reason="invalid persisted zone values")
+            if relay_id not in completed_relay_ids:
+                remaining.append(zone)
+    except (TypeError, ValueError, AttributeError, OverflowError):
+        return OperatingWindowResult("INVALID", reason="invalid persisted zone sequence")
+    if not remaining:
+        return OperatingWindowResult("INVALID", reason="no remaining zones")
+    try:
+        ordered = sorted(
+            remaining,
+            key=lambda zone: _parse_time(zone["scheduled_start_utc"]),
+        )
+        starts = [_parse_time(zone["scheduled_start_utc"]) for zone in ordered]
+        durations = [int(zone["run_seconds"]) for zone in ordered]
+    except (KeyError, TypeError, ValueError, AttributeError, OverflowError):
+        return OperatingWindowResult("INVALID", reason="invalid persisted zone sequence")
+    if any(start is None for start in starts):
+        return OperatingWindowResult("INVALID", reason="missing persisted zone start")
+    assert all(start is not None for start in starts)
+    try:
+        bounds = operating_bounds(now_utc)
+    except (TypeError, ValueError, AttributeError, OverflowError):
+        return OperatingWindowResult("INVALID", reason="invalid operating window time")
+    if bounds is None:
+        return OperatingWindowResult("INVALID", reason="operating timezone unavailable")
+    earliest, deadline = bounds
+    try:
+        normalized_now = now_utc.astimezone(timezone.utc)
+    except (TypeError, ValueError, AttributeError, OverflowError):
+        return OperatingWindowResult("INVALID", reason="invalid operating window time")
+    effective_start = max(normalized_now, earliest)
+    first_planned = starts[0]
+    try:
+        shifted_starts = [effective_start + (start - first_planned) for start in starts]
+        sequence = validate_zone_sequence(shifted_starts, durations)
+    except (TypeError, ValueError, AttributeError, OverflowError):
+        return OperatingWindowResult("INVALID", reason="invalid persisted zone sequence")
+    if sequence.code == "INVALID":
+        return sequence
+    try:
+        projected_end = _projected_irrigation_end(
+            plan=ordered,
+            completed_relay_ids=set(),
+            current_relay_id=None,
+            current_started_utc=None,
+            now_utc=effective_start,
+            end_confirmation_minutes=end_confirmation_minutes,
+        )
+    except (KeyError, TypeError, ValueError, AttributeError):
+        return OperatingWindowResult("INVALID", reason="invalid projected zone sequence")
+    span_seconds = max(0, int((projected_end - effective_start).total_seconds()))
+    projected = validate_fresh_start(
+        effective_start,
+        duration_seconds=span_seconds,
+    )
+    if projected.code != "OK":
+        return projected
+    if normalized_now < earliest:
+        return OperatingWindowResult(
+            "TOO_EARLY", earliest, deadline, projected_end,
+            projected.latest_start_utc,
+            "earliest local start is 03:30 Europe/Berlin",
+        )
+    return OperatingWindowResult(
+        "OK", earliest, deadline, projected_end, projected.latest_start_utc,
+    )
+
+
+def _delay_coordinated_remaining_zones(
+    plan: list[dict[str, Any]], *, completed: set[int], current_id: int,
+    proved_clear_since: datetime,
+) -> list[dict[str, Any]]:
+    """Carry observed lateness forward without shortening the source's pauses."""
+    current = next(zone for zone in plan if int(zone["relay_id"]) == current_id)
+    planned_end = _parse_time(current.get("scheduled_end_utc"))
+    if planned_end is None:
+        raise RuntimeError("Die gespeicherte Zonenendzeit fehlt.")
+    delay = max(timedelta(0), proved_clear_since - planned_end)
+    adjusted = []
+    for zone in plan:
+        updated = dict(zone)
+        if int(zone["relay_id"]) not in completed:
+            start = _parse_time(zone.get("scheduled_start_utc"))
+            end = _parse_time(zone.get("scheduled_end_utc"))
+            if start is None or end is None:
+                raise RuntimeError("Die gespeicherten Zonenzeiten fehlen.")
+            updated["scheduled_start_utc"] = (start + delay).isoformat()
+            updated["scheduled_end_utc"] = (end + delay).isoformat()
+        adjusted.append(updated)
+    return adjusted
 
 
 def _next_scheduled_irrigation_start(
@@ -1018,8 +1302,12 @@ def _cycle_state(
     details = _as_dict(result.details)
     mower = _as_dict(details.get("mower"))
     safety = _as_dict(_as_dict(details.get("hydrawise")).get("safety"))
-    observed = _parse_time(safety.get("observed_at_utc"))
-    fresh = bool(safety.get("available")) and bool(safety.get("fresh"))
+    observed = _hydrawise_source_observation(details, now_utc=now_utc)
+    fresh = (
+        bool(safety.get("available"))
+        and bool(safety.get("fresh"))
+        and safety.get("relay_set_valid") is True
+    )
     clear = fresh and bool(safety.get("clear_now"))
     zones = _as_dict(details.get("hydrawise")).get("zones")
     next_irrigation: datetime | None = None
@@ -1038,7 +1326,7 @@ def _cycle_state(
         mower_activity=str(mower.get("activity") or "") or None,
         mower_state=str(mower.get("state") or "") or None,
         error_code=int(mower.get("error_code") or 0),
-        hydrawise_success_utc=now_utc if fresh else None,
+        hydrawise_success_utc=observed if fresh else None,
         hydrawise_observed_utc=observed,
         hydrawise_clear=clear,
         hydrawise_active_count=(
@@ -1052,6 +1340,7 @@ def _state_details(state: AutomationState, *, persisted: bool, error: str | None
     schedule_override = _schedule_override(state)
     return {
         "revision": state.revision,
+        "maintenance_mode": state.maintenance_mode,
         "persisted": persisted,
         "error": error,
         "parked_by_automation": state.parked_by_automation,
@@ -1061,6 +1350,8 @@ def _state_details(state: AutomationState, *, persisted: bool, error: str | None
         "park_confirmed_utc": state.park_confirmed_utc,
         "park_confirmed_observations": state.park_confirmed_observations,
         "continuous_mowing_owned": state.continuous_mowing_owned,
+        "mower_start_pending_since_utc": state.mower_start_pending_since_utc,
+        "mower_start_pending_deadline_utc": state.mower_start_pending_deadline_utc,
         "irrigation_phase": state.irrigation_phase,
         "irrigation_plan_id": state.irrigation_plan_id,
         "irrigation_current_relay_id": state.irrigation_current_relay_id,
@@ -1104,6 +1395,7 @@ def _state_details(state: AutomationState, *, persisted: bool, error: str | None
         ),
         "hydrawise_clear_since_utc": state.hydrawise_clear_since_utc,
         "hydrawise_clear_origin": state.hydrawise_clear_origin,
+        "hydrawise_drying_since_utc": state.hydrawise_drying_since_utc,
     }
 
 
@@ -1180,6 +1472,108 @@ def _failed_irrigation(state: AutomationState, reason: str) -> AutomationState:
         irrigation_phase="FAILED",
         irrigation_failed_reason=reason,
     )
+
+
+def _hold_unconfirmed_mower_start(
+    *, store: StateStore, original: AutomationState, state: AutomationState,
+    result: CycleResult, details: dict[str, Any], settings: RuntimeSettings,
+    environment: Mapping[str, str], now_utc: datetime,
+    mower_status_fresh: bool, expected_relay_ids: frozenset[int],
+    park_sender: ParkSender, stop_zone_sender: StopZoneSender,
+) -> CycleResult:
+    """An ambiguous START is a durable stop latch, never an expired lease.
+
+    A later dock observation does not prove that the vendor's command queue
+    is empty. Only protective parking and an explicit immediate water stop
+    are permitted here. Automatic water/start/resume commands stay disabled
+    until an operator reconciles the vendor/device state outside this loop.
+    """
+
+    mower = _as_dict(details.get("mower"))
+    hydra = _as_dict(_as_dict(details.get("hydrawise")).get("safety"))
+    action = _operator_action(state, now_utc)
+    details["mower_start_outcome"] = {
+        "status": "UNCONFIRMED",
+        "reserved_at_utc": state.mower_start_pending_since_utc,
+        "requested_deadline_utc": state.mower_start_pending_deadline_utc,
+        "last_acknowledged_deadline_utc": state.continuous_mowing_window_end_utc,
+        "automatic_retry_allowed": False,
+        "dock_observation_clears_latch": False,
+        "resolution": "Gerätewarteschlange, nativen Zeitplan und sicheren Parkzustand vor manueller Freigabe abgleichen.",
+    }
+    safe_stop_ids = _active_relay_ids(details)
+    if (
+        action == "STOP_IRRIGATION_NOW"
+        and settings.enable_irrigation_commands
+        and hydra.get("available") is True and hydra.get("fresh") is True
+        and hydra.get("relay_set_valid") is True
+        and set(hydra.get("observed_relay_ids", [])) == expected_relay_ids
+        and len(safe_stop_ids) == 1 and safe_stop_ids.issubset(expected_relay_ids)
+    ):
+        reserved = _finish_operator_request(
+            state, "Direkter Wasserstopp reserviert; Mäherstart bleibt ungeklärt.",
+            status="SENT_UNCONFIRMED",
+        )
+        try:
+            store.save(reserved, expected_revision=original.revision)
+        except Exception as exc:
+            return replace(result, decision_code="IRRIGATION_STOP_RESERVATION_FAILED", command_sent=False,
+                           message="Wasserstopp konnte nicht persistent reserviert werden.",
+                           details=_decorate(details, state=state, settings=settings, persisted=False,
+                                             command_sent=False, error=type(exc).__name__))
+        relay_id = next(iter(safe_stop_ids))
+        try:
+            response = stop_zone_sender(str(environment.get("HYDRAWISE_API_KEY", "")), relay_id,
+                                        environment.get("HYDRAWISE_CONTROLLER_ID") or None)
+        except Exception as exc:
+            details["irrigation_action"] = {"type": "StopZone", "relay_id": relay_id,
+                                             "outcome": "UNCONFIRMED", "error_type": type(exc).__name__}
+        else:
+            details["irrigation_action"] = {"type": "StopZone", "relay_id": relay_id, "response": response}
+        return replace(result, decision_code="MOWER_START_OUTCOME_UNCONFIRMED", command_sent=True,
+                       message="Wasserstopp angefordert; die ungeklärte Mäheraktion sperrt weitere Starts.",
+                       details=_decorate(details, state=reserved, settings=settings, persisted=True, command_sent=True))
+    if action and action != "PARK_MOWER":
+        state = _finish_operator_request(state, "Startwirkung ungeklärt; zuerst Geräteaktion abgleichen.", status="REJECTED")
+
+    activity = str(mower.get("activity") or "").upper()
+    mower_state = str(mower.get("state") or "").upper()
+    safe_to_park = (
+        settings.enable_park_commands and mower_status_fresh and mower.get("connected") is True
+        and now_utc - _parse_time(state.mower_start_pending_since_utc) >= timedelta(seconds=90)
+        and bool(mower.get("mower_id")) and int(mower.get("error_code") or 0) == 0
+        and mower_state not in ERROR_STATES | MANUAL_STATES
+        and activity in PARK_COMMAND_ACTIVITIES
+        and (not state.parked_by_automation or activity in PARKABLE_ACTIVITIES
+             or str(mower.get("override_action") or "").upper() not in PARK_OVERRIDE_ACTIONS)
+    )
+    if safe_to_park:
+        intent = CommandIntent(action="PARK", target=str(mower["mower_id"]),
+                               reason=f"unconfirmed-start|{state.mower_start_pending_since_utc}")
+        gate = evaluate_command_gate(state=original, intent=intent, now_utc=now_utc, dedupe_minutes=3)
+        if gate.allowed:
+            parked = state.record_command(fingerprint=intent.fingerprint, sent_utc=now_utc,
+                                           action="PARK", park_source="start_outcome_unknown", restart_allowed=False)
+            try:
+                store.save(parked, expected_revision=original.revision)
+            except Exception as exc:
+                return replace(result, decision_code="MOWER_START_OUTCOME_UNCONFIRMED", command_sent=False,
+                               message="Startwirkung ungeklärt; Schutzparkierung konnte nicht reserviert werden.",
+                               details=_decorate(details, state=state, settings=settings, persisted=False,
+                                                 command_sent=False, error=type(exc).__name__))
+            try:
+                response = park_sender(str(environment.get("HUSQVARNA_CLIENT_ID", "")),
+                                       str(environment.get("HUSQVARNA_CLIENT_SECRET", "")), str(mower["mower_id"]))
+            except Exception as exc:
+                details["park_action"] = {"type": "ParkUntilFurtherNotice", "outcome": "UNCONFIRMED", "error_type": type(exc).__name__}
+            else:
+                details["park_action"] = {"type": "ParkUntilFurtherNotice", "response": response}
+            return replace(result, decision_code="MOWER_START_OUTCOME_UNCONFIRMED", command_sent=True,
+                           message="Schutzparkierung angefordert; ungeklärte Startwirkung erfordert manuellen Abgleich.",
+                           details=_decorate(details, state=parked, settings=settings, persisted=True, command_sent=True))
+    return _persist_result(store=store, original=original, state=state, result=result, details=details,
+                           settings=settings, decision_code="MOWER_START_OUTCOME_UNCONFIRMED",
+                           message="Die frühere Startwirkung ist ungeklärt; Parkbeobachtung allein hebt diese Sperre nicht auf.")
 
 
 def _partial_irrigation_end_proof(
@@ -1451,6 +1845,8 @@ def run_full_failsafe_cycle(
     stop_zone_sender: StopZoneSender = stop_zone_now,
     cutting_height_sender: CuttingHeightSender = set_work_area_cutting_height,
     blade_usage_reset_sender: BladeUsageResetSender = reset_cutting_blade_usage_time,
+    input_failure_runner: InputFailureRunner = run_input_failure_guard,
+    command_clock: Clock = lambda: datetime.now(timezone.utc),
 ) -> CycleResult:
     """Fail-closed Gesamtsteuerung für Mäher, Belegung und sieben Zonen."""
 
@@ -1477,13 +1873,34 @@ def run_full_failsafe_cycle(
         )
     )
 
-    result = read_only_runner(
-        now_utc=now,
-        settings=settings,
-        environment=environment,
-        past_due=past_due,
-        source=source,
-    )
+    if str(environment.get("HYDRAWISE_STATUS_CACHE_MODE") or "OFF").strip().upper() != "OFF":
+        raise RuntimeError("Der gemeinsame Statuscache ist für Gerätebetriebsarten noch nicht freigegeben.")
+
+    read_only_kwargs = {
+        "now_utc": now,
+        "settings": settings,
+        "environment": environment,
+        "past_due": past_due,
+        "source": source,
+    }
+    if read_only_runner is run_read_only_cycle:
+        # The controller uses direct device reads. Publishing this independent
+        # dashboard snapshot is best-effort inside the canonical reader and
+        # never changes control decisions or specialized injected runners.
+        read_only_kwargs["publish_dashboard_snapshot"] = True
+    try:
+        result = read_only_runner(**read_only_kwargs)
+    except InputUnavailable as exc:
+        return input_failure_runner(
+            now_utc=now,
+            settings=settings,
+            environment=environment,
+            past_due=past_due,
+            source=source,
+            cause=exc,
+            state_store_factory=state_store_factory,
+            park_sender=park_sender,
+        )
     details = dict(result.details)
     current_plan = _as_dict(details.get("current_plan"))
     parking_block = _as_dict(current_plan.get("parking_block"))
@@ -1501,6 +1918,13 @@ def run_full_failsafe_cycle(
     mower_status_max_age_seconds = _env_int(
         environment,
         "MOWER_STATUS_MAX_AGE_SECONDS",
+        180,
+        minimum=30,
+        maximum=900,
+    )
+    hydrawise_status_max_age_seconds = _env_int(
+        environment,
+        "HYDRAWISE_STATUS_MAX_AGE_SECONDS",
         180,
         minimum=30,
         maximum=900,
@@ -1541,6 +1965,14 @@ def run_full_failsafe_cycle(
             message="Wartungsmodus ist aktiv; alle automatischen Befehle bleiben gesperrt.",
         )
 
+    if state.mower_start_pending_since_utc is not None:
+        return _hold_unconfirmed_mower_start(
+            store=store, original=original, state=state, result=result, details=details,
+            settings=settings, environment=environment, now_utc=now,
+            mower_status_fresh=mower_status_fresh, expected_relay_ids=expected_relay_ids,
+            park_sender=park_sender, stop_zone_sender=stop_zone_sender,
+        )
+
     block_source = str(parking_block.get("source") or "").strip().lower()
     irrigation_due = "irrigation" in _source_parts(block_source)
     hydra_safety = _as_dict(_as_dict(details.get("hydrawise")).get("safety"))
@@ -1572,6 +2004,160 @@ def run_full_failsafe_cycle(
         maximum=120,
     )
     schedule_override = _schedule_override(state)
+    coordination_gate = coordination_execution_enabled(
+        environment, full_failsafe_gate=settings.full_failsafe_write_gate_enabled
+    )
+    execution_input = details.get("coordination_execution_input")
+    details["coordination_execution"] = {
+        "enabled": coordination_gate,
+        "reserved": state.coordination_execution_request_json is not None,
+        "accepted": False,
+        "reason": None,
+    }
+    # OFF never permits a latent reservation to wake up after an arbitrary
+    # delay.  Clear only the active request; durable dedup evidence survives.
+    if not coordination_gate and state.coordination_execution_request_json is not None:
+        state = mark_coordination_terminal(state, status="DISABLED", now_utc=now)
+        schedule_override = _schedule_override(state)
+        details["coordination_execution"].update(
+            reserved=False, reason="COORDINATION_EXECUTION_DISABLED"
+        )
+    # Terminalize a reservation before normal operator handling.  In
+    # particular, a new PARK_MOWER request must continue through its own path
+    # instead of being consumed by the coordination revalidation return.
+    if (
+        coordination_gate and state.coordination_execution_request_json is not None
+        and (
+            state.maintenance_mode or state.operator_request_status == "PENDING"
+            or state.irrigation_phase is not None or state.irrigation_schedule_override_json
+            or (state.parked_by_automation and "operator" in str(state.automation_park_source or "").lower())
+        )
+    ):
+        state = mark_coordination_terminal(state, status="INTERRUPTED", now_utc=now)
+        schedule_override = _schedule_override(state)
+        details["coordination_execution"].update(
+            reserved=False, reason="MANUAL_OR_IRRIGATION_CHANGED"
+        )
+    # The read-only handover cannot authorize a command.  It may only cause a
+    # CAS-persisted reservation; no Hydrawise call happens in this cycle.
+    if coordination_gate and schedule_override is None and state.coordination_execution_request_json is None and execution_input is not None:
+        reserved, outcome = reserve_coordination(
+            state, cycle=result.to_dict(), execution_input=execution_input, now_utc=now,
+        )
+        details["coordination_execution"].update(outcome)
+        if outcome.get("accepted"):
+            return _persist_result(
+                store=store, original=original, state=reserved, result=result,
+                details=details, settings=settings,
+                decision_code="COORDINATION_EXECUTION_RESERVED",
+                message="Der freigegebene Bewässerungsbedarf wurde einmalig reserviert; es wurde kein Gerätebefehl gesendet.",
+            )
+    # A second current observation must still support the entire shadow draft
+    # before the reservation becomes the existing CUSTOM_NEXT transaction.
+    if coordination_gate and schedule_override is None and state.coordination_execution_request_json is not None:
+        checked, reserved_request, reason = consume_coordination_request(
+            state, cycle=result.to_dict(), execution_input=execution_input, now_utc=now,
+        )
+        if reserved_request is None:
+            terminal = mark_coordination_terminal(checked, status="INVALID_OR_CHANGED", now_utc=now)
+            details["coordination_execution"].update(reason=reason, reserved=False)
+            return _persist_result(
+                store=store, original=original, state=terminal, result=result,
+                details=details, settings=settings,
+                decision_code="COORDINATION_EXECUTION_REVALIDATION_FAILED",
+                message="Die reservierte Koordination wurde ohne Gerätebefehl endgültig verworfen.",
+            )
+        try:
+            desired_start = _parse_time(reserved_request.get("selected_start_utc"))
+            valid_until = _parse_time(reserved_request.get("valid_until_utc"))
+            if desired_start is None or valid_until is None or not now < desired_start <= valid_until:
+                raise RuntimeError("COORDINATION_RESERVATION_EXPIRED")
+            live_plan_id, source_zones = _validated_upcoming_plan(
+                details, now_utc=now, expected_zone_count=expected_zones,
+                expected_relay_ids=expected_relay_ids, max_lead_minutes=14 * 24 * 60,
+                preserve_approved_gaps=True,
+            )
+            if coordination_source_plan_id(source_zones) != str(reserved_request.get("source_plan_id") or ""):
+                raise RuntimeError("COORDINATION_SOURCE_PLAN_CHANGED")
+            draft_zones = reserved_request.get("zones")
+            if not isinstance(draft_zones, list) or len(draft_zones) != len(source_zones):
+                raise RuntimeError("COORDINATION_ZONE_SEQUENCE_INVALID")
+            by_relay = {int(item["relay_id"]): dict(item) for item in source_zones}
+            custom_zones = []
+            for item in draft_zones:
+                if not isinstance(item, Mapping):
+                    raise RuntimeError("COORDINATION_ZONE_SEQUENCE_INVALID")
+                relay = int(item.get("relay_id") or 0)
+                base = by_relay.pop(relay, None)
+                start = _parse_time(item.get("scheduled_start_utc"))
+                seconds = item.get("run_seconds")
+                if base is None or start is None or type(seconds) is not int or seconds != base.get("run_seconds"):
+                    raise RuntimeError("COORDINATION_DURATION_OR_RELAY_CHANGED")
+                base_start = _parse_time(base.get("scheduled_start_utc"))
+                selected = _parse_time(reserved_request.get("selected_start_utc"))
+                original_first = min(_parse_time(zone.get("scheduled_start_utc")) for zone in source_zones)
+                declared_offset = item.get("offset_seconds")
+                if (base_start is None or selected is None or original_first is None
+                        or type(declared_offset) is not int
+                        or declared_offset != int((base_start - original_first).total_seconds())
+                        or start != selected + timedelta(seconds=declared_offset)):
+                    raise RuntimeError("COORDINATION_ZONE_OFFSET_CHANGED")
+                custom_zones.append({
+                    **base, "scheduled_start_utc": start.isoformat(),
+                    "scheduled_end_utc": (start + timedelta(seconds=seconds)).isoformat(),
+                    "coordination_execution": True,
+                })
+            if by_relay or [z["relay_id"] for z in custom_zones] != [int(z["relay_id"]) for z in source_zones]:
+                raise RuntimeError("COORDINATION_ZONE_ORDER_CHANGED")
+            source_start = min(_parse_time(zone["scheduled_start_utc"]) for zone in source_zones)
+            source_end = max(_parse_time(zone["scheduled_end_utc"]) for zone in source_zones)
+            desired_end = max(_parse_time(zone["scheduled_end_utc"]) for zone in custom_zones)
+            assert source_start is not None and source_end is not None and desired_end is not None
+            override = {
+                "version": 1, "kind": "CUSTOM_NEXT", "status": "VERIFYING",
+                "request_id": str(reserved_request["request_id"]),
+                "coordination_execution": True,
+                "coordination_need_id": str(reserved_request["need_id"]),
+                "coordination_need_sha256": str(reserved_request["need_sha256"]),
+                "created_utc": now.isoformat(), "verify_since_utc": now.isoformat(),
+                # CUSTOM_NEXT keeps its established internal plan hash.  The
+                # approved coordination need remains bound separately to the
+                # wire-order identity used by the read-only producer.
+                "source_plan_id": live_plan_id,
+                "coordination_source_plan_id": str(reserved_request["source_plan_id"]),
+                "source_start_utc": source_start.isoformat(),
+                "source_end_utc": source_end.isoformat(), "desired_start_utc": desired_start.isoformat(),
+                "desired_end_utc": desired_end.isoformat(),
+                "suspend_until_utc": (max(source_end, desired_end) + timedelta(minutes=180)).isoformat(),
+                "source_zones": source_zones, "zones": custom_zones,
+                "commanded_relay_ids": [], "confirm_since_utc": None,
+            }
+            terminal = mark_coordination_terminal(checked, status="SCHEDULED", now_utc=now)
+            state = replace(
+                terminal, revision=terminal.revision + 1,
+                irrigation_schedule_override_json=dump_irrigation_schedule_object(override),
+                irrigation_schedule_history_json=append_irrigation_schedule_history(
+                    terminal.irrigation_schedule_history_json, now_utc=now,
+                    action="COORDINATION_CUSTOM_NEXT", status="REQUESTED",
+                    summary="Reservierter Koordinationslauf wird in der bestehenden CUSTOM_NEXT-Transaktion geprüft.",
+                ),
+            )
+            details["coordination_execution"].update(accepted=True, reserved=False, request_id=override["request_id"])
+            return _persist_result(
+                store=store, original=original, state=state, result=result,
+                details=details, settings=settings,
+                decision_code="COORDINATION_EXECUTION_SCHEDULED",
+                message="Die Koordination wurde ohne Gerätebefehl in die bestehende Sieben-Zonen-Transaktion übernommen.",
+            )
+        except Exception as exc:
+            terminal = mark_coordination_terminal(checked, status="REVALIDATION_FAILED", now_utc=now)
+            details["coordination_execution"].update(reason=f"{type(exc).__name__}: {exc}", reserved=False)
+            return _persist_result(
+                store=store, original=original, state=terminal, result=result,
+                details=details, settings=settings,
+                decision_code="COORDINATION_EXECUTION_REVALIDATION_FAILED",
+                message="Die reservierte Koordination wurde ohne Gerätebefehl endgültig verworfen.",
+            )
     schedule_override_status = str(
         (schedule_override or {}).get("status") or ""
     ).strip().upper()
@@ -1728,6 +2314,7 @@ def run_full_failsafe_cycle(
                     expected_zone_count=expected_zones,
                     expected_relay_ids=expected_relay_ids,
                     max_lead_minutes=14 * 24 * 60,
+                    preserve_approved_gaps=schedule_override.get("coordination_execution") is True,
                 )
             except Exception as exc:
                 failed_override = {
@@ -1861,6 +2448,54 @@ def run_full_failsafe_cycle(
                     command_until = now + timedelta(minutes=1)
                 if command_until is None:
                     raise RuntimeError("Der Suspendierungszeitpunkt der Plananpassung fehlt.")
+                coordination_transaction = schedule_override.get("coordination_execution") is True
+                pending_reservation = schedule_override.get("coordination_command_reservation")
+                if coordination_transaction and pending_reservation is not None:
+                    # A prior process may have reached the CAS point and then
+                    # died or lost the sender response.  It is never safe to
+                    # replay that relay command.
+                    rejected_override = {
+                        **schedule_override, "status": "REJECTED",
+                        "error": "Der reservierte Koordinations-Suspendierungsbefehl hat keine bestätigte Antwort.",
+                    }
+                    rejected = replace(
+                        state, revision=state.revision + 1,
+                        irrigation_schedule_override_json=dump_irrigation_schedule_object(rejected_override),
+                    )
+                    return _persist_result(
+                        store=store, original=original, state=rejected, result=result,
+                        details=details, settings=settings,
+                        decision_code="COORDINATION_EXECUTION_COMMAND_UNCERTAIN",
+                        message="Eine koordinierte Hydrawise-Antwort ist unklar; der Bedarf wird nicht wiederholt.",
+                    )
+                if coordination_transaction:
+                    reserved_override = {
+                        **schedule_override,
+                        "coordination_command_reservation": {
+                            "relay_id": pending_relay, "until_utc": command_until.isoformat(),
+                            "reserved_utc": now.isoformat(),
+                        },
+                    }
+                    reserved_state = replace(
+                        state, revision=state.revision + 1,
+                        irrigation_schedule_override_json=dump_irrigation_schedule_object(reserved_override),
+                    )
+                    try:
+                        store.save(reserved_state, expected_revision=original.revision)
+                    except Exception as exc:
+                        return replace(
+                            result, decision_code="COORDINATION_EXECUTION_COMMAND_RESERVATION_FAILED",
+                            message="Der koordinierte Hydrawise-Befehl wurde ohne CAS-Reservierung nicht gesendet.",
+                            command_sent=False,
+                            details=_decorate(details, state=state, settings=settings,
+                                              persisted=False, command_sent=False,
+                                              error=f"{type(exc).__name__}: {exc}"),
+                        )
+                    # Every subsequent state save in this branch must advance
+                    # from the command reservation rather than the stale load.
+                    original = reserved_state
+                    state = reserved_state
+                    schedule_override = reserved_override
                 attempts = {
                     str(key): int(value)
                     for key, value in dict(schedule_override.get("attempts") or {}).items()
@@ -1875,7 +2510,7 @@ def run_full_failsafe_cycle(
                 except Exception as exc:
                     key = str(pending_relay)
                     attempts[key] = attempts.get(key, 0) + 1
-                    failed = attempts[key] >= 3
+                    failed = attempts[key] >= 3 or coordination_transaction
                     updated_override = {
                         **schedule_override,
                         "status": "REJECTED" if failed else "APPLYING",
@@ -1908,6 +2543,7 @@ def run_full_failsafe_cycle(
                     "attempts": attempts,
                     "error": None,
                 }
+                updated_override.pop("coordination_command_reservation", None)
                 if override_kind == "RESUME":
                     updated_override["suspend_until_utc"] = command_until.isoformat()
                 if commanded == set(expected_relay_ids):
@@ -1916,6 +2552,7 @@ def run_full_failsafe_cycle(
                             "status": "CONFIRMING",
                             "confirm_since_utc": None,
                             "confirm_last_seen_utc": None,
+                            "confirm_not_before_utc": now.isoformat(),
                         }
                     )
                 updated_state = replace(
@@ -1966,6 +2603,7 @@ def run_full_failsafe_cycle(
                     "commanded_relay_ids": sorted(commanded),
                     "confirm_since_utc": None,
                     "confirm_last_seen_utc": None,
+                    "confirm_not_before_utc": None,
                 }
                 retry_state = replace(
                     state,
@@ -1982,12 +2620,33 @@ def run_full_failsafe_cycle(
                 )
             confirm_since = _parse_time(schedule_override.get("confirm_since_utc"))
             confirm_last = _parse_time(schedule_override.get("confirm_last_seen_utc"))
-            continuity = confirm_last is not None and now - confirm_last <= timedelta(minutes=3)
+            proof_now = _hydrawise_source_observation(details, now_utc=now)
+            confirm_not_before = _parse_time(
+                schedule_override.get("confirm_not_before_utc")
+            )
+            if proof_now is None or (confirm_last is not None and proof_now <= confirm_last):
+                return _persist_result(
+                    store=store, original=original, state=state, result=result,
+                    details=details, settings=settings,
+                    decision_code="IRRIGATION_SCHEDULE_CONFIRM_WAIT",
+                    message="Die Plananpassung wartet auf eine neue gültige Hydrawise-Quellbeobachtung.",
+                )
+            if confirm_not_before is not None and proof_now <= confirm_not_before:
+                return _persist_result(
+                    store=store, original=original, state=state, result=result,
+                    details=details, settings=settings,
+                    decision_code="IRRIGATION_SCHEDULE_CONFIRMING",
+                    message="Die Plananpassung wartet auf eine Quellbeobachtung nach dem letzten Suspendierungsbefehl.",
+                )
+            continuity = (
+                confirm_last is not None
+                and timedelta(0) < proof_now - confirm_last <= timedelta(minutes=3)
+            )
             if confirm_since is None or not continuity:
                 confirming = {
                     **schedule_override,
-                    "confirm_since_utc": now.isoformat(),
-                    "confirm_last_seen_utc": now.isoformat(),
+                    "confirm_since_utc": proof_now.isoformat(),
+                    "confirm_last_seen_utc": proof_now.isoformat(),
                 }
                 confirming_state = replace(
                     state,
@@ -2002,10 +2661,10 @@ def run_full_failsafe_cycle(
                     decision_code="IRRIGATION_SCHEDULE_CONFIRMING",
                     message="Hydrawise bestätigt die Plananpassung fortlaufend.",
                 )
-            if now - confirm_since < timedelta(minutes=2):
+            if proof_now - confirm_since < timedelta(minutes=2):
                 confirming = {
                     **schedule_override,
-                    "confirm_last_seen_utc": now.isoformat(),
+                    "confirm_last_seen_utc": proof_now.isoformat(),
                 }
                 confirming_state = replace(
                     state,
@@ -2040,7 +2699,7 @@ def run_full_failsafe_cycle(
                     **schedule_override,
                     "status": "ACTIVE",
                     "confirmed_utc": now.isoformat(),
-                    "confirm_last_seen_utc": now.isoformat(),
+                    "confirm_last_seen_utc": proof_now.isoformat(),
                 }
                 state = replace(
                     state,
@@ -2106,11 +2765,20 @@ def run_full_failsafe_cycle(
                 proof_hash = _plan_change_fingerprint(
                     "EXTERNAL_RESUME", proof_payload
                 )
+                proof_now = _hydrawise_source_observation(details, now_utc=now)
                 continuous = (
                     candidate_last is not None
-                    and timedelta(0) <= now - candidate_last <= timedelta(minutes=3)
+                    and proof_now is not None
+                    and timedelta(0) < proof_now - candidate_last <= timedelta(minutes=3)
                 )
                 if external_resume:
+                    if proof_now is None or (candidate_last is not None and proof_now <= candidate_last):
+                        return _persist_result(
+                            store=store, original=original, state=state, result=result,
+                            details=details, settings=settings,
+                            decision_code="IRRIGATION_SCHEDULE_EXTERNAL_RESUME_CONFIRMING",
+                            message="Die externe Planänderung wartet auf eine neue gültige Hydrawise-Quellbeobachtung.",
+                        )
                     if (
                         candidate_since is None
                         or not continuous
@@ -2120,8 +2788,8 @@ def run_full_failsafe_cycle(
                         confirming_override = {
                             **schedule_override,
                             "external_resume_candidate_hash": proof_hash,
-                            "external_resume_candidate_since_utc": now.isoformat(),
-                            "external_resume_candidate_last_seen_utc": now.isoformat(),
+                            "external_resume_candidate_since_utc": proof_now.isoformat(),
+                            "external_resume_candidate_last_seen_utc": proof_now.isoformat(),
                         }
                         confirming_state = replace(
                             state,
@@ -2150,12 +2818,12 @@ def run_full_failsafe_cycle(
                         minimum=1,
                         maximum=15,
                     )
-                    if now - candidate_since < timedelta(
+                    if proof_now - candidate_since < timedelta(
                         minutes=confirmation_minutes
                     ):
                         confirming_override = {
                             **schedule_override,
-                            "external_resume_candidate_last_seen_utc": now.isoformat(),
+                            "external_resume_candidate_last_seen_utc": proof_now.isoformat(),
                         }
                         confirming_state = replace(
                             state,
@@ -2215,6 +2883,12 @@ def run_full_failsafe_cycle(
                 override_kind = ""
                 suspend_until = None
             if override_kind == "CUSTOM_NEXT":
+                coordination_disabled_hold = (
+                    schedule_override.get("coordination_execution") is True
+                    and not coordination_gate
+                )
+                if coordination_disabled_hold:
+                    details["coordination_execution"].update(reason="COORDINATION_EXECUTION_DISABLED")
                 desired_start = _parse_time(schedule_override.get("desired_start_utc"))
                 if desired_start is None:
                     raise RuntimeError("Der angepasste Beregnungsstart fehlt.")
@@ -2232,9 +2906,9 @@ def run_full_failsafe_cycle(
                         ),
                     )
                     schedule_override = failed_override
-                elif desired_start - now <= timedelta(
+                elif (not coordination_disabled_hold and desired_start - now <= timedelta(
                     minutes=irrigation_capture_max_lead_minutes
-                ):
+                )):
                     custom_zones = [
                         dict(zone) for zone in schedule_override.get("zones", [])
                         if isinstance(zone, dict)
@@ -2713,6 +3387,8 @@ def run_full_failsafe_cycle(
         and current_occupancy_end > now
         and bool(all_current_block_sources)
         and all_current_block_sources.issubset(occupancy_only_sources)
+        and occupancy_override_allowed(blocked_now)
+        and (not parking_block or occupancy_override_allowed(parking_block))
         and state.irrigation_phase is None
     )
     if occupancy_override_request and (
@@ -2775,6 +3451,38 @@ def run_full_failsafe_cycle(
         ),
         "does_not_override_irrigation": True,
     }
+
+    # This covers water that the controller did not initiate too.  Do not
+    # transmit an unowned stop; freeze automation and surface an on-site
+    # controller check when fresh Hydrawise evidence says it is outside the
+    # mandatory local operating window.
+    operating_bounds_now = operating_bounds(now)
+    actual_active_ids = _active_relay_ids(details)
+    if (
+        operating_bounds_now is not None
+        and actual_active_ids
+        and hydra_safety.get("available") is True
+        and hydra_safety.get("fresh") is True
+        and not (operating_bounds_now[0] <= now < operating_bounds_now[1])
+    ):
+        outside_hold = _failed_irrigation(
+            state,
+            "Frische Hydrawise-Beobachtung meldet Wasser außerhalb 03:30--08:00 Europe/Berlin.",
+        )
+        details["irrigation_operating_window"] = {
+            "code": "ACTIVE_OUTSIDE_WINDOW",
+            "earliest_start_utc": operating_bounds_now[0].isoformat(),
+            "latest_end_utc": operating_bounds_now[1].isoformat(),
+            "active_relay_ids": sorted(actual_active_ids),
+            "automatic_stop_sent": False,
+            "required_action": "ON_SITE_CONTROLLER_CHECK",
+        }
+        return _persist_result(
+            store=store, original=original, state=outside_hold, result=result,
+            details=details, settings=settings,
+            decision_code="IRRIGATION_ACTIVE_OUTSIDE_OPERATING_WINDOW",
+            message="Bewässerung bitte beenden und den Controller vor Ort prüfen.",
+        )
 
     occupancy_sources = _source_parts(
         effective_parking_block.get("source")
@@ -3113,6 +3821,7 @@ def run_full_failsafe_cycle(
                 state,
                 fingerprint=fingerprint,
                 now_utc=now,
+                observed_utc=_hydrawise_source_observation(details, now_utc=now),
                 required_minutes=expired_confirmation_minutes,
             )
             details["irrigation_expired_failed_gate"] = {
@@ -3227,6 +3936,9 @@ def run_full_failsafe_cycle(
             )
 
     if state.irrigation_phase in ACTIVE_IRRIGATION_PHASES:
+        active_override = _schedule_override(state)
+        # Do not return here when the pilot is switched off.  The normal active
+        # state machine must still run its lease, parking and stop recovery.
         confirmation_minutes = _env_int(
             environment,
             "MOWER_PARK_CONFIRMATION_MINUTES",
@@ -3277,8 +3989,15 @@ def run_full_failsafe_cycle(
             len(execution_zones) == 1
             and bool(execution_zones[0].get("operator_single_zone"))
         )
-        schedule_override_plan = bool(zones) and all(
-            zone.get("operator_schedule_override") is True for zone in zones
+        active_override_for_plan = _schedule_override(state)
+        coordination_plan = bool(
+            active_override_for_plan
+            and active_override_for_plan.get("coordination_execution") is True
+        )
+        schedule_override_plan = bool(zones) and (
+            coordination_plan or all(
+                zone.get("operator_schedule_override") is True for zone in zones
+            )
         )
         execution_zone_count = len(execution_zones)
         active_ids = _active_relay_ids(details)
@@ -3396,6 +4115,7 @@ def run_full_failsafe_cycle(
                     state,
                     fingerprint=fingerprint,
                     now_utc=now,
+                    observed_utc=_hydrawise_source_observation(details, now_utc=now),
                     required_minutes=confirmation_minutes,
                 )
                 details["irrigation_plan_reconciliation"] = {
@@ -3612,6 +4332,7 @@ def run_full_failsafe_cycle(
                     state,
                     fingerprint=fingerprint,
                     now_utc=now,
+                    observed_utc=_hydrawise_source_observation(details, now_utc=now),
                     required_minutes=expired_confirmation_minutes,
                 )
                 details["irrigation_expired_ready_gate"]["confirmed"] = confirmed
@@ -3659,10 +4380,10 @@ def run_full_failsafe_cycle(
                 message="Beregnung wartet zunächst auf den eigenen sicheren Parkbefehl.",
             )
 
-        # ``status_timestamp_ms`` is Husqvarnas Zeitpunkt der letzten
-        # Zustandsaenderung, nicht der Zeitpunkt unseres erfolgreichen
-        # Live-Abrufs. Vor einem Wasserstart bleibt ein frischer Eventnachweis
-        # zwingend. Nach einem bereits gesendeten Zonenstart muss die
+        # ``status_timestamp_ms`` is the backend-generated timestamp of the
+        # latest status update according to Husqvarna, not a physical sensor
+        # timestamp or the receipt time of our poll. Before a water start a
+        # fresh status update remains mandatory. Nach einem Zonenstart muss die
         # Hydrawise-Enderkennung aber weiterlaufen koennen, solange der aktuelle
         # Live-Abruf den Maeher weiterhin verbunden, fehlerfrei und im Dock
         # meldet. Die naechste READY-Zone erfordert danach wieder einen frischen
@@ -3791,6 +4512,7 @@ def run_full_failsafe_cycle(
                     state,
                     fingerprint=fingerprint,
                     now_utc=now,
+                    observed_utc=_hydrawise_source_observation(details, now_utc=now),
                     required_minutes=duration_confirmation_minutes,
                 )
                 details["irrigation_duration_reconciliation"] = {
@@ -4005,6 +4727,7 @@ def run_full_failsafe_cycle(
                         state,
                         fingerprint=fingerprint,
                         now_utc=now,
+                        observed_utc=_hydrawise_source_observation(details, now_utc=now),
                         required_minutes=confirmation_minutes,
                     )
                     details["irrigation_plan_reconciliation"] = {
@@ -4068,6 +4791,23 @@ def run_full_failsafe_cycle(
                 (zone for zone in execution_zones if int(zone["relay_id"]) not in completed),
                 None,
             )
+            if coordination_plan and next_zone is not None:
+                next_scheduled_start = _parse_time(next_zone.get("scheduled_start_utc"))
+                if next_scheduled_start is None:
+                    failed = _failed_irrigation(state, "Der koordinierte Zonenabstand ist nicht persistent nachweisbar.")
+                    return _persist_result(
+                        store=store, original=original, state=failed, result=result,
+                        details=details, settings=settings,
+                        decision_code="COORDINATION_EXECUTION_GAP_INVALID",
+                        message=failed.irrigation_failed_reason or "Koordinierter Zonenabstand unklar.",
+                    )
+                if now < next_scheduled_start:
+                    return _persist_result(
+                        store=store, original=original, state=state, result=result,
+                        details=details, settings=settings,
+                        decision_code="COORDINATION_EXECUTION_ZONE_GAP_WAIT",
+                        message="Der bestätigte Abstand bis zur nächsten koordinierten Zone wird eingehalten.",
+                    )
             if next_zone is None:
                 partial_schedule_override = (
                     schedule_override_plan and execution_zone_count < expected_zones
@@ -4188,6 +4928,10 @@ def run_full_failsafe_cycle(
                         _record_suspension_revalidation_observation(
                             state,
                             now_utc=now,
+                            observed_utc=_hydrawise_source_observation(details, now_utc=now),
+                            not_before_utc=_parse_time(
+                                state.irrigation_suspension_completed_utc
+                            ),
                             max_gap_seconds=revalidation_gap_seconds,
                             required_observations=required_revalidation_observations,
                         )
@@ -4342,6 +5086,72 @@ def run_full_failsafe_cycle(
                     decision_code="IRRIGATION_START_COLLISION",
                     message=failed.irrigation_failed_reason or "Startkollision.",
                 )
+            active_override = _schedule_override(state)
+            if active_override is not None and active_override.get("coordination_execution") is True:
+                remaining_plan = [
+                    zone for zone in execution_zones
+                    if int(zone["relay_id"]) not in set(completed)
+                ]
+                if not coordination_gate:
+                    coordination_blocker = "COORDINATION_EXECUTION_DISABLED"
+                else:
+                    coordination_blocker = coordination_start_authorized(
+                        override=active_override, cycle=result.to_dict(),
+                        execution_input=execution_input, now_utc=now,
+                        remaining_plan=remaining_plan, projected_end_utc=projected_end,
+                    )
+                details["coordination_execution"]["start_revalidation"] = coordination_blocker is None
+                if coordination_blocker is not None:
+                    return _persist_result(
+                        store=store, original=original, state=state, result=result,
+                        details=details, settings=settings,
+                        decision_code="COORDINATION_EXECUTION_START_BLOCKED",
+                        message="Der koordinierte Zonenstart bleibt wegen geänderter Freigabe oder Belegung gesperrt.",
+                    )
+            operating_window = _irrigation_operating_window(
+                plan=execution_zones,
+                completed_relay_ids=set(completed),
+                now_utc=now,
+                end_confirmation_minutes=end_confirmation_minutes,
+            )
+            details["irrigation_operating_window"] = {
+                "code": operating_window.code,
+                "earliest_start_utc": (
+                    operating_window.earliest_start_utc.isoformat()
+                    if operating_window.earliest_start_utc else None
+                ),
+                "latest_end_utc": (
+                    operating_window.latest_end_utc.isoformat()
+                    if operating_window.latest_end_utc else None
+                ),
+                "projected_end_utc": (
+                    operating_window.projected_end_utc.isoformat()
+                    if operating_window.projected_end_utc else None
+                ),
+                "latest_start_utc": (
+                    operating_window.latest_start_utc.isoformat()
+                    if operating_window.latest_start_utc else None
+                ),
+                "reason": operating_window.reason,
+            }
+            if operating_window.code == "TOO_EARLY":
+                return _persist_result(
+                    store=store, original=original, state=state, result=result,
+                    details=details, settings=settings,
+                    decision_code="IRRIGATION_OPERATING_WINDOW",
+                    message="Die Beregnung wartet bis 03:30 Europe/Berlin; der gesicherte native Plan bleibt unterdrückt.",
+                )
+            if operating_window.code != "OK":
+                return _persist_result(
+                    store=store, original=original, state=state, result=result,
+                    details=details, settings=settings,
+                    decision_code=(
+                        "IRRIGATION_WINDOW_CANNOT_FIT"
+                        if operating_window.code == "TOO_LATE"
+                        else "IRRIGATION_OPERATING_WINDOW"
+                    ),
+                    message="Bewässerung ist nur ab 03:30 möglich und muss bis 08:00 beendet sein. Bitte früheren Start wählen.",
+                )
             reserved = replace(
                 state,
                 revision=state.revision + 1,
@@ -4370,6 +5180,131 @@ def run_full_failsafe_cycle(
                 )
             api_key = str(environment.get("HYDRAWISE_API_KEY", "")).strip()
             controller_id = str(environment.get("HYDRAWISE_CONTROLLER_ID", "")).strip() or None
+            # Read persisted ownership before sampling the dispatch clock: a
+            # slow remote state read must not make an old clock look current.
+            try:
+                latest = store.load()
+                dispatch_now = command_clock()
+                if dispatch_now.tzinfo is None or dispatch_now.utcoffset() is None:
+                    raise ValueError("command clock is not timezone-aware")
+                dispatch_now = dispatch_now.astimezone(timezone.utc)
+            except Exception as exc:
+                details["irrigation_action"] = {
+                    "type": "StartZone", "outcome": "PRE_SEND_BLOCKED",
+                    "reason_code": "IRRIGATION_OPERATING_WINDOW",
+                    "error_type": type(exc).__name__,
+                }
+                return replace(
+                    result, decision_code="IRRIGATION_OPERATING_WINDOW", command_sent=False,
+                    message="Die Startvorbereitung ist nicht aktuell nachweisbar; es wurde kein Zonenbefehl gesendet.",
+                    details=_decorate(details, state=reserved, settings=settings, persisted=True, command_sent=False),
+                )
+            if (
+                latest.revision != reserved.revision
+                or latest.irrigation_phase != "START_RESERVED"
+                or latest.irrigation_current_relay_id != int(next_zone["relay_id"])
+                or latest.irrigation_zone_start_reserved_utc
+                != reserved.irrigation_zone_start_reserved_utc
+            ):
+                details["irrigation_action"] = {
+                    "type": "StartZone", "outcome": "PRE_SEND_BLOCKED",
+                    "reason_code": "IRRIGATION_START_RESERVATION_CHANGED",
+                }
+                return replace(
+                    result, decision_code="IRRIGATION_OPERATING_WINDOW", command_sent=False,
+                    message="Die Zonenstart-Reservierung wurde vor dem Versand verändert; es wurde kein Zonenbefehl gesendet.",
+                    details=_decorate(details, state=latest, settings=settings, persisted=True, command_sent=False),
+                )
+            # The state reread is deliberately the final remote operation.
+            # Reassess every proof whose age can expire while it was in
+            # flight; a cached cycle result is never a licence to POST later.
+            dispatch_window = _irrigation_operating_window(
+                plan=execution_zones,
+                completed_relay_ids=set(completed),
+                now_utc=dispatch_now,
+                end_confirmation_minutes=end_confirmation_minutes,
+            )
+            dispatch_code: str | None = None
+            dispatch_reason: str | None = None
+            if dispatch_window.code == "TOO_LATE":
+                dispatch_code, dispatch_reason = "IRRIGATION_WINDOW_CANNOT_FIT", "IRRIGATION_WINDOW_CANNOT_FIT"
+            elif latest.maintenance_mode:
+                dispatch_code, dispatch_reason = "IRRIGATION_OPERATING_WINDOW", "MAINTENANCE_MODE"
+            elif _operator_action(latest, dispatch_now) is not None:
+                dispatch_code, dispatch_reason = "IRRIGATION_OPERATING_WINDOW", "OPERATOR_ACTION_PENDING"
+            elif latest.mower_start_pending_since_utc is not None:
+                dispatch_code, dispatch_reason = "IRRIGATION_OPERATING_WINDOW", "MOWER_START_PENDING"
+            elif not _mower_status_is_fresh(
+                mower, now_utc=dispatch_now,
+                max_age_seconds=mower_status_max_age_seconds,
+            ):
+                dispatch_code, dispatch_reason = "IRRIGATION_OPERATING_WINDOW", "MOWER_STATUS_STALE"
+            else:
+                dispatch_observed = _hydrawise_source_observation(
+                    details, now_utc=dispatch_now,
+                )
+                dispatch_hydra_fresh = (
+                    dispatch_observed is not None
+                    and -60 <= (dispatch_now - dispatch_observed).total_seconds()
+                    <= hydrawise_status_max_age_seconds
+                )
+                if (
+                    not dispatch_hydra_fresh
+                    or hydra_safety.get("clear_now") is not True
+                    or bool(_active_relay_ids(details))
+                ):
+                    dispatch_code, dispatch_reason = "IRRIGATION_OPERATING_WINDOW", "HYDRAWISE_STATUS_STALE_OR_ACTIVE"
+                elif (
+                    (_source_parts(effective_blocked_now.get("source"))
+                     | _source_parts(effective_parking_block.get("source")))
+                    - frozenset({"irrigation"})
+                ):
+                    # These are the cycle's already-read occupancy proofs.
+                    # Do not initiate another source burst here; without a
+                    # fresh positive read they remain a conservative block.
+                    dispatch_code, dispatch_reason = "IRRIGATION_OPERATING_WINDOW", "OCCUPANCY_OR_PARKING_BLOCK"
+                elif dispatch_window.code != "OK":
+                    dispatch_code = (
+                        "IRRIGATION_WINDOW_CANNOT_FIT"
+                        if dispatch_window.code == "TOO_LATE"
+                        else "IRRIGATION_OPERATING_WINDOW"
+                    )
+                    dispatch_reason = dispatch_code
+                else:
+                    latest_suspension_until = _parse_time(
+                        latest.irrigation_suspension_until_utc
+                    )
+                    if (
+                        latest_suspension_until is None
+                        or dispatch_window.projected_end_utc is None
+                        or dispatch_window.projected_end_utc > latest_suspension_until
+                    ):
+                        dispatch_code = "IRRIGATION_WINDOW_CANNOT_FIT"
+                        dispatch_reason = "IRRIGATION_SUSPENSION_WINDOW_EXPIRED"
+            if dispatch_code is not None:
+                reopened = replace(
+                    reserved,
+                    revision=reserved.revision + 1,
+                    irrigation_phase="READY",
+                    irrigation_current_relay_id=None,
+                    irrigation_zone_start_reserved_utc=None,
+                    last_decision_code=dispatch_code,
+                )
+                try:
+                    store.save(reopened, expected_revision=reserved.revision)
+                except Exception:
+                    reopened = reserved
+                details["irrigation_action"] = {
+                    "type": "StartZone", "outcome": "PRE_SEND_BLOCKED",
+                    "reason_code": dispatch_reason,
+                }
+                return replace(
+                    result,
+                    decision_code=dispatch_code,
+                    command_sent=False,
+                    message="Bewässerung ist nur ab 03:30 möglich und muss bis 08:00 beendet sein. Bitte früheren Start wählen.",
+                    details=_decorate(details, state=reopened, settings=settings, persisted=True, command_sent=False),
+                )
             response = start_zone_sender(
                 api_key,
                 int(next_zone["relay_id"]),
@@ -4444,6 +5379,8 @@ def run_full_failsafe_cycle(
                 revision=state.revision + 1,
                 irrigation_phase="STOPPING",
                 irrigation_zone_clear_since_utc=None,
+                irrigation_zone_clear_observed_utc=None,
+                irrigation_zone_stop_requested_utc=now.isoformat(),
             )
             try:
                 store.save(stopping, expected_revision=original.revision)
@@ -4542,17 +5479,19 @@ def run_full_failsafe_cycle(
                     decision_code="IRRIGATION_DIRECT_STOP_END_UNCLEAR",
                     message="Der direkte Zonenstopp ist nicht sicher bestätigt; der Mäher bleibt gesperrt.",
                 )
-            clear_since = _parse_time(state.irrigation_zone_clear_since_utc)
-            if clear_since is None:
-                confirming = replace(
-                    state,
-                    revision=state.revision + 1,
-                    irrigation_zone_clear_since_utc=now.isoformat(),
-                )
+            confirming, advanced_observation = _record_zone_clear_observation(
+                state,
+                observed_utc=_hydrawise_source_observation(details, now_utc=now),
+                not_before_utc=(
+                    _parse_time(state.irrigation_zone_stop_requested_utc)
+                    or _parse_time(state.irrigation_zone_started_utc)
+                ),
+            )
+            clear_since = _parse_time(confirming.irrigation_zone_clear_since_utc)
+            if clear_since is None or not advanced_observation:
                 return _persist_result(
                     store=store,
-                    original=original,
-                    state=confirming,
+                    original=original, state=confirming,
                     result=result,
                     details=details,
                     settings=settings,
@@ -4566,11 +5505,11 @@ def run_full_failsafe_cycle(
                 minimum=1,
                 maximum=10,
             )
-            if now - clear_since < timedelta(minutes=end_confirmation):
+            if _hydrawise_source_observation(details, now_utc=now) - clear_since < timedelta(minutes=end_confirmation):
                 return _persist_result(
                     store=store,
                     original=original,
-                    state=state,
+                    state=confirming,
                     result=result,
                     details=details,
                     settings=settings,
@@ -4622,7 +5561,7 @@ def run_full_failsafe_cycle(
                     details=details,
                     settings=settings,
                     decision_code="IRRIGATION_ZONE_CONFIRMED_RUNNING",
-                    message="Der angeforderte Hydrawise-Zonenstart ist physisch bestätigt.",
+                    message="Hydrawise meldet die angeforderte Zone als laufend.",
                 )
             start_timeout = _env_int(
                 environment,
@@ -4683,17 +5622,16 @@ def run_full_failsafe_cycle(
                     decision_code="IRRIGATION_ZONE_END_UNCLEAR",
                     message=failed.irrigation_failed_reason or "Zonenende unklar.",
                 )
-            clear_since = _parse_time(state.irrigation_zone_clear_since_utc)
-            if clear_since is None:
-                confirming = replace(
-                    state,
-                    revision=state.revision + 1,
-                    irrigation_zone_clear_since_utc=now.isoformat(),
-                )
+            confirming, advanced_observation = _record_zone_clear_observation(
+                state,
+                observed_utc=_hydrawise_source_observation(details, now_utc=now),
+                not_before_utc=_parse_time(state.irrigation_zone_started_utc),
+            )
+            clear_since = _parse_time(confirming.irrigation_zone_clear_since_utc)
+            if clear_since is None or not advanced_observation:
                 return _persist_result(
                     store=store,
-                    original=original,
-                    state=confirming,
+                    original=original, state=confirming,
                     result=result,
                     details=details,
                     settings=settings,
@@ -4707,11 +5645,11 @@ def run_full_failsafe_cycle(
                 minimum=1,
                 maximum=10,
             )
-            if now - clear_since < timedelta(minutes=end_confirmation):
+            if _hydrawise_source_observation(details, now_utc=now) - clear_since < timedelta(minutes=end_confirmation):
                 return _persist_result(
                     store=store,
                     original=original,
-                    state=state,
+                    state=confirming,
                     result=result,
                     details=details,
                     settings=settings,
@@ -4821,6 +5759,30 @@ def run_full_failsafe_cycle(
                 )
             completed.append(int(current_id or 0))
             all_complete = len(set(completed)) == execution_zone_count
+            if coordination_plan and not all_complete:
+                try:
+                    shifted = _delay_coordinated_remaining_zones(
+                        zones, completed=set(completed), current_id=int(current_id),
+                        proved_clear_since=clear_since,
+                    )
+                except (RuntimeError, TypeError, ValueError, StopIteration) as exc:
+                    failed = _failed_irrigation(state, str(exc))
+                    return _persist_result(
+                        store=store, original=original, state=failed, result=result,
+                        details=details, settings=settings,
+                        decision_code="COORDINATION_EXECUTION_GAP_INVALID",
+                        message="Die Pause bis zur nächsten Zone ist nicht sicher nachweisbar.",
+                    )
+                canonical = json.dumps(shifted, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+                shifted_override = {
+                    **active_override_for_plan, "zones": shifted,
+                    "last_proved_zone_end_utc": clear_since.isoformat(),
+                }
+                state = replace(
+                    state, irrigation_plan_json=canonical,
+                    irrigation_plan_id=hashlib.sha256(canonical.encode("utf-8")).hexdigest(),
+                    irrigation_schedule_override_json=dump_irrigation_schedule_object(shifted_override),
+                )
             advanced = replace(
                 state,
                 revision=state.revision + 1,
@@ -4899,9 +5861,18 @@ def run_full_failsafe_cycle(
         now_utc=now,
         required_clear_minutes=release_minutes,
         persistent_state_available=True,
+        drying_since_utc=state.hydrawise_drying_since_utc,
+        telemetry_confirmation_minutes=_env_int(
+            environment,
+            "HYDRAWISE_DATA_GAP_CONFIRMATION_MINUTES",
+            2,
+            minimum=1,
+            maximum=1440,
+        ),
     )
     cancelled_without_run_release = (
         state.irrigation_cancelled_without_run_utc is not None
+        and state.hydrawise_drying_since_utc is None
         and bool(hydra_safety.get("available"))
         and bool(hydra_safety.get("fresh"))
         and bool(hydra_safety.get("clear_now"))
@@ -5388,68 +6359,92 @@ def run_full_failsafe_cycle(
         command_state = _clear_irrigation(command_state)
     client_id = str(environment.get("HUSQVARNA_CLIENT_ID", "")).strip()
     client_secret = str(environment.get("HUSQVARNA_CLIENT_SECRET", "")).strip()
-    if failsafe_refresh:
-        response = start_sender(
-            client_id,
-            client_secret,
-            mower_id,
-            work_area_id,
-            duration,
+    # All START variants share one durable reservation. Keep the previously
+    # acknowledged interval until the vendor response and following CAS both
+    # succeed; a process death or lost response must not invent a shorter one.
+    reserved = replace(
+        state, revision=state.revision + 1,
+        last_command_fingerprint=intent.fingerprint, last_command_utc=now.isoformat(),
+        mower_start_pending_since_utc=now.isoformat(),
+        mower_start_pending_deadline_utc=command_end.isoformat(),
+    )
+    try:
+        store.save(reserved, expected_revision=original.revision)
+    except Exception as exc:
+        return replace(
+            result, decision_code="MOWER_START_RESERVATION_FAILED", command_sent=False,
+            message="Mäherstart wurde wegen fehlender persistenter Reservierung nicht gesendet.",
+            details=_decorate(details, state=state, settings=settings, persisted=False,
+                              command_sent=False, error=type(exc).__name__),
         )
-        try:
-            store.save(command_state, expected_revision=original.revision)
-        except Exception as exc:
-            details["start_action"] = {
-                "type": "StartInWorkArea",
-                "response": response,
-                "duration_minutes": duration,
-                "work_area_id": work_area_id,
-                "continuous_mowing": True,
-                "command_end_utc": command_end.isoformat(),
-                "failsafe_refresh": True,
-                "state_confirmation_error": f"{type(exc).__name__}: {exc}",
-            }
-            return replace(
-                result,
-                decision_code="CONTINUOUS_MOWING_FAILSAFE_REFRESH_SENT_STATE_UNCONFIRMED",
-                message=(
-                    "Husqvarna hat die sichere kürzere Laufzeit angenommen; "
-                    "die Zustandsbestätigung wird im nächsten Zyklus wiederholt."
-                ),
-                command_sent=True,
-                details=_decorate(
-                    details,
-                    state=state,
-                    settings=settings,
-                    persisted=False,
-                    command_sent=True,
-                    error=f"{type(exc).__name__}: {exc}",
-                ),
+
+    def before_start_dispatch() -> int:
+        return prepare_start_dispatch(
+            clock=command_clock,
+            store=store,
+            reserved=reserved,
+            mower=mower,
+            hydrawise_safety=hydra_safety,
+            safe_command_deadline_utc=safe_command_deadline,
+            command_end_utc=command_end,
+            requested_duration_minutes=duration,
+            mower_status_max_age_seconds=mower_status_max_age_seconds,
+            hydrawise_status_max_age_seconds=hydrawise_status_max_age_seconds,
+        )
+
+    try:
+        # Always fence legacy five-argument fakes/adapters immediately before
+        # their invocation.  The production sender repeats this exact fence
+        # after OAuth and immediately before its HTTP POST.
+        guarded_duration = before_start_dispatch()
+        if start_sender is start_in_work_area:
+            response = start_sender(
+                client_id, client_secret, mower_id, work_area_id, guarded_duration,
+                before_send=before_start_dispatch,
             )
-    else:
-        try:
-            store.save(command_state, expected_revision=original.revision)
-        except Exception as exc:
-            return replace(
-                result,
-                decision_code="MOWER_START_RESERVATION_FAILED",
-                message="Mäherstart wurde wegen fehlender persistenter Reservierung nicht gesendet.",
-                command_sent=False,
-                details=_decorate(
-                    details,
-                    state=state,
-                    settings=settings,
-                    persisted=False,
-                    command_sent=False,
-                    error=f"{type(exc).__name__}: {exc}",
-                ),
+        else:
+            response = start_sender(
+                client_id, client_secret, mower_id, work_area_id, guarded_duration
             )
-        response = start_sender(
-            client_id,
-            client_secret,
-            mower_id,
-            work_area_id,
-            duration,
+    except StartDispatchBlocked as exc:
+        details["start_action"] = {
+            "type": "StartInWorkArea", "outcome": "PRE_SEND_BLOCKED",
+            "reason_code": exc.code, "requested_deadline_utc": command_end.isoformat(),
+            "failsafe_refresh": failsafe_refresh,
+        }
+        return replace(
+            result, decision_code="MOWER_START_SEND_BLOCKED", command_sent=False,
+            message="Der Mäherstart wurde vor dem HTTP-Versand verworfen; der Schutz-Latch bleibt bis zum Abgleich bestehen.",
+            details=_decorate(details, state=reserved, settings=settings, persisted=True, command_sent=False),
+        )
+    except Exception as exc:
+        details["start_action"] = {
+            "type": "StartInWorkArea", "outcome": "UNCONFIRMED", "error_type": type(exc).__name__,
+            "requested_deadline_utc": command_end.isoformat(), "failsafe_refresh": failsafe_refresh,
+        }
+        return replace(
+            result, decision_code="MOWER_START_OUTCOME_UNCONFIRMED", command_sent=True,
+            message="Die Startantwort fehlt; weitere Starts bleiben bis zum Abgleich gesperrt.",
+            details=_decorate(details, state=reserved, settings=settings, persisted=True, command_sent=True),
+        )
+    command_state = replace(
+        command_state, revision=reserved.revision + 1,
+        mower_start_pending_since_utc=None, mower_start_pending_deadline_utc=None,
+    )
+    try:
+        store.save(command_state, expected_revision=reserved.revision)
+    except Exception as exc:
+        details["start_action"] = {
+            "type": "StartInWorkArea", "response": response,
+            "duration_minutes": duration, "work_area_id": work_area_id,
+            "continuous_mowing": True, "requested_deadline_utc": command_end.isoformat(),
+            "failsafe_refresh": failsafe_refresh, "state_confirmation_error": type(exc).__name__,
+        }
+        return replace(
+            result, decision_code="MOWER_START_OUTCOME_UNCONFIRMED", command_sent=True,
+            message="Start angenommen, aber nicht sicher gespeichert; weitere Starts bleiben bis zum Abgleich gesperrt.",
+            details=_decorate(details, state=reserved, settings=settings, persisted=False,
+                              command_sent=True, error=type(exc).__name__),
         )
     details["start_action"] = {
         "type": "StartInWorkArea",
@@ -5461,6 +6456,8 @@ def run_full_failsafe_cycle(
         "failsafe_refresh": failsafe_refresh,
         "turnaround_before_dock": turnaround_before_dock,
         "hydrawise_release_minutes": release_minutes,
+        "acknowledgement": "VENDOR_QUEUE_ACCEPTED",
+        "physical_execution_confirmed": False,
     }
     return replace(
         result,
@@ -5474,12 +6471,12 @@ def run_full_failsafe_cycle(
             )
         ),
         message=(
-            "Der laufende Mähauftrag wurde im Mäher selbst bis zur sicheren Rückkehrfrist begrenzt."
+            "Die zeitlich begrenzte Laufzeitänderung wurde angenommen; die Geräteausführung ist noch nicht bestätigt."
             if failsafe_refresh
             else (
-                "Der ausreichend geladene Mäher wurde vor der Station sicher erneut in die Rasenfläche geschickt."
+                "Der begrenzte Startbefehl für die Rückfahrt wurde angenommen; die Geräteausführung ist noch nicht bestätigt."
                 if turnaround_before_dock
-                else "Der Mäher wurde im sicheren freien Fenster zum kontinuierlichen Mähen gestartet."
+                else "Der begrenzte Mähstart wurde angenommen; die Geräteausführung ist noch nicht bestätigt."
             )
         ),
         command_sent=True,
