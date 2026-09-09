@@ -1,0 +1,62 @@
+- text: SIMULATION · Beispielwerte · Netzwerk gesperrt · keine Gerätebefehle
+- link "Verbindungsausfall zeigen":
+  - /url: "#offline"
+- main:
+  - generic: SSV53
+  - heading "Platzpflege" [level=1]
+  - separator
+  - generic: Jetzt
+  - generic: Mähermeldung ist älter
+  - generic: Bitte aktualisieren. Die angezeigten Gerätedaten sind der letzte bestätigte Stand.
+  - article:
+    - generic: Zeitplan
+    - heading "Als Nächstes" [level=2]
+    - generic: Nächster Mähstart
+    - strong: Noch offen
+    - generic: Wartezeit nach Bewässerung bis
+    - strong: Heute, 22:42 Uhr
+  - article:
+    - generic: Mäher
+    - 'heading "Zuletzt: Auf dem Platz aktiv" [level=2]'
+    - button "Mäherstatistiken öffnen":
+    - generic: Letzte Meldung
+    - generic: Heute, 20:45 Uhr
+    - generic: Akku
+    - generic: 100 %
+    - generic: Fläche gemäht
+    - generic: 43 %
+    - generic: Schnitthöhe
+    - generic: 25 mm
+    - button "Mäher parken"
+    - generic "Schnitthöhe ändern"
+  - article:
+    - generic: Bewässerung
+    - heading "Läuft" [level=2]
+    - button "Bewässerungsplan anpassen":
+    - button "Bewässerungsstatistiken öffnen":
+    - generic: Zurzeit wird nicht bewässert.
+    - paragraph: Start frühestens 03:30 Uhr. Alle Zonen fertig bis 08:00 Uhr.
+    - generic: Nächster Start
+    - generic: Do., 10.09.26, 04:30 Uhr
+    - generic "Einzelne Zonen bedienen"
+    - button "Bewässerung beenden"
+  - article:
+    - generic: Platzbelegung
+    - heading "Nächste Platzbelegung" [level=2]
+    - generic: Platz ist frei
+    - strong: Keine Belegung geplant
+    - generic: Derzeit ist keine kommende Sperre bekannt.
+  - article:
+    - generic: Training
+    - heading "Wintertrainingsplan" [level=2]
+    - switch "Wintertrainingsplan –" [disabled]:
+      - generic: –
+    - paragraph: Trainingsplan fehlt. Bitte aktualisieren.
+    - paragraph: An Feiertagen in Brandenburg findet kein Training statt. Spiele bleiben im Plan.
+  - article:
+    - generic: Vereinsheim
+    - heading "Nächste Belegungen" [level=2]
+    - list:
+      - listitem: Belegungen konnten nicht geladen werden. Bitte aktualisieren.
+  - button "Aktualisieren"
+  - generic: Aktualisiert um 20:50 Uhr

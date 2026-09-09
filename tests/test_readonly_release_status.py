@@ -29,7 +29,15 @@ ENVIRONMENT = {
 
 
 class ReadOnlyReleaseStatusTests(unittest.TestCase):
-    def displayed_status(self, state, *, store_unavailable=False, payload_override=None):
+    def displayed_status(
+        self,
+        state,
+        *,
+        store_unavailable=False,
+        payload_override=None,
+        environment=None,
+        mower_status_timestamp_ms=None,
+    ):
         class ReadOnlyStore(InMemoryStateStore):
             def load(self):
                 if store_unavailable:
@@ -46,7 +54,12 @@ class ReadOnlyReleaseStatusTests(unittest.TestCase):
             mode="HOME", error_code=0, override_action="FORCE_PARK",
             restricted_reason="NOT_APPLICABLE", external_reason_id=AUTOMATION_EXTERNAL_REASON,
             next_start_timestamp_ms=None, work_areas=({"id": 849199, "name": "Rasenfläche"},),
-            connected=True, status_timestamp_ms=int(NOW.timestamp() * 1000),
+            connected=True,
+            status_timestamp_ms=(
+                int(NOW.timestamp() * 1000)
+                if mower_status_timestamp_ms is None
+                else mower_status_timestamp_ms
+            ),
         )
         config = {
             "timezone": "Europe/Berlin",
@@ -84,7 +97,7 @@ class ReadOnlyReleaseStatusTests(unittest.TestCase):
                 patch("platzwart_console._dashboard_statistics", return_value={}),
                 patch("platzwart_console._dashboard_irrigation_statistics", return_value={}),
             ):
-                output = live_status(ENVIRONMENT, NOW)
+                output = live_status(environment or ENVIRONMENT, NOW)
         if not store_unavailable:
             self.assertEqual(store.load(), state)
         return output
@@ -136,6 +149,31 @@ class ReadOnlyReleaseStatusTests(unittest.TestCase):
         self.assertFalse(output["irrigation"]["releaseConfirmation"]["allowed"])
         self.assertFalse(output["irrigation"]["releaseConfirmation"]["persistent_state_available"])
         self.assertFalse(output["controlsAvailable"])
+
+    def test_real_readonly_pipeline_keeps_stop_gate_open_when_mower_telemetry_is_stale(self):
+        fully_armed = {
+            **ENVIRONMENT,
+            "ENABLE_PARK_COMMANDS": "true",
+            "ENABLE_START_COMMANDS": "true",
+            "ENABLE_IRRIGATION_COMMANDS": "true",
+            "FULL_MOWER_CONFIRMATION": "SSV53-TRAINING-MATCH-PARK-START",
+            "FULL_FAILSAFE_CONFIRMATION": "SSV53-MOWER-HYDRAWISE-7-ZONES-150-MINUTES-ADAPTIVE-V1",
+        }
+        output = self.displayed_status(
+            AutomationState(),
+            environment=fully_armed,
+            mower_status_timestamp_ms=int(
+                (NOW - timedelta(seconds=181)).timestamp() * 1000
+            ),
+        )
+
+        self.assertTrue(output["deviceControlsAvailable"])
+        self.assertFalse(output["mower"]["telemetryFresh"])
+        self.assertEqual(output["mower"]["statusAgeSeconds"], 181)
+        self.assertIn(
+            "MOWER_TELEMETRY",
+            {item["code"] for item in output["coordination"]["blockers"]},
+        )
 
     def test_malformed_hydrawise_retains_diagnostic_response_without_release(self):
         for relays in (None, {}, [None], [{"relay_id": "bad"}],

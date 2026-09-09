@@ -59,6 +59,7 @@ test("Laufendes Wasser außerhalb der erlaubten Zeit verlangt eine klare Handlun
 
 test("Veralteter Belegungsplan verspricht keinen sicheren physischen Mäherstopp", () => {
   const s = snapshot(); s.controlsAvailable = false; s.dataQuality = {code: "CONFIG_STALE"};
+  assert.equal(view.activity(s.mower), "Lädt");
   s.mower.activity = "MOWING";
   const message = view.dashboardMessage(s);
   assert.equal(message.title, "Belegungsplan nicht aktuell");
@@ -122,6 +123,33 @@ test("Fehlende Freigaben und unbestätigte Aktionen unterdrücken die Startprogn
     change(s);
     assert.equal(view.nextMowerStart(s), "Noch offen", `case ${index}`);
   }
+});
+
+test("Veraltete Mäherdaten sperren Start und bleiben als letzter Stand erkennbar", () => {
+  const s = snapshot();
+  s.mower.telemetryFresh = false;
+  s.mower.statusTimestamp = "2026-09-09T09:57:00Z";
+  s.mower.activity = "CHARGING";
+  s.mower.displayActivity = "RESTRICTED";
+  s.coordination.blockers.push({code: "MOWER_TELEMETRY"});
+  assert.equal(view.dashboardMessage(s).title, "Mähermeldung ist älter");
+  assert.equal(view.effectiveMowerActions(s).showStart, false);
+  s.mower.activity = "MOWING";
+  s.automation.irrigationPhase = "RUNNING";
+  assert.equal(view.effectiveMowerActions(s).showPark, true);
+  assert.equal(view.irrigationActions(s).showStop, true);
+  assert.equal(view.deviceControlsOpen(s), true);
+  s.deviceControlsAvailable = false;
+  assert.equal(view.effectiveMowerActions(s).showStart, false);
+  delete s.deviceControlsAvailable;
+  assert.equal(view.deviceControlsOpen(s), false);
+  assert.equal(view.effectiveMowerActions(s).showStart, false);
+});
+
+test("Trocknungsanzeige rundet nur nach oben und behandelt Mitternacht", () => {
+  assert.equal(view.dryingTime("2026-09-09T20:41:51.487Z", "2026-09-09T20:00:00Z"), "Heute, 22:42 Uhr");
+  assert.equal(view.dryingTime("2026-09-09T20:42:00Z", "2026-09-09T20:00:00Z"), "Heute, 22:42 Uhr");
+  assert.equal(view.dryingTime("2026-09-09T21:59:59Z", "2026-09-09T20:00:00Z"), "Do., 10.09.26, 00:00 Uhr");
 });
 
 test("Manueller Stopp bleibt als Pause sichtbar, auch mit berechenbarem Ladeende", () => {
@@ -246,4 +274,29 @@ test("Planfehler und laufendes Wasser bleiben vor allgemeinen Pausehinweisen sic
   const running=snapshot(); running.generatedAt="2026-09-09T04:00:00Z"; running.irrigationSchedule.override={kind:"CUSTOM_NEXT",status:"EXECUTING"};running.irrigation.safety.active_zone_count=1;running.automation.irrigationPhase="RUNNING";
   assert.equal(view.dashboardMessage(running).title,"Bewässerung läuft");
   assert.equal(view.nextWaterStart(running),"Noch offen");
+});
+
+
+test("Geschlossene Bedienung erzeugt keine Startzusage und lässt keine Geräteänderung zu", () => {
+  for (const gate of [false, undefined]) {
+    const s = snapshot(); s.deviceControlsAvailable = gate;
+    assert.equal(view.nextMowerStart(s), "Noch offen");
+    for (const action of ["START_MOWING", "PARK_MOWER", "START_IRRIGATION", "STOP_IRRIGATION_NOW", "SET_CUTTING_HEIGHT", "CUSTOMIZE_NEXT_IRRIGATION"])
+      assert.equal(view.deviceActionAllowed(s, action), false, action);
+  }
+});
+
+test("Alte oder widersprüchliche Meldungen sperren Start, aber erlauben verfügbare Stoppaktionen", () => {
+  for (const blocks of [[{code:"MOWER_TELEMETRY"}], null, [null]]) {
+    const s = snapshot(); s.coordination.blockers = blocks;
+    assert.equal(view.deviceActionAllowed(s, "START_MOWING"), false);
+    assert.equal(view.deviceActionAllowed(s, "START_IRRIGATION_ZONE"), false);
+    assert.equal(view.deviceActionAllowed(s, "SET_CUTTING_HEIGHT"), false);
+    assert.equal(view.deviceActionAllowed(s, "PARK_MOWER"), true);
+    assert.equal(view.deviceActionAllowed(s, "STOP_IRRIGATION_NOW"), true);
+  }
+  const manual=snapshot(); manual.overall.code="EXTERNAL_OVERRIDE"; manual.automation={}; manual.mower.telemetryFresh=false;
+  assert.equal(view.effectiveMowerActions(manual).showStart,false);
+  const fresh=snapshot(); assert.equal(view.deviceActionAllowed(fresh,"START_MOWING"),true);
+  assert.equal(view.deviceActionAllowed(fresh,"UNKNOWN_ACTION"),false);
 });
