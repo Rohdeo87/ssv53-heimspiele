@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from pathlib import Path
 import tempfile
+import json
 import unittest
 from unittest.mock import patch
 
@@ -182,6 +183,18 @@ class CoordinationShadowTests(unittest.TestCase):
                     read_input(source)
         with patch('scripts.replay_coordination_shadow.MAX_EVIDENCE_ROWS', 0):
             with self.assertRaisesRegex(ValueError, 'evidence budget'):
+                replay({'schema_version': 1, 'cycles': [self.previous, self.cycle]}, self.need)
+
+    def test_replay_final_hashing_cannot_outlive_budget_and_return_success(self):
+        clock = [0]
+        original_dumps = json.dumps
+        def slow_final_hash(*args, **kwargs):
+            encoded = original_dumps(*args, **kwargs)
+            clock[0] = 31
+            return encoded
+        with patch('scripts.replay_coordination_shadow.monotonic', lambda: clock[0]), \
+                patch('scripts.replay_coordination_shadow.json.dumps', slow_final_hash):
+            with self.assertRaisesRegex(ValueError, 'time budget'):
                 replay({'schema_version': 1, 'cycles': [self.previous, self.cycle]}, self.need)
 
     def test_stale_or_active_water_blocks(self):

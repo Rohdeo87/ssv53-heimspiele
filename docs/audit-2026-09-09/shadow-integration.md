@@ -59,9 +59,13 @@ keine neue Ausgabedatei. Größere Untersuchungen müssen gezielt auf einzelne
 Bedarfsinstanzen aufgeteilt werden, mit deren erforderlicher vorheriger Historie.
 
 Der unabhängige Review reproduzierte zuvor 2.001.000 Normalisierungen bei 2.000
-Zyklen. Der Regressionstest belegt jetzt genau 2.000 Normalisierungen sowie
-Abbruch bei Größen-, Zeit- und Arbeitsbudgetüberschreitung. Er prüft außerdem
-die minutenweise Auswahl ohne Vorgriff auf einen späteren Messwert.
+Zyklen. Die Regressionstests belegen jetzt genau 2.000 Normalisierungen sowie
+Abbruch bei Größen-, Zeit- und Arbeitsbudgetüberschreitung, auch während der
+abschließenden Hashberechnung. Sie prüfen außerdem die minutenweise Auswahl
+ohne Vorgriff auf einen späteren Messwert. Ein weiterer unabhängiger Vergleich
+über 108 synthetische Zyklen mit drei abgeschlossenen Ladevorgängen und einem
+positiven empirischen Vorschlag ergab dieselben Entscheidungen und denselben
+ersten Vorschlag wie die frühere vollständige Präfixauswertung.
 
 ```powershell
 python scripts/replay_coordination_shadow.py --cycles PRIVATE-cycles.json --approved-need PRIVATE-need.json --output PRIVATE-comparison.json

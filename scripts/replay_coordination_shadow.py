@@ -99,7 +99,7 @@ def replay(document: dict, need: dict) -> dict:
         previous, previous_at = cycle, now
     if monotonic() >= deadline:
         raise ValueError('Local replay time budget exceeded; no complete result')
-    return {
+    report = {
         'schema_version': 1, 'shadow_only': True, 'execution_available': False,
         'input_sha256': hashlib.sha256(json.dumps(document, sort_keys=True).encode()).hexdigest(),
         'need_sha256': hashlib.sha256(json.dumps(need, sort_keys=True).encode()).hexdigest(),
@@ -107,6 +107,9 @@ def replay(document: dict, need: dict) -> dict:
         'manual_stop_latched_in_replay': stopped, 'observations': reviewed,
         'production_actions': [], 'productive_mowing_gain_minutes': None,
     }
+    if monotonic() >= deadline:
+        raise ValueError('Local replay time budget exceeded; no complete result')
+    return report
 
 
 def main():
