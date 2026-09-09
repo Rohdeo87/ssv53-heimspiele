@@ -331,3 +331,31 @@ def test_token_failure_before_callback_is_rejected_but_post_callback_loss_stays_
         raise TimeoutError()
     run(store, mower(now=NOW + timedelta(seconds=1)), moment=NOW + timedelta(seconds=1), park_sender=after_callback)
     assert operator_commands_payload(store.load())["PARK_MOWER"]["status"] == "RESERVED"
+
+
+
+def test_journal_byte_budget_compacts_only_certain_history_after_confirmation():
+    import json
+    from mower.operator_controls import _dump_journal
+    stamp = "2026-09-09T21:16:33.629662+00:00"
+    entry = {"version": 1, "action": "SET_CUTTING_HEIGHT", "request_id": "r" * 36,
+             "mode": "OPERATOR_ONLY", "generation": "operator-only-v1", "status": "CONFIRMED",
+             "requested_at": stamp, "expires_at": "2026-09-09T21:26:33.629662+00:00",
+             "target_mm": 26, "reserved_at": stamp, "sent_at": stamp, "confirmed_at": stamp,
+             "message_code": "CONFIRMED", "mower_id": "m" * 36, "area_id": 849199}
+    entries = [{**entry, "request_id": f"{index:036d}"} for index in range(32)]
+    assert len(json.dumps(entries, separators=(",", ":")).encode()) > 16_384
+    payload = _dump_journal(entries)
+    assert len(payload.encode()) <= 16_384
+    assert json.loads(payload)[-1]["request_id"] == entries[-1]["request_id"]
+    protected = {**entry, "status": "UNKNOWN", "request_id": "uncertain"}
+    compacted = json.loads(_dump_journal([protected, *entries]))
+    assert any(item["request_id"] == "uncertain" for item in compacted)
+
+
+def test_byte_budget_never_deletes_unresolved_requests():
+    from mower.operator_controls import _dump_journal
+    entry = {"status": "UNKNOWN", "requested_at": NOW.isoformat(), "request_id": "x" * 64,
+             "mower_id": "m" * 128, "message_code": "UNCONFIRMED" * 40}
+    with pytest.raises(OperatorControlError, match="JOURNAL_FULL"):
+        _dump_journal([entry] * 32)
