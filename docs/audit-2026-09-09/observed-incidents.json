@@ -1,0 +1,306 @@
+{
+  "source": "Application Insights read-only export, UTC",
+  "contains_device_or_person_ids": false,
+  "rows": 10075,
+  "error_episodes": [
+    {
+      "error_code": 93,
+      "first_observation_utc": "2026-09-02T05:53:02.0839209Z",
+      "last_observation_utc": "2026-09-02T10:53:01.9624163Z",
+      "samples": 301,
+      "observed_span_minutes": 300.0
+    },
+    {
+      "error_code": 93,
+      "first_observation_utc": "2026-09-02T18:04:02.0897344Z",
+      "last_observation_utc": "2026-09-02T19:39:01.9984618Z",
+      "samples": 96,
+      "observed_span_minutes": 95.0
+    },
+    {
+      "error_code": 115,
+      "first_observation_utc": "2026-09-05T04:35:02.0990584Z",
+      "last_observation_utc": "2026-09-05T04:57:01.9300693Z",
+      "samples": 23,
+      "observed_span_minutes": 22.0
+    },
+    {
+      "error_code": 78,
+      "first_observation_utc": "2026-09-06T05:06:02.1267758Z",
+      "last_observation_utc": "2026-09-06T05:13:02.1015027Z",
+      "samples": 8,
+      "observed_span_minutes": 7.0
+    },
+    {
+      "error_code": 93,
+      "first_observation_utc": "2026-09-06T05:44:01.8653461Z",
+      "last_observation_utc": "2026-09-06T07:58:01.9847355Z",
+      "samples": 135,
+      "observed_span_minutes": 134.0
+    },
+    {
+      "error_code": 78,
+      "first_observation_utc": "2026-09-06T08:36:02.0352251Z",
+      "last_observation_utc": "2026-09-06T09:26:01.9497106Z",
+      "samples": 51,
+      "observed_span_minutes": 50.0
+    },
+    {
+      "error_code": 93,
+      "first_observation_utc": "2026-09-06T09:59:01.9608353Z",
+      "last_observation_utc": "2026-09-06T10:13:03.1612586Z",
+      "samples": 15,
+      "observed_span_minutes": 14.02
+    },
+    {
+      "error_code": 93,
+      "first_observation_utc": "2026-09-06T11:58:02.0478546Z",
+      "last_observation_utc": "2026-09-06T13:06:02.9790062Z",
+      "samples": 69,
+      "observed_span_minutes": 68.02
+    },
+    {
+      "error_code": 93,
+      "first_observation_utc": "2026-09-09T05:19:01.828564Z",
+      "last_observation_utc": "2026-09-09T05:51:01.8355135Z",
+      "samples": 33,
+      "observed_span_minutes": 32.0
+    }
+  ],
+  "september_8_recovery_excerpt_utc": [
+    {
+      "timestamp": "2026-09-08T08:04:01.9554017Z",
+      "code": "HYDRAWISE_CLEAR_CONFIRMATION_HOLD",
+      "activity": "NOT_APPLICABLE",
+      "error": "0",
+      "hydraAvailable": true,
+      "hydraFresh": true,
+      "activeZones": "0",
+      "clearSince": "2026-09-08T05:53:00.0065560Z",
+      "clearOrigin": "IRRIGATION_END",
+      "phase": "COMPLETE_HOLD",
+      "completed": "2026-09-08T05:53:00.0065560Z"
+    },
+    {
+      "timestamp": "2026-09-08T08:05:02.0545617Z",
+      "code": "HYDRAWISE_CLEAR_CONFIRMATION_HOLD",
+      "activity": "NOT_APPLICABLE",
+      "error": "0",
+      "hydraAvailable": true,
+      "hydraFresh": true,
+      "activeZones": "0",
+      "clearSince": "2026-09-08T05:53:00.0065560Z",
+      "clearOrigin": "IRRIGATION_END",
+      "phase": "COMPLETE_HOLD",
+      "completed": "2026-09-08T05:53:00.0065560Z"
+    },
+    {
+      "timestamp": "2026-09-08T08:06:02.2592548Z",
+      "code": "HYDRAWISE_CLEAR_CONFIRMATION_HOLD",
+      "activity": "NOT_APPLICABLE",
+      "error": "0",
+      "hydraAvailable": true,
+      "hydraFresh": true,
+      "activeZones": "0",
+      "clearSince": "2026-09-08T05:53:00.0065560Z",
+      "clearOrigin": "IRRIGATION_END",
+      "phase": "COMPLETE_HOLD",
+      "completed": "2026-09-08T05:53:00.0065560Z"
+    },
+    {
+      "timestamp": "2026-09-08T08:07:01.7485748Z",
+      "code": "HYDRAWISE_CLEAR_CONFIRMATION_HOLD",
+      "activity": "NOT_APPLICABLE",
+      "error": "0",
+      "hydraAvailable": false,
+      "hydraFresh": false,
+      "activeZones": "0",
+      "clearSince": null,
+      "clearOrigin": "IRRIGATION_END",
+      "phase": "COMPLETE_HOLD",
+      "completed": "2026-09-08T05:53:00.0065560Z"
+    },
+    {
+      "timestamp": "2026-09-08T08:08:01.9636309Z",
+      "code": "HYDRAWISE_CLEAR_CONFIRMATION_HOLD",
+      "activity": "NOT_APPLICABLE",
+      "error": "0",
+      "hydraAvailable": false,
+      "hydraFresh": false,
+      "activeZones": "0",
+      "clearSince": null,
+      "clearOrigin": "IRRIGATION_END",
+      "phase": "COMPLETE_HOLD",
+      "completed": "2026-09-08T05:53:00.0065560Z"
+    },
+    {
+      "timestamp": "2026-09-08T08:09:01.7641693Z",
+      "code": "HYDRAWISE_CLEAR_CONFIRMATION_HOLD",
+      "activity": "NOT_APPLICABLE",
+      "error": "0",
+      "hydraAvailable": false,
+      "hydraFresh": false,
+      "activeZones": "0",
+      "clearSince": null,
+      "clearOrigin": "IRRIGATION_END",
+      "phase": "COMPLETE_HOLD",
+      "completed": "2026-09-08T05:53:00.0065560Z"
+    },
+    {
+      "timestamp": "2026-09-08T08:10:02.5378475Z",
+      "code": "HYDRAWISE_CLEAR_CONFIRMATION_HOLD",
+      "activity": "NOT_APPLICABLE",
+      "error": "0",
+      "hydraAvailable": true,
+      "hydraFresh": true,
+      "activeZones": "0",
+      "clearSince": "2026-09-08T08:10:00.0015130Z",
+      "clearOrigin": "IRRIGATION_END",
+      "phase": "COMPLETE_HOLD",
+      "completed": "2026-09-08T05:53:00.0065560Z"
+    },
+    {
+      "timestamp": "2026-09-08T08:11:02.3383992Z",
+      "code": "PARK_COMMAND_SENT_FOR_HYDRAWISE_HOLD",
+      "activity": "MOWING",
+      "error": "0",
+      "hydraAvailable": true,
+      "hydraFresh": true,
+      "activeZones": "0",
+      "clearSince": "2026-09-08T08:10:00.0015130Z",
+      "clearOrigin": "IRRIGATION_END",
+      "phase": "COMPLETE_HOLD",
+      "completed": "2026-09-08T05:53:00.0065560Z"
+    },
+    {
+      "timestamp": "2026-09-08T08:12:01.8662707Z",
+      "code": "HYDRAWISE_CLEAR_CONFIRMATION_HOLD",
+      "activity": "GOING_HOME",
+      "error": "0",
+      "hydraAvailable": true,
+      "hydraFresh": true,
+      "activeZones": "0",
+      "clearSince": "2026-09-08T08:10:00.0015130Z",
+      "clearOrigin": "IRRIGATION_END",
+      "phase": "COMPLETE_HOLD",
+      "completed": "2026-09-08T05:53:00.0065560Z"
+    },
+    {
+      "timestamp": "2026-09-08T08:13:01.8617887Z",
+      "code": "HYDRAWISE_CLEAR_CONFIRMATION_HOLD",
+      "activity": "PARKED_IN_CS",
+      "error": "0",
+      "hydraAvailable": true,
+      "hydraFresh": true,
+      "activeZones": "0",
+      "clearSince": "2026-09-08T08:10:00.0015130Z",
+      "clearOrigin": "IRRIGATION_END",
+      "phase": "COMPLETE_HOLD",
+      "completed": "2026-09-08T05:53:00.0065560Z"
+    },
+    {
+      "timestamp": "2026-09-08T08:14:02.3353938Z",
+      "code": "HYDRAWISE_CLEAR_CONFIRMATION_HOLD",
+      "activity": "PARKED_IN_CS",
+      "error": "0",
+      "hydraAvailable": true,
+      "hydraFresh": true,
+      "activeZones": "0",
+      "clearSince": "2026-09-08T08:10:00.0015130Z",
+      "clearOrigin": "IRRIGATION_END",
+      "phase": "COMPLETE_HOLD",
+      "completed": "2026-09-08T05:53:00.0065560Z"
+    }
+  ],
+  "complete_hold_clear_clock_changes": [
+    {
+      "before": {
+        "timestamp": "2026-09-07T06:08:01.9351879Z",
+        "code": "IRRIGATION_CONFIRM_ZONE_END",
+        "activity": "PARKED_IN_CS",
+        "error": "0",
+        "hydraAvailable": true,
+        "hydraFresh": true,
+        "activeZones": "0",
+        "clearSince": "2026-09-07T06:06:00.0081070Z",
+        "clearOrigin": "IRRIGATION_END",
+        "phase": "RUNNING",
+        "completed": null
+      },
+      "after": {
+        "timestamp": "2026-09-07T06:09:01.9624681Z",
+        "code": "IRRIGATION_ALL_ZONES_CONFIRMED_COMPLETE",
+        "activity": "PARKED_IN_CS",
+        "error": "0",
+        "hydraAvailable": true,
+        "hydraFresh": true,
+        "activeZones": "0",
+        "clearSince": "2026-09-07T06:09:00.0056450Z",
+        "clearOrigin": "IRRIGATION_END",
+        "phase": "COMPLETE_HOLD",
+        "completed": "2026-09-07T06:09:00.0056450Z"
+      }
+    },
+    {
+      "before": {
+        "timestamp": "2026-09-08T05:52:01.680924Z",
+        "code": "IRRIGATION_CONFIRM_ZONE_END",
+        "activity": "PARKED_IN_CS",
+        "error": "0",
+        "hydraAvailable": true,
+        "hydraFresh": true,
+        "activeZones": "0",
+        "clearSince": "2026-09-08T05:50:00.0071930Z",
+        "clearOrigin": "IRRIGATION_END",
+        "phase": "RUNNING",
+        "completed": null
+      },
+      "after": {
+        "timestamp": "2026-09-08T05:53:01.7630109Z",
+        "code": "IRRIGATION_ALL_ZONES_CONFIRMED_COMPLETE",
+        "activity": "PARKED_IN_CS",
+        "error": "0",
+        "hydraAvailable": true,
+        "hydraFresh": true,
+        "activeZones": "0",
+        "clearSince": "2026-09-08T05:53:00.0065560Z",
+        "clearOrigin": "IRRIGATION_END",
+        "phase": "COMPLETE_HOLD",
+        "completed": "2026-09-08T05:53:00.0065560Z"
+      }
+    },
+    {
+      "before": {
+        "timestamp": "2026-09-08T08:06:02.2592548Z",
+        "code": "HYDRAWISE_CLEAR_CONFIRMATION_HOLD",
+        "activity": "NOT_APPLICABLE",
+        "error": "0",
+        "hydraAvailable": true,
+        "hydraFresh": true,
+        "activeZones": "0",
+        "clearSince": "2026-09-08T05:53:00.0065560Z",
+        "clearOrigin": "IRRIGATION_END",
+        "phase": "COMPLETE_HOLD",
+        "completed": "2026-09-08T05:53:00.0065560Z"
+      },
+      "after": {
+        "timestamp": "2026-09-08T08:07:01.7485748Z",
+        "code": "HYDRAWISE_CLEAR_CONFIRMATION_HOLD",
+        "activity": "NOT_APPLICABLE",
+        "error": "0",
+        "hydraAvailable": false,
+        "hydraFresh": false,
+        "activeZones": "0",
+        "clearSince": null,
+        "clearOrigin": "IRRIGATION_END",
+        "phase": "COMPLETE_HOLD",
+        "completed": "2026-09-08T05:53:00.0065560Z"
+      }
+    }
+  ],
+  "limitations": [
+    "An observed error code is not proof of a hardware root cause.",
+    "Clock changes are observations; causality and additional physical idle time require replay.",
+    "Missing cycles split episodes; no interpolation through telemetry gaps."
+  ]
+}

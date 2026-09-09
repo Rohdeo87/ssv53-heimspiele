@@ -9,6 +9,8 @@ on:
       - "function_app.py"
       - "host.json"
       - "requirements.txt"
+      - "requirements-test.txt"
+      - "tests/**"
       - "mower/**"
       - "occupancy/**"
       - "public/rasen.ics"
@@ -22,6 +24,8 @@ on:
       - "function_app.py"
       - "host.json"
       - "requirements.txt"
+      - "requirements-test.txt"
+      - "tests/**"
       - "mower/**"
       - "occupancy/**"
       - "public/rasen.ics"
@@ -58,14 +62,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python -m pip install --disable-pip-version-check -r requirements.txt pytest
+          python -m pip install --disable-pip-version-check -r requirements-test.txt
 
       - name: Repository- und Sicherheitstests
         shell: bash
         run: |
           set -euo pipefail
           python -m compileall -q mower function_app.py scripts
-          python -m unittest discover -s tests -p "test_*.py" -v
+          python -m pytest -q tests
 
       - name: Geprüftes Quellpaket bauen
         shell: bash

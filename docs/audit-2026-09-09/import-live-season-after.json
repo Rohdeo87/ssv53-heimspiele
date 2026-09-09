@@ -1,0 +1,539 @@
+{
+  "scope": "local modified importer, read-only HTTP; complete configured season; no publication",
+  "repository_main_sha": "d67e9d3fef24117f504a192c9ecaee998612ddd7",
+  "retrieval_started_at_utc": "2026-09-09T05:56:01+00:00",
+  "retrieval_finished_at_utc": "2026-09-09T05:56:12+00:00",
+  "range": {
+    "from": "2026-07-01",
+    "to": "2027-06-30"
+  },
+  "summary": {
+    "generated_at": "2026-09-09T05:56:12+00:00",
+    "selection_mode": "club-wide venue",
+    "event_timing": {
+      "before_minutes": 60,
+      "after_minutes": 60,
+      "configured_age_classes": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+        "HERREN",
+        "UE40",
+        "UE50"
+      ],
+      "configured_format_rules": [
+        "ssv53-e-festival-90-including-breaks-20260831",
+        "ssv53-festival-unclear-duration-90-20260831"
+      ]
+    },
+    "total": 113,
+    "included": 46,
+    "review": 0,
+    "excluded": 67,
+    "by_calendar": {
+      "Rasen": 41,
+      "Kunstrasen": 5
+    },
+    "by_team": {
+      "Schönwalder SV": {
+        "total": 35,
+        "included": 16,
+        "excluded": 19,
+        "review": 0
+      },
+      "Schönwalder SV (9er)": {
+        "total": 8,
+        "included": 4,
+        "excluded": 4,
+        "review": 0
+      },
+      "Schönwalder SV (Ü40)": {
+        "total": 16,
+        "included": 7,
+        "excluded": 9,
+        "review": 0
+      },
+      "Schönwalder SV 53": {
+        "total": 1,
+        "included": 1,
+        "excluded": 0,
+        "review": 0
+      },
+      "Schönwalder SV 53 I (Fussball-3, 2019)": {
+        "total": 1,
+        "included": 1,
+        "excluded": 0,
+        "review": 0
+      },
+      "Schönwalder SV 53 I (Fussball-5, 2016)": {
+        "total": 1,
+        "included": 1,
+        "excluded": 0,
+        "review": 0
+      },
+      "Schönwalder SV 53 II (Fussball-5, 2017)": {
+        "total": 1,
+        "included": 1,
+        "excluded": 0,
+        "review": 0
+      },
+      "SpG Perwenitz/​Schönwalde Ü50": {
+        "total": 15,
+        "included": 3,
+        "excluded": 12,
+        "review": 0
+      },
+      "Spielgemeinschaft Schönwalde-Perwenitz-Paaren": {
+        "total": 35,
+        "included": 12,
+        "excluded": 23,
+        "review": 0
+      }
+    },
+    "teams_discovered": [
+      "Schönwalder SV",
+      "Schönwalder SV (9er)",
+      "Schönwalder SV (Ü40)",
+      "Schönwalder SV 53",
+      "Schönwalder SV 53 I (Fussball-3, 2019)",
+      "Schönwalder SV 53 I (Fussball-5, 2016)",
+      "Schönwalder SV 53 II (Fussball-5, 2017)",
+      "SpG Perwenitz/​Schönwalde Ü50",
+      "Spielgemeinschaft Schönwalde-Perwenitz-Paaren"
+    ],
+    "team_registry_changes": {
+      "new": [
+        "Schönwalder SV 53 I (Fussball-3, 2019)",
+        "Schönwalder SV 53 I (Fussball-5, 2016)",
+        "Schönwalder SV 53 II (Fussball-5, 2017)",
+        "Schönwalder SV"
+      ],
+      "known": [
+        "Spielgemeinschaft Schönwalde-Perwenitz-Paaren",
+        "Schönwalder SV",
+        "SpG Perwenitz/​Schönwalde Ü50",
+        "Schönwalder SV (Ü40)",
+        "Schönwalder SV (9er)"
+      ],
+      "not_seen_in_current_run": []
+    },
+    "publishable": true,
+    "quality_errors": [],
+    "request_count": 4,
+    "accepted_windows": [
+      {
+        "date_from": "2026-07-01",
+        "date_to": "2026-09-30",
+        "competition_rows": 41
+      },
+      {
+        "date_from": "2026-10-01",
+        "date_to": "2026-12-31",
+        "competition_rows": 36
+      },
+      {
+        "date_from": "2027-01-01",
+        "date_to": "2027-03-31",
+        "competition_rows": 12
+      },
+      {
+        "date_from": "2027-04-01",
+        "date_to": "2027-06-30",
+        "competition_rows": 28
+      }
+    ]
+  },
+  "quality": {
+    "publishable": true,
+    "errors": [],
+    "invalid_included": [],
+    "by_calendar": {
+      "Rasen": 41,
+      "Kunstrasen": 5
+    },
+    "event_timing": {
+      "before_minutes": 60,
+      "after_minutes": 60,
+      "configured_age_classes": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+        "HERREN",
+        "UE40",
+        "UE50"
+      ],
+      "configured_format_rules": [
+        "ssv53-e-festival-90-including-breaks-20260831",
+        "ssv53-festival-unclear-duration-90-20260831"
+      ]
+    },
+    "request_count": 4,
+    "accepted_windows": [
+      {
+        "date_from": "2026-07-01",
+        "date_to": "2026-09-30",
+        "competition_rows": 41
+      },
+      {
+        "date_from": "2026-10-01",
+        "date_to": "2026-12-31",
+        "competition_rows": 36
+      },
+      {
+        "date_from": "2027-01-01",
+        "date_to": "2027-03-31",
+        "competition_rows": 12
+      },
+      {
+        "date_from": "2027-04-01",
+        "date_to": "2027-06-30",
+        "competition_rows": 28
+      }
+    ],
+    "window_audits": [
+      {
+        "date_from": "2026-07-01",
+        "date_to": "2026-09-30",
+        "depth": 0,
+        "source_url": "https://www.fussball.de/ajax.club.matchplan/-/id/00ES8GNBL0000049VV0AG08LVUPGND5I/mode/PAGE/show-filter/false/show-venues/true/mime-type/HTML/datum-von/2026-07-01/datum-bis/2026-09-30/max/50",
+        "source_scope": "all club teams; inclusion decided only by venue",
+        "competition_rows": 41,
+        "source_detail_ids": 33,
+        "parsed_matches_before_duplicate_merge": 41,
+        "parsed_matches": 41,
+        "parsed_detail_ids": 33,
+        "missing_detail_ids": [],
+        "source_festival_groups": 3,
+        "missing_festival_groups": [],
+        "festival_round_assignments": [],
+        "duplicate_detail_ids": [],
+        "collapsed_duplicate_detail_ids": [],
+        "duplicate_conflicts": [],
+        "duplicate_resolutions": [],
+        "duplicate_resolution_deferred": true,
+        "has_more": false,
+        "request_count_after_parse": 1,
+        "truncated": false,
+        "accepted": true
+      },
+      {
+        "date_from": "2026-10-01",
+        "date_to": "2026-12-31",
+        "depth": 0,
+        "source_url": "https://www.fussball.de/ajax.club.matchplan/-/id/00ES8GNBL0000049VV0AG08LVUPGND5I/mode/PAGE/show-filter/false/show-venues/true/mime-type/HTML/datum-von/2026-10-01/datum-bis/2026-12-31/max/50",
+        "source_scope": "all club teams; inclusion decided only by venue",
+        "competition_rows": 36,
+        "source_detail_ids": 32,
+        "parsed_matches_before_duplicate_merge": 36,
+        "parsed_matches": 36,
+        "parsed_detail_ids": 32,
+        "missing_detail_ids": [],
+        "source_festival_groups": 0,
+        "missing_festival_groups": [],
+        "festival_round_assignments": [],
+        "duplicate_detail_ids": [],
+        "collapsed_duplicate_detail_ids": [],
+        "duplicate_conflicts": [],
+        "duplicate_resolutions": [],
+        "duplicate_resolution_deferred": true,
+        "has_more": false,
+        "request_count_after_parse": 2,
+        "truncated": false,
+        "accepted": true
+      },
+      {
+        "date_from": "2027-01-01",
+        "date_to": "2027-03-31",
+        "depth": 0,
+        "source_url": "https://www.fussball.de/ajax.club.matchplan/-/id/00ES8GNBL0000049VV0AG08LVUPGND5I/mode/PAGE/show-filter/false/show-venues/true/mime-type/HTML/datum-von/2027-01-01/datum-bis/2027-03-31/max/50",
+        "source_scope": "all club teams; inclusion decided only by venue",
+        "competition_rows": 12,
+        "source_detail_ids": 9,
+        "parsed_matches_before_duplicate_merge": 12,
+        "parsed_matches": 12,
+        "parsed_detail_ids": 9,
+        "missing_detail_ids": [],
+        "source_festival_groups": 0,
+        "missing_festival_groups": [],
+        "festival_round_assignments": [],
+        "duplicate_detail_ids": [],
+        "collapsed_duplicate_detail_ids": [],
+        "duplicate_conflicts": [],
+        "duplicate_resolutions": [],
+        "duplicate_resolution_deferred": true,
+        "has_more": false,
+        "request_count_after_parse": 3,
+        "truncated": false,
+        "accepted": true
+      },
+      {
+        "date_from": "2027-04-01",
+        "date_to": "2027-06-30",
+        "depth": 0,
+        "source_url": "https://www.fussball.de/ajax.club.matchplan/-/id/00ES8GNBL0000049VV0AG08LVUPGND5I/mode/PAGE/show-filter/false/show-venues/true/mime-type/HTML/datum-von/2027-04-01/datum-bis/2027-06-30/max/50",
+        "source_scope": "all club teams; inclusion decided only by venue",
+        "competition_rows": 28,
+        "source_detail_ids": 27,
+        "parsed_matches_before_duplicate_merge": 28,
+        "parsed_matches": 28,
+        "parsed_detail_ids": 27,
+        "missing_detail_ids": [],
+        "source_festival_groups": 0,
+        "missing_festival_groups": [],
+        "festival_round_assignments": [],
+        "duplicate_detail_ids": [],
+        "collapsed_duplicate_detail_ids": [],
+        "duplicate_conflicts": [],
+        "duplicate_resolutions": [],
+        "duplicate_resolution_deferred": true,
+        "has_more": false,
+        "request_count_after_parse": 4,
+        "truncated": false,
+        "accepted": true
+      }
+    ],
+    "cross_window_resolution": {
+      "collapsed_duplicate_detail_ids": [
+        "031DB8NS8C000000VS5489BUVUR5FS5A",
+        "031DP96C58000000VS5489BUVUR5FS5A",
+        "031DP96F8G000000VS5489BUVUR5FS5A",
+        "031MFGE2PG000000VS5489BUVVKNMR0J"
+      ],
+      "duplicate_resolutions": [
+        {
+          "detail_id": "031DB8NS8C000000VS5489BUVUR5FS5A",
+          "occurrences": 2,
+          "conflicts": {},
+          "resolved": true,
+          "resolution_attempt": {
+            "method": "explicit_postponement_chain",
+            "relocations": [
+              {
+                "from": "2026-09-11T19:30+02:00",
+                "to": "2026-09-15T19:00+02:00"
+              }
+            ],
+            "selected_kickoff": "2026-09-15T19:00+02:00",
+            "resolved": true
+          },
+          "merged_external_id": "031DB8NS8C000000VS5489BUVUR5FS5A"
+        },
+        {
+          "detail_id": "031DP96C58000000VS5489BUVUR5FS5A",
+          "occurrences": 2,
+          "conflicts": {},
+          "resolved": true,
+          "resolution_attempt": {
+            "method": "explicit_postponement_chain",
+            "relocations": [
+              {
+                "from": "2026-09-06T14:00+02:00",
+                "to": "2026-09-04T20:00+02:00"
+              }
+            ],
+            "selected_kickoff": "2026-09-04T20:00+02:00",
+            "resolved": true
+          },
+          "merged_external_id": "031DP96C58000000VS5489BUVUR5FS5A"
+        },
+        {
+          "detail_id": "031DP96F8G000000VS5489BUVUR5FS5A",
+          "occurrences": 2,
+          "conflicts": {},
+          "resolved": true,
+          "resolution_attempt": {
+            "method": "explicit_postponement_chain",
+            "relocations": [
+              {
+                "from": "2026-10-04T14:00+02:00",
+                "to": "2026-12-13T13:00+01:00"
+              }
+            ],
+            "selected_kickoff": "2026-12-13T13:00+01:00",
+            "resolved": true
+          },
+          "merged_external_id": "031DP96F8G000000VS5489BUVUR5FS5A"
+        },
+        {
+          "detail_id": "031MFGE2PG000000VS5489BUVVKNMR0J",
+          "occurrences": 2,
+          "conflicts": {},
+          "resolved": true,
+          "resolution_attempt": {
+            "method": "explicit_postponement_chain",
+            "relocations": [
+              {
+                "from": "2026-09-12T09:00+02:00",
+                "to": "2026-10-08T18:00+02:00"
+              }
+            ],
+            "selected_kickoff": "2026-10-08T18:00+02:00",
+            "resolved": true
+          },
+          "merged_external_id": "031MFGE2PG000000VS5489BUVVKNMR0J"
+        }
+      ],
+      "festival_round_assignments": [
+        {
+          "method": "younger_birth_year_first",
+          "group": {
+            "date": "2026-09-27",
+            "venue": "rasenplatz sportplatz schoenwalde strandbad platz 1 kurmaerkische str 2 14621 schoenwalde glien"
+          },
+          "assignments": [
+            {
+              "external_id": "610018461",
+              "team_id": "01OFNF8544000000VV0AG80NVUUTMIT0",
+              "birth_year": 2017,
+              "before": "2026-09-27T15:30+02:00",
+              "after": "2026-09-27T13:30+02:00"
+            },
+            {
+              "external_id": "610018452",
+              "team_id": "01KPKBA8F8000000VV0AG811VSVU41QE",
+              "birth_year": 2016,
+              "before": "2026-09-27T13:30+02:00",
+              "after": "2026-09-27T15:30+02:00"
+            }
+          ],
+          "changed": true
+        }
+      ]
+    }
+  },
+  "raw_response_utf8_hashes": {
+    "club_2026-07-01_2026-09-30.html": "0299686da5eed200eb813d895a179d3fb3d70ad98358d0d88c67f72421ddfc07",
+    "club_2026-10-01_2026-12-31.html": "14f2a74f8857001f9d46ae9b0e91f79efbca4502a65b2850f4b85fa19592c2e6",
+    "club_2027-01-01_2027-03-31.html": "3ef5a6c5e6ac59391a55499c39807c4e71eafabe089643ce8a5ea5772b173ab4",
+    "club_2027-04-01_2027-06-30.html": "e4affc03990866aae63e93b8377ef1d7ff3ed86410c49a0ee0495136e13da386"
+  },
+  "comparison_origin_main": {
+    "generated_at": "2026-09-08T04:51:22+00:00",
+    "age_minutes_at_comparison": 1506.71,
+    "before_count": 113,
+    "after_count": 113,
+    "added_ids": [],
+    "removed_ids": [],
+    "changed": [
+      {
+        "id": "031MFGE2PG000000VS5489BUVVKNMR0J",
+        "fields": {
+          "kickoff": {
+            "before": "2026-09-12T09:00+02:00",
+            "after": "2026-10-08T18:00+02:00"
+          },
+          "event_start": {
+            "before": "2026-09-12T08:00+02:00",
+            "after": "2026-10-08T17:00+02:00"
+          },
+          "event_end": {
+            "before": "2026-09-12T11:25+02:00",
+            "after": "2026-10-08T20:25+02:00"
+          },
+          "venue_raw": {
+            "before": "Kunstrasenplatz, Fußballplatz Dallgow, Charlottenstr. 1-3, 14624 Dallgow-Döberitz",
+            "after": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien"
+          },
+          "decision": {
+            "before": "exclude",
+            "after": "include"
+          },
+          "calendar": {
+            "before": "",
+            "after": "Rasen"
+          }
+        }
+      }
+    ]
+  },
+  "september_sample": {
+    "total": 23,
+    "included": 12,
+    "by_calendar": {
+      "Kunstrasen": 3,
+      "Rasen": 9
+    },
+    "teams": [
+      {
+        "name": "Schönwalder SV",
+        "category": "A-Junioren | Landesklasse",
+        "team_id": "02T7TD5NLG000000VS5489BSVU9LEHLB",
+        "total": 3
+      },
+      {
+        "name": "Schönwalder SV",
+        "category": "D-Junioren | 1.Kreisklasse",
+        "team_id": "01S69BH0IK000000VS548985VUL18RL3",
+        "total": 4
+      },
+      {
+        "name": "Schönwalder SV (9er)",
+        "category": "C-Junioren | 2.Kreisklasse",
+        "team_id": "031A57Q7PG000000VS5489BSVU0ORN69",
+        "total": 3
+      },
+      {
+        "name": "Schönwalder SV (Ü40)",
+        "category": "Herren Ü40 | Kreisliga",
+        "team_id": "02PKVQDTEK000000VS5489B2VT4FEOV2",
+        "total": 2
+      },
+      {
+        "name": "Schönwalder SV (Ü40)",
+        "category": "Herren Ü40 | Kreispokal",
+        "team_id": "02PKVQDTEK000000VS5489B2VT4FEOV2",
+        "total": 1
+      },
+      {
+        "name": "Schönwalder SV 53",
+        "category": "A-Junioren | Brandenburg-Pokal",
+        "team_id": "02T7TD5NLG000000VS5489BSVU9LEHLB",
+        "total": 1
+      },
+      {
+        "name": "Schönwalder SV 53 I (Fussball-3, 2019)",
+        "category": "F-Junioren | Kinderfußball",
+        "team_id": "011KGG85I0000000VTVG0001VSK3M9SE",
+        "total": 1
+      },
+      {
+        "name": "Schönwalder SV 53 I (Fussball-5, 2016)",
+        "category": "E-Junioren | Kinderfußball",
+        "team_id": "01KPKBA8F8000000VV0AG811VSVU41QE",
+        "total": 1
+      },
+      {
+        "name": "Schönwalder SV 53 II (Fussball-5, 2017)",
+        "category": "E-Junioren | Kinderfußball",
+        "team_id": "01OFNF8544000000VV0AG80NVUUTMIT0",
+        "total": 1
+      },
+      {
+        "name": "SpG Perwenitz/​Schönwalde Ü50",
+        "category": "Herren Ü50 | Kreisliga",
+        "team_id": "02PKT2MAOC000000VS5489B2VT4FEOV2",
+        "total": 2
+      },
+      {
+        "name": "SpG Perwenitz/​Schönwalde Ü50",
+        "category": "Herren Ü50 | Kreispokal",
+        "team_id": "02PKT2MAOC000000VS5489B2VT4FEOV2",
+        "total": 1
+      },
+      {
+        "name": "Spielgemeinschaft Schönwalde-Perwenitz-Paaren",
+        "category": "Herren | Kreisliga",
+        "team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
+        "total": 3
+      }
+    ]
+  }
+}

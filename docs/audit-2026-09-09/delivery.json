@@ -1,0 +1,41 @@
+{
+  "date": "2026-09-09",
+  "repository": "Rohdeo87/ssv53-heimspiele",
+  "base_branch": "feature/azure-mower-migration",
+  "base_commit": "9c2d0fc9c010b366cd49b58b8086b27f9d59a0dd",
+  "review_branch": "audit/platzpflege-20260909",
+  "source_commit": "1b0fefa1cc9f2f2a5098de2c8bcc107a94bb0e71",
+  "import_pull_request": "https://github.com/Rohdeo87/ssv53-heimspiele/pull/46",
+  "import_source_commit": "efe932cbaf5186f050847a29347566782e891c20",
+  "import_ci": "https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/34318897870",
+  "local_tests": {
+    "python_passed": 694,
+    "python_subtests_passed": 406,
+    "appack_passed": 70,
+    "compileall": "passed",
+    "git_diff_check": "passed"
+  },
+  "package": {
+    "source_commit": "1b0fefa1cc9f2f2a5098de2c8bcc107a94bb0e71",
+    "path": "dist/ssv53-platzpflege-audit-20260909-source.zip",
+    "sha256": "2598eee0470262ae5ba84a8c03b1bd0adc14c504cd35cdead9317ed3bea14c33",
+    "file_count": 47,
+    "all_manifest_file_hashes_verified": true,
+    "manifest_sha256": "bcc1d852d4d1bdffb0fe05afda6c9909d8d193279694de9b3505ac69f99d8e93",
+    "entrypoint_sha256": "24c45c1af7eb527eaa2eeb672666787e707f7dbe56a8638f0d5d0a06d148d8fa",
+    "remote_build_required": true,
+    "deployed": false,
+    "installed": false,
+    "new_optimizer_connected": false
+  },
+  "stages": {
+    "analyzed": true,
+    "implemented_in_development": true,
+    "locally_tested": true,
+    "simulated": true,
+    "new_shadow_observed": false,
+    "live_pilot": false,
+    "production_deployed": false
+  },
+  "original_user_changes_preserved": true
+}
