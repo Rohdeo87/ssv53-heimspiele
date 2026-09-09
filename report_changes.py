@@ -303,12 +303,26 @@ def confirm_safety_decrease(
     last_counted = now_utc
 
     if previous.get("pendingFingerprint") == fingerprint:
-        confirmations = max(int(previous.get("confirmations") or 0), 1)
-        first_seen = parse_datetime(previous.get("firstSeenAt")) or now_utc
-        last_counted = parse_datetime(previous.get("lastCountedAt")) or first_seen
-        if now_utc - last_counted >= minimum_interval:
-            confirmations += 1
-            last_counted = now_utc
+        count = previous.get("confirmations")
+        first = parse_datetime(previous.get("firstSeenAt"))
+        last = parse_datetime(previous.get("lastCountedAt"))
+        valid_previous = (
+            previous.get("schemaVersion") == 1
+            and type(count) is int
+            and 1 <= count < required_confirmations
+            and previous.get("items") == items
+            and first is not None
+            and last is not None
+            and first <= last <= now_utc
+            and last - first >= minimum_interval * (count - 1)
+        )
+        if valid_previous:
+            confirmations = count
+            first_seen = first
+            last_counted = last
+            if now_utc - last_counted >= minimum_interval:
+                confirmations += 1
+                last_counted = now_utc
 
     confirmed = confirmations >= required_confirmations
     if confirmed:
@@ -343,6 +357,8 @@ def markdown_report(report: dict[str, Any], *, max_items: int = 50) -> str:
     status = report["status"]
     if status == "blocked":
         headline = "⛔ Veröffentlichung blockiert"
+    elif status == "additive_pending":
+        headline = "⚠️ Neue Sperren vorbereitet; ungeklärte Rücknahmen bleiben gesperrt"
     elif status == "approved_override":
         headline = "⚠️ Massive Änderung manuell freigegeben"
     elif status == "baseline":
@@ -364,6 +380,16 @@ def markdown_report(report: dict[str, Any], *, max_items: int = 50) -> str:
         f"| Entfernt | {counts['removed']} |",
         "",
     ]
+
+    if "effectiveAfter" in counts:
+        lines.extend([
+            "Die Spielzahlen oben beschreiben die vollständige Quelle. Der wirksame Bestand enthält zusätzlich zurückgehaltene Sperren.",
+            "",
+            f"- Wirksame Spiele und Sperren: {counts['effectiveAfter']}",
+            f"- Weiter gesperrt bis zur Klärung: {counts.get('retained', 0)}",
+            f"- Bestätigt oder zeitlich erledigt: {counts.get('released', 0)}",
+            "",
+        ])
 
     guard = report.get("guard", {})
     if guard.get("reasons"):
@@ -413,6 +439,15 @@ def markdown_report(report: dict[str, Any], *, max_items: int = 50) -> str:
     add_match_section("Neue Spiele", report["added"], "added")
     add_match_section("Geänderte Spiele", report["changed"], "changed")
     add_match_section("Entfernte Spiele", report["removed"], "removed")
+
+    if report.get("retained"):
+        lines.extend(["### Weiter gesperrte bisherige Belegungen", ""])
+        for hold in report["retained"][:max_items]:
+            condition = ("ausdrückliche Prüfung erforderlich" if hold.get("requiresManual") else
+                         f"{hold['confirmations']}/{hold['requiredConfirmations']} getrennte Abrufe; "
+                         f"mindestens {hold['minimumIntervalMinutes']} Minuten Abstand")
+            lines.append(f"- `{hold['sourceId']}` → `{hold['id']}`: {condition}.")
+        lines.append("")
 
     if not report["added"] and not report["changed"] and not report["removed"]:
         lines.extend(["Keine inhaltlichen Änderungen seit dem vorherigen erfolgreichen Abruf.", ""])
@@ -480,10 +515,18 @@ def main() -> int:
         min_removed_for_ratio=args.min_removed_for_ratio,
     )
     risky_changes = safety_decreasing_changes(changed, removed, now=generated_at)
+    observation_at = parse_datetime(after_feed.get("generatedAt"))
+    if risky_changes and (
+        observation_at is None
+        or observation_at > generated_at + timedelta(minutes=5)
+    ):
+        parser.error("Sicherheitsrelevante Änderungen benötigen einen gültigen Quellen-Abrufzeitpunkt generatedAt.")
     safety_confirmation = confirm_safety_decrease(
         risky_changes,
         state_path=args.confirmation_state,
-        now=generated_at,
+        # Replaying an unchanged file an hour later is not a second source
+        # observation. Only its independently produced acquisition time counts.
+        now=observation_at or generated_at,
         required_confirmations=args.required_confirmations,
         minimum_interval=timedelta(minutes=args.minimum_confirmation_minutes),
     )
