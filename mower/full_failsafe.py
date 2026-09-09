@@ -1056,6 +1056,7 @@ def _state_details(state: AutomationState, *, persisted: bool, error: str | None
     schedule_override = _schedule_override(state)
     return {
         "revision": state.revision,
+        "maintenance_mode": state.maintenance_mode,
         "persisted": persisted,
         "error": error,
         "parked_by_automation": state.parked_by_automation,
@@ -1585,6 +1586,9 @@ def run_full_failsafe_cycle(
             required=True,
         )
     )
+
+    if str(environment.get("HYDRAWISE_STATUS_CACHE_MODE") or "OFF").strip().upper() != "OFF":
+        raise RuntimeError("Der gemeinsame Statuscache ist für Gerätebetriebsarten noch nicht freigegeben.")
 
     result = read_only_runner(
         now_utc=now,

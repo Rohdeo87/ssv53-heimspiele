@@ -14,6 +14,7 @@ from mower.hydrawise import (
 from mower.runtime import ControlMode, RuntimeSettings
 from mower.state import AutomationState
 from mower.state_store import AzureTableStateStore, StateConflictError, StateStore
+from mower.status_cache import CachedStatusRead, cache_mode, read_status_cached
 
 
 RESET_CONFIRMATION = "SSV53-RESET-FAILED-IRRIGATION"
@@ -27,6 +28,7 @@ MowerFetcher = Callable[[str, str], list[dict[str, Any]]]
 MowerSelector = Callable[[list[dict[str, Any]]], dict[str, Any]]
 MowerParser = Callable[[dict[str, Any]], MowerSnapshot]
 HydrawiseFetcher = Callable[[str, str | int | None], dict[str, Any]]
+CachedHydrawiseReader = Callable[..., CachedStatusRead]
 
 
 class IrrigationRecoveryError(RuntimeError):
@@ -98,6 +100,48 @@ def _reset_state(
         irrigation_completed_utc=None,
         irrigation_failed_reason=None,
     )
+
+
+def _read_status_for_recovery(
+    api_key: str,
+    controller_id: str | int | None,
+    *,
+    environment: Mapping[str, str],
+    hydrawise_config: Mapping[str, Any],
+    now_utc: datetime,
+    fetcher: HydrawiseFetcher,
+    cached_reader: CachedHydrawiseReader = read_status_cached,
+) -> tuple[dict[str, Any], datetime, dict[str, Any] | None]:
+    """Prepare cache-aware recovery without accepting repeated confirmation.
+
+    RuntimeSettings currently forbids AZURE_TABLE with FULL_FAILSAFE before
+    this helper can be reached from a reset. Keep the independently tested
+    helper conservative for a future, separately reviewed integration.
+    """
+    if cache_mode(environment) == "OFF":
+        return fetcher(api_key, controller_id), now_utc, None
+    cached = cached_reader(
+        api_key, controller_id, environment=environment,
+        hydrawise_config=hydrawise_config, now_utc=now_utc,
+        fetcher=lambda key, controller, **_kwargs: fetcher(key, controller),
+    )
+    observed = None
+    try:
+        observed = datetime.fromisoformat(str(cached.fetched_at_utc or "").replace("Z", "+00:00"))
+        if observed.tzinfo is None or observed.utcoffset() is None:
+            observed = None
+        elif not -30 <= (now_utc - observed).total_seconds() <= int(
+            environment.get("HYDRAWISE_STATUS_MAX_AGE_SECONDS", "180")
+        ):
+            observed = None
+    except (TypeError, ValueError):
+        pass
+    if cached.status is None or not cached.new_observation or observed is None:
+        raise IrrigationRecoveryError(
+            "RESET_FRESH_HYDRAWISE_REQUIRED",
+            "Für den Reset fehlt eine neue bestätigte Hydrawise-Abfrage. Bitte nach dem nächsten Abruf erneut prüfen.",
+        )
+    return cached.status, observed.astimezone(timezone.utc), cached.metadata()
 
 
 def reset_failed_irrigation(
@@ -203,20 +247,23 @@ def reset_failed_irrigation(
     )
     api_key = str(environment.get("HYDRAWISE_API_KEY", "")).strip()
     controller_id = str(environment.get("HYDRAWISE_CONTROLLER_ID", "")).strip() or None
-    status = hydrawise_fetcher(api_key, controller_id)
     reset_horizon_minutes = max(
         90,
         int(environment.get("POST_IRRIGATION_DRYING_MINUTES", "150")),
     )
+    hydrawise_config = {
+        "enabled": True,
+        "include_all_zones": True,
+        "before_minutes": reset_horizon_minutes,
+        "expected_relay_ids": list(expected_relay_ids),
+    }
+    status, observation_now, cache_metadata = _read_status_for_recovery(
+        api_key, controller_id, environment=environment, hydrawise_config=hydrawise_config,
+        now_utc=now, fetcher=hydrawise_fetcher,
+    )
     safety: HydrawiseSafetySnapshot = evaluate_safety_status(
-        status,
-        {
-            "enabled": True,
-            "include_all_zones": True,
-            "before_minutes": reset_horizon_minutes,
-            "expected_relay_ids": list(expected_relay_ids),
-        },
-        now_utc=now,
+        status, hydrawise_config,
+        now_utc=observation_now,
         max_age_seconds=int(environment.get("HYDRAWISE_STATUS_MAX_AGE_SECONDS", "180")),
     )
     if (
@@ -241,7 +288,7 @@ def reset_failed_irrigation(
     # Ursprung eindeutig ein beobachtetes Beregnungsende ist und der aktuelle
     # unabhängige Hydrawise-Liveabruf weiterhin alle sieben Zonen als frei
     # bestätigt. Bei jeder Unsicherheit beginnt die Bestätigung bei ``now``.
-    confirmed_clear_since = now
+    confirmed_clear_since = observation_now
     confirmed_clear_origin = "DATA_GAP"
     try:
         previous_success = datetime.fromisoformat(
@@ -262,14 +309,14 @@ def reset_failed_irrigation(
             "IRRIGATION_END",
             "POSSIBLE_IRRIGATION_DURING_GAP",
         }
-        and timedelta(0) <= now - previous_success <= timedelta(minutes=3)
+        and timedelta(0) <= observation_now - previous_success <= timedelta(minutes=3)
         and previous_clear_since <= previous_success
     ):
         confirmed_clear_since = previous_clear_since
         confirmed_clear_origin = str(state.hydrawise_clear_origin)
     reset = _reset_state(
         state,
-        now_utc=now,
+        now_utc=observation_now,
         hydrawise_observed_utc=safety.observed_at_utc,
         confirmed_clear_since_utc=confirmed_clear_since.isoformat(),
         confirmed_clear_origin=confirmed_clear_origin,
@@ -306,5 +353,6 @@ def reset_failed_irrigation(
             "active_zone_count": safety.active_zone_count,
             "imminent_zone_count": safety.imminent_zone_count,
             "reset_horizon_minutes": reset_horizon_minutes,
+            **({"cache": cache_metadata} if cache_metadata is not None else {}),
         },
     )

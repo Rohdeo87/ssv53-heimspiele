@@ -5,6 +5,8 @@ Fehler nennen eine konkrete Handlung. Technische Diagnosebegriffe und rohe
 Herstellermeldungen erscheinen nicht mehr in diesen Anzeigen.
 
 **Entwickelt und getestet, noch nicht veröffentlicht oder installiert.**
+Die inzwischen erteilte bedingte Livefreigabe und die noch offenen Voraussetzungen
+sind im [aktuellen Prüfstand](release-readiness.md) festgehalten.
 Diese Überarbeitung ersetzt den UI-Vorschlag aus dem ursprünglichen Audit
 und gehört zu [Entwicklungs-PR 47](https://github.com/Rohdeo87/ssv53-heimspiele/pull/47).
 

@@ -14,6 +14,7 @@ import azure.functions as func
 from daily_safety_report import process_daily_report
 
 from mower.controller import run_control_cycle
+from mower.build_provenance import inspect_installed_package
 from mower.irrigation_journal import record_irrigation_observation
 from mower.irrigation_recovery import (
     IrrigationRecoveryError,
@@ -63,16 +64,8 @@ LOGGER = logging.getLogger("ssv53.azure.platzpflege")
 
 @lru_cache(maxsize=1)
 def _build_provenance() -> dict:
-    """Identify loaded entrypoint/package metadata without claiming device rollout."""
-    root = Path(__file__).resolve().parent
-    evidence = {"entrypoint_sha256": None, "package_manifest_sha256": None,
-                "all_installed_files_verified": False}
-    for name, key in (("function_app.py", "entrypoint_sha256"), ("package-manifest.json", "package_manifest_sha256")):
-        try:
-            evidence[key] = hashlib.sha256((root / name).read_bytes()).hexdigest()
-        except OSError:
-            pass
-    return evidence
+    """One source-directory check per process; not a remote-build/device proof."""
+    return inspect_installed_package(Path(__file__).resolve().parent)
 
 
 @app.timer_trigger(

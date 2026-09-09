@@ -15,7 +15,10 @@ USER_AGENT = "SSV53-Maehplan-Dry-Run/1.0 (+https://www.ssv53.de)"
 
 
 class HydrawiseError(RuntimeError):
-    pass
+    def __init__(self, message: str, *, http_status: int | None = None, retry_after: str | None = None) -> None:
+        super().__init__(message)
+        self.http_status = http_status
+        self.retry_after = retry_after
 
 
 @dataclass(frozen=True)
@@ -98,6 +101,7 @@ class HydrawiseContinuousClearSnapshot:
     dry_until_utc: str | None = None
     telemetry_confirmed: bool = False
     telemetry_required_minutes: int | None = None
+    confirmation_observed_until_utc: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -115,6 +119,7 @@ def evaluate_continuous_clear_confirmation(
     persistent_state_available: bool,
     drying_since_utc: str | None = None,
     telemetry_confirmation_minutes: int | None = None,
+    confirmation_observed_until_utc: str | None = None,
 ) -> HydrawiseContinuousClearSnapshot:
     """Require current data confidence and the separate physical drying hold.
 
@@ -148,6 +153,7 @@ def evaluate_continuous_clear_confirmation(
         "dry_until_utc": None,
         "telemetry_confirmed": False,
         "telemetry_required_minutes": telemetry_minutes,
+        "confirmation_observed_until_utc": confirmation_observed_until_utc,
     }
     now = now_utc.astimezone(timezone.utc)
     dry_until = None
@@ -212,9 +218,23 @@ def evaluate_continuous_clear_confirmation(
             **common,
         )
 
-    confirmed_seconds = int((now - clear_since).total_seconds())
+    confirmed_until = now
+    if confirmation_observed_until_utc is not None:
+        try:
+            confirmed_until = datetime.fromisoformat(confirmation_observed_until_utc.replace("Z", "+00:00"))
+            if confirmed_until.tzinfo is None or confirmed_until.utcoffset() is None:
+                raise ValueError
+            confirmed_until = confirmed_until.astimezone(timezone.utc)
+            if confirmed_until > now + timedelta(seconds=30):
+                raise ValueError
+            confirmed_until = min(confirmed_until, now)
+        except (AttributeError, TypeError, ValueError):
+            return HydrawiseContinuousClearSnapshot(
+                allowed=False, reason="Der Zeitpunkt der letzten echten Hydrawise-Abfrage ist ungültig.", **common,
+            )
+    confirmed_seconds = max(0, int((confirmed_until - clear_since).total_seconds()))
     telemetry_release_at = clear_since + timedelta(minutes=telemetry_minutes)
-    telemetry_confirmed = now >= telemetry_release_at
+    telemetry_confirmed = confirmed_until >= telemetry_release_at
     if dry_until is not None:
         release_at = max(dry_until, telemetry_release_at)
     else:
@@ -250,6 +270,7 @@ def evaluate_continuous_clear_confirmation(
         dry_until_utc=dry_until.isoformat() if dry_until is not None else None,
         telemetry_confirmed=telemetry_confirmed,
         telemetry_required_minutes=telemetry_minutes,
+        confirmation_observed_until_utc=confirmation_observed_until_utc,
     )
 
 
@@ -606,8 +627,10 @@ def _get_json(endpoint: str, parameters: dict[str, str | int], timeout: int = 20
             payload = response.read().decode("utf-8")
     except HTTPError as exc:
         if exc.code == 429:
-            raise HydrawiseError("Hydrawise-Rate-Limit erreicht (HTTP 429).") from exc
-        raise HydrawiseError(f"Hydrawise antwortete mit HTTP {exc.code}.") from exc
+            raise HydrawiseError("Hydrawise-Rate-Limit erreicht (HTTP 429).", http_status=429,
+                                 retry_after=exc.headers.get("Retry-After") if exc.headers else None) from exc
+        raise HydrawiseError(f"Hydrawise antwortete mit HTTP {exc.code}.", http_status=exc.code,
+                             retry_after=exc.headers.get("Retry-After") if exc.headers else None) from exc
     except URLError as exc:
         raise HydrawiseError(f"Hydrawise ist nicht erreichbar: {exc.reason}") from exc
 

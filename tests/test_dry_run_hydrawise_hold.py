@@ -111,6 +111,14 @@ class DryRunHydrawiseHoldTests(unittest.TestCase):
                 patch("mower.dry_run.fetch_status") as fetch_status,
             ):
                 fetch_status.return_value = hydrawise_status(NOW)
+                display = run_read_only_cycle(
+                    now_utc=NOW, settings=settings, environment=environment,
+                    past_due=False, source="platzwart-status",
+                    state_store_factory=lambda _environment: store,
+                    persist_observations=False,
+                )
+                self.assertEqual(store.load().revision, 0)
+                self.assertFalse(display.details["safety"]["persistent_safety_state_write"])
                 first = run_read_only_cycle(
                     now_utc=NOW,
                     settings=settings,

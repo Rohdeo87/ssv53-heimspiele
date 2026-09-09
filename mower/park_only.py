@@ -105,6 +105,9 @@ def run_park_only_cycle(
     if not settings.enable_live_reads:
         raise RuntimeError("PARK_ONLY benötigt ENABLE_LIVE_READS=true.")
 
+    if str(environment.get("HYDRAWISE_STATUS_CACHE_MODE") or "OFF").strip().upper() != "OFF":
+        raise RuntimeError("Der gemeinsame Statuscache ist für Gerätebetriebsarten noch nicht freigegeben.")
+
     result = read_only_runner(
         now_utc=now_utc,
         settings=settings,

@@ -43,6 +43,8 @@ from mower.planner import (
 from mower.runtime import ControlMode, CycleResult, RuntimeSettings
 from mower.state_store import AzureTableStateStore, StateStore
 from mower.adaptive_planner import build_adaptive_plan
+from mower.coordination_shadow import capture_planning_inputs
+from mower.status_cache import cache_mode, read_status_cached
 from mower.weather_service import resolve_weather
 from training_cancellations import AzureTableCancellationStore
 from special_occupancy import (
@@ -205,6 +207,7 @@ def run_read_only_cycle(
     state_store_factory: StateStoreFactory = AzureTableStateStore.from_environment,
     cancellation_store_factory=AzureTableCancellationStore.from_environment,
     special_store_factory=AzureTableSpecialOccupancyStore.from_environment,
+    persist_observations: bool = True,
 ) -> CycleResult:
     """Führt die komplette Live-Abfrage aus, sendet aber keinerlei Befehle."""
 
@@ -271,21 +274,29 @@ def run_read_only_cycle(
     hydrawise_status: dict[str, Any] | None = None
     hydrawise_label = "nicht verbunden"
     hydrawise_error: str | None = None
+    hydrawise_cache = None
+    confirmation_observed_until_utc = None
     hydrawise_key = environment.get("HYDRAWISE_API_KEY", "").strip()
     if hydrawise_key:
         try:
-            hydrawise_status = fetch_status(
-                hydrawise_key,
-                environment.get(
-                    "HYDRAWISE_CONTROLLER_ID",
-                    "",
-                ).strip()
-                or None,
-            )
-            relays = hydrawise_status.get("relays")
+            controller_id = environment.get("HYDRAWISE_CONTROLLER_ID", "").strip() or None
+            if cache_mode(environment) == "AZURE_TABLE":
+                cached = read_status_cached(
+                    hydrawise_key, controller_id, environment=environment,
+                    hydrawise_config=hydrawise_config, now_utc=now_utc, fetcher=fetch_status,
+                )
+                hydrawise_status = cached.status
+                hydrawise_cache = cached.metadata()
+                confirmation_observed_until_utc = cached.confirmation_observed_until_utc or ""
+                if hydrawise_status is None:
+                    hydrawise_error = "Aktueller Bewässerungsstand fehlt. Nächsten erlaubten Abruf abwarten."
+            else:
+                hydrawise_status = fetch_status(hydrawise_key, controller_id)
+            relays = (hydrawise_status or {}).get("relays")
             hydrawise_label = (
-                f"live ({len(relays)} Zonen)" if isinstance(relays, list)
-                else "live (unvollständige Zonenantwort)"
+                (f"Gemeinsamer Status ({len(relays)} Zonen)" if isinstance(relays, list) else "Aktueller Stand fehlt")
+                if hydrawise_cache is not None else
+                (f"live ({len(relays)} Zonen)" if isinstance(relays, list) else "live (unvollständige Zonenantwort)")
             )
         except HydrawiseError as exc:
             hydrawise_label = "Abruf fehlgeschlagen"
@@ -432,6 +443,7 @@ def run_read_only_cycle(
 
     release_confirmation: HydrawiseContinuousClearSnapshot | None = None
     automation_state_details: dict[str, Any] | None = None
+    original_state = None
     if settings.control_mode is ControlMode.DRY_RUN:
         # Der verriegelte Dry Run speichert ausschließlich die binäre
         # Hydrawise-Freigabekette. So bleibt die Nachlaufsperre auch sichtbar,
@@ -452,7 +464,9 @@ def run_read_only_cycle(
                 mower_state=snapshot.state,
                 error_code=snapshot.error_code,
                 hydrawise_success_utc=(
-                    now_utc if hydrawise_safety.available and hydrawise_safety.fresh else None
+                    (min(now_utc, _parse_utc(confirmation_observed_until_utc))
+                     if confirmation_observed_until_utc else now_utc)
+                    if hydrawise_safety.available and hydrawise_safety.fresh else None
                 ),
                 hydrawise_observed_utc=_parse_utc(
                     hydrawise_safety.observed_at_utc
@@ -468,6 +482,7 @@ def run_read_only_cycle(
                 ),
             )
             release_confirmation = evaluate_continuous_clear_confirmation(
+                confirmation_observed_until_utc=confirmation_observed_until_utc,
                 available=hydrawise_safety.available,
                 fresh=hydrawise_safety.fresh,
                 clear_now=hydrawise_safety.clear_now,
@@ -494,15 +509,17 @@ def run_read_only_cycle(
                 projected_state,
                 last_decision_code=decision.code,
             )
-            store.save(
-                projected_state,
-                expected_revision=original_state.revision,
-            )
-            state_persisted = True
+            if persist_observations:
+                store.save(
+                    projected_state,
+                    expected_revision=original_state.revision,
+                )
+            state_persisted = bool(persist_observations)
         except Exception as exc:
             state_persisted = False
             state_error = f"{type(exc).__name__}: {exc}"
             release_confirmation = evaluate_continuous_clear_confirmation(
+                confirmation_observed_until_utc=confirmation_observed_until_utc,
                 available=hydrawise_safety.available,
                 fresh=hydrawise_safety.fresh,
                 clear_now=hydrawise_safety.clear_now,
@@ -576,6 +593,7 @@ def run_read_only_cycle(
             except Exception as exc:
                 state_error = f"{type(exc).__name__}: {exc}"
             release_confirmation = evaluate_continuous_clear_confirmation(
+                confirmation_observed_until_utc=confirmation_observed_until_utc,
                 available=hydrawise_safety.available,
                 fresh=hydrawise_safety.fresh,
                 clear_now=hydrawise_safety.clear_now,
@@ -654,6 +672,7 @@ def run_read_only_cycle(
                 ),
             },
             "hydrawise": {
+                "cache": hydrawise_cache,
                 "status": hydrawise_label,
                 "error": hydrawise_error,
                 "safety": hydrawise_safety.to_dict(),
@@ -667,6 +686,17 @@ def run_read_only_cycle(
             },
             "weather": weather_resolution.to_dict(),
             "adaptive_planning": adaptive_plan.to_dict(),
+            # Optional copies for command-free replay. No new data request or
+            # control-state write is made, and no proposal enters the controller.
+            "coordination_shadow_input": (
+                capture_planning_inputs(
+                    now_utc=now_utc, blocks=merged_blocks, runtime_inputs=runtime_inputs,
+                    complete_from=special_horizon_start, complete_until=special_horizon_end,
+                    special_available=special_enabled and special_error is None,
+                    state=original_state,
+                ) if str(environment.get("COORDINATION_SHADOW_CAPTURE_ENABLED", "false")).lower() == "true"
+                else None
+            ),
             "automation_state": automation_state_details,
             "training_cancellations": {
                 "available": cancellation_error is None,
@@ -700,7 +730,7 @@ def run_read_only_cycle(
                 "command_functions_present": False,
                 "command_sent": False,
                 "persistent_safety_state_write": (
-                    settings.control_mode is ControlMode.DRY_RUN
+                    settings.control_mode is ControlMode.DRY_RUN and persist_observations
                 ),
             },
         },

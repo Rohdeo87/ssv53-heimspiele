@@ -1,0 +1,71 @@
+{
+  "checkedAtUtc": "2026-09-09T09:43:16.385458+00:00",
+  "decision": "NOT_READY_FOR_FULL_ROLLOUT",
+  "authorization": "User permits going live only if all optimizations are implemented; that condition is not met. No production mutation performed.",
+  "reviewedHead": "734656bc0fe24c2d77d33e9cca60fc371854723b",
+  "runtimeSourceCommit": "325a5564a1af71ff2a3d3b73241da2771f16f431",
+  "prs": [
+    {
+      "number": 46,
+      "state": "open",
+      "draft": true,
+      "merged": false,
+      "head": "efe932cbaf5186f050847a29347566782e891c20",
+      "ci": "success"
+    },
+    {
+      "number": 47,
+      "state": "open",
+      "draft": true,
+      "merged": false,
+      "head": "734656bc0fe24c2d77d33e9cca60fc371854723b",
+      "ci": "success"
+    }
+  ],
+  "package": {
+    "sha256": "d2c763b5e052dcc61a8383285e76a5847eea8e78ce006d6165ddd2cac27d43e3",
+    "fileCount": 47,
+    "fileHashesValid": true,
+    "remoteBuildRequired": true,
+    "offlineCoordinationModelIncluded": false,
+    "adaptiveExecutionLocked": true
+  },
+  "azure": {
+    "resourceGroup": "rg-ssv53-platzpflege-prod",
+    "functionApp": "func-ssv53platzpflege-prod-q7kbw54s",
+    "state": "Running",
+    "httpsOnly": true,
+    "resourceLastModifiedUtc": "2026-09-09T08:11:58.39",
+    "installedSourceVerified": false,
+    "note": "Resource modification is not a software deployment proof. Deployment response did not yield an unambiguous complete installation attestation."
+  },
+  "latestLogObservation": {
+    "timestamp": "2026-09-09T09:40:02.3628315Z",
+    "activity": "MOWING",
+    "mowerState": "IN_OPERATION",
+    "errorCode": 0,
+    "connected": true,
+    "batteryPercent": 15,
+    "decisionCode": "CONTINUOUS_MOWING_ACTIVE",
+    "waterAvailable": true,
+    "waterFresh": true,
+    "activeZones": 0,
+    "provenancePresent": false
+  },
+  "observationLimit": "API telemetry from existing operations; not physical proof of safe field, station, valves, schedule or installed code.",
+  "openMeasures": [
+    "I03: additions retained while removals await confirmation",
+    "O01: unified authorized season/holiday/training source",
+    "A01: controller-wide API status cache and request budget",
+    "P01: production integration and command-free shadow observation of shared charging/irrigation plan"
+  ],
+  "openReleaseEvidence": [
+    "native device schedules and outstanding commands",
+    "cause of recorded movement during drying hold",
+    "installed code/build/version chain",
+    "real Appack roles and session handover",
+    "station/route protection and physical return behavior",
+    "command-free comparative observation and supervised pilot"
+  ],
+  "productionActions": []
+}

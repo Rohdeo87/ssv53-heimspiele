@@ -357,6 +357,8 @@ def markdown_report(report: dict[str, Any], *, max_items: int = 50) -> str:
     status = report["status"]
     if status == "blocked":
         headline = "⛔ Veröffentlichung blockiert"
+    elif status == "additive_pending":
+        headline = "⚠️ Neue Sperren vorbereitet; ungeklärte Rücknahmen bleiben gesperrt"
     elif status == "approved_override":
         headline = "⚠️ Massive Änderung manuell freigegeben"
     elif status == "baseline":
@@ -378,6 +380,16 @@ def markdown_report(report: dict[str, Any], *, max_items: int = 50) -> str:
         f"| Entfernt | {counts['removed']} |",
         "",
     ]
+
+    if "effectiveAfter" in counts:
+        lines.extend([
+            "Die Spielzahlen oben beschreiben die vollständige Quelle. Der wirksame Bestand enthält zusätzlich zurückgehaltene Sperren.",
+            "",
+            f"- Wirksame Spiele und Sperren: {counts['effectiveAfter']}",
+            f"- Weiter gesperrt bis zur Klärung: {counts.get('retained', 0)}",
+            f"- Bestätigt oder zeitlich erledigt: {counts.get('released', 0)}",
+            "",
+        ])
 
     guard = report.get("guard", {})
     if guard.get("reasons"):
@@ -427,6 +439,15 @@ def markdown_report(report: dict[str, Any], *, max_items: int = 50) -> str:
     add_match_section("Neue Spiele", report["added"], "added")
     add_match_section("Geänderte Spiele", report["changed"], "changed")
     add_match_section("Entfernte Spiele", report["removed"], "removed")
+
+    if report.get("retained"):
+        lines.extend(["### Weiter gesperrte bisherige Belegungen", ""])
+        for hold in report["retained"][:max_items]:
+            condition = ("ausdrückliche Prüfung erforderlich" if hold.get("requiresManual") else
+                         f"{hold['confirmations']}/{hold['requiredConfirmations']} getrennte Abrufe; "
+                         f"mindestens {hold['minimumIntervalMinutes']} Minuten Abstand")
+            lines.append(f"- `{hold['sourceId']}` → `{hold['id']}`: {condition}.")
+        lines.append("")
 
     if not report["added"] and not report["changed"] and not report["removed"]:
         lines.extend(["Keine inhaltlichen Änderungen seit dem vorherigen erfolgreichen Abruf.", ""])

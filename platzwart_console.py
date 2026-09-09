@@ -1090,6 +1090,7 @@ def live_status(environment: Mapping[str, str], now_utc: datetime) -> dict[str, 
             environment=environment,
             past_due=False,
             source="platzwart-status",
+            persist_observations=False,
         )
     except RuntimeError as exc:
         # Die Steuerung muss bei einer abgelaufenen dynamischen Konfiguration
@@ -1107,6 +1108,7 @@ def live_status(environment: Mapping[str, str], now_utc: datetime) -> dict[str, 
             environment=display_environment,
             past_due=False,
             source="platzwart-status-display-only",
+            persist_observations=False,
         )
         controls_available = False
         data_quality = {

@@ -1,5 +1,12 @@
 # Gesamtbewertung der SSV53-Platzpflegeplattform
 
+**Aktueller Folgestand:** Die bedingte Livefreigabe und die zusätzlichen
+Entwicklungsänderungen am Import, Trainingsmodell, Statuscache und lesenden
+Planungsvergleich sind in [release-readiness.md](../ui-2026-09-09/release-readiness.md)
+zusammengefasst. Dort sind auch die noch offenen Integrationen benannt. Die
+älteren Testzahlen und Paketnachweise dieses Erstberichts bleiben zeitgebundene
+Nachweise; die Bedingung für den vollständigen Livegang ist noch nicht erfüllt.
+
 **UI-Folgeänderung:** Die anschließend gewünschte einfache Anzeige mit klaren
 Uhrzeiten liegt unter [docs/ui-2026-09-09](../ui-2026-09-09/README.md).
 Die dortigen Aufnahmen, Tests und Paketnachweise ergänzen diesen Auditstand.

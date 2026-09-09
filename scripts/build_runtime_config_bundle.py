@@ -25,6 +25,10 @@ from occupancy.match_model import (
     normalize_match_title,
 )
 from poc_scraper import Match, recalculate_event_times, write_ics
+from publish_matches import (
+    HOLD_PREFIX, decode_included_matches, retained_presentation,
+    validate_publication_evidence, validate_retained_match,
+)
 
 
 UTC = timezone.utc
@@ -47,16 +51,21 @@ def _load_object(path: Path, label: str) -> dict[str, Any]:
     return value
 
 
-def _load_list(path: Path, label: str) -> list[dict[str, Any]]:
+def _load_included(path: Path, label: str) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
     try:
         value = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         raise RuntimeBundleError(f"{label} konnte nicht gelesen werden: {exc}") from exc
+    publication = value.get("publication") if isinstance(value, dict) else None
+    try:
+        value = decode_included_matches(value)
+    except ValueError as exc:
+        raise RuntimeBundleError(f"{label}: {exc}") from exc
     if not isinstance(value, list) or not value:
         raise RuntimeBundleError(f"{label} muss eine nicht leere JSON-Liste sein.")
     if any(not isinstance(item, dict) for item in value):
         raise RuntimeBundleError(f"{label} enthält einen ungültigen Eintrag.")
-    return value
+    return value, publication
 
 
 def _parse_utc(value: str, label: str) -> datetime:
@@ -74,6 +83,7 @@ def _validate_source(
     included: list[dict[str, Any]],
     summary: dict[str, Any],
     quality: dict[str, Any],
+    included_publication: dict[str, Any] | None,
     published_at: datetime,
     max_source_age_minutes: int,
 ) -> datetime:
@@ -85,6 +95,19 @@ def _validate_source(
         raise RuntimeBundleError("Die Qualitätsprüfung des Spielbestands ist nicht grün.")
     if int(summary.get("included", -1)) != len(included):
         raise RuntimeBundleError("summary.json und included_matches.json widersprechen sich.")
+    if included_publication is not None or "publication" in summary or "publication" in quality:
+        publication = summary.get("publication")
+        if (publication != quality.get("publication")
+                or (included_publication is not None and publication != included_publication)):
+            raise RuntimeBundleError("Rohbestand, Zusammenfassung und Qualitätsnachweis gehören zu verschiedenen Veröffentlichungen.")
+        try:
+            validate_publication_evidence(publication, included)
+        except ValueError as exc:
+            raise RuntimeBundleError(str(exc)) from exc
+        if _parse_utc(publication["sourceGeneratedAt"], "publication.sourceGeneratedAt") != _parse_utc(
+            str(summary.get("generated_at") or ""), "summary.generated_at"
+        ):
+            raise RuntimeBundleError("Abrufzeit und Veröffentlichungsnachweis widersprechen sich.")
 
     source_generated_at = _parse_utc(
         str(summary.get("generated_at") or ""),
@@ -115,6 +138,8 @@ def _validate_source(
             raise RuntimeBundleError(
                 f"Die veröffentlichte Anzahl für {calendar} ist widersprüchlich."
             )
+        if "publication" in quality and (quality.get("by_calendar") or {}).get(calendar) != actual_by_calendar.get(calendar, 0):
+            raise RuntimeBundleError(f"Die Qualitätszählung für {calendar} ist widersprüchlich.")
     return source_generated_at
 
 
@@ -268,7 +293,13 @@ def _retime_matches(
     for item in included:
         match = _as_match(item)
         try:
-            recalculate_event_times(match, timing_config)
+            if match.external_id.startswith(HOLD_PREFIX) and not match.publication_retention:
+                raise ValueError("Eine Rückhaltesperre hat ihren unverzichtbaren Herkunftsnachweis verloren.")
+            if match.publication_retention:
+                # Recomputing a held old interval could silently shorten it.
+                validate_retained_match(item)
+            else:
+                recalculate_event_times(match, timing_config)
         except ValueError as exc:
             raise RuntimeBundleError(
                 f"Spiel {match.external_id} besitzt keine belastbare Zeitregel: {exc}"
@@ -356,6 +387,9 @@ def _structured_matches_payload(
                 "checksum": match.checksum,
             }
         )
+        if match.publication_retention:
+            result[-1]["publicationRetention"] = dict(match.publication_retention)
+            result[-1] = retained_presentation(result[-1])
     result.sort(key=lambda value: (str(value["start"]), str(value["id"])))
     return {
         "schemaVersion": 2,
@@ -388,13 +422,14 @@ def build_runtime_bundle(
     if output_dir.exists() and any(output_dir.iterdir()):
         raise RuntimeBundleError("Das Bundle-Zielverzeichnis muss leer sein.")
 
-    included = _load_list(included_matches_path, "included_matches.json")
+    included, included_publication = _load_included(included_matches_path, "included_matches.json")
     source_summary = _load_object(source_summary_path, "summary.json")
     source_quality = _load_object(source_quality_path, "quality_report.json")
     source_generated_at = _validate_source(
         included=included,
         summary=source_summary,
         quality=source_quality,
+        included_publication=included_publication,
         published_at=published_at,
         max_source_age_minutes=max_source_age_minutes,
     )
