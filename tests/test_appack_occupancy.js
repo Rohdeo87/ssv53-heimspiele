@@ -94,6 +94,15 @@ test("Verbindlicher Trainingskalender zeigt beide Plätze ohne Saisonwahl", () =
   assert.deepEqual(ui.getAllowedCalendarIds(), ["kunstrasen"]);
 });
 
+test("Unklare Trainingstermine nennen den Platzwart und behalten die Sperre", () => {
+  const text = new Function(extractFunction("getOccupancyFailureText") + ";return getOccupancyFailureText;")();
+  assert.match(text({code: "TRAINING_SOURCE_UNAVAILABLE"}), /Platzwart kontaktieren/);
+  assert.match(text({code: "TRAINING_SOURCE_UNAVAILABLE"}), /nicht freigeben/);
+  assert.doesNotMatch(text({code: "TRAINING_SOURCE_UNAVAILABLE"}), /Azure|SHA|Envelope|Internet/);
+  assert.match(text(new Error("raw technical details")), /erneut versuchen/);
+  assert.doesNotMatch(text(new Error("raw technical details")), /raw technical/);
+});
+
 test("Bedienelemente wechseln nur bei echtem Überlauf in den Großtextmodus", () => {
   assert.match(html, /html\.ssv-large-text #booking-controls/);
   assert.match(html, /html\.ssv-large-text #calendar-navigation/);

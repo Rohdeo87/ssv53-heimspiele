@@ -285,7 +285,7 @@
   "tests": {
     "python_passed": 970,
     "python_subtests_passed": 425,
-    "appack_passed": 89,
+    "appack_passed": 90,
     "post_run_notification_tests_passed": 14
   },
   "evidence": {

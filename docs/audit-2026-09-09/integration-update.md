@@ -131,7 +131,7 @@ sind reproduzierbar.
 
 Lokaler Gesamtlauf: **970 Python-Tests und 425 Untertests bestanden**.
 Die anschließend ergänzte Vortagsabfrage für nächtliche Trainingsabsagen wurde
-mit 14 Benachrichtigungstests erneut geprüft. **89 Appack-Tests bestanden.**
+mit 14 Benachrichtigungstests erneut geprüft. **90 Appack-Tests bestanden.**
 Die UI-Aufnahmen entstanden lokal ohne Netz mit echtem Kontrollmarkup und
 Auswahlcode; Terminliste und DOM-Umgebung sind ein Testaufbau. Sie belegen keine
 installierte App oder vollständige native Kalenderbedienung:

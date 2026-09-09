@@ -4658,7 +4658,9 @@ if (!response.ok) {
 const detail = payload && payload.error
 ? String(payload.error)
 : "HTTP " + response.status;
-throw new Error("Azure-Belegungsdienst: " + detail);
+const failure = new Error("Azure-Belegungsdienst: " + detail);
+failure.code = payload && payload.code;
+throw failure;
 }
 
 if (
@@ -5042,6 +5044,13 @@ state.calendar.updateSize();
 });
 }
 
+function getOccupancyFailureText(error) {
+if (error && error.code === "TRAINING_SOURCE_UNAVAILABLE") {
+return "Die Trainingstermine müssen geprüft werden. Bitte den Platzwart kontaktieren. Den Platz bis dahin nicht freigeben.";
+}
+return "Die Belegungsdaten sind gerade nicht verfügbar. Bitte Internetverbindung prüfen und erneut versuchen.";
+}
+
 async function loadRangeEvents(rangeStart, rangeEnd) {
 const token = ++state.fetchToken;
 setStatus("loading", "Daten werden geladen", false);
@@ -5084,8 +5093,7 @@ updateMatchResourceVisibility(new Set());
 if (state.calendar) state.calendar.removeAllEvents();
 setStatus(
 "error",
-"Die Belegungsdaten sind gerade nicht verfügbar. " +
-"Bitte Internetverbindung prüfen und erneut versuchen.",
+getOccupancyFailureText(error),
 true
 );
 

@@ -83,7 +83,7 @@ Rückhalteformat zwar ab, übernehmen dadurch aber auch keine neuen Sperren.
 Ein kontrollierter Rollout muss beide Seiten der Verarbeitung nachweisen.
 
 Die anschließende Integration ist mit **970 Python-Tests, 425 Untertests und
-89 Appack-Tests** geprüft. Zusätzliche gezielte Prüfungen folgten für die
+90 Appack-Tests** geprüft. Zusätzliche gezielte Prüfungen folgten für die
 Vortagsabfrage nächtlicher Absagen. Die neuen lokalen Kontrollaufnahmen sind
 Vorschauen mit Testdaten. [Änderungen, Wirkung, Risiken und verbleibende
 Grenzen](../audit-2026-09-09/integration-update.md).
