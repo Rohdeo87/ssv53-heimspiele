@@ -222,3 +222,11 @@ abgelegt. Der Quellpaketnachweis lässt sich mit
 wiederholen. Das Werkzeug baut aus den unveränderten Git-Bytes, vergleicht jede
 Datei und importiert das entpackte Programm mit gesperrtem Netzwerk. Es führt
 keine Installation durch.
+
+Quellstand: [c4fd6e7a25d7318950145687fd93f97af0728186](https://github.com/Rohdeo87/ssv53-heimspiele/commit/c4fd6e7a25d7318950145687fd93f97af0728186).
+Das lokale Paket `dist/ssv53-platzpflege-coordination-20260909-source.zip`
+enthält **56 Quelldateien und ein Manifest**. Jede Quelldatei stimmt byteweise
+mit diesem Commit überein. Der isolierte Import registrierte **14 Funktionen**.
+Paket-SHA256: `f0b057e8a0de9dca1c9b233a444f89402206fde5db80a673e663b9d6b9ca4807`.
+Remote-Build-Abhängigkeiten und die produktiv installierten Dateien sind
+weiterhin nicht nachgewiesen.
