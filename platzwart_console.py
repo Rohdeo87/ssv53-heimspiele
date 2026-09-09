@@ -32,7 +32,7 @@ from mower.cutting_height import (
     cutting_height_percent_to_mm,
     supports_metric_cutting_height,
 )
-from mower.runtime import RuntimeSettings
+from mower.runtime import ControlMode, RuntimeSettings
 from mower.state import AutomationState
 from mower.state_store import AzureTableStateStore, StateConflictError
 from mower.safety import occupancy_override_allowed
@@ -619,6 +619,56 @@ def _state_payload(state: AutomationState) -> dict[str, Any]:
     }
 
 
+def _mower_status_age_seconds(
+    mower: Mapping[str, Any],
+    now_utc: datetime,
+) -> int | None:
+    """Return the accepted Husqvarna status age used by all console gates."""
+
+    try:
+        observed_at = datetime.fromtimestamp(
+            float(mower.get("status_timestamp_ms")) / 1000,
+            timezone.utc,
+        )
+        age_seconds = (
+            now_utc.astimezone(timezone.utc) - observed_at
+        ).total_seconds()
+    except (ValueError, TypeError, OverflowError, OSError):
+        return None
+    return round(age_seconds) if age_seconds >= -30 else None
+
+
+def _mower_telemetry_fresh(
+    mower: Mapping[str, Any],
+    environment: Mapping[str, str],
+    now_utc: datetime,
+) -> tuple[bool, int | None]:
+    """Keep the visible mower freshness exactly aligned with MOWER_TELEMETRY."""
+
+    age_seconds = _mower_status_age_seconds(mower, now_utc)
+    try:
+        maximum_age = int(environment.get("MOWER_STATUS_MAX_AGE_SECONDS", "180"))
+    except (TypeError, ValueError):
+        # A malformed runtime value can never turn telemetry into a permit.
+        return False, age_seconds
+    return (
+        mower.get("connected") is True
+        and age_seconds is not None
+        and age_seconds <= maximum_age,
+        age_seconds,
+    )
+
+
+def _runtime_device_controls_enabled(settings: RuntimeSettings) -> bool:
+    """The console may queue a device action only in the fully armed runtime."""
+
+    return (
+        settings.control_mode is ControlMode.FULL_FAILSAFE
+        and settings.enable_live_reads
+        and settings.full_failsafe_write_gate_enabled
+    )
+
+
 def _coordination_payload(details, state, current_plan, environment, now_utc, data_quality, *, charging_end_estimate=None):
     """Read-only explanation of simultaneous conditions; never a start permit."""
     now = now_utc.astimezone(timezone.utc)
@@ -648,8 +698,8 @@ def _coordination_payload(details, state, current_plan, environment, now_utc, da
         add("START_UNCONFIRMED", "Wirkung eines Mäherstarts ungeklärt", "Gerätewarteschlange, nativen Zeitplan und sicheren Parkzustand vor manueller Freigabe abgleichen. Eine Parkmeldung allein hebt die Sperre nicht auf.")
     if _mower_error_active(mower):
         add("MOWER_ERROR", _mower_error_message(mower) or "Mäherstörung", "Fehler beheben; frische fehlerfreie Gerätemeldung erforderlich.")
-    mower_age = age(mower.get("status_timestamp_ms"), milliseconds=True)
-    if mower.get("connected") is not True or mower_age is None or mower_age > int(environment.get("MOWER_STATUS_MAX_AGE_SECONDS", "180")):
+    mower_fresh, mower_age = _mower_telemetry_fresh(mower, environment, now)
+    if not mower_fresh:
         add("MOWER_TELEMETRY", "Mäherzustand nicht aktuell bestätigt", "Neue, verbundene Gerätemeldung innerhalb der Altersgrenze.")
     for block in (current_plan.get("blocked_now"), current_plan.get("parking_block")):
         if block and not any(item["code"] == "OCCUPANCY" for item in blockers):
@@ -807,6 +857,11 @@ def _mower_display_activity(
         return "SEARCHING_FOR_POSITION"
     if inactive_reason == "PLANNING":
         return "PLANNING"
+    # A parked or charging station report is more informative than the broad
+    # RESTRICTED state. ERROR, PAUSED and STOPPED above intentionally retain
+    # their stronger operator-facing priority.
+    if activity in {"PARKED_IN_CS", "CHARGING"}:
+        return activity
     if mower_state == "RESTRICTED":
         return "RESTRICTED"
     if activity != "NOT_APPLICABLE" or mower_state != "IN_OPERATION":
@@ -886,7 +941,7 @@ def _mower_display_label(
         "MOWING": "Mäht",
         "LEAVING": "Fährt auf den Platz",
         "GOING_HOME": "Fährt zur Station",
-        "PARKED_IN_CS": "Geparkt",
+        "PARKED_IN_CS": "In der Station",
         "CHARGING": "Lädt",
         "PAUSED": "Pausiert",
         "STOPPED": "Manuell gestoppt",
@@ -1163,6 +1218,9 @@ def live_status(environment: Mapping[str, str], now_utc: datetime) -> dict[str, 
     details = result.details
     mower = dict(details.get("mower") or {})
     hydrawise = dict(details.get("hydrawise") or {})
+    telemetry_fresh, status_age_seconds = _mower_telemetry_fresh(
+        mower, environment, now_utc
+    )
     if dashboard_snapshot_only and not (
         (hydrawise.get("safety") or {}).get("available") is True
         and (hydrawise.get("safety") or {}).get("fresh") is True
@@ -1172,6 +1230,10 @@ def live_status(environment: Mapping[str, str], now_utc: datetime) -> dict[str, 
         if data_quality["code"] == "LIVE":
             data_quality = {"code": "IRRIGATION_STATUS_UNAVAILABLE", "displayOnly": True,
                             "message": "Bewässerungsstand fehlt. Bitte aktualisieren und die Anlage prüfen. Keine Geräte starten."}
+    device_controls_available = bool(
+        controls_available
+        and _runtime_device_controls_enabled(settings)
+    )
     current_plan = _display_current_plan(
         dict(details.get("current_plan") or {}),
         environment,
@@ -1276,6 +1338,7 @@ def live_status(environment: Mapping[str, str], now_utc: datetime) -> dict[str, 
     return {
         "generatedAt": now_utc.astimezone(timezone.utc).isoformat(),
         "controlsAvailable": controls_available,
+        "deviceControlsAvailable": device_controls_available,
         "dataQuality": data_quality,
         "overall": {
             "code": state.last_decision_code if controls_available else data_quality["code"],
@@ -1293,6 +1356,8 @@ def live_status(environment: Mapping[str, str], now_utc: datetime) -> dict[str, 
             "errorMessage": _mower_error_message(mower),
             "connected": mower.get("connected"),
             "statusTimestamp": mower.get("status_timestamp_ms"),
+            "telemetryFresh": telemetry_fresh,
+            "statusAgeSeconds": status_age_seconds,
             "restartBatteryPercent": _restart_battery_percent(environment),
             "restrictedReason": mower.get("restricted_reason"),
             "workArea": target.get("name"), "workAreaProgress": target.get("progress"),
@@ -1339,6 +1404,7 @@ def unavailable_live_status(now_utc: datetime) -> dict[str, Any]:
     return {
         "generatedAt": now_utc.astimezone(timezone.utc).isoformat(),
         "controlsAvailable": False,
+        "deviceControlsAvailable": False,
         "dataQuality": {
             "code": "DISPLAY_UNAVAILABLE",
             "displayOnly": True,
@@ -1355,6 +1421,8 @@ def unavailable_live_status(now_utc: datetime) -> dict[str, Any]:
             "errorActive": False,
             "errorMessage": None,
             "connected": None,
+            "telemetryFresh": False,
+            "statusAgeSeconds": None,
             "workAreaProgress": None,
             "cuttingHeightMm": None,
             "cuttingHeightSupported": False,
@@ -1547,7 +1615,7 @@ def request_action(
         run_seconds = None
         cutting_height_mm = None
     settings = RuntimeSettings.from_mapping(environment)
-    if not settings.full_failsafe_write_gate_enabled:
+    if not _runtime_device_controls_enabled(settings):
         raise PlatzwartError("AUTOMATION_LOCKED", "Die sichere Automatik ist nicht vollständig freigegeben.", 409)
     store = AzureTableStateStore.from_environment(environment)
     original = store.load()

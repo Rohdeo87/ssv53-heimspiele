@@ -80,6 +80,10 @@ def test_one_direct_control_read_serves_repeated_app_reads_without_state_write(t
         assert all(o["irrigation"]["safety"]["fresh"] for o in outputs)
         assert {o["irrigation"]["safety"]["observed_at_utc"] for o in outputs} == {NOW.isoformat()}
         assert all(not o["irrigation"]["releaseConfirmation"]["telemetry_confirmed"] for o in outputs)
+        assert all(o["mower"]["telemetryFresh"] for o in outputs)
+        assert {o["mower"]["statusAgeSeconds"] for o in outputs} == {30, 60, 120}
+        # A read-only controller source cannot make console device controls available.
+        assert all(not o["deviceControlsAvailable"] for o in outputs)
 
 
 @pytest.mark.parametrize("populated", [False, True])
@@ -90,6 +94,7 @@ def test_empty_or_stale_app_snapshot_disables_controls_and_has_no_fallback(tmp_p
         before, calls = ctx.state.load(), ctx.vendor.call_count
         output = live_status(ENV, NOW + timedelta(seconds=181))
         assert not output["controlsAvailable"]
+        assert not output["deviceControlsAvailable"]
         assert output["dataQuality"]["code"] == "IRRIGATION_STATUS_UNAVAILABLE"
         assert output["irrigation"]["safety"]["available"] is False
         assert ctx.vendor.call_count == calls and ctx.state.load() == before

@@ -14,8 +14,8 @@ function sourceOf(name) {
 }
 
 const viewFunctions = [
-  "localDay", "calendarTime", "intervalEnd", "isSearching", "hasActiveMowerError", "activity", "trainingControlView", "irrigationOutsideWindow",
-  "isMowerPaused", "irrigationScheduleChangePending", "coordinationExecutionBlocked", "mowerActions", "effectiveMowerActions",
+  "localDay", "calendarTime", "dryingTime", "intervalEnd", "isSearching", "hasActiveMowerError", "activity", "trainingControlView", "irrigationOutsideWindow",
+  "isMowerPaused", "irrigationScheduleChangePending", "coordinationExecutionBlocked", "deviceControlsOpen", "mowerTelemetryFresh", "deviceActionAllowed", "mowerActions", "effectiveMowerActions",
   "simpleStatus", "chargingEnd", "nextStartInfo", "nextMowerStart", "actionProgressText", "irrigationActions",
   "dashboardMessage", "friendlyError", "phase", "waterTitle", "simpleWater", "nextWaterStart",
   "clubClockParts", "inputDateTime", "parsePlanDateTime", "planPauseEnd", "localDateTime", "planDate", "planStatusText"
@@ -27,9 +27,9 @@ function viewModel() {
 
 function snapshot() {
   return {
-    generatedAt: "2026-09-09T10:00:00Z", controlsAvailable: true,
+    generatedAt: "2026-09-09T10:00:00Z", controlsAvailable: true, deviceControlsAvailable: true,
     overall: {code: "HYDRAWISE_CLEAR_CONFIRMATION"},
-    mower: {activity: "CHARGING", state: "IN_OPERATION", connected: true, errorCode: 0, batteryPercent: 73},
+    mower: {activity: "CHARGING", state: "IN_OPERATION", connected: true, telemetryFresh: true, statusAgeSeconds: 12, errorCode: 0, batteryPercent: 73},
     automation: {continuousMowingOwned: true, irrigationPhase: "COMPLETE_HOLD"},
     irrigation: {safety: {available: true, fresh: true, clear_now: true, active_zone_count: 0}},
     irrigationSchedule: {available: true, nextRun: {start: "2026-09-10T02:00:00Z"}},

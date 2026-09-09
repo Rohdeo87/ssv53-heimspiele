@@ -1,0 +1,35 @@
+{
+  "python": {
+    "passed": 1164,
+    "subtests_passed": 445,
+    "seconds": 28.48
+  },
+  "appack_js": {
+    "passed": 112,
+    "failed": 0
+  },
+  "browser": {
+    "synthetic": true,
+    "device_commands_sent": 0,
+    "width_css_px": 390,
+    "scenarios": [
+      "photo-time stale dock: no start, old data labelled, dry end ceiled",
+      "fresh data with device gate closed: height and start disabled",
+      "reopened irrigation plan under closed gate: editing disabled",
+      "stale mower data with device gate open: PARK and irrigation STOP enabled"
+    ]
+  },
+  "review": {
+    "model": "gpt-5.6-terra",
+    "result": "Integration reviewed; resetPlanDialog finding corrected and browser verified"
+  },
+  "template_sha256": "8e10db32cf6575a63cab02157f78bd96ca8e3b93852342cdba8dfd5e9305fc61",
+  "evidence": {
+    "fresh-locked-dom.txt": "69e7ae2b461626e9d570814af270ec8110ccf57f46a7dd9e25e37c15c9f25585",
+    "mobile-after-simulation.png": "ba9408ecdbe43b7c35d3cc7efa5100193822c6e825f0e14b008d2e874d57b6be",
+    "mobile-times-simulation.png": "8b46422e9f089bafe039f38662e1220cb328243995b6f99405ca3012dfe0824c",
+    "native-before.jpg": "c037fc38ae094af7805d59a752298840b0d38825bc41fd4fab854b491ca20513",
+    "plan-locked-dom.txt": "73fbe415aed65cd2ac5cea09b1975ea9a6cc4b7727c6a1421d489352fdd01a44",
+    "stale-stop-dom.txt": "b327426d381fe68a66c04cb28483ba136607e515a92c1a92b0a8e7d1ef6d33a9"
+  }
+}

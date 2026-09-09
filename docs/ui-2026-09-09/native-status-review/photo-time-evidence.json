@@ -1,0 +1,128 @@
+{
+  "schema_version": 1,
+  "photo_device_clock_local": "20:50",
+  "photo_sha256": "c037fc38ae094af7805d59a752298840b0d38825bc41fd4fab854b491ca20513",
+  "photo_date_inferred_from_current_user_turn": "2026-09-09",
+  "native_app_open_verified_by_user_photo": true,
+  "native_app_full_acceptance": false,
+  "observations": [
+    {
+      "observed_at_utc": "2026-09-09T18:46:02.646381Z",
+      "vendor_status_at_utc": "2026-09-09T18:45:43.897000+00:00",
+      "vendor_age_seconds": 19,
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "state": "RESTRICTED",
+        "override_action": "FORCE_PARK",
+        "restricted_reason": "PARK_OVERRIDE",
+        "connected": true,
+        "battery_percent": 100
+      },
+      "control_mode": "DRY_RUN",
+      "command_sent": false,
+      "dry_until_utc": "2026-09-09T20:41:51.487032+00:00"
+    },
+    {
+      "observed_at_utc": "2026-09-09T18:47:02.3484305Z",
+      "vendor_status_at_utc": "2026-09-09T18:45:43.897000+00:00",
+      "vendor_age_seconds": 78,
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "state": "RESTRICTED",
+        "override_action": "FORCE_PARK",
+        "restricted_reason": "PARK_OVERRIDE",
+        "connected": true,
+        "battery_percent": 100
+      },
+      "control_mode": "DRY_RUN",
+      "command_sent": false,
+      "dry_until_utc": "2026-09-09T20:41:51.487032+00:00"
+    },
+    {
+      "observed_at_utc": "2026-09-09T18:48:02.4650074Z",
+      "vendor_status_at_utc": "2026-09-09T18:45:43.897000+00:00",
+      "vendor_age_seconds": 139,
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "state": "RESTRICTED",
+        "override_action": "FORCE_PARK",
+        "restricted_reason": "PARK_OVERRIDE",
+        "connected": true,
+        "battery_percent": 100
+      },
+      "control_mode": "DRY_RUN",
+      "command_sent": false,
+      "dry_until_utc": "2026-09-09T20:41:51.487032+00:00"
+    },
+    {
+      "observed_at_utc": "2026-09-09T18:49:02.3485661Z",
+      "vendor_status_at_utc": "2026-09-09T18:45:43.897000+00:00",
+      "vendor_age_seconds": 198,
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "state": "RESTRICTED",
+        "override_action": "FORCE_PARK",
+        "restricted_reason": "PARK_OVERRIDE",
+        "connected": true,
+        "battery_percent": 100
+      },
+      "control_mode": "DRY_RUN",
+      "command_sent": false,
+      "dry_until_utc": "2026-09-09T20:41:51.487032+00:00"
+    },
+    {
+      "observed_at_utc": "2026-09-09T18:50:02.9916093Z",
+      "vendor_status_at_utc": "2026-09-09T18:45:43.897000+00:00",
+      "vendor_age_seconds": 259,
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "state": "RESTRICTED",
+        "override_action": "FORCE_PARK",
+        "restricted_reason": "PARK_OVERRIDE",
+        "connected": true,
+        "battery_percent": 100
+      },
+      "control_mode": "DRY_RUN",
+      "command_sent": false,
+      "dry_until_utc": "2026-09-09T20:41:51.487032+00:00"
+    },
+    {
+      "observed_at_utc": "2026-09-09T18:51:02.2635505Z",
+      "vendor_status_at_utc": "2026-09-09T18:50:56.288000+00:00",
+      "vendor_age_seconds": 6,
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "state": "RESTRICTED",
+        "override_action": "FORCE_PARK",
+        "restricted_reason": "PARK_OVERRIDE",
+        "connected": true,
+        "battery_percent": 100
+      },
+      "control_mode": "DRY_RUN",
+      "command_sent": false,
+      "dry_until_utc": "2026-09-09T20:41:51.487032+00:00"
+    },
+    {
+      "observed_at_utc": "2026-09-09T18:52:02.1747347Z",
+      "vendor_status_at_utc": "2026-09-09T18:51:49.141000+00:00",
+      "vendor_age_seconds": 13,
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "state": "RESTRICTED",
+        "override_action": "FORCE_PARK",
+        "restricted_reason": "PARK_OVERRIDE",
+        "connected": true,
+        "battery_percent": 100
+      },
+      "control_mode": "DRY_RUN",
+      "command_sent": false,
+      "dry_until_utc": "2026-09-09T20:41:51.487032+00:00"
+    }
+  ],
+  "boundaries": [
+    "No user session or enrollment code acquired.",
+    "Status endpoint not called by impersonating the user.",
+    "No device command sent.",
+    "Snapshot confirms visible upper portion only; winter switch and other controls not shown."
+  ]
+}

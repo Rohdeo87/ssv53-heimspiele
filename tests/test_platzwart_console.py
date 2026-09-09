@@ -32,6 +32,16 @@ from mower.full_failsafe import run_full_failsafe_cycle
 
 
 SESSION_ENV = {"SSV53_PLATZWART_SESSION_SECRET": "x" * 48}
+FULL_DEVICE_CONTROL_ENV = {
+    **ENV,
+    "CONTROL_MODE": "FULL_FAILSAFE",
+    "ENABLE_LIVE_READS": "true",
+    "ENABLE_PARK_COMMANDS": "true",
+    "ENABLE_START_COMMANDS": "true",
+    "ENABLE_IRRIGATION_COMMANDS": "true",
+    "FULL_MOWER_CONFIRMATION": "SSV53-TRAINING-MATCH-PARK-START",
+    "FULL_FAILSAFE_CONFIRMATION": "SSV53-MOWER-HYDRAWISE-7-ZONES-150-MINUTES-ADAPTIVE-V1",
+}
 
 
 class PlatzwartAuthenticationTests(unittest.TestCase):
@@ -85,9 +95,12 @@ class PlatzwartAuthenticationTests(unittest.TestCase):
         payload = unavailable_live_status(NOW)
 
         self.assertFalse(payload["controlsAvailable"])
+        self.assertFalse(payload["deviceControlsAvailable"])
         self.assertEqual(payload["dataQuality"]["code"], "DISPLAY_UNAVAILABLE")
         self.assertFalse(payload["occupancy"]["available"])
         self.assertFalse(payload["irrigation"]["safety"]["available"])
+        self.assertFalse(payload["mower"]["telemetryFresh"])
+        self.assertIsNone(payload["mower"]["statusAgeSeconds"])
         self.assertEqual(payload["occupancy"]["upcoming"], [])
 
     def test_match_in_merged_block_gets_nominal_display_times(self) -> None:
@@ -250,6 +263,79 @@ class PlatzwartAuthenticationTests(unittest.TestCase):
         self.assertEqual(payload["statistics"]["mownAreaEquivalents7d"], 3.4)
         self.assertNotIn("totalCuttingSeconds", payload["statistics"])
         self.assertNotIn("chargingCycles", payload["statistics"])
+
+    def test_live_status_exposes_freshness_and_only_arms_fully_enabled_device_controls(self) -> None:
+        live_cycle = result(activity="PARKED_IN_CS", battery=100)
+        store = InMemoryStateStore()
+        with patch("platzwart_console.run_read_only_cycle", return_value=live_cycle), patch(
+            "platzwart_console.AzureTableStateStore.from_environment",
+            return_value=store,
+        ), patch("platzwart_console._clubhouse_events", return_value={}), patch(
+            "platzwart_console._dashboard_statistics", return_value={}
+        ), patch("platzwart_console._dashboard_irrigation_statistics", return_value={}):
+            armed = live_status(FULL_DEVICE_CONTROL_ENV, NOW)
+            dry_run = live_status(
+                {**FULL_DEVICE_CONTROL_ENV, "CONTROL_MODE": "DRY_RUN"}, NOW
+            )
+            missing_gate = live_status(
+                {**FULL_DEVICE_CONTROL_ENV, "ENABLE_IRRIGATION_COMMANDS": "false"},
+                NOW,
+            )
+
+        self.assertTrue(armed["controlsAvailable"])
+        self.assertTrue(armed["deviceControlsAvailable"])
+        self.assertTrue(armed["mower"]["telemetryFresh"])
+        self.assertEqual(armed["mower"]["statusAgeSeconds"], 0)
+        self.assertFalse(dry_run["deviceControlsAvailable"])
+        self.assertFalse(missing_gate["deviceControlsAvailable"])
+
+    def test_stale_connected_mower_is_visible_with_telemetry_blocker_but_open_stop_gate(self) -> None:
+        live_cycle = result(activity="PARKED_IN_CS", battery=100)
+        live_cycle.details["mower"]["status_timestamp_ms"] = int(
+            (NOW - timedelta(seconds=181)).timestamp() * 1000
+        )
+        store = InMemoryStateStore()
+        with patch("platzwart_console.run_read_only_cycle", return_value=live_cycle), patch(
+            "platzwart_console.AzureTableStateStore.from_environment",
+            return_value=store,
+        ), patch("platzwart_console._clubhouse_events", return_value={}), patch(
+            "platzwart_console._dashboard_statistics", return_value={}
+        ), patch("platzwart_console._dashboard_irrigation_statistics", return_value={}):
+            payload = live_status(FULL_DEVICE_CONTROL_ENV, NOW)
+
+        self.assertTrue(payload["mower"]["connected"])
+        self.assertFalse(payload["mower"]["telemetryFresh"])
+        self.assertEqual(payload["mower"]["statusAgeSeconds"], 181)
+        self.assertTrue(payload["deviceControlsAvailable"])
+        self.assertIn(
+            "MOWER_TELEMETRY",
+            {item["code"] for item in payload["coordination"]["blockers"]},
+        )
+
+    def test_restricted_force_park_station_report_keeps_station_activity(self) -> None:
+        for activity, expected_label in (
+            ("PARKED_IN_CS", "In der Station"),
+            ("CHARGING", "Lädt"),
+        ):
+            with self.subTest(activity=activity):
+                live_cycle = result(activity=activity, battery=100)
+                live_cycle.details["mower"].update(
+                    {
+                        "state": "RESTRICTED",
+                        "restricted_reason": "WEEK_SCHEDULE",
+                        "override_action": "FORCE_PARK",
+                    }
+                )
+                with patch("platzwart_console.run_read_only_cycle", return_value=live_cycle), patch(
+                    "platzwart_console.AzureTableStateStore.from_environment",
+                    return_value=InMemoryStateStore(),
+                ), patch("platzwart_console._clubhouse_events", return_value={}), patch(
+                    "platzwart_console._dashboard_statistics", return_value={}
+                ), patch("platzwart_console._dashboard_irrigation_statistics", return_value={}):
+                    payload = live_status(FULL_DEVICE_CONTROL_ENV, NOW)
+
+                self.assertEqual(payload["mower"]["displayActivity"], activity)
+                self.assertEqual(payload["mower"]["displayLabel"], expected_label)
 
     def test_live_status_exposes_all_seven_irrigation_zone_statistics(self) -> None:
         live_cycle = result(activity="PARKED_IN_CS", battery=100)
@@ -519,6 +605,30 @@ class PlatzwartAuthenticationTests(unittest.TestCase):
 
 
 class PlatzwartSafetyIntegrationTests(unittest.TestCase):
+    def test_non_failsafe_modes_reject_armed_flags_before_any_request_state_read_or_write(self) -> None:
+        for control_mode in ("OFF", "DRY_RUN", "PARK_ONLY", "FULL_MOWER"):
+            with self.subTest(control_mode=control_mode):
+                environment = {
+                    **FULL_DEVICE_CONTROL_ENV,
+                    "CONTROL_MODE": control_mode,
+                }
+                with patch(
+                    "platzwart_console.AzureTableStateStore.from_environment"
+                ) as state_factory, patch(
+                    "platzwart_console.ConsoleTableStore.from_environment"
+                ) as audit_factory, self.assertRaises(PlatzwartError) as error:
+                    request_action(
+                        "START_MOWING",
+                        f"{control_mode.lower()}-rejected",
+                        "START_MOWING",
+                        environment,
+                        NOW,
+                    )
+
+                self.assertEqual(error.exception.code, "AUTOMATION_LOCKED")
+                state_factory.assert_not_called()
+                audit_factory.assert_not_called()
+
     def test_manual_irrigation_outside_window_never_queues_request(self) -> None:
         for action, moment, extra in (
             ("START_IRRIGATION", NOW.replace(hour=1, minute=29), {}),
