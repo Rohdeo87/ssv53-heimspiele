@@ -1,5 +1,10 @@
 # Gesamtbewertung der SSV53-Platzpflegeplattform
 
+**Neueste Erweiterung:** [Koordinierte Bewässerung während des Ladens](coordination-execution-update.md)
+verbindet die Planung mit dem persistenten Ausführungsablauf. Sie enthält die
+zusätzlichen Fehlernachweise, einfache App-Anzeigen, isolierte Ablaufprüfungen
+und die weiterhin offenen Voraussetzungen für den Livebetrieb.
+
 **Aktueller Folgestand:** Die bedingte Livefreigabe und die zusätzlichen
 Entwicklungsänderungen am Import, Trainingsmodell, Statuscache und lesenden
 Planungsvergleich sind in [release-readiness.md](../ui-2026-09-09/release-readiness.md)

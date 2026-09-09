@@ -101,6 +101,8 @@ class AutomationState:
     operator_occupancy_override_until_utc: str | None = None
     irrigation_schedule_override_json: str | None = None
     irrigation_schedule_history_json: str | None = None
+    coordination_execution_reservations_json: str | None = None
+    coordination_execution_request_json: str | None = None
 
     def __post_init__(self) -> None:
         if self.schema_version != 1:
@@ -414,6 +416,12 @@ class AutomationState:
             ),
             irrigation_schedule_history_json=_normalize_optional_text(
                 values.get("irrigation_schedule_history_json")
+            ),
+            coordination_execution_reservations_json=_normalize_optional_text(
+                values.get("coordination_execution_reservations_json")
+            ),
+            coordination_execution_request_json=_normalize_optional_text(
+                values.get("coordination_execution_request_json")
             ),
         )
 

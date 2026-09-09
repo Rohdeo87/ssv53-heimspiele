@@ -1,6 +1,23 @@
 <!doctype html>
 <html lang="de">
 <head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<script>
+window.auditFixture={"ok": true, "generatedAt": "2026-09-09T10:00:00Z", "controlsAvailable": true, "overall": {"code": "HYDRAWISE_CLEAR_CONFIRMATION"}, "dataQuality": {"displayOnly": false}, "mower": {"activity": "CHARGING", "state": "IN_OPERATION", "connected": true, "errorCode": 0, "batteryPercent": 73, "restartBatteryPercent": 90, "model": "Automower 580 EPOS", "cuttingHeightMm": 30, "cuttingHeightSupported": true, "workAreaProgress": 62}, "automation": {"continuousMowingOwned": true, "parkedByAutomation": true, "irrigationPhase": "COMPLETE_HOLD"}, "irrigation": {"safety": {"available": true, "fresh": true, "clear_now": true, "active_zone_count": 0}, "zones": [{"zone": 1, "name": "Zone 1", "running": false, "run_seconds": 900}, {"zone": 2, "name": "Zone 2", "running": false, "run_seconds": 900}, {"zone": 3, "name": "Zone 3", "running": false, "run_seconds": 900}, {"zone": 4, "name": "Zone 4", "running": false, "run_seconds": 900}, {"zone": 5, "name": "Zone 5", "running": false, "run_seconds": 900}, {"zone": 6, "name": "Zone 6", "running": false, "run_seconds": 900}, {"zone": 7, "name": "Zone 7", "running": false, "run_seconds": 900}]}, "occupancy": {"current": null, "upcoming": [{"start": "2026-09-09T16:30:00+02:00", "end": "2026-09-09T20:00:00+02:00", "title": "Jugendtraining", "source": "training", "details": {"nominal_start": "2026-09-09T17:00:00+02:00", "nominal_end": "2026-09-09T19:30:00+02:00"}}], "safeWindows": [{"start": "2026-09-09T10:00:00Z", "command_deadline": "2026-09-09T14:26:00Z", "minimum_mowing_minutes": 30}]}, "coordination": {"explanationOnly": true, "dryUntil": "2026-09-09T12:30:00Z", "releaseNotBefore": "2026-09-09T12:30:00Z", "chargingEndEstimate": {"at": "2026-09-09T11:45:00Z", "estimated": true}, "blockers": [{"code": "CHARGING"}, {"code": "DRYING_OR_CONFIRMATION"}]}, "irrigationSchedule": {"available": true, "nextRun": {"start": "2026-09-10T02:00:00Z", "selectedZoneCount": 7, "zones": [{"zone": 1, "name": "Zone 1", "selected": true, "runSeconds": 900}, {"zone": 2, "name": "Zone 2", "selected": true, "runSeconds": 900}, {"zone": 3, "name": "Zone 3", "selected": true, "runSeconds": 900}, {"zone": 4, "name": "Zone 4", "selected": true, "runSeconds": 900}, {"zone": 5, "name": "Zone 5", "selected": true, "runSeconds": 900}, {"zone": 6, "name": "Zone 6", "selected": true, "runSeconds": 900}, {"zone": 7, "name": "Zone 7", "selected": true, "runSeconds": 900}]}}, "statistics": {"mowingMinutesToday": 180, "mowingMinutes7d": 1260, "available": true}, "irrigationStatistics": {"available": true}, "clubhouse": {"available": true, "events": []}};
+localStorage.setItem('ssv53_platzwart_device_v1',JSON.stringify({deviceId:'synthetic',deviceToken:'not-a-credential'}));
+sessionStorage.setItem('ssv53_platzwart_session_v1',JSON.stringify({token:'synthetic-not-signed',expiresAt:'2099-01-01T00:00:00Z'}));
+window.fetch=async function(url,options){
+ if(options&&options.method==='POST')return {ok:false,status:409,json:async()=>({error:'Vorschau: Es wird kein Gerätebefehl gesendet.'})};
+ if(location.hash==='#offline')throw new TypeError('Failed to fetch');
+ const data=JSON.parse(JSON.stringify(window.auditFixture));
+ if(location.hash==='#unknown')data.coordination.chargingEndEstimate=null;
+ if(location.hash==='#error'){data.mower.state='ERROR';data.mower.activity='NOT_APPLICABLE';data.mower.errorCode=93;data.mower.errorActive=true;data.automation.irrigationPhase=null;data.coordination.blockers=[{code:'MOWER_ERROR'}];data.coordination.dryUntil=null;}
+ if(location.hash==='#rejected'){data.irrigationSchedule.override={kind:'PAUSE',status:'REJECTED'};data.automation.irrigationPhase=null;}
+ if(location.hash==='#manual'){data.overall.code='OPERATOR_PARK_HOLD';data.coordination.blockers.push({code:'MANUAL_STOP'});data.automation.irrigationPhase=null;}
+ if(location.hash==='#coordination'||location.hash==='#coordination-blocked'){data.overall.code=location.hash==='#coordination'?'COORDINATION_EXECUTION_RESERVED':'COORDINATION_EXECUTION_START_BLOCKED';data.automation.irrigationPhase=null;data.coordination.dryUntil=null;data.coordination.releaseNotBefore=null;data.coordination.blockers=[{code:'CHARGING'}];}
+ return {ok:true,status:200,json:async()=>data};
+};
+</script>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>Platzpflege</title>
@@ -51,10 +68,16 @@
     .attention-btn{width:30px;height:30px;flex:0 0 30px;margin:11px 1px;border:1px solid #e5a3a3;background:#fff7f7;color:var(--red);border-radius:50%;box-shadow:none}.attention-btn svg{width:16px;height:16px;stroke-width:2.4}.attention-list{list-style:none;margin:14px 0 0;padding:0}.attention-list li{padding:12px 0;border-top:1px solid var(--line)}.attention-list strong,.attention-list span{display:block}.attention-list span{margin-top:3px;color:var(--muted);font-size:15px}.attention-summary{padding:12px 13px;border-left:4px solid var(--red);border-radius:11px;background:#fff7f7;font-weight:700}
   </style>
 </head>
-<body>
+<body><nav style="background:#172033;color:white;padding:8px;text-align:center;font:14px Arial">Vorschau · Beispieldaten<br>
+<a style="color:white" href="#charging" onclick="setTimeout(()=>document.getElementById('refresh').click(),0)">Zeitplan</a> ·
+<a style="color:white" href="#unknown" onclick="setTimeout(()=>document.getElementById('refresh').click(),0)">Zeit offen</a> ·
+<a style="color:white" href="#error" onclick="setTimeout(()=>document.getElementById('refresh').click(),0)">Fehler</a> ·
+<a style="color:white" href="#offline" onclick="setTimeout(()=>document.getElementById('refresh').click(),0)">Keine Verbindung</a> ·
+<a style="color:white" href="#coordination" onclick="setTimeout(()=>document.getElementById('refresh').click(),0)">Wasser vorbereiten</a> ·
+<a style="color:white" href="#coordination-blocked" onclick="setTimeout(()=>document.getElementById('refresh').click(),0)">Wasser prüfen</a></nav>
 <main class="shell">
   <header class="head">
-    <img class="logo" src="https://cdn.appack.de/ssv53/images/Icon_Verein.png" alt="SSV 53">
+    <div class="logo" style="margin:auto;font-weight:800;color:#285ea7;padding:20px 0">SSV53</div>
     <h1>Platzpflege</h1><hr class="gold">
   </header>
 
@@ -122,7 +145,7 @@
 <dialog id="water-attention-dialog" class="stats-dialog"><div class="dialog-body"><div class="stats-head"><div><div class="eyebrow">Bewässerung</div><h2 id="water-attention-title">Bewässerung prüfen</h2></div><button id="water-attention-close" class="stats-close" type="button" aria-label="Hinweis schließen">×</button></div><div id="water-attention-summary" class="attention-summary"></div><ul id="water-attention-list" class="attention-list"></ul><p class="stats-note">Fehlt ein Abschluss, bitte die Bewässerung vor Ort prüfen.</p></div></dialog>
 
 <script>
-  var profileJSON = [#if profile_json?has_content]${profile_json}[#else]{}[/#if];
+  var profileJSON = {"roleKeys":["Platzwart"]};
   document.addEventListener("DOMContentLoaded",function(){"use strict";
     function ssvElementVisible(element){if(!element||!element.isConnected)return false;var box=element.getBoundingClientRect();return box.width>0&&box.height>0&&window.getComputedStyle(element).visibility!=="hidden"}
     function ssvElementOverflows(element){if(!ssvElementVisible(element))return false;return element.scrollWidth>element.clientWidth+2||element.scrollHeight>element.clientHeight+2}
@@ -130,7 +153,7 @@
     function ssvNeedsLargeTextLayout(){var textTargets=document.querySelectorAll(".btn:not(.icon-btn),.plan-choice,.profile-row button,.zone-controls select,.facts span,.stat-value,.stats-note,.height-value"),groupTargets=document.querySelectorAll(".card-head,.card-icons,.stats-head,.dialog-actions,.plan-actions.two,.profile-row,.plan-datetime-group,.zone-controls");return Array.prototype.some.call(textTargets,ssvElementOverflows)||Array.prototype.some.call(groupTargets,ssvChildrenClipped)}
     var ssvLayoutCheckPending=false;function ssvCheckLargeTextLayout(){if(document.documentElement.classList.contains("ssv-large-text")||ssvLayoutCheckPending)return;ssvLayoutCheckPending=true;window.requestAnimationFrame(function(){window.requestAnimationFrame(function(){ssvLayoutCheckPending=false;if(ssvNeedsLargeTextLayout())document.documentElement.classList.add("ssv-large-text")})})}
     window.ssvNeedsLargeTextLayout=ssvNeedsLargeTextLayout;window.addEventListener("resize",ssvCheckLargeTextLayout);window.addEventListener("orientationchange",ssvCheckLargeTextLayout);if(document.fonts&&document.fonts.ready)document.fonts.ready.then(ssvCheckLargeTextLayout);if(window.MutationObserver)new MutationObserver(ssvCheckLargeTextLayout).observe(document.body,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:["class","hidden"]});ssvCheckLargeTextLayout();
-    var API="https://func-ssv53platzpflege-prod-q7kbw54s.azurewebsites.net/api/platzwart";
+    var API="/synthetic/platzwart";
     var DEVICE_KEY="ssv53_platzwart_device_v1",SESSION_KEY="ssv53_platzwart_session_v1";
     var state={status:null,pendingAction:null,pendingPayload:null,timer:0,loading:false,loginPending:false,heightDirty:false,heightChoice:30};
     function norm(v){return String(v||"").trim().toLocaleLowerCase("de-DE").replace(/ä/g,"ae").replace(/ö/g,"oe").replace(/ü/g,"ue").replace(/ß/g,"ss").replace(/[\s_-]+/g,"")}

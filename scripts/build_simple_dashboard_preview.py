@@ -1,5 +1,6 @@
 """Review the actual simplified template with labelled synthetic examples only."""
 from pathlib import Path
+import argparse
 import re
 
 from build_audit_preview import build
@@ -8,6 +9,9 @@ OUT = Path(__file__).resolve().parents[1] / "docs/ui-2026-09-09"
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--output", type=Path, default=OUT)
+    output = parser.parse_args().output.resolve()
     fixture = {
         "ok": True, "generatedAt": "2026-09-09T10:00:00Z", "controlsAvailable": True,
         "overall": {"code": "HYDRAWISE_CLEAR_CONFIRMATION"}, "dataQuality": {"displayOnly": False},
@@ -36,23 +40,26 @@ def main():
         "irrigationStatistics": {"available": True},
         "clubhouse": {"available": True, "events": []},
     }
-    build(output=OUT, fixture=fixture)
-    target = OUT / "appack-preview.html"
+    build(output=output, fixture=fixture)
+    target = output / "appack-preview.html"
     preview = target.read_text(encoding="utf-8")
     preview = preview.replace("return {ok:true,status:200,json:async()=>window.auditFixture};", """const data=JSON.parse(JSON.stringify(window.auditFixture));
  if(location.hash==='#unknown')data.coordination.chargingEndEstimate=null;
  if(location.hash==='#error'){data.mower.state='ERROR';data.mower.activity='NOT_APPLICABLE';data.mower.errorCode=93;data.mower.errorActive=true;data.automation.irrigationPhase=null;data.coordination.blockers=[{code:'MOWER_ERROR'}];data.coordination.dryUntil=null;}
  if(location.hash==='#rejected'){data.irrigationSchedule.override={kind:'PAUSE',status:'REJECTED'};data.automation.irrigationPhase=null;}
  if(location.hash==='#manual'){data.overall.code='OPERATOR_PARK_HOLD';data.coordination.blockers.push({code:'MANUAL_STOP'});data.automation.irrigationPhase=null;}
+ if(location.hash==='#coordination'||location.hash==='#coordination-blocked'){data.overall.code=location.hash==='#coordination'?'COORDINATION_EXECUTION_RESERVED':'COORDINATION_EXECUTION_START_BLOCKED';data.automation.irrigationPhase=null;data.coordination.dryUntil=null;data.coordination.releaseNotBefore=null;data.coordination.blockers=[{code:'CHARGING'}];}
  return {ok:true,status:200,json:async()=>data};""")
     banner = """<body><nav style="background:#172033;color:white;padding:8px;text-align:center;font:14px Arial">Vorschau · Beispieldaten<br>
 <a style="color:white" href="#charging" onclick="setTimeout(()=>document.getElementById('refresh').click(),0)">Zeitplan</a> ·
 <a style="color:white" href="#unknown" onclick="setTimeout(()=>document.getElementById('refresh').click(),0)">Zeit offen</a> ·
 <a style="color:white" href="#error" onclick="setTimeout(()=>document.getElementById('refresh').click(),0)">Fehler</a> ·
-<a style="color:white" href="#offline" onclick="setTimeout(()=>document.getElementById('refresh').click(),0)">Keine Verbindung</a></nav>"""
+<a style="color:white" href="#offline" onclick="setTimeout(()=>document.getElementById('refresh').click(),0)">Keine Verbindung</a> ·
+<a style="color:white" href="#coordination" onclick="setTimeout(()=>document.getElementById('refresh').click(),0)">Wasser vorbereiten</a> ·
+<a style="color:white" href="#coordination-blocked" onclick="setTimeout(()=>document.getElementById('refresh').click(),0)">Wasser prüfen</a></nav>"""
     preview = re.sub(r"<body><div style=\"background:#172033.*?</div>", lambda _: banner, preview, count=1, flags=re.S)
     target.write_text(preview, encoding="utf-8", newline="\n")
-    print(f"Synthetic, network-isolated review: {OUT.relative_to(OUT.parents[1])}")
+    print(f"Synthetic, network-isolated review: {output}")
 
 
 if __name__ == "__main__":

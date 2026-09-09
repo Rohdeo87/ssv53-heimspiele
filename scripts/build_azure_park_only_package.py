@@ -8,6 +8,7 @@ from pathlib import Path, PurePosixPath
 
 
 REQUIRED_FILES = (
+    "daily_safety_report.py",
     "function_app.py",
     "host.json",
     "order_mail.py",
@@ -26,6 +27,9 @@ REQUIRED_FILES = (
     "mower/__init__.py",
     "mower/build_provenance.py",
     "mower/coordination_shadow.py",
+    "mower/coordination_inputs.py",
+    "mower/coordination_request.py",
+    "mower/statistics_cache.py",
     "mower/status_cache.py",
     "mower/status_cache_store.py",
     "mower/config.json",

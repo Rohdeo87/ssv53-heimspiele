@@ -49,7 +49,8 @@ def build_coordination_request(*, proposal: Mapping[str, Any], cycle: Mapping[st
                                need: Mapping[str, Any],
                                charging_end_estimate: Mapping[str, Any] | None,
                                previous_cycle: Mapping[str, Any] | None = None,
-                               drying_minutes: int = 150) -> dict[str, Any]:
+                               drying_minutes: int = 150,
+                               minimum_lead_minutes: int = 0) -> dict[str, Any]:
     """Return a deterministic draft, or a blocked result with reasons.
 
     The supplied proposal is checked against a fresh comparison of the exact
@@ -64,6 +65,7 @@ def build_coordination_request(*, proposal: Mapping[str, Any], cycle: Mapping[st
         fresh = compare_charging_window(
             cycle=cycle, need=need, charging_end_estimate=charging_end_estimate,
             previous_cycle=previous_cycle, drying_minutes=drying_minutes,
+            minimum_lead_minutes=minimum_lead_minutes,
         )
         if fresh.get("status") != "SHADOW_PROPOSAL":
             blocked["blockers"].extend(fresh.get("blockers") or ["SHADOW_PROPOSAL_REQUIRED"])

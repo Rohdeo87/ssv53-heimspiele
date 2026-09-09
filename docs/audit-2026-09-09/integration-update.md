@@ -1,5 +1,10 @@
 # Fortsetzung: gemeinsame Quelle und belastbare Bestätigungen
 
+Die anschließende [Anbindung der Bewässerungskoordination](coordination-execution-update.md)
+schreibt den unten dokumentierten damaligen Entwurfsstand fort. Historische
+Test- und Paketnachweise dieses Dokuments bleiben dem jeweiligen Quellstand
+zugeordnet.
+
 Stand 09.09.2026. Dieser Bericht ergänzt das [Gesamtaudit](README.md) und den
 [Freigabestand](../ui-2026-09-09/release-readiness.md). Er betrifft den
 Entwicklungsbranch. Es wurden keine Gerätebefehle, Produktivänderungen,

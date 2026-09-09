@@ -44,6 +44,7 @@ from mower.runtime import ControlMode, CycleResult, RuntimeSettings
 from mower.state_store import AzureTableStateStore, StateStore
 from mower.adaptive_planner import build_adaptive_plan
 from mower.coordination_shadow import capture_planning_inputs
+from mower.coordination_inputs import capture_enabled, prepare_coordination_inputs
 from mower.status_cache import cache_mode, read_status_cached
 from mower.weather_service import resolve_weather
 from occupancy.training_runtime import resolve_runtime_training, training_mode
@@ -659,7 +660,7 @@ def run_read_only_cycle(
         snapshot.work_areas
     )
 
-    return CycleResult(
+    result = CycleResult(
         schema_version=2,
         executed_at_utc=now_utc.astimezone(timezone.utc).isoformat(),
         source=source,
@@ -709,15 +710,15 @@ def run_read_only_cycle(
             },
             "weather": weather_resolution.to_dict(),
             "adaptive_planning": adaptive_plan.to_dict(),
-            # Optional copies for command-free replay. No new data request or
-            # control-state write is made, and no proposal enters the controller.
+            # Complete source copies serve replay and the optional coordinator.
+            # The latter still requires independent persistent admission gates.
             "coordination_shadow_input": (
                 capture_planning_inputs(
                     now_utc=now_utc, blocks=merged_blocks, runtime_inputs=runtime_inputs,
                     complete_from=special_horizon_start, complete_until=special_horizon_end,
                     special_available=special_enabled and special_error is None,
                     state=original_state,
-                ) if str(environment.get("COORDINATION_SHADOW_CAPTURE_ENABLED", "false")).lower() == "true"
+                ) if capture_enabled(environment)
                 else None
             ),
             "automation_state": automation_state_details,
@@ -759,3 +760,12 @@ def run_read_only_cycle(
             },
         },
     )
+    coordination = prepare_coordination_inputs(
+        cycle=result.to_dict(), config=config, environment=environment,
+        source_fresh=(runtime_inputs.source_kind in {"azure_blob", "azure_blob_cache"}
+                      and bool(runtime_inputs.manifest_etag and runtime_inputs.published_at_utc)
+                      and not runtime_inputs.fallback_used),
+    )
+    if coordination is not None:
+        result = replace(result, details={**result.details, "coordination_execution_input": coordination})
+    return result

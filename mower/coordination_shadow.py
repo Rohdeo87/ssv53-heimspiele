@@ -81,7 +81,9 @@ def capture_planning_inputs(*, now_utc: datetime, blocks, runtime_inputs,
 def compare_charging_window(*, cycle: Mapping[str, Any], need: Mapping[str, Any],
                             charging_end_estimate: Mapping[str, Any] | None,
                             previous_cycle: Mapping[str, Any] | None = None,
-                            minimum_gain_minutes: int = 10, drying_minutes: int = 150) -> dict[str, Any]:
+                            minimum_gain_minutes: int = 10, drying_minutes: int = 150,
+                            minimum_lead_minutes: int = 0,
+                            fixed_start_utc: str | None = None) -> dict[str, Any]:
     """Compare the unchanged occurrence with one charging-event proposal.
 
     The charge estimate must come from the existing empirical estimator. Fresh
@@ -97,7 +99,9 @@ def compare_charging_window(*, cycle: Mapping[str, Any], need: Mapping[str, Any]
     }
     blockers = result["blockers"]
     try:
-        if type(drying_minutes) is not int or drying_minutes < 150 or type(minimum_gain_minutes) is not int or minimum_gain_minutes < 1:
+        if (type(drying_minutes) is not int or drying_minutes < 150
+                or type(minimum_gain_minutes) is not int or minimum_gain_minutes < 1
+                or type(minimum_lead_minutes) is not int or not 0 <= minimum_lead_minutes <= 120):
             raise ValueError("Conservative timing required")
         now = _instant(cycle["executed_at_utc"])
         details = cycle["details"]
@@ -171,10 +175,17 @@ def compare_charging_window(*, cycle: Mapping[str, Any], need: Mapping[str, Any]
         if blockers:
             return result
         charge_end = _instant(estimate["at"])
-        candidate = max(now, earliest).replace(second=0, microsecond=0)
-        if candidate < max(now, earliest):
-            candidate += timedelta(minutes=1)
-        if not now < charge_end or candidate >= charge_end or candidate >= original or not earliest <= candidate <= latest:
+        available_start = max(now + timedelta(minutes=minimum_lead_minutes), earliest)
+        if fixed_start_utc is None:
+            candidate = available_start.replace(second=0, microsecond=0)
+            if candidate < available_start:
+                candidate += timedelta(minutes=1)
+        else:
+            # A persisted reservation must be checked at its exact timestamp;
+            # validating a newly shifted slot cannot release the old one.
+            candidate = _instant(fixed_start_utc)
+        if (not now < charge_end or candidate < available_start or candidate >= charge_end
+                or candidate >= original or not earliest <= candidate <= latest):
             blockers.append("NO_UPCOMING_WINDOW_DURING_CHARGING")
             return result
         if original - candidate > timedelta(minutes=120):
@@ -207,7 +218,9 @@ def compare_charging_window(*, cycle: Mapping[str, Any], need: Mapping[str, Any]
         gain = max(0.0, baseline - proposed)
         result.update({
             "need_id": need["need_id"], "input_sha256": hashlib.sha256(json.dumps(
-                {"cycle": cycle, "need": need, "estimate": estimate}, sort_keys=True).encode()).hexdigest(),
+                {"cycle": cycle, "need": need, "estimate": estimate,
+                 "minimum_lead_minutes": minimum_lead_minutes,
+                 "fixed_start_utc": fixed_start_utc}, sort_keys=True).encode()).hexdigest(),
             "potential_freed_field_minutes": round(gain, 2),
             "water_minutes_unchanged": sum(z["run_seconds"] for z in zones) / 60,
             "baseline_start_utc": original.isoformat(), "baseline_dry_until_utc": old_release.isoformat(),

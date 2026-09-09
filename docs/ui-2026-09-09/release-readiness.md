@@ -14,7 +14,7 @@ nachgewiesenen Stand festgehalten; sie ersetzt keine fehlenden Betriebsdaten.
 | I03 – Neue und bisherige Belegung | Eigenständiger Publisher übernimmt neue validierte Sperren und behält unbestätigt zurückgenommene Intervalle im selben JSON-/ICS-Bundle. Unabhängige Prüfung und Fehlerfälle einschließlich Neustart, Quellverlust und paralleler Veröffentlichung. [Nachweis](../audit-2026-09-09/import-additive-update.md) | Zusammenführung, kontrollierter Quellenlauf und Prüfung des anschließend tatsächlich verwendeten Bundles. |
 | O01 – Trainingskalender | Gemeinsame Quelle und Laufzeitanbindung von App, Mäher, Absagen, Verlegungs-Lookup und Konfliktprüfung umgesetzt. Unveränderliche Eingabekopien verhindern Versionswechsel während der Verarbeitung. [Nachweis](../audit-2026-09-09/integration-update.md) | Standard `SHARED_TRAINING_MODE=OFF`. Verbindliche Saison-/Ferienregeln und Freigabe des konkreten Kalenders fehlen; die Rückfrage wurde gestellt. Noch kein Wechsel der produktiven Quelle. |
 | A01 – API-Abfragen | Gemeinsamer Cache im lesenden Pfad; Geräteketten verwenden tatsächliche Quellzeitpunkte. Wiederholungen verlängern keine Bestätigung und starten keine physische Trocknung neu. [Nachweis](../audit-2026-09-09/device-observation-update.md) | Cache bleibt `OFF`, Gerätebetriebsarten lehnen ihn ab. Herstellerbudget plus Minutentimer kann 120 Sekunden Abstand verursachen; die Revalidierung erlaubt höchstens 90 Sekunden. Zulässiger Takt ist vor Aktivierung nachzuweisen. Keine aktuelle Kosteneinsparung behauptet. |
-| P01 – Laden und Wasser gemeinsam planen | Lokaler Vergleich und ein deterministischer Verschiebungsentwurf mit gleicher Zonenfolge, gleichen Pausen/Dauern sowie 45-Minuten-Vorlauf umgesetzt. Beispiel: höchstens 45 Minuten früher nutzbarer Platz; keine gemessenen Mähminuten. [Nachweis](../audit-2026-09-09/integration-update.md) | Erfassung deaktiviert, kein neuer Parallelbetrieb. Bedarfsfenster, Bedarfsspeicherung und Geräteverbraucher einschließlich bestätigter Unterdrückung des Ursprungstermins fehlen als gemeinsamer Ausführungspfad. |
+| P01/P02 – Laden und Wasser gemeinsam planen | Vergleich und persistente Anbindung an den bestehenden Gesamtcontroller ergänzt: unveränderter Bedarf, Zonenfolge/Pausen, einmalige Vormerkung, exakter Zeitvergleich und Prüfung vor Zonenstarts. Standard deaktiviert. [Aktuelle Fortsetzung](../audit-2026-09-09/coordination-execution-update.md) | Freigegebene Bedarfsfenster und Stations-/Wegeprüfung fehlen; neue Parallelbeobachtung und Gerätepilot wurden nicht durchgeführt. Ein vollständig eingeführter, live nachgewiesener Ablauf ist das noch nicht. |
 | V01 – Installationsnachweis | Diagnose prüft die im Manifest aufgeführten Quellbytes und unerwartete zusätzliche Anwendungsmodule. [Code](../../mower/build_provenance.py) | Diagnose noch nicht installiert. Paketdateien auf Datenträger sind kein Nachweis der Remote-Build-Abhängigkeiten, des bereits geladenen Codes oder des Geräteverhaltens. |
 | U01 – Einfache App-Anzeige | Jetzt, Als Nächstes, klare Uhrzeiten und gekennzeichnetes Ladeende bleiben erhalten. Bei gemeinsamer Quelle entfällt die Saisonwahl; beide Plätze bleiben auswählbar. [Neue Kontrollvorschau](shared-training-preview.html) und [bisherige Gesamtansicht](README.md). | Tatsächliche Veröffentlichung, WebView-/Sitzungs- und Rollenprüfung auf dem Appgerät. |
 
@@ -45,7 +45,7 @@ dargestellt. Die Meldungen beweisen keine sichere Fläche, Station oder Ventile.
 ## Warum der vollständige Livegang weiterhin wartet
 
 1. **Funktionsumfang:** O01 benötigt einen verbindlich freigegebenen Kalender, A01 einen nachgewiesenen zulässigen Abfragetakt;
-   die vorgezogene Bewässerung besitzt weiterhin keinen produktiven Adapter.
+   die neue Bewässerungsanbindung benötigt weiterhin fachlich freigegebene Eingaben und die gestufte Betriebsabnahme.
 2. **Steuerverantwortung:** Ursache der protokollierten Bewegung während
    Trocknungssperre, native Geräteprogramme, weitere Scheduler und ausstehende
    Befehle sind nicht vollständig abgeglichen.
@@ -89,3 +89,9 @@ Vorschauen mit Testdaten. [Änderungen, Wirkung, Risiken und verbleibende
 Grenzen](../audit-2026-09-09/integration-update.md).
 Der neue Byte-/Paketnachweis steht getrennt vom historischen Stand in
 [integration-delivery.json](../audit-2026-09-09/integration-delivery.json).
+
+Die Fortsetzung [Koordinierte Bewässerung](../audit-2026-09-09/coordination-execution-update.md)
+enthält jetzt auch den persistenten Ausführungspfad. Der getrennte
+[Liefernachweis](../audit-2026-09-09/coordination-execution-delivery.json) gilt für
+diese Erweiterung. Standardmäßig bleibt sie deaktiviert; die oben genannten
+fachlichen Eingaben und Betriebsnachweise werden dadurch nicht ersetzt.

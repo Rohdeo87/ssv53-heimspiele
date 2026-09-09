@@ -46,6 +46,11 @@ from mower.irrigation_schedule import (
     validate_schedule_request,
 )
 from daily_safety_report import dashboard_irrigation_statistics, dashboard_statistics, estimate_charging_end
+from mower.statistics_cache import (
+    get_dashboard_statistics,
+    _STATISTICS_CACHE,
+    _STATISTICS_CACHE_LOCK,
+)
 from occupancy.runtime_source import resolve_occupancy_match_source
 
 
@@ -67,8 +72,6 @@ ALLOWED_ACTIONS = frozenset(
 
 _CLUBHOUSE_CACHE_LOCK = threading.Lock()
 _CLUBHOUSE_CACHE: dict[str, Any] = {"expires": None, "events": [], "available": False}
-_STATISTICS_CACHE_LOCK = threading.Lock()
-_STATISTICS_CACHE: dict[str, Any] = {"expires": None, "available": False}
 _IRRIGATION_STATISTICS_CACHE_LOCK = threading.Lock()
 _IRRIGATION_STATISTICS_CACHE: dict[str, Any] = {"expires": None, "available": False}
 _MATCH_DISPLAY_CACHE_LOCK = threading.Lock()
@@ -76,23 +79,7 @@ _MATCH_DISPLAY_CACHE: dict[str, Any] = {"path": None, "mtime_ns": None, "matches
 
 
 def _dashboard_statistics(environment: Mapping[str, str], now_utc: datetime) -> dict[str, Any]:
-    with _STATISTICS_CACHE_LOCK:
-        expires = _STATISTICS_CACHE.get("expires")
-        if isinstance(expires, datetime) and now_utc < expires:
-            return {key: value for key, value in _STATISTICS_CACHE.items() if key != "expires"}
-    try:
-        payload = dashboard_statistics(now_utc, environment)
-        payload["message"] = None
-    except Exception:
-        payload = {
-            "available": False,
-            "message": "Die 7-Tage-Auswertung ist gerade nicht erreichbar.",
-        }
-    with _STATISTICS_CACHE_LOCK:
-        _STATISTICS_CACHE.clear()
-        _STATISTICS_CACHE.update(payload)
-        _STATISTICS_CACHE["expires"] = now_utc + timedelta(minutes=5)
-    return payload
+    return get_dashboard_statistics(environment, now_utc, loader=dashboard_statistics)
 
 
 def _dashboard_irrigation_statistics(

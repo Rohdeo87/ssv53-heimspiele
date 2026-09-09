@@ -15,6 +15,14 @@ from mower.decision import (
     PARK_OVERRIDE_ACTIONS,
 )
 from mower.dry_run import run_read_only_cycle
+from mower.coordination_request import canonical_schedule_id as coordination_source_plan_id
+from mower.coordination_execution import (
+    consume_request as consume_coordination_request,
+    enabled as coordination_execution_enabled,
+    mark_terminal as mark_coordination_terminal,
+    reserve as reserve_coordination,
+    start_authorized as coordination_start_authorized,
+)
 from mower.cutting_height import (
     cutting_height_mm_to_percent,
     supports_metric_cutting_height,
@@ -455,6 +463,7 @@ def _validated_upcoming_plan(
     expected_zone_count: int,
     expected_relay_ids: frozenset[int],
     max_lead_minutes: int,
+    preserve_approved_gaps: bool = False,
 ) -> tuple[str, list[dict[str, Any]]]:
     raw_zones = _as_dict(details.get("hydrawise")).get("zones")
     if not isinstance(raw_zones, list) or len(raw_zones) != expected_zone_count:
@@ -510,7 +519,9 @@ def _validated_upcoming_plan(
             raise RuntimeError("Hydrawise-Zonenzeit ist ungültig.")
         if previous_end is not None:
             gap = (start - previous_end).total_seconds()
-            if not -5 <= gap <= 120:
+            if preserve_approved_gaps and gap < 0:
+                raise RuntimeError("Freigegebene Bewässerungszonen dürfen sich nicht überschneiden.")
+            if not preserve_approved_gaps and not -5 <= gap <= 120:
                 raise RuntimeError("Die sieben Hydrawise-Zonen bilden keinen lückenlosen Lauf.")
         previous_end = end
     canonical = json.dumps(zones, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
@@ -1055,20 +1066,70 @@ def _projected_irrigation_end(
 ) -> datetime:
     """Berechnet konservativ das Ende der bereits übernommenen manuellen Folge."""
 
-    seconds = 0
-    remaining_zone_count = 0
+    if not any(zone.get("coordination_execution") is True for zone in plan):
+        seconds = 0
+        remaining_zone_count = 0
+        for zone in plan:
+            relay_id = int(zone["relay_id"])
+            if relay_id in completed_relay_ids:
+                continue
+            duration = int(zone["run_seconds"])
+            if relay_id == current_relay_id and current_started_utc is not None:
+                elapsed = max(0, int((now_utc - current_started_utc).total_seconds()))
+                duration = max(0, duration - elapsed)
+            seconds += duration
+            remaining_zone_count += 1
+        return now_utc + timedelta(seconds=seconds + remaining_zone_count * end_confirmation_minutes * 60)
+
+    # A simple sum loses deliberate inter-zone pauses.  Advance a cursor over
+    # persisted timestamps instead, preserving a future scheduled gap while
+    # carrying any real delay of a preceding zone forward conservatively.
+    cursor = now_utc.astimezone(timezone.utc)
+    previous_physical_end: datetime | None = None
+    previous_planned_end: datetime | None = None
     for zone in plan:
         relay_id = int(zone["relay_id"])
         if relay_id in completed_relay_ids:
             continue
+        scheduled_start = _parse_time(zone.get("scheduled_start_utc"))
+        if scheduled_start is None:
+            raise RuntimeError("Gespeicherter Beregnungsplan enthält keine Startzeit.")
         duration = int(zone["run_seconds"])
         if relay_id == current_relay_id and current_started_utc is not None:
-            elapsed = max(0, int((now_utc - current_started_utc).total_seconds()))
+            elapsed = max(0, int((cursor - current_started_utc).total_seconds()))
             duration = max(0, duration - elapsed)
-        seconds += duration
-        remaining_zone_count += 1
-    seconds += remaining_zone_count * end_confirmation_minutes * 60
-    return now_utc + timedelta(seconds=seconds)
+        earliest = max(cursor, scheduled_start)
+        if previous_physical_end is not None and previous_planned_end is not None:
+            gap = max(timedelta(0), scheduled_start - previous_planned_end)
+            earliest = max(earliest, previous_physical_end + gap)
+        previous_physical_end = earliest + timedelta(seconds=duration)
+        previous_planned_end = scheduled_start + timedelta(seconds=int(zone["run_seconds"]))
+        cursor = previous_physical_end + timedelta(minutes=end_confirmation_minutes)
+    return cursor
+
+
+def _delay_coordinated_remaining_zones(
+    plan: list[dict[str, Any]], *, completed: set[int], current_id: int,
+    proved_clear_since: datetime,
+) -> list[dict[str, Any]]:
+    """Carry observed lateness forward without shortening the source's pauses."""
+    current = next(zone for zone in plan if int(zone["relay_id"]) == current_id)
+    planned_end = _parse_time(current.get("scheduled_end_utc"))
+    if planned_end is None:
+        raise RuntimeError("Die gespeicherte Zonenendzeit fehlt.")
+    delay = max(timedelta(0), proved_clear_since - planned_end)
+    adjusted = []
+    for zone in plan:
+        updated = dict(zone)
+        if int(zone["relay_id"]) not in completed:
+            start = _parse_time(zone.get("scheduled_start_utc"))
+            end = _parse_time(zone.get("scheduled_end_utc"))
+            if start is None or end is None:
+                raise RuntimeError("Die gespeicherten Zonenzeiten fehlen.")
+            updated["scheduled_start_utc"] = (start + delay).isoformat()
+            updated["scheduled_end_utc"] = (end + delay).isoformat()
+        adjusted.append(updated)
+    return adjusted
 
 
 def _next_scheduled_irrigation_start(
@@ -1813,6 +1874,160 @@ def run_full_failsafe_cycle(
         maximum=120,
     )
     schedule_override = _schedule_override(state)
+    coordination_gate = coordination_execution_enabled(
+        environment, full_failsafe_gate=settings.full_failsafe_write_gate_enabled
+    )
+    execution_input = details.get("coordination_execution_input")
+    details["coordination_execution"] = {
+        "enabled": coordination_gate,
+        "reserved": state.coordination_execution_request_json is not None,
+        "accepted": False,
+        "reason": None,
+    }
+    # OFF never permits a latent reservation to wake up after an arbitrary
+    # delay.  Clear only the active request; durable dedup evidence survives.
+    if not coordination_gate and state.coordination_execution_request_json is not None:
+        state = mark_coordination_terminal(state, status="DISABLED", now_utc=now)
+        schedule_override = _schedule_override(state)
+        details["coordination_execution"].update(
+            reserved=False, reason="COORDINATION_EXECUTION_DISABLED"
+        )
+    # Terminalize a reservation before normal operator handling.  In
+    # particular, a new PARK_MOWER request must continue through its own path
+    # instead of being consumed by the coordination revalidation return.
+    if (
+        coordination_gate and state.coordination_execution_request_json is not None
+        and (
+            state.maintenance_mode or state.operator_request_status == "PENDING"
+            or state.irrigation_phase is not None or state.irrigation_schedule_override_json
+            or (state.parked_by_automation and "operator" in str(state.automation_park_source or "").lower())
+        )
+    ):
+        state = mark_coordination_terminal(state, status="INTERRUPTED", now_utc=now)
+        schedule_override = _schedule_override(state)
+        details["coordination_execution"].update(
+            reserved=False, reason="MANUAL_OR_IRRIGATION_CHANGED"
+        )
+    # The read-only handover cannot authorize a command.  It may only cause a
+    # CAS-persisted reservation; no Hydrawise call happens in this cycle.
+    if coordination_gate and schedule_override is None and state.coordination_execution_request_json is None and execution_input is not None:
+        reserved, outcome = reserve_coordination(
+            state, cycle=result.to_dict(), execution_input=execution_input, now_utc=now,
+        )
+        details["coordination_execution"].update(outcome)
+        if outcome.get("accepted"):
+            return _persist_result(
+                store=store, original=original, state=reserved, result=result,
+                details=details, settings=settings,
+                decision_code="COORDINATION_EXECUTION_RESERVED",
+                message="Der freigegebene Bewässerungsbedarf wurde einmalig reserviert; es wurde kein Gerätebefehl gesendet.",
+            )
+    # A second current observation must still support the entire shadow draft
+    # before the reservation becomes the existing CUSTOM_NEXT transaction.
+    if coordination_gate and schedule_override is None and state.coordination_execution_request_json is not None:
+        checked, reserved_request, reason = consume_coordination_request(
+            state, cycle=result.to_dict(), execution_input=execution_input, now_utc=now,
+        )
+        if reserved_request is None:
+            terminal = mark_coordination_terminal(checked, status="INVALID_OR_CHANGED", now_utc=now)
+            details["coordination_execution"].update(reason=reason, reserved=False)
+            return _persist_result(
+                store=store, original=original, state=terminal, result=result,
+                details=details, settings=settings,
+                decision_code="COORDINATION_EXECUTION_REVALIDATION_FAILED",
+                message="Die reservierte Koordination wurde ohne Gerätebefehl endgültig verworfen.",
+            )
+        try:
+            desired_start = _parse_time(reserved_request.get("selected_start_utc"))
+            valid_until = _parse_time(reserved_request.get("valid_until_utc"))
+            if desired_start is None or valid_until is None or not now < desired_start <= valid_until:
+                raise RuntimeError("COORDINATION_RESERVATION_EXPIRED")
+            live_plan_id, source_zones = _validated_upcoming_plan(
+                details, now_utc=now, expected_zone_count=expected_zones,
+                expected_relay_ids=expected_relay_ids, max_lead_minutes=14 * 24 * 60,
+                preserve_approved_gaps=True,
+            )
+            if coordination_source_plan_id(source_zones) != str(reserved_request.get("source_plan_id") or ""):
+                raise RuntimeError("COORDINATION_SOURCE_PLAN_CHANGED")
+            draft_zones = reserved_request.get("zones")
+            if not isinstance(draft_zones, list) or len(draft_zones) != len(source_zones):
+                raise RuntimeError("COORDINATION_ZONE_SEQUENCE_INVALID")
+            by_relay = {int(item["relay_id"]): dict(item) for item in source_zones}
+            custom_zones = []
+            for item in draft_zones:
+                if not isinstance(item, Mapping):
+                    raise RuntimeError("COORDINATION_ZONE_SEQUENCE_INVALID")
+                relay = int(item.get("relay_id") or 0)
+                base = by_relay.pop(relay, None)
+                start = _parse_time(item.get("scheduled_start_utc"))
+                seconds = item.get("run_seconds")
+                if base is None or start is None or type(seconds) is not int or seconds != base.get("run_seconds"):
+                    raise RuntimeError("COORDINATION_DURATION_OR_RELAY_CHANGED")
+                base_start = _parse_time(base.get("scheduled_start_utc"))
+                selected = _parse_time(reserved_request.get("selected_start_utc"))
+                original_first = min(_parse_time(zone.get("scheduled_start_utc")) for zone in source_zones)
+                declared_offset = item.get("offset_seconds")
+                if (base_start is None or selected is None or original_first is None
+                        or type(declared_offset) is not int
+                        or declared_offset != int((base_start - original_first).total_seconds())
+                        or start != selected + timedelta(seconds=declared_offset)):
+                    raise RuntimeError("COORDINATION_ZONE_OFFSET_CHANGED")
+                custom_zones.append({
+                    **base, "scheduled_start_utc": start.isoformat(),
+                    "scheduled_end_utc": (start + timedelta(seconds=seconds)).isoformat(),
+                    "coordination_execution": True,
+                })
+            if by_relay or [z["relay_id"] for z in custom_zones] != [int(z["relay_id"]) for z in source_zones]:
+                raise RuntimeError("COORDINATION_ZONE_ORDER_CHANGED")
+            source_start = min(_parse_time(zone["scheduled_start_utc"]) for zone in source_zones)
+            source_end = max(_parse_time(zone["scheduled_end_utc"]) for zone in source_zones)
+            desired_end = max(_parse_time(zone["scheduled_end_utc"]) for zone in custom_zones)
+            assert source_start is not None and source_end is not None and desired_end is not None
+            override = {
+                "version": 1, "kind": "CUSTOM_NEXT", "status": "VERIFYING",
+                "request_id": str(reserved_request["request_id"]),
+                "coordination_execution": True,
+                "coordination_need_id": str(reserved_request["need_id"]),
+                "coordination_need_sha256": str(reserved_request["need_sha256"]),
+                "created_utc": now.isoformat(), "verify_since_utc": now.isoformat(),
+                # CUSTOM_NEXT keeps its established internal plan hash.  The
+                # approved coordination need remains bound separately to the
+                # wire-order identity used by the read-only producer.
+                "source_plan_id": live_plan_id,
+                "coordination_source_plan_id": str(reserved_request["source_plan_id"]),
+                "source_start_utc": source_start.isoformat(),
+                "source_end_utc": source_end.isoformat(), "desired_start_utc": desired_start.isoformat(),
+                "desired_end_utc": desired_end.isoformat(),
+                "suspend_until_utc": (max(source_end, desired_end) + timedelta(minutes=180)).isoformat(),
+                "source_zones": source_zones, "zones": custom_zones,
+                "commanded_relay_ids": [], "confirm_since_utc": None,
+            }
+            terminal = mark_coordination_terminal(checked, status="SCHEDULED", now_utc=now)
+            state = replace(
+                terminal, revision=terminal.revision + 1,
+                irrigation_schedule_override_json=dump_irrigation_schedule_object(override),
+                irrigation_schedule_history_json=append_irrigation_schedule_history(
+                    terminal.irrigation_schedule_history_json, now_utc=now,
+                    action="COORDINATION_CUSTOM_NEXT", status="REQUESTED",
+                    summary="Reservierter Koordinationslauf wird in der bestehenden CUSTOM_NEXT-Transaktion geprüft.",
+                ),
+            )
+            details["coordination_execution"].update(accepted=True, reserved=False, request_id=override["request_id"])
+            return _persist_result(
+                store=store, original=original, state=state, result=result,
+                details=details, settings=settings,
+                decision_code="COORDINATION_EXECUTION_SCHEDULED",
+                message="Die Koordination wurde ohne Gerätebefehl in die bestehende Sieben-Zonen-Transaktion übernommen.",
+            )
+        except Exception as exc:
+            terminal = mark_coordination_terminal(checked, status="REVALIDATION_FAILED", now_utc=now)
+            details["coordination_execution"].update(reason=f"{type(exc).__name__}: {exc}", reserved=False)
+            return _persist_result(
+                store=store, original=original, state=terminal, result=result,
+                details=details, settings=settings,
+                decision_code="COORDINATION_EXECUTION_REVALIDATION_FAILED",
+                message="Die reservierte Koordination wurde ohne Gerätebefehl endgültig verworfen.",
+            )
     schedule_override_status = str(
         (schedule_override or {}).get("status") or ""
     ).strip().upper()
@@ -1969,6 +2184,7 @@ def run_full_failsafe_cycle(
                     expected_zone_count=expected_zones,
                     expected_relay_ids=expected_relay_ids,
                     max_lead_minutes=14 * 24 * 60,
+                    preserve_approved_gaps=schedule_override.get("coordination_execution") is True,
                 )
             except Exception as exc:
                 failed_override = {
@@ -2102,6 +2318,54 @@ def run_full_failsafe_cycle(
                     command_until = now + timedelta(minutes=1)
                 if command_until is None:
                     raise RuntimeError("Der Suspendierungszeitpunkt der Plananpassung fehlt.")
+                coordination_transaction = schedule_override.get("coordination_execution") is True
+                pending_reservation = schedule_override.get("coordination_command_reservation")
+                if coordination_transaction and pending_reservation is not None:
+                    # A prior process may have reached the CAS point and then
+                    # died or lost the sender response.  It is never safe to
+                    # replay that relay command.
+                    rejected_override = {
+                        **schedule_override, "status": "REJECTED",
+                        "error": "Der reservierte Koordinations-Suspendierungsbefehl hat keine bestätigte Antwort.",
+                    }
+                    rejected = replace(
+                        state, revision=state.revision + 1,
+                        irrigation_schedule_override_json=dump_irrigation_schedule_object(rejected_override),
+                    )
+                    return _persist_result(
+                        store=store, original=original, state=rejected, result=result,
+                        details=details, settings=settings,
+                        decision_code="COORDINATION_EXECUTION_COMMAND_UNCERTAIN",
+                        message="Eine koordinierte Hydrawise-Antwort ist unklar; der Bedarf wird nicht wiederholt.",
+                    )
+                if coordination_transaction:
+                    reserved_override = {
+                        **schedule_override,
+                        "coordination_command_reservation": {
+                            "relay_id": pending_relay, "until_utc": command_until.isoformat(),
+                            "reserved_utc": now.isoformat(),
+                        },
+                    }
+                    reserved_state = replace(
+                        state, revision=state.revision + 1,
+                        irrigation_schedule_override_json=dump_irrigation_schedule_object(reserved_override),
+                    )
+                    try:
+                        store.save(reserved_state, expected_revision=original.revision)
+                    except Exception as exc:
+                        return replace(
+                            result, decision_code="COORDINATION_EXECUTION_COMMAND_RESERVATION_FAILED",
+                            message="Der koordinierte Hydrawise-Befehl wurde ohne CAS-Reservierung nicht gesendet.",
+                            command_sent=False,
+                            details=_decorate(details, state=state, settings=settings,
+                                              persisted=False, command_sent=False,
+                                              error=f"{type(exc).__name__}: {exc}"),
+                        )
+                    # Every subsequent state save in this branch must advance
+                    # from the command reservation rather than the stale load.
+                    original = reserved_state
+                    state = reserved_state
+                    schedule_override = reserved_override
                 attempts = {
                     str(key): int(value)
                     for key, value in dict(schedule_override.get("attempts") or {}).items()
@@ -2116,7 +2380,7 @@ def run_full_failsafe_cycle(
                 except Exception as exc:
                     key = str(pending_relay)
                     attempts[key] = attempts.get(key, 0) + 1
-                    failed = attempts[key] >= 3
+                    failed = attempts[key] >= 3 or coordination_transaction
                     updated_override = {
                         **schedule_override,
                         "status": "REJECTED" if failed else "APPLYING",
@@ -2149,6 +2413,7 @@ def run_full_failsafe_cycle(
                     "attempts": attempts,
                     "error": None,
                 }
+                updated_override.pop("coordination_command_reservation", None)
                 if override_kind == "RESUME":
                     updated_override["suspend_until_utc"] = command_until.isoformat()
                 if commanded == set(expected_relay_ids):
@@ -2488,6 +2753,12 @@ def run_full_failsafe_cycle(
                 override_kind = ""
                 suspend_until = None
             if override_kind == "CUSTOM_NEXT":
+                coordination_disabled_hold = (
+                    schedule_override.get("coordination_execution") is True
+                    and not coordination_gate
+                )
+                if coordination_disabled_hold:
+                    details["coordination_execution"].update(reason="COORDINATION_EXECUTION_DISABLED")
                 desired_start = _parse_time(schedule_override.get("desired_start_utc"))
                 if desired_start is None:
                     raise RuntimeError("Der angepasste Beregnungsstart fehlt.")
@@ -2505,9 +2776,9 @@ def run_full_failsafe_cycle(
                         ),
                     )
                     schedule_override = failed_override
-                elif desired_start - now <= timedelta(
+                elif (not coordination_disabled_hold and desired_start - now <= timedelta(
                     minutes=irrigation_capture_max_lead_minutes
-                ):
+                )):
                     custom_zones = [
                         dict(zone) for zone in schedule_override.get("zones", [])
                         if isinstance(zone, dict)
@@ -3503,6 +3774,9 @@ def run_full_failsafe_cycle(
             )
 
     if state.irrigation_phase in ACTIVE_IRRIGATION_PHASES:
+        active_override = _schedule_override(state)
+        # Do not return here when the pilot is switched off.  The normal active
+        # state machine must still run its lease, parking and stop recovery.
         confirmation_minutes = _env_int(
             environment,
             "MOWER_PARK_CONFIRMATION_MINUTES",
@@ -3553,8 +3827,15 @@ def run_full_failsafe_cycle(
             len(execution_zones) == 1
             and bool(execution_zones[0].get("operator_single_zone"))
         )
-        schedule_override_plan = bool(zones) and all(
-            zone.get("operator_schedule_override") is True for zone in zones
+        active_override_for_plan = _schedule_override(state)
+        coordination_plan = bool(
+            active_override_for_plan
+            and active_override_for_plan.get("coordination_execution") is True
+        )
+        schedule_override_plan = bool(zones) and (
+            coordination_plan or all(
+                zone.get("operator_schedule_override") is True for zone in zones
+            )
         )
         execution_zone_count = len(execution_zones)
         active_ids = _active_relay_ids(details)
@@ -4348,6 +4629,23 @@ def run_full_failsafe_cycle(
                 (zone for zone in execution_zones if int(zone["relay_id"]) not in completed),
                 None,
             )
+            if coordination_plan and next_zone is not None:
+                next_scheduled_start = _parse_time(next_zone.get("scheduled_start_utc"))
+                if next_scheduled_start is None:
+                    failed = _failed_irrigation(state, "Der koordinierte Zonenabstand ist nicht persistent nachweisbar.")
+                    return _persist_result(
+                        store=store, original=original, state=failed, result=result,
+                        details=details, settings=settings,
+                        decision_code="COORDINATION_EXECUTION_GAP_INVALID",
+                        message=failed.irrigation_failed_reason or "Koordinierter Zonenabstand unklar.",
+                    )
+                if now < next_scheduled_start:
+                    return _persist_result(
+                        store=store, original=original, state=state, result=result,
+                        details=details, settings=settings,
+                        decision_code="COORDINATION_EXECUTION_ZONE_GAP_WAIT",
+                        message="Der bestätigte Abstand bis zur nächsten koordinierten Zone wird eingehalten.",
+                    )
             if next_zone is None:
                 partial_schedule_override = (
                     schedule_override_plan and execution_zone_count < expected_zones
@@ -4626,6 +4924,28 @@ def run_full_failsafe_cycle(
                     decision_code="IRRIGATION_START_COLLISION",
                     message=failed.irrigation_failed_reason or "Startkollision.",
                 )
+            active_override = _schedule_override(state)
+            if active_override is not None and active_override.get("coordination_execution") is True:
+                remaining_plan = [
+                    zone for zone in execution_zones
+                    if int(zone["relay_id"]) not in set(completed)
+                ]
+                if not coordination_gate:
+                    coordination_blocker = "COORDINATION_EXECUTION_DISABLED"
+                else:
+                    coordination_blocker = coordination_start_authorized(
+                        override=active_override, cycle=result.to_dict(),
+                        execution_input=execution_input, now_utc=now,
+                        remaining_plan=remaining_plan, projected_end_utc=projected_end,
+                    )
+                details["coordination_execution"]["start_revalidation"] = coordination_blocker is None
+                if coordination_blocker is not None:
+                    return _persist_result(
+                        store=store, original=original, state=state, result=result,
+                        details=details, settings=settings,
+                        decision_code="COORDINATION_EXECUTION_START_BLOCKED",
+                        message="Der koordinierte Zonenstart bleibt wegen geänderter Freigabe oder Belegung gesperrt.",
+                    )
             reserved = replace(
                 state,
                 revision=state.revision + 1,
@@ -5108,6 +5428,30 @@ def run_full_failsafe_cycle(
                 )
             completed.append(int(current_id or 0))
             all_complete = len(set(completed)) == execution_zone_count
+            if coordination_plan and not all_complete:
+                try:
+                    shifted = _delay_coordinated_remaining_zones(
+                        zones, completed=set(completed), current_id=int(current_id),
+                        proved_clear_since=clear_since,
+                    )
+                except (RuntimeError, TypeError, ValueError, StopIteration) as exc:
+                    failed = _failed_irrigation(state, str(exc))
+                    return _persist_result(
+                        store=store, original=original, state=failed, result=result,
+                        details=details, settings=settings,
+                        decision_code="COORDINATION_EXECUTION_GAP_INVALID",
+                        message="Die Pause bis zur nächsten Zone ist nicht sicher nachweisbar.",
+                    )
+                canonical = json.dumps(shifted, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+                shifted_override = {
+                    **active_override_for_plan, "zones": shifted,
+                    "last_proved_zone_end_utc": clear_since.isoformat(),
+                }
+                state = replace(
+                    state, irrigation_plan_json=canonical,
+                    irrigation_plan_id=hashlib.sha256(canonical.encode("utf-8")).hexdigest(),
+                    irrigation_schedule_override_json=dump_irrigation_schedule_object(shifted_override),
+                )
             advanced = replace(
                 state,
                 revision=state.revision + 1,

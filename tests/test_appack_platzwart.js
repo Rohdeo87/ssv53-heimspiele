@@ -201,12 +201,13 @@ test("Mäheraktionen sind für Fahren, Laden, Sperren und manuelle Bedienung ein
   const schedulePendingFunction = html.split("\n").find((line) => line.includes("function irrigationScheduleChangePending(s)"));
   const actionsFunction = html.split("\n").find((line) => line.includes("function mowerActions(s)"));
   const effectiveActionsFunction = html.split("\n").find((line) => line.includes("function effectiveMowerActions(s)"));
+  const coordinationBlockedFunction = html.split("\n").find((line) => line.includes("function coordinationExecutionBlocked(s)"));
   assert.ok(searchingFunction);
   assert.ok(pausedFunction);
   assert.ok(schedulePendingFunction);
   assert.ok(actionsFunction);
-  assert.ok(effectiveActionsFunction);
-  const actions = new Function(`${searchingFunction}\n${pausedFunction}\n${schedulePendingFunction}\n${actionsFunction}\n${effectiveActionsFunction}\nreturn effectiveMowerActions;`)();
+  assert.ok(effectiveActionsFunction); assert.ok(coordinationBlockedFunction);
+  const actions = new Function(`${searchingFunction}\n${pausedFunction}\n${schedulePendingFunction}\n${actionsFunction}\n${coordinationBlockedFunction}\n${effectiveActionsFunction}\nreturn effectiveMowerActions;`)();
   const safe = { available: true, fresh: true, clear_now: true };
 
   assert.deepEqual(
@@ -275,7 +276,8 @@ test("Mäheraktionen sind für Fahren, Laden, Sperren und manuelle Bedienung ein
 test("Bewässerungsaktionen erscheinen nur im passenden Zustand", () => {
   const actionsFunction = html.split("\n").find((line) => line.includes("function irrigationActions(s)"));
   assert.ok(actionsFunction);
-  const actions = new Function(`${actionsFunction}\nreturn irrigationActions;`)();
+  const coordinationBlockedFunction = html.split("\n").find((line) => line.includes("function coordinationExecutionBlocked(s)"));
+  const actions = new Function(`${coordinationBlockedFunction}\n${actionsFunction}\nreturn irrigationActions;`)();
   const safe = { available: true, fresh: true };
   assert.deepEqual(actions({ automation: {}, irrigation: { safety: safe } }), { showStart: true, showStop: false });
   assert.deepEqual(actions({ automation: { irrigationPhase: "RUNNING" }, irrigation: { safety: safe } }), { showStart: false, showStop: true });

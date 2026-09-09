@@ -15,8 +15,8 @@ function sourceOf(name) {
 
 const viewFunctions = [
   "localDay", "calendarTime", "intervalEnd", "isSearching", "hasActiveMowerError", "activity",
-  "isMowerPaused", "irrigationScheduleChangePending", "mowerActions", "effectiveMowerActions",
-  "simpleStatus", "chargingEnd", "nextStartInfo", "nextMowerStart", "actionProgressText",
+  "isMowerPaused", "irrigationScheduleChangePending", "coordinationExecutionBlocked", "mowerActions", "effectiveMowerActions",
+  "simpleStatus", "chargingEnd", "nextStartInfo", "nextMowerStart", "actionProgressText", "irrigationActions",
   "dashboardMessage", "friendlyError", "phase", "waterTitle", "simpleWater", "nextWaterStart",
   "clubClockParts", "inputDateTime", "parsePlanDateTime", "planPauseEnd", "localDateTime", "planDate", "planStatusText"
 ];
