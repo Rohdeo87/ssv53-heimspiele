@@ -1,0 +1,15 @@
+{
+  "verified_at_utc": "2026-09-09T19:31:52.224Z",
+  "template": "Platzpflege.tpl",
+  "template_id": "6a86ab6c4b3c829dd60de9b7",
+  "data_source": "Belegungsplan_db",
+  "cms_last_modified_local": "2026-09-09 21:27 Europe/Berlin",
+  "previous_normalized_sha256": "d0573fa45b944dc70524d43c43d64b691b9b7ff8e523890984300ee05c2d13a5",
+  "source_commit": "d2e09c1ab023a136fc4ca90ad22d2308041fe14a",
+  "candidate_and_reloaded_source_sha256": "8e10db32cf6575a63cab02157f78bd96ca8e3b93852342cdba8dfd5e9305fc61",
+  "stored_bytes_sha256": "e9c7e654e16eff3b0cd1c29b579aea82a5a97a7c9a4fb32964a7b378dfd8658f",
+  "saved_and_reloaded": true,
+  "characters": 116616,
+  "device_commands_sent": 0,
+  "native_after_change_verified": false
+}

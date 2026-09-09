@@ -1,0 +1,15 @@
+{
+  "id": "7b6e4542-b627-4001-9a8c-eaf7d0c29e46",
+  "status": 4,
+  "remoteBuild": true,
+  "received_time": "2026-09-09T19:20:54.2063877Z",
+  "start_time": "2026-09-09T19:20:54.2063877Z",
+  "end_time": "2026-09-09T19:22:12.8069486Z",
+  "last_success_end_time": "2026-09-09T19:22:12.8069486Z",
+  "complete": true,
+  "active": true,
+  "verified_at_utc": "2026-09-09T19:29:33.414306+00:00",
+  "metadata_response_valid_json": false,
+  "metadata_response_warning": "Azure appended an HTML runtime-error page after the JSON object. Leading metadata is corroborating evidence only. CLI exit 0, installed source bytes and actual runtime cycles independently prove installation.",
+  "http_status": 200
+}

@@ -1,7 +1,8 @@
 # Korrektur nach der tatsächlichen Appansicht
 
-Status: Entwicklung und gezielte Prüfung; Veröffentlichung dieser Korrektur noch
-nicht nachgewiesen. Der [vorherige Einführungsstand](../../audit-2026-09-09/live-introduction-progress.md)
+Status: Korrektur entwickelt, getestet, gemergt, in Azure installiert und in
+Appack gespeichert und erneut ausgelesen. Gerätebetrieb weiterhin DRY_RUN;
+native Nachkontrolle nach dieser Veröffentlichung noch offen. Der [vorherige Einführungsstand](../../audit-2026-09-09/live-introduction-progress.md)
 bleibt als zeitgebundener Nachweis erhalten.
 
 ## Belegter Fehler
@@ -66,8 +67,47 @@ gerenderten gesperrten Knöpfe geprüft.
 390-Pixel-Inhaltsbreite, ersetzt das Logo und blockiert das Netzwerk per CSP;
 jeder simulierte POST wird abgewiesen. Reine DOM-Nachweise liegen daneben.
 
-Quellcommit, PR, Paket-/Installationsnachweis und CMS-Speichernachweis werden
-nach ihrem tatsächlichen Abschluss ergänzt.
+Quellstand: [d2e09c1](https://github.com/Rohdeo87/ssv53-heimspiele/commit/d2e09c1ab023a136fc4ca90ad22d2308041fe14a),
+[PR 51](https://github.com/Rohdeo87/ssv53-heimspiele/pull/51),
+Merge [c3b59dd](https://github.com/Rohdeo87/ssv53-heimspiele/commit/c3b59dd0802e5bd1eb3ba15b45d5656f5a60ce82).
+Beide GitHub-Prüfungen waren vor dem Merge grün; Head, Basis und Mergefähigkeit
+wurden unmittelbar geprüft: [CI-/PR-Nachweis](pr-ci-verification.json).
 Ein erfolgreiches Testbild ersetzt weder native Bedienprüfung noch
 Geräteabnahme. Die erteilte Freigabe für die betreute Einführung gilt weiter;
 Geräteschreibrechte werden für diese Anzeigenkorrektur nicht geöffnet.
+
+
+## Tatsächliche Veröffentlichung am 09.09.2026
+
+- Das [CI-Paket](https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/34394181513) wurde vollständig gegen den kanonischen Git-Quellstand geprüft. Alle 61 Quellen sind enthalten; gegenüber der zuvor installierten Version änderte sich nur platzwart_console.py. [Paketnachweis](ci-package-verification.json).
+- Paket-SHA256: `9379280242f2237b97a34297b9a0b88d5b71bf3ae9834c4eb43647c3f3269fca`. Manifest-SHA256: `fc9cec4b2d66fe9c39685023a5a17bdf7e9bbf4b3a6e4329a0b48ce1fee1b43f`.
+- Azure CLI beendete den Remote-Build erfolgreich um 21:23:17 Uhr. Danach wurden alle 61 installierten Quelldateien bytegenau gegen das CI-Paket gelesen; das Manifest blieb währenddessen identisch. [Installationsnachweis](installed-source-verification.json). Dependency-Wheels sind dadurch nicht bytegeprüft.
+- Die Azure-Deploymentmetadaten nennen `7b6e4542-b627-4001-9a8c-eaf7d0c29e46`, Status 4, aktiv und vollständig. Azure hängte allerdings eine HTML-Fehlerseite an die JSON-Metadaten an. Dieser formal fehlerhafte Metadatenabruf ist nur ein ergänzender Nachweis; CLI-Ergebnis, tatsächliche Quelldateien und laufende Timerzyklen belegen die Installation unabhängig. [Einschränkung und Zeitstempel](active-deployment-verification.json). Es wurden dafür keine Zugriffsrechte erweitert; der gesperrte Zugriff auf das allgemeine Dateisystem wurde nicht geöffnet. Gelesen wurden die Quellen unter dem von Azure ausgewiesenen scriptHref.
+- Die realen Zyklen um 21:23–21:26 Uhr melden das neue Manifest, jeweils 61 geprüfte Quellen, DRY_RUN, keinen Gerätebefehl und weiterhin PARKED_IN_CS. Das bestehende Warteende blieb 22:41:51.487 Uhr; dieser Rollout löste keine zusätzliche volle Wartezeit aus. Das Ende bezeichnet eine Freigabeschranke, keinen zugesagten Mähstart und keinen Nachweis einer tatsächlich erfolgten Bewässerung. [Zyklen](post-deployment-cycles-summary.json).
+- Sämtliche App-Einstellungen blieben unverändert, insbesondere geschlossene Gerätegates, DRY_RUN und SHADOW. [Einstellungsnachweis](post-deployment-settings-verification.json). Der Timer wurde nicht absichtlich unterbrochen; eine unterbrechungsfreie Herstellerkommunikation ist damit nicht zugesichert.
+- Platzpflege.tpl wurde um 21:27 Uhr in Appack gespeichert. Nach vollständigem Neuladen und erneutem Öffnen des Editors stimmt der normalisierte Quelltext exakt mit dem getesteten Template überein: `8e10db32cf6575a63cab02157f78bd96ca8e3b93852342cdba8dfd5e9305fc61`. Die Datenquelle Belegungsplan_db und die Verwendung in Platzpflege blieben zugeordnet. [CMS-Nachweis](appack-publication-verification.json).
+
+## Verbleibende Prüfung und Rückfall
+
+Die neue Anzeige muss auf dem bereits angemeldeten echten Appgerät nach dem
+Schließen und erneuten Öffnen der Platzpflegeseite nachkontrolliert werden.
+Das Browsergerät besitzt keine native Geräteaktivierung; deshalb wurde weder
+ein Benutzer nachgeahmt noch ein Aktivierungscode erzeugt. Die authentifizierte
+Statusantwort auf diesem Appgerät nach Veröffentlichung ist noch nicht
+unabhängig ausgelesen. Das Foto belegt nur den vorher sichtbaren oberen Bereich.
+
+Die bisherigen Einführungsgrenzen gelten weiter: Keine Gerätebefehle in diesem
+Änderungsschritt, kein Nachweis eines vollständig freigegebenen Automatikbetriebs.
+Ein betreuter Pilot braucht den bestätigten Abgleich von Geräteprogrammen und
+Übernahmezustand sowie die bereits dokumentierten Freigabekriterien. Die
+vorliegende Anzeigenkorrektur ersetzt diesen Abgleich nicht.
+
+Rückfall für diese begrenzte Änderung: Gerätegates geschlossen lassen; die
+vorherige gesicherte CMS-Vorlage zurückspielen und bei Bedarf das zuvor
+installierte 61-Dateien-Paket mit SHA256
+`570858f6da7f85ddbb4182fd4539f534ca5225d2c47dc1a03a1ebdf66535350f`
+per Remote-Build installieren. Keine Rücksetzung persistenter Bewässerungs- oder
+Stoppsperren. Jeder erneute Hostwechsel kann eine Bestätigungslücke verursachen;
+eine daraus resultierende Sperre darf nicht ohne belegte Voraussetzungen
+entfernt werden. In diesem Rollout wurden keine neuen Geräteaktionen erzeugt,
+keine Geräteprogramme geändert und keine kostenpflichtigen Ressourcen angelegt.

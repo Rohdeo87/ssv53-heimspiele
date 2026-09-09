@@ -1,0 +1,110 @@
+[
+  {
+    "at": "2026-09-09T19:26:03.1402551Z",
+    "mode": "DRY_RUN",
+    "decision": "EXTERNAL_OVERRIDE",
+    "command_sent": false,
+    "mower_activity": "PARKED_IN_CS",
+    "dry_until": "2026-09-09T20:41:51.487032+00:00",
+    "build": {
+      "all_installed_files_verified": false,
+      "entrypoint_sha256": "b38d32a3dfc53fdbbbead9fcad96ded7bfe7865af89309675d3d36f33a320556",
+      "manifest_file_count": 61,
+      "manifest_files_verified": true,
+      "package_manifest_sha256": "fc9cec4b2d66fe9c39685023a5a17bdf7e9bbf4b3a6e4329a0b48ce1fee1b43f",
+      "remote_build_dependencies_verified": false,
+      "verification_error": null,
+      "verified_file_count": 61
+    }
+  },
+  {
+    "at": "2026-09-09T19:25:03.0691316Z",
+    "mode": "DRY_RUN",
+    "decision": "EXTERNAL_OVERRIDE",
+    "command_sent": false,
+    "mower_activity": "PARKED_IN_CS",
+    "dry_until": "2026-09-09T20:41:51.487032+00:00",
+    "build": {
+      "all_installed_files_verified": false,
+      "entrypoint_sha256": "b38d32a3dfc53fdbbbead9fcad96ded7bfe7865af89309675d3d36f33a320556",
+      "manifest_file_count": 61,
+      "manifest_files_verified": true,
+      "package_manifest_sha256": "fc9cec4b2d66fe9c39685023a5a17bdf7e9bbf4b3a6e4329a0b48ce1fee1b43f",
+      "remote_build_dependencies_verified": false,
+      "verification_error": null,
+      "verified_file_count": 61
+    }
+  },
+  {
+    "at": "2026-09-09T19:24:03.2377265Z",
+    "mode": "DRY_RUN",
+    "decision": "EXTERNAL_OVERRIDE",
+    "command_sent": false,
+    "mower_activity": "PARKED_IN_CS",
+    "dry_until": "2026-09-09T20:41:51.487032+00:00",
+    "build": {
+      "all_installed_files_verified": false,
+      "entrypoint_sha256": "b38d32a3dfc53fdbbbead9fcad96ded7bfe7865af89309675d3d36f33a320556",
+      "manifest_file_count": 61,
+      "manifest_files_verified": true,
+      "package_manifest_sha256": "fc9cec4b2d66fe9c39685023a5a17bdf7e9bbf4b3a6e4329a0b48ce1fee1b43f",
+      "remote_build_dependencies_verified": false,
+      "verification_error": null,
+      "verified_file_count": 61
+    }
+  },
+  {
+    "at": "2026-09-09T19:23:04.6777562Z",
+    "mode": "DRY_RUN",
+    "decision": "EXTERNAL_OVERRIDE",
+    "command_sent": false,
+    "mower_activity": "PARKED_IN_CS",
+    "dry_until": "2026-09-09T20:41:51.487032+00:00",
+    "build": {
+      "all_installed_files_verified": false,
+      "entrypoint_sha256": "b38d32a3dfc53fdbbbead9fcad96ded7bfe7865af89309675d3d36f33a320556",
+      "manifest_file_count": 61,
+      "manifest_files_verified": true,
+      "package_manifest_sha256": "fc9cec4b2d66fe9c39685023a5a17bdf7e9bbf4b3a6e4329a0b48ce1fee1b43f",
+      "remote_build_dependencies_verified": false,
+      "verification_error": null,
+      "verified_file_count": 61
+    }
+  },
+  {
+    "at": "2026-09-09T19:22:02.7902459Z",
+    "mode": "DRY_RUN",
+    "decision": "EXTERNAL_OVERRIDE",
+    "command_sent": false,
+    "mower_activity": "PARKED_IN_CS",
+    "dry_until": "2026-09-09T20:41:51.487032+00:00",
+    "build": {
+      "all_installed_files_verified": false,
+      "entrypoint_sha256": "b38d32a3dfc53fdbbbead9fcad96ded7bfe7865af89309675d3d36f33a320556",
+      "manifest_file_count": 61,
+      "manifest_files_verified": true,
+      "package_manifest_sha256": "7c93901b640250814fe29a5217526b5b98a834dfbc02b2dc41c0594e77da077b",
+      "remote_build_dependencies_verified": false,
+      "verification_error": null,
+      "verified_file_count": 61
+    }
+  },
+  {
+    "at": "2026-09-09T19:21:02.2978595Z",
+    "mode": "DRY_RUN",
+    "decision": "EXTERNAL_OVERRIDE",
+    "command_sent": false,
+    "mower_activity": "PARKED_IN_CS",
+    "dry_until": "2026-09-09T20:41:51.487032+00:00",
+    "build": {
+      "all_installed_files_verified": false,
+      "entrypoint_sha256": "b38d32a3dfc53fdbbbead9fcad96ded7bfe7865af89309675d3d36f33a320556",
+      "manifest_file_count": 61,
+      "manifest_files_verified": true,
+      "package_manifest_sha256": "7c93901b640250814fe29a5217526b5b98a834dfbc02b2dc41c0594e77da077b",
+      "remote_build_dependencies_verified": false,
+      "verification_error": null,
+      "verified_file_count": 61
+    }
+  }
+]

@@ -1,0 +1,16 @@
+{
+  "source_commit": "d2e09c1ab023a136fc4ca90ad22d2308041fe14a",
+  "pr": 51,
+  "merge_commit": "c3b59dd0802e5bd1eb3ba15b45d5656f5a60ce82",
+  "artifact_id": 10120838401,
+  "workflow_run": 34394181513,
+  "artifact_sha256": "4f868e4bcd46b8ec2f03890d65d0010b95d4951b49c67094dd05c83bda271fcf",
+  "package_sha256": "9379280242f2237b97a34297b9a0b88d5b71bf3ae9834c4eb43647c3f3269fca",
+  "manifest_sha256": "fc9cec4b2d66fe9c39685023a5a17bdf7e9bbf4b3a6e4329a0b48ce1fee1b43f",
+  "verified_canonical_files": 61,
+  "changed_installed_source_files": [
+    "platzwart_console.py"
+  ],
+  "all_other_source_files_unchanged": true,
+  "device_commands_sent": 0
+}
