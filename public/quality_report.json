@@ -3,7 +3,7 @@
   "errors": [],
   "invalid_included": [],
   "by_calendar": {
-    "Rasen": 40,
+    "Rasen": 41,
     "Kunstrasen": 5
   },
   "event_timing": {
@@ -36,7 +36,7 @@
     {
       "date_from": "2026-10-01",
       "date_to": "2026-12-31",
-      "competition_rows": 35
+      "competition_rows": 36
     },
     {
       "date_from": "2027-01-01",
@@ -59,81 +59,17 @@
       "competition_rows": 41,
       "source_detail_ids": 33,
       "parsed_matches_before_duplicate_merge": 41,
-      "parsed_matches": 39,
+      "parsed_matches": 41,
       "parsed_detail_ids": 33,
       "missing_detail_ids": [],
       "source_festival_groups": 3,
       "missing_festival_groups": [],
-      "festival_round_assignments": [
-        {
-          "method": "younger_birth_year_first",
-          "group": {
-            "date": "2026-09-27",
-            "venue": "rasenplatz sportplatz schoenwalde strandbad platz 1 kurmaerkische str 2 14621 schoenwalde glien"
-          },
-          "assignments": [
-            {
-              "external_id": "610018461",
-              "team_id": "01OFNF8544000000VV0AG80NVUUTMIT0",
-              "birth_year": 2017,
-              "before": "2026-09-27T15:30+02:00",
-              "after": "2026-09-27T13:30+02:00"
-            },
-            {
-              "external_id": "610018452",
-              "team_id": "01KPKBA8F8000000VV0AG811VSVU41QE",
-              "birth_year": 2016,
-              "before": "2026-09-27T13:30+02:00",
-              "after": "2026-09-27T15:30+02:00"
-            }
-          ],
-          "changed": true
-        }
-      ],
+      "festival_round_assignments": [],
       "duplicate_detail_ids": [],
-      "collapsed_duplicate_detail_ids": [
-        "031DB8NS8C000000VS5489BUVUR5FS5A",
-        "031DP96C58000000VS5489BUVUR5FS5A"
-      ],
+      "collapsed_duplicate_detail_ids": [],
       "duplicate_conflicts": [],
-      "duplicate_resolutions": [
-        {
-          "detail_id": "031DB8NS8C000000VS5489BUVUR5FS5A",
-          "occurrences": 2,
-          "conflicts": {},
-          "resolved": true,
-          "resolution_attempt": {
-            "method": "explicit_postponement_chain",
-            "relocations": [
-              {
-                "from": "2026-09-11T19:30+02:00",
-                "to": "2026-09-15T19:00+02:00"
-              }
-            ],
-            "selected_kickoff": "2026-09-15T19:00+02:00",
-            "resolved": true
-          },
-          "merged_external_id": "031DB8NS8C000000VS5489BUVUR5FS5A"
-        },
-        {
-          "detail_id": "031DP96C58000000VS5489BUVUR5FS5A",
-          "occurrences": 2,
-          "conflicts": {},
-          "resolved": true,
-          "resolution_attempt": {
-            "method": "explicit_postponement_chain",
-            "relocations": [
-              {
-                "from": "2026-09-06T14:00+02:00",
-                "to": "2026-09-04T20:00+02:00"
-              }
-            ],
-            "selected_kickoff": "2026-09-04T20:00+02:00",
-            "resolved": true
-          },
-          "merged_external_id": "031DP96C58000000VS5489BUVUR5FS5A"
-        }
-      ],
+      "duplicate_resolutions": [],
+      "duplicate_resolution_deferred": true,
       "has_more": false,
       "request_count_after_parse": 1,
       "truncated": false,
@@ -145,40 +81,20 @@
       "depth": 0,
       "source_url": "https://www.fussball.de/ajax.club.matchplan/-/id/00ES8GNBL0000049VV0AG08LVUPGND5I/mode/PAGE/show-filter/false/show-venues/true/mime-type/HTML/datum-von/2026-10-01/datum-bis/2026-12-31/max/50",
       "source_scope": "all club teams; inclusion decided only by venue",
-      "competition_rows": 35,
-      "source_detail_ids": 31,
-      "parsed_matches_before_duplicate_merge": 35,
-      "parsed_matches": 34,
-      "parsed_detail_ids": 31,
+      "competition_rows": 36,
+      "source_detail_ids": 32,
+      "parsed_matches_before_duplicate_merge": 36,
+      "parsed_matches": 36,
+      "parsed_detail_ids": 32,
       "missing_detail_ids": [],
       "source_festival_groups": 0,
       "missing_festival_groups": [],
       "festival_round_assignments": [],
       "duplicate_detail_ids": [],
-      "collapsed_duplicate_detail_ids": [
-        "031DP96F8G000000VS5489BUVUR5FS5A"
-      ],
+      "collapsed_duplicate_detail_ids": [],
       "duplicate_conflicts": [],
-      "duplicate_resolutions": [
-        {
-          "detail_id": "031DP96F8G000000VS5489BUVUR5FS5A",
-          "occurrences": 2,
-          "conflicts": {},
-          "resolved": true,
-          "resolution_attempt": {
-            "method": "explicit_postponement_chain",
-            "relocations": [
-              {
-                "from": "2026-10-04T14:00+02:00",
-                "to": "2026-12-13T13:00+01:00"
-              }
-            ],
-            "selected_kickoff": "2026-12-13T13:00+01:00",
-            "resolved": true
-          },
-          "merged_external_id": "031DP96F8G000000VS5489BUVUR5FS5A"
-        }
-      ],
+      "duplicate_resolutions": [],
+      "duplicate_resolution_deferred": true,
       "has_more": false,
       "request_count_after_parse": 2,
       "truncated": false,
@@ -203,6 +119,7 @@
       "collapsed_duplicate_detail_ids": [],
       "duplicate_conflicts": [],
       "duplicate_resolutions": [],
+      "duplicate_resolution_deferred": true,
       "has_more": false,
       "request_count_after_parse": 3,
       "truncated": false,
@@ -227,10 +144,119 @@
       "collapsed_duplicate_detail_ids": [],
       "duplicate_conflicts": [],
       "duplicate_resolutions": [],
+      "duplicate_resolution_deferred": true,
       "has_more": false,
       "request_count_after_parse": 4,
       "truncated": false,
       "accepted": true
     }
-  ]
+  ],
+  "cross_window_resolution": {
+    "collapsed_duplicate_detail_ids": [
+      "031DB8NS8C000000VS5489BUVUR5FS5A",
+      "031DP96C58000000VS5489BUVUR5FS5A",
+      "031DP96F8G000000VS5489BUVUR5FS5A",
+      "031MFGE2PG000000VS5489BUVVKNMR0J"
+    ],
+    "duplicate_resolutions": [
+      {
+        "detail_id": "031DB8NS8C000000VS5489BUVUR5FS5A",
+        "occurrences": 2,
+        "conflicts": {},
+        "resolved": true,
+        "resolution_attempt": {
+          "method": "explicit_postponement_chain",
+          "relocations": [
+            {
+              "from": "2026-09-11T19:30+02:00",
+              "to": "2026-09-15T19:00+02:00"
+            }
+          ],
+          "selected_kickoff": "2026-09-15T19:00+02:00",
+          "resolved": true
+        },
+        "merged_external_id": "031DB8NS8C000000VS5489BUVUR5FS5A"
+      },
+      {
+        "detail_id": "031DP96C58000000VS5489BUVUR5FS5A",
+        "occurrences": 2,
+        "conflicts": {},
+        "resolved": true,
+        "resolution_attempt": {
+          "method": "explicit_postponement_chain",
+          "relocations": [
+            {
+              "from": "2026-09-06T14:00+02:00",
+              "to": "2026-09-04T20:00+02:00"
+            }
+          ],
+          "selected_kickoff": "2026-09-04T20:00+02:00",
+          "resolved": true
+        },
+        "merged_external_id": "031DP96C58000000VS5489BUVUR5FS5A"
+      },
+      {
+        "detail_id": "031DP96F8G000000VS5489BUVUR5FS5A",
+        "occurrences": 2,
+        "conflicts": {},
+        "resolved": true,
+        "resolution_attempt": {
+          "method": "explicit_postponement_chain",
+          "relocations": [
+            {
+              "from": "2026-10-04T14:00+02:00",
+              "to": "2026-12-13T13:00+01:00"
+            }
+          ],
+          "selected_kickoff": "2026-12-13T13:00+01:00",
+          "resolved": true
+        },
+        "merged_external_id": "031DP96F8G000000VS5489BUVUR5FS5A"
+      },
+      {
+        "detail_id": "031MFGE2PG000000VS5489BUVVKNMR0J",
+        "occurrences": 2,
+        "conflicts": {},
+        "resolved": true,
+        "resolution_attempt": {
+          "method": "explicit_postponement_chain",
+          "relocations": [
+            {
+              "from": "2026-09-12T09:00+02:00",
+              "to": "2026-10-08T18:00+02:00"
+            }
+          ],
+          "selected_kickoff": "2026-10-08T18:00+02:00",
+          "resolved": true
+        },
+        "merged_external_id": "031MFGE2PG000000VS5489BUVVKNMR0J"
+      }
+    ],
+    "festival_round_assignments": [
+      {
+        "method": "younger_birth_year_first",
+        "group": {
+          "date": "2026-09-27",
+          "venue": "rasenplatz sportplatz schoenwalde strandbad platz 1 kurmaerkische str 2 14621 schoenwalde glien"
+        },
+        "assignments": [
+          {
+            "external_id": "610018461",
+            "team_id": "01OFNF8544000000VV0AG80NVUUTMIT0",
+            "birth_year": 2017,
+            "before": "2026-09-27T15:30+02:00",
+            "after": "2026-09-27T13:30+02:00"
+          },
+          {
+            "external_id": "610018452",
+            "team_id": "01KPKBA8F8000000VV0AG811VSVU41QE",
+            "birth_year": 2016,
+            "before": "2026-09-27T13:30+02:00",
+            "after": "2026-09-27T15:30+02:00"
+          }
+        ],
+        "changed": true
+      }
+    ]
+  }
 }
