@@ -219,6 +219,13 @@ def suspended_result(*, activity: str = "PARKED_IN_CS") -> CycleResult:
     return cycle
 
 
+def observed_cycle(cycle: CycleResult, now: datetime) -> CycleResult:
+    """Model a later vendor response; tests must not reuse its source time."""
+    fresh = deepcopy(cycle)
+    fresh.details["hydrawise"]["safety"]["observed_at_utc"] = now.isoformat()
+    return fresh
+
+
 def irrigation_state(*, phase: str, current: int | None = None) -> AutomationState:
     plan = zones()
     return AutomationState(
@@ -258,6 +265,7 @@ class FullFailsafeTests(unittest.TestCase):
     def _run(self, state: AutomationState, cycle: CycleResult, *, now: datetime = NOW, **senders):
         cycle = deepcopy(cycle)
         cycle.details["mower"]["status_timestamp_ms"] = int(now.timestamp() * 1000)
+        cycle.details["hydrawise"]["safety"]["observed_at_utc"] = now.isoformat()
         store = InMemoryStateStore(state)
         output = run_full_failsafe_cycle(
             now_utc=now,
@@ -265,7 +273,7 @@ class FullFailsafeTests(unittest.TestCase):
             environment=ENV,
             past_due=False,
             source="test",
-            read_only_runner=lambda **_: cycle,
+            read_only_runner=lambda **kwargs: observed_cycle(cycle, kwargs["now_utc"]),
             state_store_factory=lambda _env: store,
             park_sender=senders.get("park", lambda *_: {"accepted": True}),
             start_sender=senders.get("start", lambda *_: {"accepted": True}),
@@ -280,13 +288,14 @@ class FullFailsafeTests(unittest.TestCase):
     def _continue(self, store, cycle: CycleResult, *, now: datetime, **senders):
         cycle = deepcopy(cycle)
         cycle.details["mower"]["status_timestamp_ms"] = int(now.timestamp() * 1000)
+        cycle.details["hydrawise"]["safety"]["observed_at_utc"] = now.isoformat()
         output = run_full_failsafe_cycle(
             now_utc=now,
             settings=settings(),
             environment=ENV,
             past_due=False,
             source="test",
-            read_only_runner=lambda **_: cycle,
+            read_only_runner=lambda **kwargs: observed_cycle(cycle, kwargs["now_utc"]),
             state_store_factory=lambda _env: store,
             park_sender=senders.get("park", lambda *_: {"accepted": True}),
             start_sender=senders.get("start", lambda *_: {"accepted": True}),
@@ -488,7 +497,7 @@ class FullFailsafeTests(unittest.TestCase):
             environment=ENV,
             past_due=False,
             source="test",
-            read_only_runner=lambda **_: result(activity="PARKED_IN_CS"),
+            read_only_runner=lambda **kwargs: observed_cycle(result(activity="PARKED_IN_CS"), kwargs["now_utc"]),
             state_store_factory=lambda _env: store,
             park_sender=lambda *args: park_calls.append(args) or {"accepted": True},
             start_sender=lambda *args: start_calls.append(args) or {"accepted": True},
@@ -767,7 +776,7 @@ class FullFailsafeTests(unittest.TestCase):
                 environment=ENV,
                 past_due=False,
                 source="test",
-                read_only_runner=lambda **_: cycle,
+                read_only_runner=lambda **kwargs: observed_cycle(cycle, kwargs["now_utc"]),
                 state_store_factory=lambda _env: store,
                 park_sender=lambda *_: self.fail("Mäher darf keinen Parkbefehl erhalten"),
                 suspend_zone_sender=fail,
@@ -990,7 +999,7 @@ class FullFailsafeTests(unittest.TestCase):
             environment=ENV,
             past_due=False,
             source="test",
-            read_only_runner=lambda **_: cycle,
+            read_only_runner=lambda **kwargs: observed_cycle(cycle, kwargs["now_utc"]),
             state_store_factory=lambda _env: store,
             suspend_zone_sender=lambda *args: suspend_calls.append(args) or {},
             start_zone_sender=lambda *args: zone_calls.append(args) or {},
@@ -1002,7 +1011,7 @@ class FullFailsafeTests(unittest.TestCase):
             environment=ENV,
             past_due=False,
             source="test",
-            read_only_runner=lambda **_: cycle,
+            read_only_runner=lambda **kwargs: observed_cycle(cycle, kwargs["now_utc"]),
             state_store_factory=lambda _env: store,
             suspend_zone_sender=lambda *args: suspend_calls.append(args) or {},
             start_zone_sender=lambda *args: zone_calls.append(args) or {},
@@ -1054,7 +1063,7 @@ class FullFailsafeTests(unittest.TestCase):
             environment=ENV,
             past_due=False,
             source="test",
-            read_only_runner=lambda **_: cycle,
+            read_only_runner=lambda **kwargs: observed_cycle(cycle, kwargs["now_utc"]),
             state_store_factory=lambda _env: store,
             suspend_zone_sender=lambda *args: suspend_calls.append(args) or {},
         )
@@ -1120,7 +1129,7 @@ class FullFailsafeTests(unittest.TestCase):
                     environment=ENV,
                     past_due=False,
                     source="test",
-                    read_only_runner=lambda **_: cycle,
+                    read_only_runner=lambda **kwargs: observed_cycle(cycle, kwargs["now_utc"]),
                     state_store_factory=lambda _env: store,
                 )
                 self.assertEqual(
@@ -1239,7 +1248,7 @@ class FullFailsafeTests(unittest.TestCase):
             environment=ENV,
             past_due=False,
             source="test",
-            read_only_runner=lambda **_: cycle,
+            read_only_runner=lambda **kwargs: observed_cycle(cycle, kwargs["now_utc"]),
             state_store_factory=lambda _env: store,
         )
         self.assertEqual(
@@ -1266,7 +1275,7 @@ class FullFailsafeTests(unittest.TestCase):
             environment=ENV,
             past_due=False,
             source="test",
-            read_only_runner=lambda **_: cycle,
+            read_only_runner=lambda **kwargs: observed_cycle(cycle, kwargs["now_utc"]),
             state_store_factory=lambda _env: store,
         )
         self.assertEqual(confirmed.decision_code, "IRRIGATION_PLAN_UPDATED")
@@ -1302,7 +1311,7 @@ class FullFailsafeTests(unittest.TestCase):
             environment=ENV,
             past_due=False,
             source="test",
-            read_only_runner=lambda **_: second_cycle,
+            read_only_runner=lambda **kwargs: observed_cycle(second_cycle, kwargs["now_utc"]),
             state_store_factory=lambda _env: store,
             suspend_zone_sender=lambda *args: calls.append(args) or {},
         )
@@ -1682,7 +1691,7 @@ class FullFailsafeTests(unittest.TestCase):
                     environment=ENV,
                     past_due=False,
                     source="test",
-                    read_only_runner=lambda **_: cycle,
+                    read_only_runner=lambda **kwargs: observed_cycle(cycle, kwargs["now_utc"]),
                     state_store_factory=lambda _env: store,
                     park_sender=lambda *_: {"accepted": True},
                     start_sender=lambda *_: {"accepted": True},
@@ -1720,7 +1729,7 @@ class FullFailsafeTests(unittest.TestCase):
                     environment=ENV,
                     past_due=False,
                     source="test",
-                    read_only_runner=lambda **_: cycle,
+                    read_only_runner=lambda **kwargs: observed_cycle(cycle, kwargs["now_utc"]),
                     state_store_factory=lambda _env: store,
                     park_sender=lambda *_: {"accepted": True},
                     start_sender=lambda *_: {"accepted": True},
@@ -1759,7 +1768,7 @@ class FullFailsafeTests(unittest.TestCase):
             environment=ENV,
             past_due=False,
             source="test",
-            read_only_runner=lambda **_: cycle,
+            read_only_runner=lambda **kwargs: observed_cycle(cycle, kwargs["now_utc"]),
             state_store_factory=lambda _env: store,
             park_sender=lambda *_: {"accepted": True},
             start_sender=lambda *_: {"accepted": True},
@@ -1829,11 +1838,11 @@ class FullFailsafeTests(unittest.TestCase):
                 environment=ENV,
                 past_due=False,
                 source="test",
-                read_only_runner=lambda **_: result(
+                read_only_runner=lambda **kwargs: observed_cycle(result(
                     block_source="irrigation",
                     active_ids=[RELAYS[0]] if active else [],
                     clear=not active,
-                ),
+                ), kwargs["now_utc"]),
                 state_store_factory=lambda _env: store,
                 stop_zone_sender=lambda _key, relay, controller: stop_calls.append(
                     (relay, controller)
@@ -3214,6 +3223,7 @@ class FullFailsafeTests(unittest.TestCase):
         resumed, resumed_store = self._run(
             resumable_state,
             result(activity="PARKED_IN_CS"),
+            now=NOW + timedelta(seconds=1),
             start=lambda *args: start_calls.append(args) or {"accepted": True},
         )
         self.assertEqual(resumed.decision_code, "CONTINUOUS_MOWING_START_SENT")

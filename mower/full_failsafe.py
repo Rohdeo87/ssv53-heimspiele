@@ -657,25 +657,94 @@ def _plan_change_fingerprint(kind: str, payload: Any) -> str:
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
+def _hydrawise_source_observation(
+    details: Mapping[str, Any], *, now_utc: datetime
+) -> datetime | None:
+    """Return one usable Hydrawise source observation, never a cycle timestamp.
+
+    The cache may have been populated by another reader.  Its source timestamp
+    is therefore a valid independent observation for this controller, whereas
+    the local ``new_observation`` flag deliberately is not required here.
+    A source timestamp must agree with the safety projection and may not be
+    future dated.  Callers compare this value with their persisted predecessor
+    before they count it or let a deadline advance.
+    """
+    hydrawise = _as_dict(details.get("hydrawise"))
+    safety = _as_dict(hydrawise.get("safety"))
+    if not (
+        safety.get("available") is True
+        and safety.get("fresh") is True
+        and safety.get("relay_set_valid") is True
+    ):
+        return None
+    observed = _parse_time(safety.get("observed_at_utc"))
+    cache = _as_dict(hydrawise.get("cache"))
+    # Direct reads and cache reads both prove only the manufacturer's time.
+    # A controller tick is never a substitute for a source observation.
+    if not cache:
+        if observed is None or observed > now_utc + timedelta(seconds=30):
+            return None
+        return observed
+    cached_observed = _parse_time(cache.get("source_observed_at_utc"))
+    if cache and (cached_observed is None or cached_observed != observed):
+        return None
+    if observed is None or observed > now_utc + timedelta(seconds=30):
+        return None
+    return observed
+
+
 def _candidate_confirmation(
     state: AutomationState,
     *,
     fingerprint: str,
     now_utc: datetime,
+    observed_utc: datetime | None,
     required_minutes: int,
+    max_gap_minutes: int = 3,
+    not_before_utc: datetime | None = None,
 ) -> tuple[AutomationState, bool]:
+    # A timer tick, cache hit, stale source, or a source from before the
+    # requested effect has no proof value.  Keep the candidate so a later
+    # independent source can still complete the same proof.
+    if observed_utc is None or (
+        not_before_utc is not None and observed_utc <= not_before_utc
+    ):
+        return state, False
     since = _parse_time(state.irrigation_change_candidate_since_utc)
-    if state.irrigation_change_candidate_hash != fingerprint or since is None:
+    last_observed = _parse_time(state.irrigation_change_candidate_observed_utc)
+    if (
+        state.irrigation_change_candidate_hash != fingerprint
+        or since is None
+        or last_observed is None
+    ):
         return (
             replace(
                 state,
                 revision=state.revision + 1,
                 irrigation_change_candidate_hash=fingerprint,
-                irrigation_change_candidate_since_utc=now_utc.isoformat(),
+                irrigation_change_candidate_since_utc=observed_utc.isoformat(),
+                irrigation_change_candidate_observed_utc=observed_utc.isoformat(),
             ),
             False,
         )
-    return state, now_utc - since >= timedelta(minutes=required_minutes)
+    if observed_utc <= last_observed:
+        return state, False
+    if observed_utc - last_observed > timedelta(minutes=max_gap_minutes):
+        return (
+            replace(
+                state,
+                revision=state.revision + 1,
+                irrigation_change_candidate_since_utc=observed_utc.isoformat(),
+                irrigation_change_candidate_observed_utc=observed_utc.isoformat(),
+            ),
+            False,
+        )
+    updated = replace(
+        state,
+        revision=state.revision + 1,
+        irrigation_change_candidate_observed_utc=observed_utc.isoformat(),
+    )
+    return updated, observed_utc - since >= timedelta(minutes=required_minutes)
 
 
 def _clear_change_candidate(state: AutomationState) -> AutomationState:
@@ -689,6 +758,7 @@ def _clear_change_candidate(state: AutomationState) -> AutomationState:
         revision=state.revision + 1,
         irrigation_change_candidate_hash=None,
         irrigation_change_candidate_since_utc=None,
+        irrigation_change_candidate_observed_utc=None,
     )
 
 
@@ -696,15 +766,24 @@ def _record_suspension_revalidation_observation(
     state: AutomationState,
     *,
     now_utc: datetime,
+    observed_utc: datetime | None,
+    not_before_utc: datetime | None = None,
     max_gap_seconds: int,
     required_observations: int,
 ) -> tuple[AutomationState, bool]:
     """Bestätigt eine weiterhin wirksame Suspendierung über getrennte Zyklen."""
 
+    if observed_utc is None or (
+        not_before_utc is not None and observed_utc <= not_before_utc
+    ):
+        return state, False
     last_seen = _parse_time(state.irrigation_suspension_revalidation_last_seen_utc)
+    last_observed = _parse_time(state.irrigation_suspension_revalidation_observed_utc)
+    if last_observed is not None and observed_utc <= last_observed:
+        return state, False
     consecutive = (
         last_seen is not None
-        and timedelta(0) < now_utc - last_seen <= timedelta(seconds=max_gap_seconds)
+        and timedelta(0) < observed_utc - last_seen <= timedelta(seconds=max_gap_seconds)
     )
     observations = (
         int(state.irrigation_suspension_revalidation_observations or 0) + 1
@@ -714,10 +793,51 @@ def _record_suspension_revalidation_observation(
     updated = replace(
         state,
         revision=state.revision + 1,
-        irrigation_suspension_revalidation_last_seen_utc=now_utc.isoformat(),
+        irrigation_suspension_revalidation_last_seen_utc=observed_utc.isoformat(),
+        irrigation_suspension_revalidation_observed_utc=observed_utc.isoformat(),
         irrigation_suspension_revalidation_observations=observations,
     )
     return updated, observations >= required_observations
+
+
+def _record_zone_clear_observation(
+    state: AutomationState,
+    *,
+    observed_utc: datetime | None,
+    not_before_utc: datetime | None,
+) -> tuple[AutomationState, bool]:
+    """Record a distinct post-command clear source, never a control tick."""
+    if observed_utc is None or (
+        not_before_utc is not None and observed_utc <= not_before_utc
+    ):
+        return state, False
+    since = _parse_time(state.irrigation_zone_clear_since_utc)
+    last = _parse_time(state.irrigation_zone_clear_observed_utc)
+    if since is None:
+        return replace(
+            state,
+            revision=state.revision + 1,
+            irrigation_zone_clear_since_utc=observed_utc.isoformat(),
+            irrigation_zone_clear_observed_utc=observed_utc.isoformat(),
+        ), False
+    # Older persisted runs predate the observation-identity field.  Their
+    # already stored clear boundary is retained as a conservative predecessor;
+    # only a later source can migrate it forward.
+    if last is None:
+        last = since
+    if observed_utc <= last:
+        return state, False
+    if observed_utc - last > timedelta(minutes=3):
+        return replace(
+            state, revision=state.revision + 1,
+            irrigation_zone_clear_since_utc=observed_utc.isoformat(),
+            irrigation_zone_clear_observed_utc=observed_utc.isoformat(),
+        ), False
+    return replace(
+        state,
+        revision=state.revision + 1,
+        irrigation_zone_clear_observed_utc=observed_utc.isoformat(),
+    ), True
 
 
 def _reconcile_prestart_plan(
@@ -1018,7 +1138,7 @@ def _cycle_state(
     details = _as_dict(result.details)
     mower = _as_dict(details.get("mower"))
     safety = _as_dict(_as_dict(details.get("hydrawise")).get("safety"))
-    observed = _parse_time(safety.get("observed_at_utc"))
+    observed = _hydrawise_source_observation(details, now_utc=now_utc)
     fresh = (
         bool(safety.get("available"))
         and bool(safety.get("fresh"))
@@ -1042,7 +1162,7 @@ def _cycle_state(
         mower_activity=str(mower.get("activity") or "") or None,
         mower_state=str(mower.get("state") or "") or None,
         error_code=int(mower.get("error_code") or 0),
-        hydrawise_success_utc=now_utc if fresh else None,
+        hydrawise_success_utc=observed if fresh else None,
         hydrawise_observed_utc=observed,
         hydrawise_clear=clear,
         hydrawise_active_count=(
@@ -2037,6 +2157,7 @@ def run_full_failsafe_cycle(
                             "status": "CONFIRMING",
                             "confirm_since_utc": None,
                             "confirm_last_seen_utc": None,
+                            "confirm_not_before_utc": now.isoformat(),
                         }
                     )
                 updated_state = replace(
@@ -2087,6 +2208,7 @@ def run_full_failsafe_cycle(
                     "commanded_relay_ids": sorted(commanded),
                     "confirm_since_utc": None,
                     "confirm_last_seen_utc": None,
+                    "confirm_not_before_utc": None,
                 }
                 retry_state = replace(
                     state,
@@ -2103,12 +2225,33 @@ def run_full_failsafe_cycle(
                 )
             confirm_since = _parse_time(schedule_override.get("confirm_since_utc"))
             confirm_last = _parse_time(schedule_override.get("confirm_last_seen_utc"))
-            continuity = confirm_last is not None and now - confirm_last <= timedelta(minutes=3)
+            proof_now = _hydrawise_source_observation(details, now_utc=now)
+            confirm_not_before = _parse_time(
+                schedule_override.get("confirm_not_before_utc")
+            )
+            if proof_now is None or (confirm_last is not None and proof_now <= confirm_last):
+                return _persist_result(
+                    store=store, original=original, state=state, result=result,
+                    details=details, settings=settings,
+                    decision_code="IRRIGATION_SCHEDULE_CONFIRM_WAIT",
+                    message="Die Plananpassung wartet auf eine neue gültige Hydrawise-Quellbeobachtung.",
+                )
+            if confirm_not_before is not None and proof_now <= confirm_not_before:
+                return _persist_result(
+                    store=store, original=original, state=state, result=result,
+                    details=details, settings=settings,
+                    decision_code="IRRIGATION_SCHEDULE_CONFIRMING",
+                    message="Die Plananpassung wartet auf eine Quellbeobachtung nach dem letzten Suspendierungsbefehl.",
+                )
+            continuity = (
+                confirm_last is not None
+                and timedelta(0) < proof_now - confirm_last <= timedelta(minutes=3)
+            )
             if confirm_since is None or not continuity:
                 confirming = {
                     **schedule_override,
-                    "confirm_since_utc": now.isoformat(),
-                    "confirm_last_seen_utc": now.isoformat(),
+                    "confirm_since_utc": proof_now.isoformat(),
+                    "confirm_last_seen_utc": proof_now.isoformat(),
                 }
                 confirming_state = replace(
                     state,
@@ -2123,10 +2266,10 @@ def run_full_failsafe_cycle(
                     decision_code="IRRIGATION_SCHEDULE_CONFIRMING",
                     message="Hydrawise bestätigt die Plananpassung fortlaufend.",
                 )
-            if now - confirm_since < timedelta(minutes=2):
+            if proof_now - confirm_since < timedelta(minutes=2):
                 confirming = {
                     **schedule_override,
-                    "confirm_last_seen_utc": now.isoformat(),
+                    "confirm_last_seen_utc": proof_now.isoformat(),
                 }
                 confirming_state = replace(
                     state,
@@ -2161,7 +2304,7 @@ def run_full_failsafe_cycle(
                     **schedule_override,
                     "status": "ACTIVE",
                     "confirmed_utc": now.isoformat(),
-                    "confirm_last_seen_utc": now.isoformat(),
+                    "confirm_last_seen_utc": proof_now.isoformat(),
                 }
                 state = replace(
                     state,
@@ -2227,11 +2370,20 @@ def run_full_failsafe_cycle(
                 proof_hash = _plan_change_fingerprint(
                     "EXTERNAL_RESUME", proof_payload
                 )
+                proof_now = _hydrawise_source_observation(details, now_utc=now)
                 continuous = (
                     candidate_last is not None
-                    and timedelta(0) <= now - candidate_last <= timedelta(minutes=3)
+                    and proof_now is not None
+                    and timedelta(0) < proof_now - candidate_last <= timedelta(minutes=3)
                 )
                 if external_resume:
+                    if proof_now is None or (candidate_last is not None and proof_now <= candidate_last):
+                        return _persist_result(
+                            store=store, original=original, state=state, result=result,
+                            details=details, settings=settings,
+                            decision_code="IRRIGATION_SCHEDULE_EXTERNAL_RESUME_CONFIRMING",
+                            message="Die externe Planänderung wartet auf eine neue gültige Hydrawise-Quellbeobachtung.",
+                        )
                     if (
                         candidate_since is None
                         or not continuous
@@ -2241,8 +2393,8 @@ def run_full_failsafe_cycle(
                         confirming_override = {
                             **schedule_override,
                             "external_resume_candidate_hash": proof_hash,
-                            "external_resume_candidate_since_utc": now.isoformat(),
-                            "external_resume_candidate_last_seen_utc": now.isoformat(),
+                            "external_resume_candidate_since_utc": proof_now.isoformat(),
+                            "external_resume_candidate_last_seen_utc": proof_now.isoformat(),
                         }
                         confirming_state = replace(
                             state,
@@ -2271,12 +2423,12 @@ def run_full_failsafe_cycle(
                         minimum=1,
                         maximum=15,
                     )
-                    if now - candidate_since < timedelta(
+                    if proof_now - candidate_since < timedelta(
                         minutes=confirmation_minutes
                     ):
                         confirming_override = {
                             **schedule_override,
-                            "external_resume_candidate_last_seen_utc": now.isoformat(),
+                            "external_resume_candidate_last_seen_utc": proof_now.isoformat(),
                         }
                         confirming_state = replace(
                             state,
@@ -3236,6 +3388,7 @@ def run_full_failsafe_cycle(
                 state,
                 fingerprint=fingerprint,
                 now_utc=now,
+                observed_utc=_hydrawise_source_observation(details, now_utc=now),
                 required_minutes=expired_confirmation_minutes,
             )
             details["irrigation_expired_failed_gate"] = {
@@ -3519,6 +3672,7 @@ def run_full_failsafe_cycle(
                     state,
                     fingerprint=fingerprint,
                     now_utc=now,
+                    observed_utc=_hydrawise_source_observation(details, now_utc=now),
                     required_minutes=confirmation_minutes,
                 )
                 details["irrigation_plan_reconciliation"] = {
@@ -3735,6 +3889,7 @@ def run_full_failsafe_cycle(
                     state,
                     fingerprint=fingerprint,
                     now_utc=now,
+                    observed_utc=_hydrawise_source_observation(details, now_utc=now),
                     required_minutes=expired_confirmation_minutes,
                 )
                 details["irrigation_expired_ready_gate"]["confirmed"] = confirmed
@@ -3914,6 +4069,7 @@ def run_full_failsafe_cycle(
                     state,
                     fingerprint=fingerprint,
                     now_utc=now,
+                    observed_utc=_hydrawise_source_observation(details, now_utc=now),
                     required_minutes=duration_confirmation_minutes,
                 )
                 details["irrigation_duration_reconciliation"] = {
@@ -4128,6 +4284,7 @@ def run_full_failsafe_cycle(
                         state,
                         fingerprint=fingerprint,
                         now_utc=now,
+                        observed_utc=_hydrawise_source_observation(details, now_utc=now),
                         required_minutes=confirmation_minutes,
                     )
                     details["irrigation_plan_reconciliation"] = {
@@ -4311,6 +4468,10 @@ def run_full_failsafe_cycle(
                         _record_suspension_revalidation_observation(
                             state,
                             now_utc=now,
+                            observed_utc=_hydrawise_source_observation(details, now_utc=now),
+                            not_before_utc=_parse_time(
+                                state.irrigation_suspension_completed_utc
+                            ),
                             max_gap_seconds=revalidation_gap_seconds,
                             required_observations=required_revalidation_observations,
                         )
@@ -4567,6 +4728,8 @@ def run_full_failsafe_cycle(
                 revision=state.revision + 1,
                 irrigation_phase="STOPPING",
                 irrigation_zone_clear_since_utc=None,
+                irrigation_zone_clear_observed_utc=None,
+                irrigation_zone_stop_requested_utc=now.isoformat(),
             )
             try:
                 store.save(stopping, expected_revision=original.revision)
@@ -4665,17 +4828,19 @@ def run_full_failsafe_cycle(
                     decision_code="IRRIGATION_DIRECT_STOP_END_UNCLEAR",
                     message="Der direkte Zonenstopp ist nicht sicher bestätigt; der Mäher bleibt gesperrt.",
                 )
-            clear_since = _parse_time(state.irrigation_zone_clear_since_utc)
-            if clear_since is None:
-                confirming = replace(
-                    state,
-                    revision=state.revision + 1,
-                    irrigation_zone_clear_since_utc=now.isoformat(),
-                )
+            confirming, advanced_observation = _record_zone_clear_observation(
+                state,
+                observed_utc=_hydrawise_source_observation(details, now_utc=now),
+                not_before_utc=(
+                    _parse_time(state.irrigation_zone_stop_requested_utc)
+                    or _parse_time(state.irrigation_zone_started_utc)
+                ),
+            )
+            clear_since = _parse_time(confirming.irrigation_zone_clear_since_utc)
+            if clear_since is None or not advanced_observation:
                 return _persist_result(
                     store=store,
-                    original=original,
-                    state=confirming,
+                    original=original, state=confirming,
                     result=result,
                     details=details,
                     settings=settings,
@@ -4689,11 +4854,11 @@ def run_full_failsafe_cycle(
                 minimum=1,
                 maximum=10,
             )
-            if now - clear_since < timedelta(minutes=end_confirmation):
+            if _hydrawise_source_observation(details, now_utc=now) - clear_since < timedelta(minutes=end_confirmation):
                 return _persist_result(
                     store=store,
                     original=original,
-                    state=state,
+                    state=confirming,
                     result=result,
                     details=details,
                     settings=settings,
@@ -4806,17 +4971,16 @@ def run_full_failsafe_cycle(
                     decision_code="IRRIGATION_ZONE_END_UNCLEAR",
                     message=failed.irrigation_failed_reason or "Zonenende unklar.",
                 )
-            clear_since = _parse_time(state.irrigation_zone_clear_since_utc)
-            if clear_since is None:
-                confirming = replace(
-                    state,
-                    revision=state.revision + 1,
-                    irrigation_zone_clear_since_utc=now.isoformat(),
-                )
+            confirming, advanced_observation = _record_zone_clear_observation(
+                state,
+                observed_utc=_hydrawise_source_observation(details, now_utc=now),
+                not_before_utc=_parse_time(state.irrigation_zone_started_utc),
+            )
+            clear_since = _parse_time(confirming.irrigation_zone_clear_since_utc)
+            if clear_since is None or not advanced_observation:
                 return _persist_result(
                     store=store,
-                    original=original,
-                    state=confirming,
+                    original=original, state=confirming,
                     result=result,
                     details=details,
                     settings=settings,
@@ -4830,11 +4994,11 @@ def run_full_failsafe_cycle(
                 minimum=1,
                 maximum=10,
             )
-            if now - clear_since < timedelta(minutes=end_confirmation):
+            if _hydrawise_source_observation(details, now_utc=now) - clear_since < timedelta(minutes=end_confirmation):
                 return _persist_result(
                     store=store,
                     original=original,
-                    state=state,
+                    state=confirming,
                     result=result,
                     details=details,
                     settings=settings,

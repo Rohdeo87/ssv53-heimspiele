@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
@@ -308,6 +309,68 @@ class TrainingBatch:
         ) for event in self.events if event["resourceId"] == "rasen" and event["blocking"]]
 
 
+def validate_batch_for_range(batch: TrainingBatch, range_start: datetime, range_end: datetime) -> None:
+    """Validate an active batch before either projection consumes it."""
+    if not isinstance(batch, TrainingBatch):
+        raise TypeError("training_batch muss ein TrainingBatch sein.")
+    if type(batch.revision) is not int or batch.revision < 1:
+        raise ValueError("TrainingBatch benötigt eine positive ganzzahlige Revision.")
+    if not isinstance(batch.calendar_id, str) or not batch.calendar_id.strip():
+        raise ValueError("TrainingBatch benötigt eine nichtleere Kalender-ID.")
+    if not isinstance(batch.content_sha256, str) or not re.fullmatch(r"[0-9a-fA-F]{64}", batch.content_sha256):
+        raise ValueError("TrainingBatch benötigt einen gültigen SHA-256-Inhaltshash.")
+    start, end = _utc(range_start), _utc(range_end)
+    batch_start, batch_end = _utc(batch.range_start_utc), _utc(batch.range_end_utc)
+    if batch.evaluated_at_utc.tzinfo is None or batch.evaluated_at_utc.utcoffset() is None:
+        raise ValueError("TrainingBatch-Auswertungszeit benötigt einen expliziten Offset.")
+    evaluated = _utc(batch.evaluated_at_utc)
+    if end <= start or batch_end <= batch_start or batch_start > start or batch_end < end:
+        raise ValueError("TrainingBatch deckt den positiven angefragten Zeitraum nicht ab.")
+    ids: set[str] = set()
+    for event in batch.events:
+        if not isinstance(event, Mapping):
+            raise TypeError("TrainingBatch-Ereignisse müssen Mapping-Objekte sein.")
+        event_id = str(event.get("id") or "")
+        if not event_id or event_id in ids:
+            raise ValueError("TrainingBatch-Ereignis-IDs müssen eindeutig sein.")
+        ids.add(event_id)
+        if event.get("calendarId") != batch.calendar_id or event.get("calendarRevision") != batch.revision or event.get("calendarSha256") != batch.content_sha256:
+            raise ValueError("TrainingBatch-Ereignis widerspricht Kalender-ID, Revision oder Hash.")
+        if type(event.get("calendarRevision")) is not int:
+            raise ValueError("TrainingBatch-Ereignisrevision muss eine echte Ganzzahl sein.")
+        for key in ("id", "scheduleId", "team", "start", "end"):
+            if not isinstance(event.get(key), str) or not event[key].strip():
+                raise ValueError(f"TrainingBatch-Feld {key} fehlt oder ist leer.")
+        if event.get("resourceId") not in {"rasen", "kunstrasen"}:
+            raise ValueError("TrainingBatch enthält einen unbekannten Platz.")
+        event_evaluated = datetime.fromisoformat(str(event.get("evaluatedAtUtc") or ""))
+        if event_evaluated.tzinfo is None or event_evaluated.utcoffset() is None or _utc(event_evaluated) != evaluated:
+            raise ValueError("TrainingBatch-Ereignis besitzt eine abweichende Auswertungszeit.")
+        parsed = []
+        for key in ("occupancyStart", "start", "end", "occupancyEnd"):
+            value = datetime.fromisoformat(str(event.get(key) or ""))
+            if value.tzinfo is None or value.utcoffset() is None:
+                raise ValueError("TrainingBatch-Zeitpunkte benötigen einen expliziten Offset.")
+            parsed.append(value)
+        if not parsed[0] <= parsed[1] < parsed[2] <= parsed[3]:
+            raise ValueError("TrainingBatch-Zeitreihenfolge ist ungültig.")
+        if type(event.get("blocking")) is not bool or type(event.get("cancelled")) is not bool:
+            raise ValueError("TrainingBatch blocking/cancelled müssen boolesche Werte sein.")
+        release = event.get("releaseNotBeforeUtc")
+        if event["cancelled"]:
+            if not isinstance(release, str):
+                raise ValueError("Abgesagte Batch-Ereignisse benötigen eine Freigabezeit.")
+            release_dt = datetime.fromisoformat(release)
+            if release_dt.tzinfo is None or release_dt.utcoffset() is None:
+                raise ValueError("Freigabezeit benötigt einen expliziten Offset.")
+            if event["blocking"] != (_utc(release_dt) > evaluated):
+                raise ValueError("Absage-Sperrstatus widerspricht der Freigabezeit.")
+        elif release is not None:
+            raise ValueError("Nicht abgesagte Batch-Ereignisse dürfen keine Freigabezeit tragen.")
+        elif event["blocking"] is not True:
+            raise ValueError("Nicht abgesagte Batch-Ereignisse müssen blockierend sein.")
+
+
 @dataclass(frozen=True)
 class CalendarResolution:
     validation: CalendarValidation
@@ -323,11 +386,11 @@ def resolve_training_calendar(
     now_utc: datetime, occupancy_config: Mapping[str, Any], mower_config: Mapping[str, Any],
     cancellations: Iterable[TrainingCancellation] = (),
 ) -> CalendarResolution:
-    """Return one shared batch only after all calendar and migration gates pass.
+    """Return one shared batch after all calendar and migration gates pass.
 
-    Consumers must retain their current training if batch is None. This adapter
-    is not wired into either service; runtime publication is a separate change.
-    Cancellations must come from the authenticated server store, not a client.
+    Runtime wiring is default-off. Consumers must retain the existing safe
+    block when active resolution is unavailable; this never means a free
+    legacy plan. Cancellations must come from the authenticated server store.
     """
     validation = validate_calendar(document, now_utc=now_utc,
                                    occupancy_config=occupancy_config, mower_config=mower_config)
@@ -335,9 +398,10 @@ def resolve_training_calendar(
         return CalendarResolution(validation)
     try:
         start, end, now = _utc(range_start), _utc(range_end), _utc(now_utc)
-        if end <= start or end - start > timedelta(days=64):
-            raise ValueError("Kalenderabfrage benötigt einen positiven Bereich von höchstens 64 Tagen.")
         tz = ZoneInfo(document["timezone"])
+        local_span = end.astimezone(tz).replace(tzinfo=None) - start.astimezone(tz).replace(tzinfo=None)
+        if end <= start or local_span > timedelta(days=64):
+            raise ValueError("Kalenderabfrage benötigt einen positiven Bereich von höchstens 64 Tagen.")
         # Include previous-day overnight sessions and next-day pre-event buffers.
         first_anchor = start.astimezone(tz).date() - timedelta(days=1)
         last_anchor = end.astimezone(tz).date()

@@ -2515,6 +2515,7 @@ return (month === 10 || month === 11 || month === 0 || month === 1)
 }
 
 function getAllowedCalendarIds() {
+if (state.sharedTrainingCalendar) return SUMMER_RESOURCE_IDS;
 return state.activeSeason === "Winter"
 ? WINTER_RESOURCE_IDS
 : SUMMER_RESOURCE_IDS;
@@ -4402,6 +4403,25 @@ function updateSeasonButtons() {
 updateButtonGroup(state.activeSeason ? elements.seasonButtons : [], "data-season", state.activeSeason);
 }
 
+function applySharedTrainingCalendar(payload) {
+const shared = Boolean(payload && payload.training_calendar && payload.training_calendar.active === true);
+const changed = shared !== Boolean(state.sharedTrainingCalendar);
+state.sharedTrainingCalendar = shared;
+const group = document.querySelector(".ssv-control-group--season");
+if (group) {
+group.hidden = shared;
+group.style.display = shared ? "none" : "";
+}
+if (!changed) return;
+// A previously selected winter view must not hide confirmed grass training.
+state.activeCalendarId = "all";
+storageSet(storageKey("calendar:" + state.activeSeason), "all");
+ensureActiveCalendarSelection();
+updateResources();
+renderPlaceFilters();
+if (state.calendar) state.calendar.setOption("resources", state.resources);
+}
+
 function updateViewButtons() {
 updateButtonGroup(elements.viewButtons, "data-calendar-view", state.activeView);
 }
@@ -5031,6 +5051,7 @@ const payload = await fetchOccupancyPayload(rangeStart, rangeEnd);
 if (token !== state.fetchToken) return;
 
 updateAzureResourceMetadata(payload.resources);
+applySharedTrainingCalendar(payload);
 const events = payload.events.map(mapAzureOccupancyEvent);
 const visibleEvents = filterMappedEventsToRange(
 deduplicateMappedEvents(events),
@@ -5063,7 +5084,7 @@ updateMatchResourceVisibility(new Set());
 if (state.calendar) state.calendar.removeAllEvents();
 setStatus(
 "error",
-"Die Belegungsdaten konnten nicht von Azure geladen werden. " +
+"Die Belegungsdaten sind gerade nicht verfügbar. " +
 "Bitte Internetverbindung prüfen und erneut versuchen.",
 true
 );
@@ -5105,6 +5126,7 @@ applyFiltersAndReload();
 }
 
 function setSeason(season) {
+if (state.sharedTrainingCalendar) return;
 if (season !== "Sommer" && season !== "Winter") return;
 if (season === state.activeSeason) return;
 

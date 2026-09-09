@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import replace
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Mapping
 
 from mower.dry_run import run_read_only_cycle
@@ -49,9 +49,17 @@ def _record_cycle_state(*, state: Any, result: CycleResult, now_utc: datetime) -
     current_plan = _as_dict(details.get("current_plan"))
     next_block = _as_dict(current_plan.get("next_block"))
 
+    hydrawise_safety = _as_dict(hydrawise.get("safety"))
+    hydrawise_observed = _parse_time(hydrawise_safety.get("observed_at_utc"))
     hydrawise_success = (
-        now_utc
-        if str(hydrawise.get("status", "")).casefold().startswith("live")
+        hydrawise_observed
+        if (
+            str(hydrawise.get("status", "")).casefold().startswith("live")
+            and hydrawise_safety.get("available") is True
+            and hydrawise_safety.get("fresh") is True
+            and hydrawise_observed is not None
+            and hydrawise_observed <= now_utc + timedelta(seconds=30)
+        )
         else None
     )
     next_irrigation = None
@@ -66,6 +74,7 @@ def _record_cycle_state(*, state: Any, result: CycleResult, now_utc: datetime) -
         mower_state=str(mower.get("state") or "") or None,
         error_code=(int(mower.get("error_code")) if mower.get("error_code") is not None else None),
         hydrawise_success_utc=hydrawise_success,
+        hydrawise_observed_utc=hydrawise_success,
         next_irrigation_start_utc=next_irrigation,
     )
 

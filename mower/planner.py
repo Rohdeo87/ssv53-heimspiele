@@ -7,6 +7,7 @@ from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterable
 from zoneinfo import ZoneInfo
+from occupancy.training_calendar import TrainingBatch, validate_batch_for_range
 
 
 WEEKDAYS = {
@@ -419,6 +420,7 @@ def create_plan(
     start_day: date,
     days: int,
     cancelled_occurrences: set[tuple[str, str]] | None = None,
+    training_batch: TrainingBatch | None = None,
 ) -> tuple[list[DayPlan], list[Block]]:
     tz = ZoneInfo(config.get("timezone", "Europe/Berlin"))
     planning = config.get("planning", {})
@@ -428,13 +430,13 @@ def create_plan(
 
     horizon_start = datetime.combine(start_day, time.min, tzinfo=tz)
     horizon_end = horizon_start + timedelta(days=days)
-    training_blocks = build_training_blocks(
-        config.get("training", {}),
-        start_day,
-        days,
-        tz,
-        cancelled_occurrences,
-    )
+    if training_batch is not None:
+        validate_batch_for_range(training_batch, horizon_start, horizon_end)
+        training_blocks = training_batch.mower_blocks()
+    else:
+        training_blocks = build_training_blocks(
+            config.get("training", {}), start_day, days, tz, cancelled_occurrences,
+        )
     relevant_matches = [block for block in match_blocks if block.end > horizon_start and block.start < horizon_end]
     irrigation_blocks = build_hydrawise_blocks(
         hydrawise_status,

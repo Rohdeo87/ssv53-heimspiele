@@ -12,11 +12,11 @@ nachgewiesenen Stand festgehalten; sie ersetzt keine fehlenden Betriebsdaten.
 | Maßnahme | Tatsächlicher Entwicklungsstand | Noch offen |
 |---|---|---|
 | I03 – Neue und bisherige Belegung | Eigenständiger Publisher übernimmt neue validierte Sperren und behält unbestätigt zurückgenommene Intervalle im selben JSON-/ICS-Bundle. Unabhängige Prüfung und Fehlerfälle einschließlich Neustart, Quellverlust und paralleler Veröffentlichung. [Nachweis](../audit-2026-09-09/import-additive-update.md) | Zusammenführung, kontrollierter Quellenlauf und Prüfung des anschließend tatsächlich verwendeten Bundles. |
-| O01 – Trainingskalender | Gemeinsames versioniertes Modell, zwei Projektionen für App und Mäher, Validator, Inhaltsbindung und lesender Abweichungsvergleich entwickelt. Deaktivierte Vorlage erhält bestehende Wochenmuster und Sperren. [Nachweis](../audit-2026-09-09/training-calendar-update.md) | Verbindliche Saison-/Ferienregeln, vollständige gemeinsame Laufzeitanbindung einschließlich Pflege, Absagen und Konfliktprüfung; noch kein Wechsel der Quelle. Die entsprechende fachliche Rückfrage wurde gestellt. |
-| A01 – API-Abfragen | Gemeinsamer Cache mit erhaltenem Quellzeitpunkt, atomarer Abrufreservierung, Herstellerbudget, begrenztem Wiederanlauf und Ablehnung verspäteter Antworten entwickelt. Im befehlsfreien Lesepfad angeschlossen; Appstatus schreibt keinen Automatikzustand. [Nachweis](../audit-2026-09-09/api-cache-update.md) | Standard `OFF`. `PARK_ONLY`, `FULL_MOWER` und `FULL_FAILSAFE` lehnen die Cacheoption technisch ab. Weitere Gerätebestätigungen müssen zunächst echte neue Beobachtungen statt Zyklen zählen; erst danach ist eine vollständige Geräteintegration zulässig. Keine aktuelle Einsparung an API-Kosten behauptet. |
-| P01 – Laden und Wasser gemeinsam planen | Vollständige Eingangskopien aus vorhandenen Zyklen und lokaler Vergleich mit empirischer Ladeprognose entwickelt. Unbekannte Zeiten bleiben unbekannt. Keine neuen Herstellerabfragen. [Nachweis](../audit-2026-09-09/shadow-integration.md) | Erfassung standardmäßig deaktiviert, keine neue Parallelbeobachtung. Fachlich bestätigte Bedarfsfenster und ein geprüfter Geräteadapter für Terminverschiebung und Unterdrückung des Ursprungstermins fehlen weiterhin. |
+| O01 – Trainingskalender | Gemeinsame Quelle und Laufzeitanbindung von App, Mäher, Absagen, Verlegungs-Lookup und Konfliktprüfung umgesetzt. Unveränderliche Eingabekopien verhindern Versionswechsel während der Verarbeitung. [Nachweis](../audit-2026-09-09/integration-update.md) | Standard `SHARED_TRAINING_MODE=OFF`. Verbindliche Saison-/Ferienregeln und Freigabe des konkreten Kalenders fehlen; die Rückfrage wurde gestellt. Noch kein Wechsel der produktiven Quelle. |
+| A01 – API-Abfragen | Gemeinsamer Cache im lesenden Pfad; Geräteketten verwenden tatsächliche Quellzeitpunkte. Wiederholungen verlängern keine Bestätigung und starten keine physische Trocknung neu. [Nachweis](../audit-2026-09-09/device-observation-update.md) | Cache bleibt `OFF`, Gerätebetriebsarten lehnen ihn ab. Herstellerbudget plus Minutentimer kann 120 Sekunden Abstand verursachen; die Revalidierung erlaubt höchstens 90 Sekunden. Zulässiger Takt ist vor Aktivierung nachzuweisen. Keine aktuelle Kosteneinsparung behauptet. |
+| P01 – Laden und Wasser gemeinsam planen | Lokaler Vergleich und ein deterministischer Verschiebungsentwurf mit gleicher Zonenfolge, gleichen Pausen/Dauern sowie 45-Minuten-Vorlauf umgesetzt. Beispiel: höchstens 45 Minuten früher nutzbarer Platz; keine gemessenen Mähminuten. [Nachweis](../audit-2026-09-09/integration-update.md) | Erfassung deaktiviert, kein neuer Parallelbetrieb. Bedarfsfenster, Bedarfsspeicherung und Geräteverbraucher einschließlich bestätigter Unterdrückung des Ursprungstermins fehlen als gemeinsamer Ausführungspfad. |
 | V01 – Installationsnachweis | Diagnose prüft die im Manifest aufgeführten Quellbytes und unerwartete zusätzliche Anwendungsmodule. [Code](../../mower/build_provenance.py) | Diagnose noch nicht installiert. Paketdateien auf Datenträger sind kein Nachweis der Remote-Build-Abhängigkeiten, des bereits geladenen Codes oder des Geräteverhaltens. |
-| U01 – Einfache App-Anzeige | Die bereits entwickelte einfache Anzeige mit „Jetzt“, „Als Nächstes“, klaren Uhrzeiten und gekennzeichnetem Ladeende bleibt erhalten. [Vorschau und Screenshots](README.md) | Tatsächliche Veröffentlichung, WebView-/Sitzungs- und Rollenprüfung auf dem Appgerät. |
+| U01 – Einfache App-Anzeige | Jetzt, Als Nächstes, klare Uhrzeiten und gekennzeichnetes Ladeende bleiben erhalten. Bei gemeinsamer Quelle entfällt die Saisonwahl; beide Plätze bleiben auswählbar. [Neue Kontrollvorschau](shared-training-preview.html) und [bisherige Gesamtansicht](README.md). | Tatsächliche Veröffentlichung, WebView-/Sitzungs- und Rollenprüfung auf dem Appgerät. |
 
 „Entwickelt“ und „getestet“ bedeuten hier ausschließlich den Entwicklungsbranch.
 Deaktivierte Optionen sind keine vollständige funktionale Einführung. Die
@@ -44,7 +44,7 @@ dargestellt. Die Meldungen beweisen keine sichere Fläche, Station oder Ventile.
 
 ## Warum der vollständige Livegang weiterhin wartet
 
-1. **Funktionsumfang:** O01 und A01 haben noch offene Integrationspfade;
+1. **Funktionsumfang:** O01 benötigt einen verbindlich freigegebenen Kalender, A01 einen nachgewiesenen zulässigen Abfragetakt;
    die vorgezogene Bewässerung besitzt weiterhin keinen produktiven Adapter.
 2. **Steuerverantwortung:** Ursache der protokollierten Bewegung während
    Trocknungssperre, native Geräteprogramme, weitere Scheduler und ausstehende
@@ -68,7 +68,7 @@ erfüllen diese Bedingungen jeweils nicht allein. Die aktuelle Versions-/Paket-
 und Testzusammenfassung steht in
 [follow-up-delivery.json](../audit-2026-09-09/follow-up-delivery.json).
 
-Der abgeschlossene lokale Gesamtlauf umfasst **917 Python-Tests, 425 Untertests
+Der vorherige lokale Gesamtlauf umfasste **917 Python-Tests, 425 Untertests
 und 88 Appack-Tests**, jeweils ohne Fehler. Der Quellstand ist
 `285d0018b9064ca7fe05c5822af9f808d4e16d03`. Das neue FULL_FAILSAFE-Quellpaket
 enthält 51 Einträge einschließlich Manifest. Alle 50 Quelldateien wurden direkt
@@ -81,3 +81,11 @@ Bei der späteren Einführung muss der kompatible Importverbraucher vor dem
 additiven Publisher bereitstehen. Alte Verbraucher lehnen das neue
 Rückhalteformat zwar ab, übernehmen dadurch aber auch keine neuen Sperren.
 Ein kontrollierter Rollout muss beide Seiten der Verarbeitung nachweisen.
+
+Die anschließende Integration ist mit **970 Python-Tests, 425 Untertests und
+89 Appack-Tests** geprüft. Zusätzliche gezielte Prüfungen folgten für die
+Vortagsabfrage nächtlicher Absagen. Die neuen lokalen Kontrollaufnahmen sind
+Vorschauen mit Testdaten. [Änderungen, Wirkung, Risiken und verbleibende
+Grenzen](../audit-2026-09-09/integration-update.md).
+Der neue Byte-/Paketnachweis steht getrennt vom historischen Stand in
+[integration-delivery.json](../audit-2026-09-09/integration-delivery.json).

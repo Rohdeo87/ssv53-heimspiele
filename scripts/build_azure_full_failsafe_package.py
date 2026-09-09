@@ -20,6 +20,8 @@ REQUIRED_FILES = (
     "occupancy/match_model.py",
     "occupancy/runtime_source.py",
     "occupancy/service.py",
+    "occupancy/training_calendar.py",
+    "occupancy/training_runtime.py",
     "requirements.txt",
     "training_cancellations.py",
     "special_occupancy.py",

@@ -109,3 +109,7 @@ Nächster prüfbarer Produktionsschritt ist ausschließlich der freizugebende
 Import-Merge mit kontrolliertem Datenlauf und anschließendem JSON-/ICS-/API-
 Vergleich. Ein Mäher-/Bewässerungspilot bleibt eine gesonderte Entscheidung
 nach Schließen der physischen und technischen Pilotbedingungen.
+
+## Weitere Integration
+
+Die [anschließende Integration](integration-update.md) verbindet die gemeinsame Trainingsquelle, sichert unabhängige Herstellerbeobachtungen und ergänzt feste Dateimomentaufnahmen. Neue UI-Kontrollaufnahmen, ein begrenzter Verschiebungsentwurf und genaue Aktivierungsgrenzen sind dort dokumentiert. Der technische Liefernachweis folgt unter [integration-delivery.json](integration-delivery.json); frühere Mess- und Paketstände bleiben getrennt erhalten.

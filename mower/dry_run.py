@@ -46,6 +46,7 @@ from mower.adaptive_planner import build_adaptive_plan
 from mower.coordination_shadow import capture_planning_inputs
 from mower.status_cache import cache_mode, read_status_cached
 from mower.weather_service import resolve_weather
+from occupancy.training_runtime import resolve_runtime_training, training_mode
 from training_cancellations import AzureTableCancellationStore
 from special_occupancy import (
     AzureTableSpecialOccupancyStore,
@@ -310,6 +311,12 @@ def run_read_only_cycle(
             environment.get("HYDRAWISE_STATUS_MAX_AGE_SECONDS", "180")
         ),
     )
+    # A later cache read or timer tick cannot extend the source's evidence.
+    # This applies to direct reads too: vendors may repeat the same status.
+    confirmation_observed_until_utc = (
+        hydrawise_safety.observed_at_utc
+        if hydrawise_safety.available and hydrawise_safety.fresh else ""
+    )
     # The safety assessment owns validation. Malformed or incomplete data must
     # remain an explicit unknown and must not crash the less strict display /
     # legacy calendar parsers after it has already been rejected for control.
@@ -330,10 +337,11 @@ def run_read_only_cycle(
     cancellation_error: str | None = None
     effective_cancellations: set[tuple[str, str]] = set()
     unresolved_cancellations: list[str] = []
+    cancellations = []
     try:
         cancellation_store = cancellation_store_factory(environment)
         cancellations = cancellation_store.list_active(
-            now_local.date(),
+            now_local.date() - timedelta(days=int(training_mode(environment) != "OFF")),
             now_local.date() + timedelta(days=planning_horizon_days),
         )
         effective_cancellations, unresolved_cancellations = (
@@ -388,6 +396,21 @@ def run_read_only_cycle(
                 )
             ]
 
+    training = resolve_runtime_training(
+        config, consumer="mower", environment=environment, legacy_config=config,
+        range_start=special_horizon_start, range_end=special_horizon_end, now_utc=now_utc,
+        cancellations=cancellations,
+        relocated_keys=relocated_training_occurrence_keys(special_events),
+        source_fresh=not runtime_inputs.fallback_used,
+    )
+    if training.blocking_required:
+        # Continue into telemetry and the normal parking path. Raising here
+        # would leave a currently moving mower without a parking decision.
+        special_blocks.append(Block(
+            start=special_horizon_start, end=special_horizon_end, source="training",
+            title="Trainingstermine unklar – Platzfreigabe prüfen",
+            details={"fail_closed": True, "reason": "SHARED_TRAINING_UNAVAILABLE"},
+        ))
     match_blocks = read_match_blocks(matches_path, tz)
     match_blocks.extend(special_blocks)
     plans, merged_blocks = create_plan(
@@ -397,6 +420,7 @@ def run_read_only_cycle(
         now_local.date(),
         planning_horizon_days,
         effective_cancellations,
+        training_batch=training.batch,
     )
     adaptive_plan = build_adaptive_plan(
         now_utc=now_utc,
@@ -464,8 +488,7 @@ def run_read_only_cycle(
                 mower_state=snapshot.state,
                 error_code=snapshot.error_code,
                 hydrawise_success_utc=(
-                    (min(now_utc, _parse_utc(confirmation_observed_until_utc))
-                     if confirmation_observed_until_utc else now_utc)
+                    _parse_utc(confirmation_observed_until_utc)
                     if hydrawise_safety.available and hydrawise_safety.fresh else None
                 ),
                 hydrawise_observed_utc=_parse_utc(
@@ -698,6 +721,7 @@ def run_read_only_cycle(
                 else None
             ),
             "automation_state": automation_state_details,
+            "training_calendar": training.metadata(),
             "training_cancellations": {
                 "available": cancellation_error is None,
                 "effective_count": len(effective_cancellations),

@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
-from datetime import date, datetime, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -11,6 +11,7 @@ from zoneinfo import ZoneInfo
 from mower.hydrawise import HydrawiseError, fetch_status, parse_relay_id_allowlist
 from mower.planner import create_plan, load_json, plan_to_dict, read_match_blocks
 from mower.status_cache import cache_mode, read_status_cached
+from occupancy.training_runtime import resolve_runtime_training
 
 
 WEEKDAY_DE = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"]
@@ -178,12 +179,20 @@ def main() -> int:
             f"Spielkalender {args.matches} fehlt; Heimspiele sind nicht enthalten."
         )
 
+    horizon_start = datetime.combine(start_day, time.min, tzinfo=tz)
+    training = resolve_runtime_training(
+        config, consumer="mower", environment=os.environ, legacy_config=config,
+        range_start=horizon_start, range_end=horizon_start + timedelta(days=days),
+        now_utc=datetime.now(timezone.utc),
+    )
+    training.require_available()
     plans, merged = create_plan(
         config,
         match_blocks,
         hydrawise_status,
         start_day,
         days,
+        training_batch=training.batch,
     )
     end_day = date.fromordinal(start_day.toordinal() + days - 1)
     metadata = {
@@ -197,6 +206,8 @@ def main() -> int:
         ),
         "hydrawise_status": hydrawise_label,
         "matches_loaded": len(match_blocks),
+        "training_calendar": training.metadata(),
+        "control_authority": False,
         **({"hydrawise_cache": hydrawise_cache_metadata} if hydrawise_cache_metadata is not None else {}),
     }
     result = plan_to_dict(plans, merged, warnings, metadata)

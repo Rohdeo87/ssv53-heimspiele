@@ -411,6 +411,8 @@ def build_runtime_bundle(
     published_at: datetime,
     source_commit: str,
     max_source_age_minutes: int = 720,
+    shared_training_calendar_path: Path | None = None,
+    occupancy_config_path: Path | None = None,
 ) -> dict[str, Any]:
     if published_at.tzinfo is None or published_at.utcoffset() is None:
         raise RuntimeBundleError("published_at muss eine Zeitzone enthalten.")
@@ -450,20 +452,42 @@ def build_runtime_bundle(
     if len(rasen_matches) != expected_rasen:
         raise RuntimeBundleError("Bei der Neuberechnung gingen Rasenspiele verloren.")
 
+    structured_matches = _structured_matches_payload(all_matches, generated_at=source_generated_at)
+    training_envelope = None
+    if (shared_training_calendar_path is None) != (occupancy_config_path is None):
+        raise RuntimeBundleError("Gemeinsamer Trainingskalender und bisherige App-Konfiguration müssen zusammen angegeben werden.")
+    if shared_training_calendar_path is not None:
+        from occupancy.training_calendar import load_calendar
+        from occupancy.training_runtime import ENVELOPE_KEY, make_training_envelope
+
+        try:
+            training_envelope = make_training_envelope(
+                load_calendar(shared_training_calendar_path),
+                occupancy_config=_load_object(occupancy_config_path, "occupancy/config.json"),
+                mower_config=mower_config, now_utc=published_at,
+            )
+        except ValueError as exc:
+            raise RuntimeBundleError(str(exc)) from exc
+        mower_config = {**mower_config, ENVELOPE_KEY: training_envelope}
+        structured_matches[ENVELOPE_KEY] = training_envelope
+    elif "shared_training_calendar" in mower_config:
+        # Never publish only half of an existing shared-source envelope.
+        raise RuntimeBundleError("Ein vorhandener gemeinsamer Trainingskalender muss für beide Verbraucher neu gebunden werden.")
+
     version_dir = output_dir / "versions" / version
     version_config = version_dir / "mower" / "config.json"
     version_matches = version_dir / "public" / "rasen.ics"
     version_occupancy_matches = version_dir / "public" / "matches.json"
     version_config.parent.mkdir(parents=True, exist_ok=True)
     version_matches.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(mower_config_path, version_config)
+    if training_envelope is None:
+        shutil.copyfile(mower_config_path, version_config)
+    else:
+        version_config.write_text(json.dumps(mower_config, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     write_ics(version_matches, rasen_matches, "SSV53 Rasen – Spiele")
     version_occupancy_matches.write_text(
         json.dumps(
-            _structured_matches_payload(
-                all_matches,
-                generated_at=source_generated_at,
-            ),
+            structured_matches,
             ensure_ascii=False,
             indent=2,
         )
@@ -517,6 +541,7 @@ def build_runtime_bundle(
         "matches_sha256": manifest["matches_sha256"],
         "occupancy_matches_sha256": manifest["occupancy_matches_sha256"],
         "safety": safety_summary,
+        "shared_training_envelope_sha256": training_envelope["sha256"] if training_envelope else None,
     }
     (output_dir / "validation-summary.json").write_text(
         json.dumps(summary, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
@@ -537,6 +562,8 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--published-at", required=True)
     parser.add_argument("--source-commit", required=True)
     parser.add_argument("--max-source-age-minutes", type=int, default=720)
+    parser.add_argument("--shared-training-calendar", type=Path)
+    parser.add_argument("--occupancy-config", type=Path)
     return parser
 
 
@@ -553,6 +580,8 @@ def main() -> int:
         published_at=_parse_utc(args.published_at, "published_at"),
         source_commit=args.source_commit,
         max_source_age_minutes=args.max_source_age_minutes,
+        shared_training_calendar_path=args.shared_training_calendar,
+        occupancy_config_path=args.occupancy_config,
     )
     print(json.dumps(summary, ensure_ascii=False, indent=2, sort_keys=True))
     return 0

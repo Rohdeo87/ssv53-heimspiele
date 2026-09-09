@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from hashlib import sha256
 import json
 import os
+import uuid
 from pathlib import Path
 from typing import Any, Callable, Mapping
 
@@ -110,13 +111,23 @@ def _validate_feed(data: bytes, *, expected_generated_at: datetime) -> None:
 
 def _atomic_write(path: Path, data: bytes) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary = path.with_name(path.name + f".{uuid.uuid4().hex}.tmp")
     temporary.write_bytes(data)
     os.replace(temporary, path)
 
 
 def _cache_paths(cache_dir: Path) -> tuple[Path, Path]:
     return cache_dir / "matches.json", cache_dir / "metadata.json"
+
+
+def _immutable_snapshot(cache_dir: Path, data: bytes) -> Path:
+    snapshot_id = _hash(data)
+    path = cache_dir / "snapshots" / snapshot_id / "matches.json"
+    if not path.is_file():
+        _atomic_write(path, data)
+    if path.read_bytes() != data:
+        raise RuntimeError("Inhaltsadressierter Belegungssnapshot ist inkonsistent.")
+    return path
 
 
 def _load_cache(
@@ -148,8 +159,9 @@ def _load_cache(
         if _hash(data) != metadata.get("occupancy_matches_sha256"):
             return None
         _validate_feed(data, expected_generated_at=source_generated_at)
+        snapshot_path = _immutable_snapshot(cache_dir, data)
         return OccupancyMatchSource(
-            matches_path=str(matches_path),
+            matches_path=str(snapshot_path),
             source_kind="azure_blob_cache",
             manifest_etag=metadata.get("manifest_etag"),
             published_at_utc=published_at.isoformat(),
@@ -227,8 +239,9 @@ def _download_current(
             "utf-8"
         ),
     )
+    snapshot_path = _immutable_snapshot(cache_dir, data)
     return OccupancyMatchSource(
-        matches_path=str(matches_path),
+        matches_path=str(snapshot_path),
         source_kind="azure_blob",
         manifest_etag=etag or None,
         published_at_utc=published_at.isoformat(),

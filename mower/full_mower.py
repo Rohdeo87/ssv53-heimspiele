@@ -184,7 +184,7 @@ def _record_cycle_state(
             if mower.get("error_code") is not None
             else None
         ),
-        hydrawise_success_utc=(now_utc if hydrawise_fresh else None),
+        hydrawise_success_utc=(observed if hydrawise_fresh else None),
         hydrawise_observed_utc=observed,
         hydrawise_clear=(
             hydrawise_fresh

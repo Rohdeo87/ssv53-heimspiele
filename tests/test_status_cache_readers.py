@@ -132,22 +132,29 @@ def test_invalid_cache_mode_does_not_fall_back_to_unbudgeted_schedule_fetch(tmp_
     replace(CACHED, new_observation=True, fetched_at_utc=(NOW - timedelta(seconds=181)).isoformat()),
     replace(CACHED, new_observation=True, fetched_at_utc=(NOW + timedelta(seconds=31)).isoformat()),
 ])
-def test_prepared_recovery_rejects_reuse_error_or_unproven_receipt(cached):
-    with pytest.raises(IrrigationRecoveryError) as error:
-        _read_status_for_recovery(
-            "test-key", "123", environment=ENV, hydrawise_config=CONFIG, now_utc=NOW,
-            fetcher=lambda *_a: pytest.fail("unbudgeted retry"), cached_reader=lambda *_a, **_k: cached,
-        )
-    assert error.value.code == "RESET_FRESH_HYDRAWISE_REQUIRED"
+def test_prepared_recovery_uses_source_identity_not_receipt_or_local_fetch_flag(cached):
+    if cached.status is None:
+        with pytest.raises(IrrigationRecoveryError) as error:
+            _read_status_for_recovery(
+                "test-key", "123", environment=ENV, hydrawise_config=CONFIG, now_utc=NOW,
+                fetcher=lambda *_a: pytest.fail("unbudgeted retry"), cached_reader=lambda *_a, **_k: cached,
+            )
+        assert error.value.code == "RESET_FRESH_HYDRAWISE_REQUIRED"
+        return
+    status, observed, _metadata = _read_status_for_recovery(
+        "test-key", "123", environment=ENV, hydrawise_config=CONFIG, now_utc=NOW,
+        fetcher=lambda *_a: pytest.fail("unbudgeted retry"), cached_reader=lambda *_a, **_k: cached,
+    )
+    assert status == STATUS and observed == NOW
 
 
-def test_prepared_recovery_preserves_actual_new_fetch_receipt_time():
+def test_prepared_recovery_preserves_actual_source_time():
     fresh = replace(CACHED, new_observation=True, fetched_at_utc=(NOW + timedelta(seconds=5)).isoformat())
     status, observed, metadata = _read_status_for_recovery(
         "test-key", "123", environment=ENV, hydrawise_config=CONFIG, now_utc=NOW,
         fetcher=lambda *_a: pytest.fail("unexpected direct fetch"), cached_reader=lambda *_a, **_k: fresh,
     )
-    assert status == STATUS and observed == NOW + timedelta(seconds=5)
+    assert status == STATUS and observed == NOW
     assert metadata["source_observed_at_utc"] == NOW.isoformat()
 
 

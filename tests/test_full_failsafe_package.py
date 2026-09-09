@@ -112,6 +112,8 @@ class FullFailsafePackageTests(unittest.TestCase):
                 manifest["irrigation_schedule_blocks_mower_start_until_stable"]
             )
             self.assertIn("occupancy_notifications.py", names)
+            self.assertIn("occupancy/training_calendar.py", names)
+            self.assertIn("occupancy/training_runtime.py", names)
             self.assertIn("mower/full_failsafe.py", names)
             self.assertIn("mower/irrigation_recovery.py", names)
             self.assertIn("mower/hydrawise_actions.py", names)

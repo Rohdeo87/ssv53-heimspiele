@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import hashlib
 import html
+import json
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, time, timedelta, timezone
 from email.message import EmailMessage
 from email.utils import formataddr
+from pathlib import Path
 from typing import Any, Callable, Mapping
 from zoneinfo import ZoneInfo
 
@@ -20,6 +22,7 @@ from azure.identity import ManagedIdentityCredential
 
 from occupancy.service import build_occupancy_payload
 from occupancy.runtime_source import resolve_occupancy_match_source
+from occupancy.training_runtime import resolve_training_file, training_mode
 from order_mail import (
     APP_BORDER,
     APP_GOLD,
@@ -358,7 +361,8 @@ def find_collisions(events: list[Mapping[str, Any]]) -> list[tuple[Mapping[str, 
     bookings = [
         item for item in events
         if str(item.get("source") or "").lower() in {"training", "special"}
-        and item.get("cancelled") is not True
+        and item.get("blocking") is not False
+        and (item.get("cancelled") is not True or item.get("blocking") is True)
     ]
     result = []
     for match in matches:
@@ -367,7 +371,7 @@ def find_collisions(events: list[Mapping[str, Any]]) -> list[tuple[Mapping[str, 
         for booking in bookings:
             if str(match.get("resourceId") or "") != str(booking.get("resourceId") or ""):
                 continue
-            if match_end > _event_dt(booking, "start") and match_start < _event_dt(booking, "end"):
+            if match_end > _event_dt(booking, "occupancyStart", "start") and match_start < _event_dt(booking, "occupancyEnd", "end"):
                 result.append((match, booking))
     return result
 
@@ -376,24 +380,37 @@ def _current_payload(now_utc: datetime, values: Mapping[str, str]) -> dict[str, 
     local = now_utc.astimezone(ZoneInfo("Europe/Berlin"))
     end_day = local.date() + timedelta(days=63)
     season = "Winter" if local.month in {11, 12, 1, 2} else "Sommer"
+    source = resolve_occupancy_match_source(values, now_utc=now_utc)
+    config_path = str(values.get("OCCUPANCY_CONFIG_PATH") or "occupancy/config.json")
+    cancellations = AzureTableCancellationStore.from_environment(values).list_active(
+        local.date() - timedelta(days=int(training_mode(values) != "OFF")), end_day,
+    )
     kwargs = {
         "config_path": str(values.get("OCCUPANCY_CONFIG_PATH") or "occupancy/config.json"),
-        "matches_path": resolve_occupancy_match_source(
-            values,
-            now_utc=now_utc,
-        ).matches_path,
+        "matches_path": source.matches_path,
         "start": local.date().isoformat(),
         "end": end_day.isoformat(),
         "season": season,
         "generated_at": now_utc,
     }
-    payload = build_occupancy_payload(**kwargs)
-    cancellations = AzureTableCancellationStore.from_environment(values).list_active(local.date(), end_day)
-    if cancellations:
-        payload = build_occupancy_payload(
-            **kwargs,
-            cancelled_occurrences={item.occurrence_key for item in cancellations},
+    if training_mode(values) == "OFF":
+        training_batch = None
+    else:
+        config = json.loads(Path(config_path).read_text(encoding="utf-8"))
+        local_tz = ZoneInfo("Europe/Berlin")
+        first = datetime.combine(local.date(), time.min, tzinfo=local_tz)
+        last = datetime.combine(end_day, time.min, tzinfo=local_tz)
+        training = resolve_training_file(
+            source.matches_path, consumer="occupancy", environment=values,
+            legacy_config=config, range_start=first, range_end=last, now_utc=now_utc,
+            cancellations=cancellations,
+            source_fresh=source.fresh and not source.fallback_used,
         )
+        training.require_available()
+        training_batch = training.batch
+    payload = build_occupancy_payload(**kwargs,
+                                      training_batch=training_batch,
+                                      cancelled_occurrences={item.occurrence_key for item in cancellations})
     specials = AzureTableSpecialOccupancyStore.from_environment(values).list_active(
         datetime.fromisoformat(payload["range"]["start"]),
         datetime.fromisoformat(payload["range"]["end"]),

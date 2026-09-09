@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from hashlib import sha256
 import json
 import os
+import uuid
 from pathlib import Path
 from typing import Any, Callable, Mapping
 
@@ -69,13 +70,26 @@ def _validate_manifest(manifest: Mapping[str, Any]) -> None:
 
 def _atomic_write(path: Path, data: bytes) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary = path.with_name(path.name + f".{uuid.uuid4().hex}.tmp")
     temporary.write_bytes(data)
     os.replace(temporary, path)
 
 
 def _cache_paths(cache_dir: Path) -> tuple[Path, Path, Path]:
     return cache_dir / "mower-config.json", cache_dir / "rasen.ics", cache_dir / "metadata.json"
+
+
+def _immutable_snapshot(cache_dir: Path, config_bytes: bytes, matches_bytes: bytes) -> tuple[Path, Path]:
+    snapshot_id = _hash(config_bytes + b"\0" + matches_bytes)
+    root = cache_dir / "snapshots" / snapshot_id
+    config_path, matches_path = root / "mower-config.json", root / "rasen.ics"
+    if not config_path.is_file():
+        _atomic_write(config_path, config_bytes)
+    if not matches_path.is_file():
+        _atomic_write(matches_path, matches_bytes)
+    if config_path.read_bytes() != config_bytes or matches_path.read_bytes() != matches_bytes:
+        raise RuntimeError("Inhaltsadressierter Konfigurations-Snapshot ist inkonsistent.")
+    return config_path, matches_path
 
 
 def _load_valid_cache(
@@ -107,9 +121,10 @@ def _load_valid_cache(
             return None
         if b"BEGIN:VCALENDAR" not in matches_bytes:
             return None
+        snapshot_config, snapshot_matches = _immutable_snapshot(cache_dir, config_bytes, matches_bytes)
         return RuntimeInputPaths(
-            config_path=str(config_path),
-            matches_path=str(matches_path),
+            config_path=str(snapshot_config),
+            matches_path=str(snapshot_matches),
             source_kind="azure_blob_cache",
             manifest_etag=metadata.get("manifest_etag"),
             manifest_path=metadata.get("manifest_path"),
@@ -180,9 +195,10 @@ def _download_candidate(
         "version": str(manifest["version"]),
     }
     _atomic_write(metadata_path, (json.dumps(metadata, ensure_ascii=False, sort_keys=True) + "\n").encode("utf-8"))
+    snapshot_config, snapshot_matches = _immutable_snapshot(cache_dir, config_bytes, matches_bytes)
     return RuntimeInputPaths(
-        config_path=str(config_path),
-        matches_path=str(matches_path),
+        config_path=str(snapshot_config),
+        matches_path=str(snapshot_matches),
         source_kind="azure_blob",
         manifest_etag=etag or None,
         manifest_path=manifest_path,

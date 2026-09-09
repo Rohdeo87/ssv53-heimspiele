@@ -4,7 +4,9 @@ import json
 from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterable
+from collections.abc import Mapping
 from zoneinfo import ZoneInfo
+from occupancy.training_calendar import TrainingBatch, validate_batch_for_range
 
 from occupancy.match_model import (
     normalize_legacy_ics_description,
@@ -475,21 +477,27 @@ def build_occupancy_payload(
     season: str | None = None,
     generated_at: datetime | None = None,
     cancelled_occurrences: set[tuple[str, str]] | None = None,
+    training_batch: TrainingBatch | None = None,
 ) -> dict[str, Any]:
     config = load_config(config_path)
     tz = ZoneInfo(str(config.get("timezone", "Europe/Berlin")))
     range_start, range_end = parse_range(start, end, tz)
     selected_season = resolve_season(config, season)
-
-    events = [
-        *_training_events(
+    if training_batch is not None:
+        validate_batch_for_range(training_batch, range_start, range_end)
+        training_events = [event for event in training_batch.app_events()
+                           if _event_overlaps(event, range_start, range_end)]
+    else:
+        training_events = _training_events(
             config,
             season=selected_season,
             range_start=range_start,
             range_end=range_end,
             tz=tz,
             cancelled_occurrences=cancelled_occurrences,
-        ),
+        )
+    events = [
+        *training_events,
         *_match_events(
             config,
             matches_path=matches_path,
@@ -525,18 +533,18 @@ def build_training_occurrences(
     start: str,
     end: str,
     season: str | None = None,
+    training_batch: TrainingBatch | None = None,
 ) -> list[dict[str, Any]]:
     """Erzeugt gültige Trainingsvorkommen ohne dynamischen Absagefilter."""
     config = load_config(config_path)
     tz = ZoneInfo(str(config.get("timezone", "Europe/Berlin")))
     range_start, range_end = parse_range(start, end, tz)
     selected_season = resolve_season(config, season)
-    events = _training_events(
-        config,
-        season=selected_season,
-        range_start=range_start,
-        range_end=range_end,
-        tz=tz,
-    )
+    if training_batch is not None:
+        validate_batch_for_range(training_batch, range_start, range_end)
+        events = [event for event in training_batch.app_events()
+                  if _event_overlaps(event, range_start, range_end)]
+    else:
+        events = _training_events(config, season=selected_season, range_start=range_start, range_end=range_end, tz=tz)
     events.sort(key=lambda item: (item["start"], item["resourceId"], item["title"]))
     return events

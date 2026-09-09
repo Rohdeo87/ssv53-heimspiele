@@ -67,6 +67,33 @@ function wallClock(date) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
+test("Verbindlicher Trainingskalender zeigt beide Plätze ohne Saisonwahl", () => {
+  const group = {hidden: false, style: {}};
+  const state = {activeSeason: "Winter", activeCalendarId: "kunstrasen", resources: []};
+  const persisted = [];
+  const ui = new Function("state", "document", "storageSet", [
+    "const SUMMER_RESOURCE_IDS=['rasen','kunstrasen']; const WINTER_RESOURCE_IDS=['kunstrasen'];",
+    "function storageKey(k){return k;} function ensureActiveCalendarSelection(){} function updateResources(){} function renderPlaceFilters(){}",
+    extractFunction("getAllowedCalendarIds"), extractFunction("applySharedTrainingCalendar"), extractFunction("setSeason"),
+    "return {applySharedTrainingCalendar, getAllowedCalendarIds, setSeason};"
+  ].join("\n"))(state, {querySelector: () => group}, (...args) => persisted.push(args));
+  ui.applySharedTrainingCalendar({training_calendar: {active: true}});
+  assert.deepEqual(ui.getAllowedCalendarIds(), ["rasen", "kunstrasen"]);
+  assert.equal(state.activeCalendarId, "all");
+  assert.equal(group.hidden, true);
+  assert.equal(group.style.display, "none");
+  ui.setSeason("Sommer");
+  assert.equal(state.activeSeason, "Winter");
+  state.activeCalendarId = "rasen";
+  ui.applySharedTrainingCalendar({training_calendar: {active: true}});
+  assert.equal(state.activeCalendarId, "rasen");
+  assert.equal(persisted.length, 1);
+  ui.applySharedTrainingCalendar({training_calendar: {active: false}});
+  assert.equal(group.hidden, false);
+  assert.equal(group.style.display, "");
+  assert.deepEqual(ui.getAllowedCalendarIds(), ["kunstrasen"]);
+});
+
 test("Bedienelemente wechseln nur bei echtem Überlauf in den Großtextmodus", () => {
   assert.match(html, /html\.ssv-large-text #booking-controls/);
   assert.match(html, /html\.ssv-large-text #calendar-navigation/);

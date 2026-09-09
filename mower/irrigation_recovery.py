@@ -81,7 +81,7 @@ def _reset_state(
         state,
         revision=state.revision + 1,
         last_decision_code="IRRIGATION_FAILED_RESET",
-        last_hydrawise_success_utc=now_utc.isoformat(),
+        last_hydrawise_success_utc=hydrawise_observed_utc,
         last_hydrawise_observed_utc=hydrawise_observed_utc,
         hydrawise_clear_since_utc=confirmed_clear_since_utc,
         hydrawise_clear_origin=confirmed_clear_origin,
@@ -127,7 +127,7 @@ def _read_status_for_recovery(
     )
     observed = None
     try:
-        observed = datetime.fromisoformat(str(cached.fetched_at_utc or "").replace("Z", "+00:00"))
+        observed = datetime.fromisoformat(str(cached.source_observed_at_utc or "").replace("Z", "+00:00"))
         if observed.tzinfo is None or observed.utcoffset() is None:
             observed = None
         elif not -30 <= (now_utc - observed).total_seconds() <= int(
@@ -136,10 +136,10 @@ def _read_status_for_recovery(
             observed = None
     except (TypeError, ValueError):
         pass
-    if cached.status is None or not cached.new_observation or observed is None:
+    if cached.status is None or observed is None:
         raise IrrigationRecoveryError(
             "RESET_FRESH_HYDRAWISE_REQUIRED",
-            "Für den Reset fehlt eine neue bestätigte Hydrawise-Abfrage. Bitte nach dem nächsten Abruf erneut prüfen.",
+            "Für den Reset fehlt eine gültige Hydrawise-Quellbeobachtung. Bitte nach dem nächsten Abruf erneut prüfen.",
         )
     return cached.status, observed.astimezone(timezone.utc), cached.metadata()
 
@@ -280,6 +280,20 @@ def reset_failed_irrigation(
             "Hydrawise bestätigt nicht alle sieben freigegebenen Zonen als frei: "
             f"{safety.reason}",
         )
+
+    try:
+        source_observed = _parse_utc(safety.observed_at_utc, "Hydrawise-Quellzeit")
+    except ValueError as exc:
+        raise IrrigationRecoveryError(
+            "RESET_FRESH_HYDRAWISE_REQUIRED",
+            "Hydrawise liefert keine gültige Quellbeobachtung.",
+        ) from exc
+    if source_observed > now + timedelta(seconds=30):
+        raise IrrigationRecoveryError(
+            "RESET_FRESH_HYDRAWISE_REQUIRED",
+            "Die Hydrawise-Quellbeobachtung liegt in der Zukunft.",
+        )
+    observation_now = source_observed
 
     previous_reason = state.irrigation_failed_reason
     # Ein bereits minutenweise und ohne Lücke bestätigter Nachlauf muss durch

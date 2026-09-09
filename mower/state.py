@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, replace
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Mapping
 
 
@@ -70,14 +70,18 @@ class AutomationState:
     irrigation_completed_relay_ids_json: str | None = None
     irrigation_current_relay_id: int | None = None
     irrigation_zone_start_reserved_utc: str | None = None
+    irrigation_zone_stop_requested_utc: str | None = None
     irrigation_zone_started_utc: str | None = None
     irrigation_zone_clear_since_utc: str | None = None
     irrigation_completed_utc: str | None = None
     irrigation_failed_reason: str | None = None
     irrigation_change_candidate_hash: str | None = None
     irrigation_change_candidate_since_utc: str | None = None
+    irrigation_change_candidate_observed_utc: str | None = None
     irrigation_suspension_revalidation_last_seen_utc: str | None = None
+    irrigation_suspension_revalidation_observed_utc: str | None = None
     irrigation_suspension_revalidation_observations: int = 0
+    irrigation_zone_clear_observed_utc: str | None = None
     irrigation_cancelled_without_run_utc: str | None = None
     last_command_fingerprint: str | None = None
     last_command_utc: str | None = None
@@ -135,13 +139,17 @@ class AutomationState:
             "mower_start_pending_deadline_utc",
             "continuous_mowing_window_end_utc",
             "irrigation_zone_start_reserved_utc",
+            "irrigation_zone_stop_requested_utc",
             "irrigation_suspension_until_utc",
             "irrigation_suspension_completed_utc",
             "irrigation_zone_started_utc",
             "irrigation_zone_clear_since_utc",
             "irrigation_completed_utc",
             "irrigation_change_candidate_since_utc",
+            "irrigation_change_candidate_observed_utc",
             "irrigation_suspension_revalidation_last_seen_utc",
+            "irrigation_suspension_revalidation_observed_utc",
+            "irrigation_zone_clear_observed_utc",
             "irrigation_cancelled_without_run_utc",
             "last_command_utc",
             "operator_requested_utc",
@@ -294,6 +302,12 @@ class AutomationState:
                 ),
                 "irrigation_zone_start_reserved_utc",
             ),
+            irrigation_zone_stop_requested_utc=_require_utc_iso(
+                _normalize_optional_text(
+                    values.get("irrigation_zone_stop_requested_utc")
+                ),
+                "irrigation_zone_stop_requested_utc",
+            ),
             irrigation_zone_started_utc=_require_utc_iso(
                 _normalize_optional_text(
                     values.get("irrigation_zone_started_utc")
@@ -322,14 +336,30 @@ class AutomationState:
                 ),
                 "irrigation_change_candidate_since_utc",
             ),
+            irrigation_change_candidate_observed_utc=_require_utc_iso(
+                _normalize_optional_text(
+                    values.get("irrigation_change_candidate_observed_utc")
+                ),
+                "irrigation_change_candidate_observed_utc",
+            ),
             irrigation_suspension_revalidation_last_seen_utc=_require_utc_iso(
                 _normalize_optional_text(
                     values.get("irrigation_suspension_revalidation_last_seen_utc")
                 ),
                 "irrigation_suspension_revalidation_last_seen_utc",
             ),
+            irrigation_suspension_revalidation_observed_utc=_require_utc_iso(
+                _normalize_optional_text(
+                    values.get("irrigation_suspension_revalidation_observed_utc")
+                ),
+                "irrigation_suspension_revalidation_observed_utc",
+            ),
             irrigation_suspension_revalidation_observations=int(
                 values.get("irrigation_suspension_revalidation_observations", 0) or 0
+            ),
+            irrigation_zone_clear_observed_utc=_require_utc_iso(
+                _normalize_optional_text(values.get("irrigation_zone_clear_observed_utc")),
+                "irrigation_zone_clear_observed_utc",
             ),
             irrigation_cancelled_without_run_utc=_require_utc_iso(
                 _normalize_optional_text(
@@ -429,7 +459,30 @@ class AutomationState:
                 "hydrawise_continuity_max_gap_seconds muss zwischen 60 und 900 liegen."
             )
 
-        hydrawise_fresh = hydrawise is not None or hydrawise_active_count is not None
+        previous_observed = (
+            datetime.fromisoformat(
+                self.last_hydrawise_observed_utc.replace("Z", "+00:00")
+            ).astimezone(timezone.utc)
+            if self.last_hydrawise_observed_utc
+            else None
+        )
+        # A repeated, backward, or future source timestamp is data that may
+        # keep an existing hold visible, but it cannot extend a positive
+        # Hydrawise proof.  The physical drying timestamp remains untouched.
+        observation_identity = hydrawise_observed or hydrawise
+        observation_progressed = (
+            hydrawise is not None
+            and observation_identity is not None
+            and observation_identity <= started + timedelta(seconds=30)
+            and (previous_observed is None or observation_identity > previous_observed)
+        )
+        hydrawise_fresh = (
+            (hydrawise is not None or hydrawise_active_count is not None)
+            and (
+                observation_progressed
+                or (hydrawise is None and hydrawise_active_count is not None)
+            )
+        )
         previous_success = (
             datetime.fromisoformat(
                 self.last_hydrawise_success_utc.replace("Z", "+00:00")
@@ -475,7 +528,23 @@ class AutomationState:
                 )
             ))
         )
-        if hydrawise_clear is True:
+        repeated_current_clear = (
+            hydrawise_clear is True
+            and hydrawise is not None
+            and observation_identity is not None
+            and observation_identity == previous_observed
+            and self.hydrawise_clear_since_utc is not None
+            and self.last_hydrawise_active_count == 0
+            and gap_seconds is not None
+            and 0 <= gap_seconds <= hydrawise_continuity_max_gap_seconds
+        )
+        if repeated_current_clear:
+            # A cached still-current clear does not advance the proof endpoint,
+            # but also does not destroy a valid chain between permitted polls.
+            # Readers cap confirmation duration at the original source time.
+            clear_since = self.hydrawise_clear_since_utc
+            clear_origin = self.hydrawise_clear_origin
+        elif hydrawise_clear is True and hydrawise_fresh:
             # Die Bestätigung beginnt mit dem tatsächlichen Abrufzyklus und
             # niemals rückdatiert mit dem Zeitstempel des API-Payloads. Eine
             # Lücke in den Kontrollzyklen unterbricht die Kette ebenfalls.
@@ -608,12 +677,12 @@ class AutomationState:
             last_error_code=error_code,
             last_hydrawise_success_utc=(
                 hydrawise.isoformat()
-                if hydrawise is not None
+                if observation_progressed
                 else self.last_hydrawise_success_utc
             ),
             last_hydrawise_observed_utc=(
-                hydrawise_observed.isoformat()
-                if hydrawise_observed is not None
+                observation_identity.isoformat()
+                if observation_progressed
                 else self.last_hydrawise_observed_utc
             ),
             hydrawise_clear_since_utc=clear_since,
