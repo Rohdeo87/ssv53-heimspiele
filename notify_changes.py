@@ -18,7 +18,7 @@ API_VERSION = "2022-11-28"
 MANAGED_MARKER = "<!-- ssv53-managed-alert -->"
 FINGERPRINT_PREFIX = "<!-- ssv53-alert:"
 TYPE_PREFIX = "<!-- ssv53-alert-type:"
-RECOVERABLE_TYPES = {"failure", "blocked"}
+RECOVERABLE_TYPES = {"failure", "blocked", "retained"}
 
 
 @dataclass(frozen=True)
@@ -198,6 +198,19 @@ def build_alert(
             "Die geprüften Daten konnten nicht sicher in GitHub gespeichert werden. "
             "Der zuletzt veröffentlichte Stand ist weiterhin maßgeblich."
         )
+    elif report and report.get("status") == "additive_pending":
+        alert_type = "retained"
+        stage = "Rücknahmen noch nicht bestätigt"
+        fp = fingerprint_for({"type": "retained", "holds": [
+            {"id": item.get("id"), "requiresManual": item.get("requiresManual"),
+             "fingerprint": item.get("fingerprint")}
+            for item in report.get("retained", [])]})
+        title = "🟡 SSV53: Neue Sperren übernommen, bisherige Sperren bleiben bis zur Klärung"
+        explanation = (
+            "Die neuen validierten Belegungen wurden übernommen. Ungeklärte Rücknahmen "
+            "geben den bisherigen Zeitraum weiterhin nicht frei. Der Änderungsbericht "
+            "nennt die noch fehlende Bestätigung beziehungsweise erforderliche Prüfung."
+        )
     else:
         counts = (report or {}).get("counts", {})
         added = int(counts.get("added", 0) or 0)
@@ -244,6 +257,13 @@ def build_alert(
         if reasons:
             lines.extend(["## Sicherheitsprüfung", ""])
             lines.extend(f"- {reason}" for reason in reasons)
+            lines.append("")
+        if report.get("retained"):
+            lines.extend(["## Weiter gesperrte Belegungen", ""])
+            for item in report["retained"]:
+                condition = ("ausdrückliche Prüfung erforderlich" if item.get("requiresManual")
+                             else "zweiter vollständiger Abruf nach dem Sicherheitsabstand erforderlich")
+                lines.append(f"- `{item.get('sourceId')}`: {condition}.")
             lines.append("")
         append_change_sections(lines, report)
 
@@ -360,6 +380,10 @@ def process(
             body = str(issue.get("body") or "")
             issue_type = marker_value(body, TYPE_PREFIX)
             if MANAGED_MARKER in body and issue_type in RECOVERABLE_TYPES:
+                if issue_type == "retained" and alert is not None and alert.alert_type == "retained":
+                    # A technically successful additive publication has not yet
+                    # resolved its pending removals. Keep their warning open.
+                    continue
                 if not dry_run:
                     client.comment(
                         int(issue["number"]),

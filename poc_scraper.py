@@ -144,6 +144,8 @@ class Match:
     home_team_id: str = ""
     away_team_id: str = ""
     postponed_to: str = ""
+    # Populated only by the publication guard, never by the source parser.
+    publication_retention: dict[str, Any] = field(default_factory=dict)
 
 
 def validate_fussball_url(url: str) -> str:
@@ -1935,7 +1937,20 @@ def deduplicate(matches: list[Match]) -> list[Match]:
 
 def iso_to_ics(value: str) -> str:
     dt = datetime.fromisoformat(value)
-    return dt.strftime("%Y%m%dT%H%M%S")
+    if dt.tzinfo is None or dt.utcoffset() is None:
+        raise ValueError("Eine ICS-Spielzeit benötigt eine Zeitzone.")
+    return dt.astimezone(ZoneInfo("Europe/Berlin")).strftime("%Y%m%dT%H%M%S")
+
+
+def ics_clock_line(name: str, value: str) -> str:
+    dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    if dt.tzinfo is None or dt.utcoffset() is None:
+        raise ValueError("Eine ICS-Spielzeit benötigt eine Zeitzone.")
+    local = dt.astimezone(ZoneInfo("Europe/Berlin"))
+    # A repeated local hour has two real instants. UTC also preserves fold=1.
+    if local.replace(fold=0).utcoffset() != local.replace(fold=1).utcoffset():
+        return f"{name}:" + dt.astimezone(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    return f"{name};TZID=Europe/Berlin:{iso_to_ics(value)}"
 
 
 def ics_escape(value: str) -> str:
@@ -1956,15 +1971,20 @@ def write_ics(path: Path, matches: list[Match], calendar_name: str) -> None:
     for match in matches:
         if not match.event_start or not match.event_end:
             continue
+        title = match.team_name + ': ' + match.home_team + ' – ' + match.away_team
+        description = match.competition + ' | ' + match.detail_url
+        if match.publication_retention:
+            title = "Sperre bis Klärung: " + title
+            description += " | Bisherige Belegung bleibt bis zur bestätigten Rücknahme gesperrt."
         lines.extend([
             "BEGIN:VEVENT",
             f"UID:dfb-{ics_escape(match.external_id)}@ssv53.de",
             f"DTSTAMP:{stamp}",
-            f"DTSTART;TZID=Europe/Berlin:{iso_to_ics(match.event_start)}",
-            f"DTEND;TZID=Europe/Berlin:{iso_to_ics(match.event_end)}",
-            f"SUMMARY:{ics_escape(match.team_name + ': ' + match.home_team + ' – ' + match.away_team)}",
+            ics_clock_line("DTSTART", match.event_start),
+            ics_clock_line("DTEND", match.event_end),
+            f"SUMMARY:{ics_escape(title)}",
             f"LOCATION:{ics_escape(match.venue_raw)}",
-            f"DESCRIPTION:{ics_escape(match.competition + ' | ' + match.detail_url)}",
+            f"DESCRIPTION:{ics_escape(description)}",
             "END:VEVENT",
         ])
     lines.append("END:VCALENDAR")
