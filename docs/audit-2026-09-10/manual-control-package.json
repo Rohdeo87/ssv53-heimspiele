@@ -1,0 +1,19 @@
+{
+  "built_at_utc": "2026-09-10T08:17:22.678714+00:00",
+  "source_commit": "6d32a2c66a89ad0ca012b92fed7af8417d4f5175",
+  "canonical_source": "git show COMMIT:path; exact committed blobs",
+  "source_package": "C:\\Users\\Install\\.codex\\.chatgpt-projects\\g-p-6a77779d6d3c8191b87b93eb3b703809\\manual-override-20260910\\dist\\manual-control-full-failsafe-source.zip",
+  "package_sha256": "71d18171481445fda5c6f504529c541e653824c4516722582bcb3379f26fe5a6",
+  "manifest_sha256": "67600a05061ca393037ae872f2db6f6a4cb41499f06c0d622bfe3a351c990abc",
+  "file_count": 68,
+  "manual_sessions_default_enabled": false,
+  "installed": false,
+  "live_commands_sent": false,
+  "checks": [
+    "All 67 source files exactly equal committed Git blobs",
+    "All five manual control modules included",
+    "15 Azure functions imported without network",
+    "Feature default is disabled"
+  ],
+  "verification": "manual-control-package-verification.json"
+}

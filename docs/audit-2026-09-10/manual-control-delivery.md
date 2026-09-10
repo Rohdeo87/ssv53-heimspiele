@@ -117,3 +117,11 @@ nachgewiesen, alte/geräteeigene Zeitpläne abgeglichen und aktuelle Geräte- so
 Platzverhältnisse bestätigt sein. Erst der anschließend beobachtete Ablauf
 liefert einen Live-Nachweis. Ein Rückfall muss Geräteaufträge und geräteeigene
 Zeitpläne einschließen; das Zurücksetzen von Code allein genügt nicht.
+
+## Konkretes Quellpaket
+
+Die [Paketprüfung](manual-control-package-verification.json) bestätigt alle 67
+Quelldateien bytegenau gegen Commit `6d32a2c66a89ad0ca012b92fed7af8417d4f5175`.
+Das Paket enthält zusätzlich sein Manifest; alle 15 Azure-Funktionen wurden
+ohne Netzwerkzugriff importiert. [Paketpfad und Hash](manual-control-package.json).
+Diese Prüfung belegt keinen Azure-Remote-Build und keine Installation.
