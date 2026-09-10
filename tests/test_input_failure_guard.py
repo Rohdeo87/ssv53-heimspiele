@@ -55,6 +55,8 @@ def mower_item(
     override_action: str = "FORCE_MOW",
     next_start_timestamp: int | None = 0,
     include_next_start: bool = True,
+    mode: str = "MAIN_AREA",
+    include_mode: bool = True,
 ) -> dict:
     planner = {
         "override": {"action": override_action},
@@ -63,18 +65,20 @@ def mower_item(
     }
     if include_next_start:
         planner["nextStartTimestamp"] = next_start_timestamp
+    mower = {
+        "activity": activity,
+        "state": state,
+        "errorCode": error_code,
+        "inactiveReason": "NONE",
+    }
+    if include_mode:
+        mower["mode"] = mode
     return {
         "id": mower_id,
         "attributes": {
             "system": {"name": "Schaf", "model": model},
             "battery": {"batteryPercent": 57},
-            "mower": {
-                "activity": activity,
-                "state": state,
-                "mode": "MAIN_AREA",
-                "errorCode": error_code,
-                "inactiveReason": "NONE",
-            },
+            "mower": mower,
             "planner": planner,
             "metadata": {
                 "connected": connected,
@@ -359,16 +363,37 @@ class InputFailureGuardTests(unittest.TestCase):
         self.assertEqual(calls, [])
         self.assertEqual(store.load().to_dict(), initial.to_dict())
 
-    def test_station_requires_native_park_override_or_reserves_park(self) -> None:
+    def test_station_requires_reported_home_mode_or_reserves_park(self) -> None:
         held_store = InMemoryStateStore()
         held_calls = []
         held = guard(
             held_store,
-            item=mower_item(activity="CHARGING", override_action="FORCE_PARK"),
+            item=mower_item(
+                activity="CHARGING", override_action="FORCE_PARK", mode="HOME"
+            ),
             park_sender=lambda *_: held_calls.append("park") or {},
         )
         self.assertEqual(held.decision_code, "INPUT_UNAVAILABLE_SAFE_HOLD")
+        self.assertTrue(held.details["mower"]["explicit_zero_next_start"])
+        self.assertTrue(held.details["mower"]["indefinite_native_hold"])
         self.assertEqual(held_calls, [])
+
+        temporary_store = InMemoryStateStore()
+        temporary_calls = []
+        temporary = guard(
+            temporary_store,
+            item=mower_item(
+                activity="CHARGING", override_action="FORCE_PARK", mode="MAIN_AREA"
+            ),
+            park_sender=lambda *_: temporary_calls.append("park") or {},
+        )
+        self.assertEqual(
+            temporary.decision_code, "INPUT_UNAVAILABLE_PARK_HOLD_UNKNOWN"
+        )
+        self.assertTrue(temporary.details["escalation"]["required"])
+        self.assertTrue(temporary.details["mower"]["explicit_zero_next_start"])
+        self.assertFalse(temporary.details["mower"]["indefinite_native_hold"])
+        self.assertEqual(temporary_calls, [])
 
         unheld_store = InMemoryStateStore()
         unheld_calls = []
@@ -379,6 +404,34 @@ class InputFailureGuardTests(unittest.TestCase):
         )
         self.assertEqual(unheld.decision_code, "INPUT_UNAVAILABLE_PARK_COMMAND_SENT")
         self.assertEqual(unheld_calls, ["park"])
+
+    def test_reported_home_mode_is_hold_with_absent_start_or_force_mow(self) -> None:
+        for override_action, include_next_start, expected_due_now in (
+            ("NOT_ACTIVE", False, False),
+            ("FORCE_MOW", True, True),
+        ):
+            with self.subTest(override_action=override_action):
+                calls = []
+                output = guard(
+                    InMemoryStateStore(),
+                    item=mower_item(
+                        activity="PARKED_IN_CS",
+                        override_action=override_action,
+                        mode="HOME",
+                        include_next_start=include_next_start,
+                    ),
+                    park_sender=lambda *_: calls.append("park") or {},
+                )
+                self.assertEqual(
+                    output.decision_code,
+                    "INPUT_UNAVAILABLE_SAFE_HOLD",
+                )
+                self.assertEqual(
+                    output.details["mower"]["explicit_zero_next_start"],
+                    expected_due_now,
+                )
+                self.assertTrue(output.details["mower"]["indefinite_native_hold"])
+                self.assertEqual(calls, [])
 
     def test_timed_or_ambiguous_station_park_is_never_reported_safe(self) -> None:
         for override, include_next, next_start in (
@@ -408,6 +461,63 @@ class InputFailureGuardTests(unittest.TestCase):
                 self.assertFalse(output.details["mower"]["indefinite_native_hold"])
                 self.assertEqual(calls, [])
 
+    def test_missing_or_unknown_mode_never_proves_indefinite_hold(self) -> None:
+        for mode, include_mode in (("UNKNOWN", True), ("MAIN_AREA", False)):
+            with self.subTest(mode=mode, include_mode=include_mode):
+                calls = []
+                output = guard(
+                    InMemoryStateStore(),
+                    item=mower_item(
+                        activity="PARKED_IN_CS",
+                        override_action="FORCE_PARK",
+                        next_start_timestamp=0,
+                        mode=mode,
+                        include_mode=include_mode,
+                    ),
+                    park_sender=lambda *_: calls.append("park") or {},
+                )
+                self.assertEqual(
+                    output.decision_code,
+                    "INPUT_UNAVAILABLE_PARK_HOLD_UNKNOWN",
+                )
+                self.assertTrue(output.details["escalation"]["required"])
+                self.assertTrue(output.details["mower"]["explicit_zero_next_start"])
+                self.assertFalse(output.details["mower"]["indefinite_native_hold"])
+                self.assertEqual(calls, [])
+
+    def test_going_home_force_park_zero_requires_home_mode(self) -> None:
+        unproven = guard(
+            InMemoryStateStore(),
+            item=mower_item(
+                activity="GOING_HOME",
+                override_action="FORCE_PARK",
+                next_start_timestamp=0,
+                mode="MAIN_AREA",
+            ),
+        )
+        self.assertEqual(unproven.decision_code, "INPUT_UNAVAILABLE_RETURN_PENDING")
+        self.assertTrue(unproven.details["escalation"]["required"])
+        self.assertEqual(
+            unproven.details["escalation"]["reason"],
+            "RETURN_WITHOUT_PARK_OVERRIDE",
+        )
+
+        protected = guard(
+            InMemoryStateStore(),
+            item=mower_item(
+                activity="GOING_HOME",
+                override_action="NOT_ACTIVE",
+                next_start_timestamp=0,
+                mode="HOME",
+            ),
+        )
+        self.assertEqual(protected.decision_code, "INPUT_UNAVAILABLE_RETURN_PENDING")
+        self.assertFalse(protected.details["escalation"]["required"])
+        self.assertEqual(
+            protected.details["escalation"]["reason"],
+            "RETURN_TO_STATION_PENDING",
+        )
+
     def test_going_home_without_park_override_is_not_reported_safe(self) -> None:
         store = InMemoryStateStore()
         calls = []
@@ -426,7 +536,9 @@ class InputFailureGuardTests(unittest.TestCase):
         )
         output = guard(
             store,
-            item=mower_item(activity="PARKED_IN_CS", override_action="FORCE_PARK"),
+            item=mower_item(
+                activity="PARKED_IN_CS", override_action="FORCE_PARK", mode="HOME"
+            ),
         )
         self.assertEqual(output.decision_code, "INPUT_UNAVAILABLE_IRRIGATION_UNKNOWN_HOLD")
         self.assertEqual(output.details["irrigation"]["status"], "UNKNOWN")

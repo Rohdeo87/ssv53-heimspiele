@@ -1,0 +1,315 @@
+{
+  "scope": "Read-only observations of regular production cycles, not a controlled device acceptance test. Timestamps UTC; local timezone Europe/Berlin. No direct test commands issued.",
+  "observations": [
+    {
+      "observed_at_utc": "2026-09-10T06:15:02.8261523Z",
+      "control_mode": "OPERATOR_ONLY",
+      "decision": "MANUAL_LOCK",
+      "command_sent": false,
+      "mower": {
+        "activity": "NOT_APPLICABLE",
+        "state": "PAUSED",
+        "mode": "MAIN_AREA",
+        "override_action": "FORCE_MOW",
+        "battery_percent": 75,
+        "connected": true,
+        "status_timestamp_ms": 1789020214766
+      },
+      "guard": {
+        "enabled": true,
+        "protected": false,
+        "reason": "NO_PROTECTIVE_EVIDENCE",
+        "requestPending": false,
+        "requestStatus": null
+      },
+      "park_request": {
+        "requestedAt": null,
+        "status": null,
+        "messageCode": null,
+        "confirmedAt": null
+      },
+      "water_active_count": 0,
+      "water_fresh": true,
+      "dry_until_utc": "2026-09-10T07:40:00.001722+00:00"
+    },
+    {
+      "observed_at_utc": "2026-09-10T06:16:02.7120181Z",
+      "control_mode": "OPERATOR_ONLY",
+      "decision": "MANUAL_LOCK",
+      "command_sent": false,
+      "mower": {
+        "activity": "NOT_APPLICABLE",
+        "state": "PAUSED",
+        "mode": "MAIN_AREA",
+        "override_action": "FORCE_MOW",
+        "battery_percent": 75,
+        "connected": true,
+        "status_timestamp_ms": 1789020214766
+      },
+      "guard": {
+        "enabled": true,
+        "protected": false,
+        "reason": "NO_PROTECTIVE_EVIDENCE",
+        "requestPending": false,
+        "requestStatus": null
+      },
+      "park_request": {
+        "requestedAt": null,
+        "status": null,
+        "messageCode": null,
+        "confirmedAt": null
+      },
+      "water_active_count": 0,
+      "water_fresh": true,
+      "dry_until_utc": "2026-09-10T07:40:00.001722+00:00"
+    },
+    {
+      "observed_at_utc": "2026-09-10T06:17:02.5009197Z",
+      "control_mode": "OPERATOR_ONLY",
+      "decision": "MANUAL_LOCK",
+      "command_sent": false,
+      "mower": {
+        "activity": "NOT_APPLICABLE",
+        "state": "PAUSED",
+        "mode": "MAIN_AREA",
+        "override_action": "FORCE_MOW",
+        "battery_percent": 75,
+        "connected": true,
+        "status_timestamp_ms": 1789020214766
+      },
+      "guard": {
+        "enabled": true,
+        "protected": false,
+        "reason": "NO_PROTECTIVE_EVIDENCE",
+        "requestPending": false,
+        "requestStatus": null
+      },
+      "park_request": {
+        "requestedAt": null,
+        "status": null,
+        "messageCode": null,
+        "confirmedAt": null
+      },
+      "water_active_count": 0,
+      "water_fresh": true,
+      "dry_until_utc": "2026-09-10T07:40:00.001722+00:00"
+    },
+    {
+      "observed_at_utc": "2026-09-10T06:18:02.9265081Z",
+      "control_mode": "OPERATOR_ONLY",
+      "decision": "OPERATOR_ACTION_SENT",
+      "command_sent": true,
+      "mower": {
+        "activity": "NOT_APPLICABLE",
+        "state": "IN_OPERATION",
+        "mode": "MAIN_AREA",
+        "override_action": "FORCE_MOW",
+        "battery_percent": 75,
+        "connected": true,
+        "status_timestamp_ms": 1789021074125
+      },
+      "guard": {
+        "enabled": true,
+        "protected": false,
+        "reason": "DRYING_HOLD",
+        "requestPending": true,
+        "requestStatus": "QUEUED"
+      },
+      "park_request": {
+        "requestedAt": "2026-09-10T06:18:00.000744+00:00",
+        "status": "SENT_UNCONFIRMED",
+        "messageCode": "SENT_UNCONFIRMED",
+        "confirmedAt": null
+      },
+      "water_active_count": 0,
+      "water_fresh": true,
+      "dry_until_utc": "2026-09-10T07:40:00.001722+00:00"
+    },
+    {
+      "observed_at_utc": "2026-09-10T06:19:04.4787734Z",
+      "control_mode": "OPERATOR_ONLY",
+      "decision": "MANUAL_LOCK",
+      "command_sent": false,
+      "mower": {
+        "activity": "NOT_APPLICABLE",
+        "state": "IN_OPERATION",
+        "mode": "HOME",
+        "override_action": "FORCE_MOW",
+        "battery_percent": 75,
+        "connected": true,
+        "status_timestamp_ms": 1789021113576
+      },
+      "guard": {
+        "enabled": true,
+        "protected": false,
+        "reason": "EXISTING_PARK_REQUEST",
+        "requestPending": true,
+        "requestStatus": "SENT_UNCONFIRMED"
+      },
+      "park_request": {
+        "requestedAt": "2026-09-10T06:18:00.000744+00:00",
+        "status": "SENT_UNCONFIRMED",
+        "messageCode": "SENT_UNCONFIRMED",
+        "confirmedAt": null
+      },
+      "water_active_count": 0,
+      "water_fresh": true,
+      "dry_until_utc": "2026-09-10T07:40:00.001722+00:00"
+    },
+    {
+      "observed_at_utc": "2026-09-10T06:27:02.7103466Z",
+      "control_mode": "OPERATOR_ONLY",
+      "decision": "EXTERNAL_OVERRIDE",
+      "command_sent": false,
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "state": "IN_OPERATION",
+        "mode": "HOME",
+        "override_action": "FORCE_MOW",
+        "battery_percent": 74,
+        "connected": true,
+        "status_timestamp_ms": 1789021612936
+      },
+      "guard": {
+        "enabled": true,
+        "protected": false,
+        "reason": "EXISTING_PARK_REQUEST",
+        "requestPending": true,
+        "requestStatus": "SENT_UNCONFIRMED"
+      },
+      "park_request": {
+        "requestedAt": "2026-09-10T06:18:00.000744+00:00",
+        "status": "SENT_UNCONFIRMED",
+        "messageCode": "SENT_UNCONFIRMED",
+        "confirmedAt": null
+      },
+      "water_active_count": 0,
+      "water_fresh": true,
+      "dry_until_utc": "2026-09-10T07:40:00.001722+00:00"
+    },
+    {
+      "observed_at_utc": "2026-09-10T06:28:02.7101932Z",
+      "control_mode": "OPERATOR_ONLY",
+      "decision": "EXTERNAL_OVERRIDE",
+      "command_sent": false,
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "state": "IN_OPERATION",
+        "mode": "HOME",
+        "override_action": "FORCE_MOW",
+        "battery_percent": 74,
+        "connected": true,
+        "status_timestamp_ms": 1789021612936
+      },
+      "guard": {
+        "enabled": true,
+        "protected": false,
+        "reason": "EXISTING_PARK_REQUEST",
+        "requestPending": true,
+        "requestStatus": "SENT_UNCONFIRMED"
+      },
+      "park_request": {
+        "requestedAt": "2026-09-10T06:18:00.000744+00:00",
+        "status": "SENT_UNCONFIRMED",
+        "messageCode": "SENT_UNCONFIRMED",
+        "confirmedAt": null
+      },
+      "water_active_count": 0,
+      "water_fresh": true,
+      "dry_until_utc": "2026-09-10T07:40:00.001722+00:00"
+    },
+    {
+      "observed_at_utc": "2026-09-10T06:29:02.8031005Z",
+      "control_mode": "OPERATOR_ONLY",
+      "decision": "EXTERNAL_OVERRIDE",
+      "command_sent": false,
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "state": "IN_OPERATION",
+        "mode": "HOME",
+        "override_action": "FORCE_MOW",
+        "battery_percent": 74,
+        "connected": true,
+        "status_timestamp_ms": 1789021712134
+      },
+      "guard": {
+        "enabled": true,
+        "protected": false,
+        "reason": "UNKNOWN_PARK_NOT_REPLAYED",
+        "requestPending": true,
+        "requestStatus": "UNKNOWN"
+      },
+      "park_request": {
+        "requestedAt": "2026-09-10T06:18:00.000744+00:00",
+        "status": "UNKNOWN",
+        "messageCode": "CONFIRMATION_TIMEOUT",
+        "confirmedAt": null
+      },
+      "water_active_count": 0,
+      "water_fresh": true,
+      "dry_until_utc": "2026-09-10T07:40:00.001722+00:00"
+    },
+    {
+      "observed_at_utc": "2026-09-10T06:30:03.1406346Z",
+      "control_mode": "OPERATOR_ONLY",
+      "decision": "EXTERNAL_OVERRIDE",
+      "command_sent": false,
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "state": "IN_OPERATION",
+        "mode": "HOME",
+        "override_action": "FORCE_MOW",
+        "battery_percent": 79,
+        "connected": true,
+        "status_timestamp_ms": 1789021771851
+      },
+      "guard": {
+        "enabled": true,
+        "protected": false,
+        "reason": "UNKNOWN_PARK_NOT_REPLAYED",
+        "requestPending": true,
+        "requestStatus": "UNKNOWN"
+      },
+      "park_request": {
+        "requestedAt": "2026-09-10T06:18:00.000744+00:00",
+        "status": "UNKNOWN",
+        "messageCode": "CONFIRMATION_TIMEOUT",
+        "confirmedAt": null
+      },
+      "water_active_count": 0,
+      "water_fresh": true,
+      "dry_until_utc": "2026-09-10T07:40:00.001722+00:00"
+    },
+    {
+      "observed_at_utc": "2026-09-10T06:31:02.5001355Z",
+      "control_mode": "OPERATOR_ONLY",
+      "decision": "EXTERNAL_OVERRIDE",
+      "command_sent": false,
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "state": "IN_OPERATION",
+        "mode": "HOME",
+        "override_action": "FORCE_MOW",
+        "battery_percent": 79,
+        "connected": true,
+        "status_timestamp_ms": 1789021771851
+      },
+      "guard": {
+        "enabled": true,
+        "protected": false,
+        "reason": "UNKNOWN_PARK_NOT_REPLAYED",
+        "requestPending": true,
+        "requestStatus": "UNKNOWN"
+      },
+      "park_request": {
+        "requestedAt": "2026-09-10T06:18:00.000744+00:00",
+        "status": "UNKNOWN",
+        "messageCode": "CONFIRMATION_TIMEOUT",
+        "confirmedAt": null
+      },
+      "water_active_count": 0,
+      "water_fresh": true,
+      "dry_until_utc": "2026-09-10T07:40:00.001722+00:00"
+    }
+  ]
+}

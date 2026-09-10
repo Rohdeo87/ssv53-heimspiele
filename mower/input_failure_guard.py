@@ -32,9 +32,6 @@ _PARKABLE_ACTIVITIES = frozenset(
 _MANUAL_HOLD_ACTIVITIES = frozenset(
     {"STOPPED_IN_GARDEN", "NOT_APPLICABLE", "PAUSED"}
 )
-_INDEFINITE_PARK_OVERRIDES = frozenset(
-    {"FORCE_PARK", "PARK_UNTIL_FURTHER_NOTICE"}
-)
 
 
 class ParkSendFenceError(RuntimeError):
@@ -217,10 +214,10 @@ def run_input_failure_guard(
         snapshot, now_utc=observed_now, max_age_seconds=max_age_seconds
     )
     explicit_zero_next_start = _explicit_zero_next_start(item)
-    indefinite_native_hold = (
-        snapshot.override_action.strip().upper() in _INDEFINITE_PARK_OVERRIDES
-        and explicit_zero_next_start
-    )
+    # The vendor contract defines zero as "should start now".  It remains a
+    # diagnostic only. Indefinite parking is reported through HOME mode; this
+    # is not an independent physical measurement.
+    indefinite_native_hold = snapshot.mode.strip().upper() == "HOME"
     mower = {
         **snapshot.to_dict(),
         "identity_strategy": identity_strategy,
@@ -325,7 +322,7 @@ def run_input_failure_guard(
             return _result(
                 now_utc=now, settings=settings, past_due=past_due, source=source,
                 cause=cause, decision_code="INPUT_UNAVAILABLE_IRRIGATION_UNKNOWN_HOLD",
-                message="Der Mäher ist mit Park-Override an der Station; die aktive Beregnungslage bleibt ohne Laufzeitdaten unbekannt.",
+                message="Der Mäher meldet Dauerparkmodus an der Station; die aktive Beregnungslage bleibt ohne Laufzeitdaten unbekannt.",
                 mower=mower, extra={
                     "irrigation": {
                         "status": "UNKNOWN", "phase": original.irrigation_phase,
@@ -337,7 +334,7 @@ def run_input_failure_guard(
         return _result(
             now_utc=now, settings=settings, past_due=past_due, source=source,
             cause=cause, decision_code="INPUT_UNAVAILABLE_SAFE_HOLD",
-            message="Die Eingabedaten fehlen; der aktuelle Stationszustand mit bestätigtem Park-Override bleibt bestehen.",
+            message="Die Eingabedaten fehlen; der aktuelle Stationszustand mit gemeldetem Dauerparkmodus bleibt bestehen.",
             mower=mower,
         )
 
