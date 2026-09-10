@@ -1,0 +1,12 @@
+{
+  "verified_at_utc": "2026-09-10T08:27:56.383Z",
+  "template": "Platzpflege.tpl",
+  "template_id": "6a86ab6c4b3c829dd60de9b7",
+  "saved_display": "10.09.26, 10:26",
+  "readback_after_page_reload": true,
+  "sha256_lf": "675440104653f38952c5e22fc3ee288803a3c5200701a2347014aed1a0d266da",
+  "source": "appack-platzwart-dashboard.html",
+  "matches_source": true,
+  "device_commands_sent": false,
+  "manual_controls_visible_only_when_backend_enabled": true
+}
