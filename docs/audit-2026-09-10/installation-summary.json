@@ -1,0 +1,22 @@
+{
+  "recorded_at": "2026-09-10T05:12:49.958231+00:00",
+  "source_commit": "7aec12e9e8f365189554ddaefbb1c322159068d5",
+  "pull_request": "https://github.com/Rohdeo87/ssv53-heimspiele/pull/55",
+  "merge_commit": "1353758a4879d4b6aeb1189a8f138cda90932997",
+  "exact_source_tests_run": "https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/34439513146",
+  "exact_source_package_run": "https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/34439513134",
+  "deployment_cli_exit_code": 0,
+  "installation_proof": "installed-final-proof.json",
+  "appack_proof": "appack-published-proof.json",
+  "guard_activation": "guard-activation-proof.json",
+  "post_activation_cycles": "postactivation-cycles.json",
+  "python_tests": 1238,
+  "python_subtests": 445,
+  "appack_tests": 125,
+  "isolated_incident_replay_cases": 5,
+  "real_device_test_commands": 0,
+  "physical_protective_park_verified": false,
+  "native_app_authenticated_view_verified": false,
+  "remote_build_dependencies_verified": false,
+  "unattended_automation_accepted": false
+}

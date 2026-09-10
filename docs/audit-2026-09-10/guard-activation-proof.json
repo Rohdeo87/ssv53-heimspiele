@@ -1,0 +1,13 @@
+{
+  "verified_at": "2026-09-10T05:09:59.693234+00:00",
+  "only_setting_changed": "ENABLE_OPERATOR_SAFETY_GUARD",
+  "value": "true",
+  "control_mode": "OPERATOR_ONLY",
+  "automatic_starts_enabled": false,
+  "irrigation_commands_enabled": false,
+  "shared_training_mode": "ACTIVE",
+  "physical_park_test_performed": false,
+  "post_activation_cycle_pending": false,
+  "observed_active_cycle_count": 4,
+  "last_observed_cycle": "2026-09-10T05:14:04.9061311Z"
+}

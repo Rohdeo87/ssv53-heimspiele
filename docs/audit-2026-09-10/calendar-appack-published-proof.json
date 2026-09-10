@@ -1,0 +1,11 @@
+{
+  "verifiedAt": "2026-09-10T05:31:00.103Z",
+  "template": "Belegungsplan_selfmade_2_optimiert.tpl",
+  "templateId": "6a6242dfccdd23e7a9553567",
+  "module": "ssv53_TextImage_1761902353516",
+  "dataSource": "Belegungsplan_db",
+  "previousSha256": "4c4844e823fd2deab951fe9eb7cb728c486a12e74b8ca79be0a5764440261c5b",
+  "sourceSha256": "dc4f9c9ae4f3aad9871b20a27492ccd208f0c0c96eaf55065d0e5f101610ec4e",
+  "reloadedSha256": "dc4f9c9ae4f3aad9871b20a27492ccd208f0c0c96eaf55065d0e5f101610ec4e",
+  "nativeDeviceVerified": false
+}

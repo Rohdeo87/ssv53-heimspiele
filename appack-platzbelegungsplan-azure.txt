@@ -4404,9 +4404,12 @@ updateButtonGroup(state.activeSeason ? elements.seasonButtons : [], "data-season
 }
 
 function applySharedTrainingCalendar(payload) {
-const shared = Boolean(payload && payload.training_calendar && payload.training_calendar.active === true);
-const changed = shared !== Boolean(state.sharedTrainingCalendar);
+const sharedSeason = sharedTrainingSeason(payload);
+const shared = sharedSeason !== null;
+const changed = shared !== Boolean(state.sharedTrainingCalendar)
+|| (shared && state.activeSeason !== sharedSeason);
 state.sharedTrainingCalendar = shared;
+if (shared) state.activeSeason = sharedSeason;
 const group = document.querySelector(".ssv-control-group--season");
 if (group) {
 group.hidden = shared;
@@ -4420,6 +4423,15 @@ ensureActiveCalendarSelection();
 updateResources();
 renderPlaceFilters();
 if (state.calendar) state.calendar.setOption("resources", state.resources);
+}
+
+function sharedTrainingSeason(payload) {
+const training = payload && payload.training_calendar;
+const control = training && training.trainingControl;
+if (!training || training.active !== true || training.mode !== "ACTIVE"
+|| !control || control.available !== true || control.fail_closed === true) return null;
+const season = control && control.season;
+return season === "Sommer" || season === "Winter" ? season : null;
 }
 
 function updateViewButtons() {
@@ -4663,10 +4675,12 @@ failure.code = payload && payload.code;
 throw failure;
 }
 
+const sharedSeason = sharedTrainingSeason(payload);
 if (
 !payload ||
 payload.data_source !== "azure" ||
-payload.season !== state.activeSeason ||
+!((sharedSeason && (payload.season === state.activeSeason || payload.season === sharedSeason)) ||
+(!sharedSeason && payload.season === state.activeSeason)) ||
 !Array.isArray(payload.resources) ||
 !Array.isArray(payload.events)
 ) {
@@ -5051,6 +5065,25 @@ return "Die Trainingstermine müssen geprüft werden. Bitte den Platzwart kontak
 return "Die Belegungsdaten sind gerade nicht verfügbar. Bitte Internetverbindung prüfen und erneut versuchen.";
 }
 
+function trainingHistoryWarning(payload) {
+const training = payload && payload.training_calendar;
+const ranges = training && training.partial === true && Array.isArray(training.unavailableRanges)
+? training.unavailableRanges : [];
+const valid = ranges.filter(function (item) {
+if (!item || item.reasonCode !== "TRAINING_CONTROL_HISTORY_UNAVAILABLE" || item.scope !== "training") return false;
+const end = new Date(item.end);
+return typeof item.end === "string" && /(?:Z|[+-]\d{2}:?\d{2})$/.test(item.end) && !isNaN(end.getTime());
+});
+if (!valid.length) return "";
+const latestEnd = valid.reduce(function (latest, item) {
+const end = new Date(item.end);
+return end > latest ? end : latest;
+}, new Date(0));
+const lastUnknownInstant = new Date(latestEnd.getTime() - 1);
+const day = lastUnknownInstant.toLocaleDateString("de-DE", {timeZone: "Europe/Berlin", day: "numeric", month: "long"});
+return "Frühere Trainings bis "+day+" sind hier nicht verfügbar. Aktuelle Termine werden angezeigt.";
+}
+
 async function loadRangeEvents(rangeStart, rangeEnd) {
 const token = ++state.fetchToken;
 setStatus("loading", "Daten werden geladen", false);
@@ -5079,10 +5112,16 @@ return event.extendedProps
 
 updateMatchResourceVisibility(matchResourceIds);
 renderEvents(visibleEvents);
+const warnings = [];
 if (payload.match_source_fresh === false && visibleEvents.length > 0) {
+warnings.push("Die Spieldaten werden gerade aktualisiert. Der letzte bestätigte Stand und bekannte Trainings bleiben sichtbar.");
+}
+const historyWarning = trainingHistoryWarning(payload);
+if (historyWarning) warnings.push(historyWarning);
+if (warnings.length) {
 setStatus(
 "warning",
-"Die Spieldaten werden gerade aktualisiert. Der letzte bestätigte Stand und alle Trainings bleiben sichtbar.",
+warnings.join(" "),
 false
 );
 }
