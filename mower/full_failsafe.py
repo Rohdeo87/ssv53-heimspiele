@@ -2321,12 +2321,17 @@ def run_full_failsafe_cycle(
             manual_session.get("kind") == "START"
             and manual_session.get("status") == "ENDED"
         ):
-            return _persist_result(
-                store=store, original=original, state=state, result=result,
-                details=details, settings=settings,
-                decision_code="MANUAL_START_SESSION_ENDED_AT_CHARGE",
-                message="Die bestätigte Start-Sitzung endete mit der nächsten beobachteten Ladefahrt.",
-            )
+            # ENDED removes the manual exceptions; it is not a permanent stop.
+            # Continue through water/occupancy/command-journal safety on EVERY
+            # cycle, even if the physical mower is still moving. Keep the
+            # session as an audit/fencing record and respect the charge return
+            # below. A durable manual PARK is a different, unchanged latch.
+            if state.operator_occupancy_override_key or state.operator_occupancy_override_until_utc:
+                state = replace(
+                    state, revision=state.revision + 1,
+                    operator_occupancy_override_key=None,
+                    operator_occupancy_override_until_utc=None,
+                )
         if (
             manual_session.get("kind") == "PARK"
             and manual_session.get("status") != "ENDED"
@@ -7199,13 +7204,6 @@ def run_full_failsafe_cycle(
                 decision_code="MANUAL_PARK_SESSION_HOLD",
                 message="Die bestätigte Park-Sitzung bleibt bis zur ausdrücklichen Freigabe aktiv.",
             )
-        if manual_session.get("kind") == "START" and manual_session.get("status") == "ENDED":
-            return _persist_result(
-                store=store, original=original, state=state, result=result,
-                details=details, settings=settings,
-                decision_code="MANUAL_START_SESSION_ENDED_AT_CHARGE",
-                message="Die bestätigte Start-Sitzung endete mit der nächsten beobachteten Ladefahrt.",
-            )
         if manual_start_requested and manual_permission.get("allowed") is not True:
             permission_code = str(
                 manual_permission.get("code") or "MANUAL_SESSION_BLOCKED"
@@ -7328,6 +7326,19 @@ def run_full_failsafe_cycle(
         activity == "GOING_HOME"
         and state.continuous_mowing_owned
         and not manual_start_active
+        and not (
+            settings.enable_manual_sessions and manual_session is not None
+            and manual_session.get("kind") == "START"
+            and manual_session.get("status") == "ENDED"
+            # Preserve this return after the manual permission ends. A later
+            # ordinary START has passed all automatic checks and owns its own
+            # return policy; the retained audit session must not disable that.
+            and (
+                state.last_start_command_utc is None
+                or _parse_time(state.last_start_command_utc)
+                <= _parse_time(manual_session["ended_at_utc"])
+            )
+        )
     )
 
     if activity == "GOING_HOME" and not turnaround_before_dock:

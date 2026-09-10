@@ -18,6 +18,7 @@ from platzwart_console import (
     _STATISTICS_CACHE,
     _restart_battery_percent,
     _protection_payload,
+    _coordination_payload,
     PlatzwartError,
     create_activation_hash,
     create_pin_hash,
@@ -47,6 +48,19 @@ FULL_DEVICE_CONTROL_ENV = {
 
 
 class PlatzwartAuthenticationTests(unittest.TestCase):
+    def test_dashboard_preserves_verified_drying_reason_and_time(self) -> None:
+        for reason in ("IRRIGATION_END", "DATA_GAP", "POSSIBLE_IRRIGATION_DURING_GAP"):
+            with self.subTest(reason=reason):
+                dry_until = (NOW + timedelta(minutes=150)).isoformat()
+                details = {"hydrawise": {"release_confirmation": {
+                    "allowed": False, "dry_until_utc": dry_until,
+                }}}
+                state = AutomationState(hydrawise_clear_origin=reason)
+                payload = _coordination_payload(details, state, {}, ENV, NOW, {})
+                self.assertEqual(payload["dryingReason"], reason)
+                self.assertEqual(payload["dryUntil"], dry_until)
+                self.assertIn("DRYING_OR_CONFIRMATION", {item["code"] for item in payload["blockers"]})
+
     def test_stale_runtime_config_keeps_live_display_but_locks_all_controls(self) -> None:
         live_cycle = result(activity="MOWING", battery=71)
         store = InMemoryStateStore(AutomationState(continuous_mowing_owned=True))

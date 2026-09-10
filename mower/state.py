@@ -687,6 +687,15 @@ class AutomationState:
             if previous_success is not None
             else None
         )
+        # A fresh source observation closes the physical gap at its own time.
+        # Comparing second-resolution provider time with microsecond-resolution
+        # cycle start made an exact 180-second gap appear longer than 180s.
+        # Late/repeated/future observations cannot backdate this evidence.
+        physical_gap_seconds = gap_seconds
+        if observation_progressed and previous_success is not None:
+            physical_gap_seconds = (
+                min(started, observation_identity) - previous_success
+            ).total_seconds()
         possible_irrigation_during_gap = (
             (
                 previous_success is None
@@ -694,8 +703,8 @@ class AutomationState:
                 and self.hydrawise_drying_since_utc is None
             )
             or (previous_success is not None and (
-                gap_seconds < 0
-                or gap_seconds > hydrawise_continuity_max_gap_seconds
+                physical_gap_seconds < 0
+                or physical_gap_seconds > hydrawise_continuity_max_gap_seconds
                 or (
                     previous_next_irrigation is not None
                     and previous_success < previous_next_irrigation <= started

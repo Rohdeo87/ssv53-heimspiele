@@ -3569,6 +3569,9 @@ class FullFailsafeTests(unittest.TestCase):
             continuous_mowing_owned=True,
             continuous_mowing_work_area_id=849199,
             continuous_mowing_window_end_utc=(NOW + timedelta(hours=4)).isoformat(),
+            hydrawise_clear_origin="DATA_GAP",
+            hydrawise_clear_since_utc=(NOW - timedelta(minutes=10)).isoformat(),
+            last_hydrawise_success_utc=(NOW - timedelta(minutes=1)).isoformat(),
         )
 
         output, store = self._run(
@@ -3578,7 +3581,7 @@ class FullFailsafeTests(unittest.TestCase):
 
         saved = json.loads(store.load().manual_session_json or "{}")
         self.assertEqual(saved["status"], "ENDED")
-        self.assertEqual(output.decision_code, "MANUAL_START_SESSION_ENDED_AT_CHARGE")
+        self.assertEqual(output.decision_code, "WAIT_FOR_MOWER_AT_STATION")
 
     def test_mower_water_choice_parks_before_suspend_or_stop(self) -> None:
         relay = RELAYS[0]

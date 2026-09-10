@@ -15,6 +15,7 @@ REQUIRED_FILES = (
     "occupancy_notifications.py",
     "platzwart_console.py",
     "occupancy/__init__.py",
+    "occupancy/appack_identity.py",
     "occupancy/config.json",
     "occupancy/match_model.py",
     "occupancy/runtime_source.py",
