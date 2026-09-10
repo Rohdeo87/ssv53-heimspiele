@@ -1,0 +1,59 @@
+{
+  "synthetic": true,
+  "case": "charging",
+  "payload": {
+    "ok": true,
+    "generatedAt": "2026-09-10T14:30:00Z",
+    "controlsAvailable": true,
+    "deviceControlsAvailable": true,
+    "overall": {},
+    "mower": {
+      "activity": "CHARGING",
+      "state": "IN_OPERATION",
+      "connected": true,
+      "telemetryFresh": true,
+      "statusAgeSeconds": 0,
+      "errorCode": 0,
+      "batteryPercent": 73,
+      "restartBatteryPercent": 90,
+      "model": "Automower 580 EPOS",
+      "cuttingHeightMm": 30
+    },
+    "automation": {
+      "continuousMowingOwned": true,
+      "parkedByAutomation": true,
+      "irrigationPhase": null
+    },
+    "irrigation": {
+      "safety": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0
+      },
+      "zones": []
+    },
+    "occupancy": {
+      "current": null,
+      "upcoming": [],
+      "safeWindows": []
+    },
+    "coordination": {
+      "explanationOnly": true,
+      "dryUntil": null,
+      "releaseNotBefore": null,
+      "blockers": [],
+      "chargingEndEstimate": {
+        "at": "2026-09-10T15:10:00Z",
+        "estimated": true
+      }
+    },
+    "dataQuality": {
+      "displayOnly": false
+    },
+    "irrigationSchedule": {},
+    "statistics": {},
+    "irrigationStatistics": {},
+    "clubhouseEvents": []
+  }
+}

@@ -129,6 +129,52 @@ berücksichtigen; ein Git-Rücksprung allein ist nicht ausreichend.
 - Unabhängiger Backend-Nachcheck mit Sol: **117 Tests und 35 Subtests**;
   ursprünglicher Turnaround-Befund behoben, keine verbleibenden konkreten
   Sicherheitsbefunde in den geprüften Änderungen. Das Anbieter-Verfügbarkeitsrisiko
-  bleibt wie oben dokumentiert. Luna prüft die mobilen Ansichten separat.
-- Paket- und Veröffentlichungsnachweise werden nach dem tatsächlichen Rollout
-  ergänzt. Aktuell: **umgesetzt und lokal geprüft, Veröffentlichung ausstehend**.
+  bleibt wie oben dokumentiert. Luna bereitete die mobilen Ansichten vor; im
+  abschließenden Root-Review wurde das Lade-Fixture korrigiert und um verbindliche
+  Browser-Prüfungen ergänzt.
+- [Browsernachweis](../ui-2026-09-10/trainer-dashboard/browser-check.json): acht
+  Fälle, vier Zustände auf 320 und 390 Pixeln; erwartete Meldungen und Endzeiten,
+  sichtbares geschätztes Ladeende, keine Überbreite und keine JavaScript-Fehler.
+  [Sicherheits-Pause](../ui-2026-09-10/trainer-dashboard/possible-gap-320.png),
+  [Ladeende](../ui-2026-09-10/trainer-dashboard/charging-390.png).
+  Die unteren Karten enthalten teilweise absichtlich keine Beispieldaten;
+  diese Aufnahmen sind keine vollständige App- oder Geräteabnahme.
+
+## Tatsächliche Backend-Veröffentlichung
+
+- [PR #62](https://github.com/Rohdeo87/ssv53-heimspiele/pull/62) ist gemergt:
+  `cf3634d014f1a5fbe57a70a9a76b6998154d7927`. Exakt geprüfter Quellcommit:
+  `128b236a93236ba76e5dafdda9f4151ad12ea283`.
+- Die [CI-Tests](https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/34494174923)
+  und der [Paketworkflow](https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/34494174703)
+  waren für diesen PR-Head erfolgreich. Die unmittelbar vor dem Merge gelesene
+  Basis war `c256fa5e95670e9f201eb4c2243022ec1f085bfb`, der PR konfliktfrei.
+- [Lokales Quellpaket](trainer-dashboard-package.json): alle **68 Git-Dateien**
+  bytegenau übernommen, zusätzlich Manifest; **15 Funktionen** ohne Netzwerk
+  importiert. ZIP-SHA256:
+  `8653ecf1fa16343949b3c155d9e9ff0d3e18458aaadc3be2aaeefd11e9c2d66a`.
+  Dieses lokal nachgewiesene ZIP wurde per Azure-Remote-Build installiert.
+  Das CI-Artefakt existiert (ID 10159056680); sein komprimiertes Archiv wurde
+  nicht als identisch mit dem lokalen ZIP behauptet.
+- [Installation vorher](trainer-dashboard-installation-before.json) und
+  [Installation nachher](trainer-dashboard-installation-after.json): alle
+  **69 installierten Paketdateien einschließlich Manifest** über die Azure-
+  Admin-Leseschnittstelle bytegenau mit dem ZIP verglichen. Host `Running`,
+  15 Funktionen, sämtliche im Nachweis aufgeführten Betriebsfreigaben unverändert.
+  Neues Manifest:
+  `8b17b7d232de8a32593c0c2aee55b3cd8527d29338c2be9626199ef72fac3d77`.
+- [Erste neue Betriebszyklen](trainer-dashboard-after.json): ab **16:56 UTC**
+  meldet die laufende Steuerung das neue Manifest. Der alte ENDED-Dauerhalt ist
+  verschwunden. Ein regulärer Schutz-Parkbefehl wurde angefordert; anschließend
+  hält die Steuerung wegen der gültigen Belegung. Mäher weiterhin in der Station,
+  keine aktive Bewässerung. Aktuelle Trainingssperre einschließlich Puffer bis
+  **22:00 Uhr Berliner Zeit**. Die alte vorsorgliche Rasenpause wurde nicht aus
+  dem Speicher gelöscht und war zu diesem Zeitpunkt bereits zeitlich abgelaufen.
+
+**Backend live nachgewiesen; Appack-Veröffentlichung noch offen.** Die verfügbare
+CMS-Sitzung war abgelaufen. Erneute Anmeldung wurde angefragt, die beiden
+korrigierten Vorlagen sind vollständig vorbereitet. Ohne bestätigtes Speichern
+und erneutes Lesen aus dem CMS wird hier weder die neue App-Anzeige noch der
+Trainer-Schreibweg aus der installierten App als veröffentlicht bezeichnet.
+Die aktive Trainerrolle wurde beim Anbieter vorab lesend geprüft; die komplette
+neue Handy-Bedienkette bleibt bis zur echten Anmeldung und Nachkontrolle offen.
