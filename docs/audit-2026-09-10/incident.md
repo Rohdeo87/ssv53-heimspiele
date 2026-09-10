@@ -264,8 +264,15 @@ Der Schutz ist standardmäßig aus und wird nur im bestätigten Bedienmodus mit
 freigegebenen Parkbefehlen wirksam. Ein vorhandener unbeantworteter Parkauftrag
 wird nicht automatisch wiederholt. Erneute Ausfahrt nach einem eindeutig
 abgeschlossenen Auftrag benötigt neue Telemetrie und mindestens 30 Sekunden
-Abstand. Ein gerätegebundener frischer Stationsstatus mit `FORCE_PARK` ist der
-einzige positive Haltenachweis; eine bloße Befehlsannahme genügt nicht.
+Abstand. Der hier dokumentierte damalige Paketstand verlangte einen
+gerätegebundenen frischen Stationsstatus mit `FORCE_PARK` als Haltenachweis;
+eine bloße Befehlsannahme genügte nicht. **Die Folgeprüfung am selben Morgen
+hat diese Interpretation als Fehler identifiziert:** Der gesendete Befehl
+`ParkUntilFurtherNotice` wird laut Hersteller durch Modus `HOME` beschrieben,
+während `FORCE_PARK` nur bis zum nächsten Zeitplaneintrag reicht. Die
+[Folgeanalyse und Korrektur](manual-override-policy.md) trennt die neue
+Entwicklung vom weiterhin installierten Paketstand und dokumentiert die
+verbleibenden Freigabevoraussetzungen.
 
 Bei Rücknahme zunächst den Schutzschalter deaktivieren und den sicheren
 Gerätezustand herstellen. Ältere Software versteht die neuen Schutzaufträge im

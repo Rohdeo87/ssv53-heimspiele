@@ -7,6 +7,8 @@ import pytest
 
 from mower.operator_controls import (
     OperatorControlError,
+    _fresh_station_confirmation,
+    _station_held,
     action_capabilities,
     operator_commands_payload,
     queue_operator_action as _queue_operator_action,
@@ -41,11 +43,12 @@ def settings(**overrides: str) -> RuntimeSettings:
 
 
 def mower(*, now: datetime = NOW, activity="MOWING", state="IN_OPERATION",
-          override="NOT_ACTIVE", height=12) -> dict:
+          override="NOT_ACTIVE", mode="MAIN_AREA", height=12) -> dict:
     return {
         "mower_id": "mower-1", "connected": True, "activity": activity,
         "state": state, "error_code": 0, "model": "Automower 580 EPOS",
-        "override_action": override, "status_timestamp_ms": int(now.timestamp() * 1000),
+        "override_action": override, "mode": mode,
+        "status_timestamp_ms": int(now.timestamp() * 1000),
         "target_work_area": {"id": 1, "name": "Rasenfläche", "enabled": True,
                              "use_global_cutting_height": False, "cutting_height_percent": height},
     }
@@ -159,6 +162,72 @@ def test_lost_response_or_crash_after_reservation_is_unknown_without_retry():
     run(store, mower(now=NOW + timedelta(minutes=11)), moment=NOW + timedelta(minutes=11), park_sender=lambda *_a, **_k: pytest.fail("must not retry"))
     assert calls == ["sent"]
     assert operator_commands_payload(store.load())["PARK_MOWER"]["status"] == "UNKNOWN"
+
+
+def test_park_confirmation_requires_a_new_exact_station_home_report_after_send():
+    store = InMemoryStateStore()
+    queue_operator_action(store, settings(), "PARK_MOWER", "park-home", NOW)
+    run(
+        store, mower(mode="MAIN_AREA"),
+        park_sender=lambda *_a, before_send=None: before_send() or {"accepted": True},
+    )
+    # The status must be newer than the protected send preparation.  A same-
+    # timestamp HOME report could have predated the request.
+    same_report = mower(activity="PARKED_IN_CS", mode="HOME", override="FORCE_MOW")
+    run(store, same_report, read_only_runner=reader(same_report))
+    assert operator_commands_payload(store.load())["PARK_MOWER"]["status"] == "SENT_UNCONFIRMED"
+    later = NOW + timedelta(seconds=1)
+    parked_home = mower(
+        now=later, activity="PARKED_IN_CS", mode="HOME", override="FORCE_MOW",
+    )
+    run(store, parked_home, moment=later, read_only_runner=reader(parked_home))
+    assert operator_commands_payload(store.load())["PARK_MOWER"] == {
+        "status": "CONFIRMED", "requestId": "park-home", "requestedAt": NOW.isoformat(),
+        "targetMm": None, "confirmedAt": later.isoformat(), "messageCode": "CONFIRMED",
+    }
+
+
+@pytest.mark.parametrize(
+    "snapshot",
+    [
+        mower(activity="PARKED_IN_CS", mode="MAIN_AREA", override="FORCE_PARK"),
+        mower(activity="MOWING", mode="HOME", override="FORCE_PARK"),
+        {**mower(activity="PARKED_IN_CS", mode="HOME", override="FORCE_PARK"), "mower_id": "other-mower"},
+        mower(now=NOW - timedelta(seconds=181), activity="PARKED_IN_CS", mode="HOME", override="FORCE_PARK"),
+        {**mower(activity="PARKED_IN_CS", mode="HOME", override="FORCE_PARK"), "connected": False},
+    ],
+    ids=["force-park-main-area", "home-without-station", "wrong-id", "stale", "disconnected"],
+)
+def test_station_hold_requires_exact_fresh_connected_station_home(snapshot):
+    assert _station_held(snapshot, NOW, expected_mower_id="mower-1") is False
+
+
+def test_unknown_park_can_reconcile_from_a_later_station_home_report_without_replay():
+    store = InMemoryStateStore()
+    queue_operator_action(store, settings(), "PARK_MOWER", "park-unknown", NOW)
+    def lose(*_args, before_send=None):
+        before_send()
+        raise TimeoutError()
+    run(store, mower(mode="MAIN_AREA"), park_sender=lose)
+    timeout = NOW + timedelta(minutes=11)
+    moving = mower(now=timeout, mode="MAIN_AREA")
+    run(store, moving, moment=timeout, read_only_runner=reader(moving))
+    assert operator_commands_payload(store.load())["PARK_MOWER"]["status"] == "UNKNOWN"
+    reconciled_at = timeout + timedelta(seconds=1)
+    parked_home = mower(
+        now=reconciled_at, activity="CHARGING", mode="HOME", override="FORCE_MOW",
+    )
+    run(
+        store, parked_home, moment=reconciled_at, read_only_runner=reader(parked_home),
+        park_sender=lambda *_a, **_k: pytest.fail("UNKNOWN must reconcile, never replay"),
+    )
+    assert operator_commands_payload(store.load())["PARK_MOWER"]["status"] == "CONFIRMED"
+
+
+def test_fresh_station_home_confirmation_rejects_missing_entry_target():
+    entry = {"reserved_at": (NOW - timedelta(seconds=1)).isoformat(), "mower_id": ""}
+    snapshot = mower(activity="PARKED_IN_CS", mode="HOME", override="FORCE_MOW")
+    assert _fresh_station_confirmation(entry, snapshot, NOW) is False
 
 
 def test_stale_or_wrong_height_confirmation_never_completes_and_legacy_request_is_ignored():
@@ -441,6 +510,27 @@ def test_operator_safety_guard_holds_charging_mower_when_force_park_is_missing()
     assert output.details["operatorSafetyGuard"]["reason"] == "IMMINENT_WATER"
 
 
+def test_operator_safety_guard_accepts_exact_station_home_without_force_park():
+    store = InMemoryStateStore()
+    guarded_settings = settings(ENABLE_OPERATOR_SAFETY_GUARD="true")
+    _queue_operator_action(
+        store, guarded_settings, "PARK_MOWER", "guard-home", NOW, mower_id="mower-1",
+        origin="SAFETY_GUARD", guard_key="active-water|6",
+    )
+    snapshot = mower(activity="PARKED_IN_CS", mode="HOME", override="FORCE_MOW")
+    output = run(
+        store, snapshot, settings_value=guarded_settings,
+        read_only_runner=safety_reader(snapshot, active=("6",)),
+        park_sender=lambda *_a, **_k: pytest.fail("station HOME must not issue a duplicate park"),
+    )
+    assert output.details["operatorSafetyGuard"].items() >= {
+        "protected": True, "requestPending": False,
+    }.items()
+    parked = operator_commands_payload(store.load())["PARK_MOWER"]
+    assert parked["status"] == "CONFIRMED"
+    assert parked["messageCode"] == "ALREADY_PARKED_HOME"
+
+
 def test_operator_safety_guard_never_claims_a_wrong_mower_is_held():
     store = InMemoryStateStore()
     snapshot = mower(activity="PARKED_IN_CS", override="FORCE_PARK")
@@ -630,11 +720,11 @@ def test_guard_reassert_needs_new_motion_but_ignores_rolling_block_start_time():
         "end": (NOW + timedelta(minutes=180, seconds=1)).isoformat(),
         "source": "hydrwise-native",
     }
-    held = mower(now=confirmed_at, activity="CHARGING", override="FORCE_PARK")
+    held = mower(now=confirmed_at, activity="CHARGING", mode="HOME", override="FORCE_PARK")
     held_output = run(
         store, held, moment=confirmed_at, settings_value=guarded_settings,
         read_only_runner=safety_reader(held, parking_block=rolling_block),
-        park_sender=lambda *_a, **_k: pytest.fail("fresh FORCE_PARK is sufficient physical hold"),
+        park_sender=lambda *_a, **_k: pytest.fail("fresh exact station HOME is sufficient vendor acknowledgement"),
     )
     assert held_output.details["operatorSafetyGuard"]["protected"] is True
     departed_at = confirmed_at + timedelta(minutes=1)

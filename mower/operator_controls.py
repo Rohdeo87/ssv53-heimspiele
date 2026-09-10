@@ -391,14 +391,29 @@ def _mower_observed_at(mower: Mapping[str, Any]) -> datetime | None:
         return None
 
 
-def _station_held(mower: Mapping[str, Any], now: datetime, *, expected_mower_id: str = "") -> bool:
+def _fresh_station_home(
+    mower: Mapping[str, Any], now: datetime, *, expected_mower_id: str = "",
+) -> bool:
+    """Return a fresh, exact-target vendor report of ParkUntilFurtherNotice.
+
+    The Automower API documents ``mode=HOME`` for ParkUntilFurtherNotice.
+    ``planner.override.action=FORCE_PARK`` has different next-task semantics,
+    so it is deliberately neither required nor accepted as the durable-park
+    proof here.  This remains a fresh backend report, not a local physical
+    guarantee against a later external start.
+    """
     return (
         _mower_age_fresh(mower, now)
         and bool(expected_mower_id)
         and str(mower.get("mower_id") or "") == expected_mower_id
         and str(mower.get("activity") or "").upper() in {"CHARGING", "PARKED_IN_CS"}
-        and str(mower.get("override_action") or "").upper() == "FORCE_PARK"
+        and str(mower.get("mode") or "").upper() == "HOME"
     )
+
+
+def _station_held(mower: Mapping[str, Any], now: datetime, *, expected_mower_id: str = "") -> bool:
+    """Whether the current snapshot reports the configured mower held at home."""
+    return _fresh_station_home(mower, now, expected_mower_id=expected_mower_id)
 
 
 def _guard_reassert_key(
@@ -499,14 +514,12 @@ def _fresh_station_confirmation(entry: Mapping[str, Any], mower: Mapping[str, An
     try:
         dispatched_at = _parse_time(entry.get("sent_at") or entry["reserved_at"])
         observed = datetime.fromtimestamp(float(mower.get("status_timestamp_ms")) / 1000, timezone.utc)
-    except (KeyError, TypeError, ValueError, OSError):
+        expected_mower_id = str(entry.get("mower_id") or "").strip()
+    except (KeyError, TypeError, ValueError, OverflowError, OSError):
         return False
     return (
-        _mower_age_fresh(mower, now)
-        and str(mower.get("mower_id") or "") == str(entry.get("mower_id") or "")
+        _fresh_station_home(mower, now, expected_mower_id=expected_mower_id)
         and observed > dispatched_at
-        and str(mower.get("activity") or "").upper() in {"PARKED_IN_CS", "CHARGING"}
-        and str(mower.get("override_action") or "").upper() == "FORCE_PARK"
     )
 
 
@@ -633,7 +646,7 @@ def run_operator_cycle(
     )
     guard_details: dict[str, Any] = {
         "enabled": settings.enable_operator_safety_guard,
-        # This is only physical proof from the current fresh mower snapshot;
+        # This is a fresh vendor report of a held mower, not physical proof;
         # a queued/reserved command is intentionally reported separately.
         "protected": station_held,
         "reason": guard_reason,
@@ -651,14 +664,14 @@ def run_operator_cycle(
         ]
         guard_details["reason"] = guard_reason
         if station_held:
-            # A current FORCE_PARK observation proves the physical hold.  Do
-            # not issue a duplicate Park command merely because the calendar
-            # or water block still exists.
+            # HOME at a fresh exact-target station report acknowledges the
+            # documented ParkUntilFurtherNotice state.  Do not issue a
+            # duplicate command merely because the block still exists.
             queued_guard = next((entry for entry in guard_history if entry["status"] == "QUEUED"), None)
             if queued_guard is not None:
                 entries = _replace_entry(
                     entries, queued_guard["request_id"], status="CONFIRMED",
-                    confirmed_at=now.isoformat(), message_code="ALREADY_FORCE_PARK",
+                    confirmed_at=now.isoformat(), message_code="ALREADY_PARKED_HOME",
                 )
                 state = _save_entries(store, state, entries)
         elif existing_unknown:
@@ -722,7 +735,7 @@ def run_operator_cycle(
         if disabled or cleared or current_station_held:
             status = "CONFIRMED" if current_station_held and not disabled else "REJECTED"
             message = (
-                "ALREADY_FORCE_PARK" if status == "CONFIRMED" else
+                "ALREADY_PARKED_HOME" if status == "CONFIRMED" else
                 "SAFETY_GUARD_REVOKED" if disabled else "SAFETY_CONDITION_CLEARED"
             )
             changes: dict[str, Any] = {"status": status, "message_code": message}
