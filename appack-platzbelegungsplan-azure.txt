@@ -308,7 +308,7 @@ right: var(--page-right) !important;
 bottom: 0 !important;
 left: var(--page-left) !important;
 display: grid;
-grid-template-rows: minmax(0, 1fr) auto;
+grid-template-rows: auto minmax(0, 1fr) auto;
 width: auto !important;
 height: auto !important;
 min-width: 0;
@@ -325,18 +325,19 @@ contain: layout paint;
 }
 
 #calendar-status {
-position: absolute;
+position: relative;
+grid-row: 1;
 z-index: 8;
-top: 8px;
-left: 8px;
-right: 8px;
+top: auto;
+left: auto;
+right: auto;
 flex: 0 0 auto;
 display: flex;
 align-items: center;
 justify-content: center;
 gap: 9px;
 min-height: 43px;
-margin: 0;
+margin: 8px 8px 0;
 padding: 8px 10px;
 border: 1px solid var(--line);
 border-radius: 9px;
@@ -365,6 +366,8 @@ color: #6f5608;
 
 
 #calendar-status[data-state="empty"] {
+position: absolute;
+margin: 0;
 top: 50%;
 right: auto;
 left: 50%;
@@ -468,7 +471,7 @@ display: none;
 
 #calendar {
 position: relative;
-grid-row: 1;
+grid-row: 2;
 width: 100%;
 height: 100%;
 min-width: 0;
@@ -716,7 +719,7 @@ user-select: none !important;
 }
 
 #calendar-navigation {
-grid-row: 2;
+grid-row: 3;
 min-width: 0;
 min-height: var(--calendar-navigation-height);
 display: grid;

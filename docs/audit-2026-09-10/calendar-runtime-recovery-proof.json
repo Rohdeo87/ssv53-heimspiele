@@ -1,0 +1,19 @@
+{
+  "verified_at": "2026-09-10T05:57:02.769633+00:00",
+  "api_records": "calendar-live-api-proof.json",
+  "summer_winter_request_same_effective_events": true,
+  "current_week_matches_known_suffix_events": true,
+  "differences_ignored": [
+    "evaluatedAtUtc"
+  ],
+  "current_week_event_count": 8,
+  "next_week_event_count": 20,
+  "current_week_training_gap": "2026-09-07T00:00:00+02:00/2026-09-10T00:00:00+02:00",
+  "gap_scope": "historical training only",
+  "strict_control_and_write_paths_unchanged": true,
+  "runtime_publisher_run": "https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/34442331448",
+  "runtime_source_commit": "20e83f28f6beb683aab96dcaf5671f1ba142c5fd",
+  "runtime_source_generated_at": "2026-09-10T05:00:10+00:00",
+  "automatic_import_handoff_pr": "https://github.com/Rohdeo87/ssv53-heimspiele/pull/57",
+  "automatic_import_handoff_observed": false
+}

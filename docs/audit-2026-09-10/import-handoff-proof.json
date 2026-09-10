@@ -1,0 +1,11 @@
+{
+  "pr": "https://github.com/Rohdeo87/ssv53-heimspiele/pull/57",
+  "source_commit": "d587b7bb0e34d89533c990045f6139e38efdf713",
+  "base_commit": "20e83f28f6beb683aab96dcaf5671f1ba142c5fd",
+  "merge_commit": "8cbd5f868abc16b47fc004a9f7f82e01dbd8a57d",
+  "ci_run": "https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/34443021066",
+  "ci_result": "success",
+  "targeted_tests": 4,
+  "targeted_subtests": 4,
+  "automatic_fresh_import_handoff_observed": false
+}

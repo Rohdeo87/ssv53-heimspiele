@@ -1,0 +1,22 @@
+{
+  "source_commit": "4b180db591f6a685ac57bb50c3fccf2794b8d8c5",
+  "pull_request": "https://github.com/Rohdeo87/ssv53-heimspiele/pull/56",
+  "exact_source_tests_run": "https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/34441433697",
+  "exact_source_package_run": "https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/34441433682",
+  "deployment_cli_exit_code": 0,
+  "installation_proof": "installed-calendar-proof.json",
+  "appack_proof": "calendar-appack-published-proof.json",
+  "post_installation_cycles": "calendar-installed-cycles.json",
+  "python_tests": 1242,
+  "python_subtests": 445,
+  "appack_tests": 127,
+  "real_device_test_commands": 0,
+  "physical_protective_park_verified": false,
+  "unattended_automation_accepted": false,
+  "api_validation_initial": "503: training publication stale after match source exceeded 720 minutes; latest actual main import not yet published",
+  "runtime_refresh_request": "runtime-refresh-dispatch.json",
+  "api_validation_final": "200: known current and future events available; unknown historical training prefix explicitly marked",
+  "api_proof": "calendar-runtime-recovery-proof.json",
+  "regular_notification_proof": "calendar-notification-proof.json",
+  "layout_appack_proof": "calendar-layout-published-proof.json"
+}

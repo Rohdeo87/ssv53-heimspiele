@@ -1,0 +1,19 @@
+{
+  "verified_at": "2026-09-10T05:59:29.026Z",
+  "url": "https://appack.de/rest-api/drender/6a6242dfccdd23e7a9553567",
+  "source_normalized_sha256": "56b34ef75f0c1497e014cc7045de80056ac5de7b42d6a3fe988b115e48e5020e",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "actual_published_backend": true,
+  "synthetic_data": false,
+  "native_app_authenticated_session": false,
+  "season_control_hidden_in_active_mode": true,
+  "grass_filter_preserves_three_grass_trainings": true,
+  "screenshots": [
+    "week-mobile.png",
+    "today-mobile.png"
+  ],
+  "notice_does_not_cover_date_header": true
+}

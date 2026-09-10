@@ -126,7 +126,7 @@ Abfrage ab dem heutigen Tag nicht sichtbar waren:
 
 | Befund | Nachweis und Ursache | Korrektur |
 |---|---|---|
-| Kalenderansicht noch auf älterer Vorlage | Das Modul `Platzbelegung` verweist auf `Belegungsplan_selfmade_2_optimiert.tpl`, ID `6a6242dfccdd23e7a9553567`. Der tatsächlich ausgelesene Inhalt mit SHA256 `4c4844e823fd2deab951fe9eb7cb728c486a12e74b8ca79be0a5764440261c5b` enthält keine gemeinsame Saisonsteuerung. | Geprüfte aktuelle Kalenderdatei vorbereiten und dieselbe Modulbindung erhalten; Veröffentlichung separat rücklesen. |
+| Kalenderansicht noch auf älterer Vorlage | Das Modul `Platzbelegung` verweist auf `Belegungsplan_selfmade_2_optimiert.tpl`, ID `6a6242dfccdd23e7a9553567`. Der tatsächlich ausgelesene Inhalt mit SHA256 `4c4844e823fd2deab951fe9eb7cb728c486a12e74b8ca79be0a5764440261c5b` enthält keine gemeinsame Saisonsteuerung. | Aktuelle Kalenderdatei in derselben Modulbindung veröffentlicht und vollständig rückgelesen; mobile Ansicht mit echten Daten geprüft. |
 | Ganze aktuelle Woche liefert 503 | Die reale Abfrage 07.–14.09. scheitert, während 10.–14.09. funktioniert. Der Resolver benötigt wegen möglicher Termine über Mitternacht auch den Vortagsanker. Die gespeicherte Historie beginnt am 09.09.; der erste vollständig belegbare Tag ist deshalb der 10.09. | Nur im öffentlichen GET bekannte aktuelle/künftige Trainingstage liefern; den früheren unbekannten Bereich ausdrücklich markieren. Spiele aus dem früheren Bereich bleiben erhalten. Keine rückwirkende Saisonannahme. |
 | Benachrichtigungszyklus scheitert | `SSV53_OCCUPANCY_COLLISION_NOTIFICATION_ERROR`: Dem Resolver wurde kein persistierter `TrainingControlSnapshot` übergeben. Die anderen beiden Verbraucher hatten diesen Zustand. | Auch dieser Verbraucher lädt einmal denselben persistenten Saisonstand. |
 
@@ -150,8 +150,36 @@ Nach dieser Ergänzung bestehen **1.242 Python-Tests und 445 Subtests sowie
 127 Appack-Tests**. Die tatsächliche Kalendervorlage wurde um 07:30 Uhr gespeichert
 und um 07:31 Uhr nach Neuladen rückgelesen; ihre Modul- und Datenquellenbindung
 blieb erhalten. [Kalender-CMS-Nachweis](calendar-appack-published-proof.json).
-Die zusätzliche Backendkorrektur muss anschließend als eigenes Paket
-installiert und gegen die reale Wochenabfrage geprüft werden.
+Das zusätzliche Backendpaket aus Quellstand `4b180db591f6a685ac57bb50c3fccf2794b8d8c5`
+ist installiert. Um **07:39 Uhr** wurden wiederum alle 62 tatsächlichen Dateien
+mit dem CI-Paket verglichen: Manifest
+`298313e2008280b522ee8f5d07fdfd3fd2b06155345398f3cc6bc39fbf894458`.
+[Installationsvergleich](installed-calendar-proof.json),
+[CI-Herkunft](calendar-ci-artifact-proof.json),
+[Lieferübersicht](calendar-installation-summary.json).
+Die regulären Mäherzyklen bestätigen dieses Manifest, den aktiven Schutz und die
+bestehende manuelle Pause ohne Befehlsversand. Die Trocknungsfrist blieb über
+beide Installationen hinweg bei 09:40 Uhr.
+
+Nach der unten beschriebenen Datenübernahme lieferten die realen Abfragen um
+**07:47 Uhr** jeweils HTTP 200: acht Termine in der aktuellen Woche und 20 in
+der nächsten Woche. Sommer- und Winter-Anfrage enthalten identische wirksame
+Termine. Die bekannte Teilwoche ab dem 10.09. ist identisch mit den angezeigten
+aktuellen Terminen der ganzen Woche. Frühere unbekannte Trainings sind als
+solche markiert; die Steuerung erhält keine gelockerte Freigaberegel.
+[API-Abgleich](calendar-runtime-recovery-proof.json).
+
+Die abschließende mobile Prüfung deckte zusätzlich einen überdeckten
+Kalenderkopf auf. Hinweise stehen jetzt in einer eigenen Zeile darüber. Diese
+reine Darstellungskorrektur wurde um **07:54 Uhr** gespeichert und um 07:55 Uhr
+nach vollständigem Neuladen rückgelesen: SHA256
+`56b34ef75f0c1497e014cc7045de80056ac5de7b42d6a3fe988b115e48e5020e`.
+[CMS-Nachweis](calendar-layout-published-proof.json),
+[heutige Termine in Smartphonebreite](calendar-live/today-mobile.png),
+[Wochenansicht](calendar-live/week-mobile.png). Beide Aufnahmen verwenden die
+veröffentlichte Vorlage und die echte öffentliche API; sie ersetzen keine
+Abnahme einer angemeldeten nativen App. Der Rasenfilter zeigte ausschließlich
+die drei heutigen Rasentrainings.
 
 Die zusätzlichen Azure-Prozessausgänge mit Code 143 sind von den
 Benachrichtigungsfehlern getrennt: Der Instanzvergleich zeigt einen Wechsel der
@@ -165,6 +193,47 @@ Nutzung mit aktiver manueller Saisonsteuerung ebenfalls eine explizite
 Snapshot-Anbindung. Er bleibt ohne diese Anbindung gesperrt und wird vom
 laufenden Gerätepfad nicht verwendet. Er wurde in dieser Vorfallkorrektur nicht
 als zusätzliche Steuerungsinstanz aktiviert.
+
+### Unterbrochene Weitergabe frischer Spielimporte
+
+Während der Abschlusskontrolle überschritt der in Azure vorhandene Spielstand
+vom **09.09., 19:24:56 Uhr** die unveränderte Frischegrenze von zwölf Stunden.
+Auch die Kalenderabfrage ab heute wurde dadurch gesperrt. Der Fehler war von
+den zunächst korrigierten historischen Trainingsankern unabhängig.
+
+Der [Importlauf 34438970315](https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/34438970315)
+hatte bereits einen neuen, erfolgreich geprüften Bestand mit Quelle
+**10.09., 07:00:10 Uhr** und 47 einbezogenen Spielen veröffentlicht:
+`20e83f28f6beb683aab96dcaf5671f1ba142c5fd` auf `main`. Der nachgelagerte
+Dispatcher reagierte auf dessen Bot-Push nicht. Das ist das dokumentierte
+[GitHub-Verhalten bei GITHUB_TOKEN-Pushes](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow).
+Sein zusätzlicher Sechsstundentakt hatte die Lücke bis dahin nicht geschlossen.
+Es wurde weder ein Quellzeitstempel künstlich erneuert noch eine Altersgrenze
+verlängert.
+
+Der [gezielt angestoßene Publisher 34442331448](https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/34442331448)
+prüfte und veröffentlichte genau diesen frischen main-Bestand. Die persistente
+Kalenderfreigabe, Kalenderrevision und Inhalts- und Hüllenhash blieben erhalten.
+Er ändert keine Azure-Betriebsschalter und sendet keine Gerätebefehle.
+Die wiederhergestellte reale API liefert denselben Kalenderhash wie die
+reguläre Mähersteuerung. Sieben reguläre Benachrichtigungszyklen zwischen
+07:46 und 07:58 Uhr liefen danach ohne den zuvor protokollierten Geschäftsfehler.
+[Nicht manuell ausgelöste Timerprüfung](calendar-notification-proof.json).
+
+Die dauerhafte Weitergabe ist in [PR 57](https://github.com/Rohdeo87/ssv53-heimspiele/pull/57)
+korrigiert und nach erfolgreicher Prüfung des exakten Quellstands
+`d587b7bb0e34d89533c990045f6139e38efdf713` in `main` zusammengeführt:
+`8cbd5f868abc16b47fc004a9f7f82e01dbd8a57d`.
+Der neue Abschluss-Trigger akzeptiert ausschließlich erfolgreiche eigene
+Hauptbranch-Importe aus Zeitplan, manueller Auslösung oder Push. Er prüft
+zusätzlich die tatsächlichen erfolgreichen Abruf- und Speicherschritte. Ein
+übersprungener Nacht-/Frischelauf erzeugt keinen zusätzlichen Publish. Der
+Publisher liest den neuesten atomaren main-Bestand; die Start-SHA des
+Importlaufs wird nicht mit dessen anschließend erzeugtem Datencommit verwechselt.
+Vier gezielte Tests und vier Subtests führen den tatsächlichen Dispatch-Code
+mit nachgebildeten API-Antworten aus. Die CI des geprüften Stands ist erfolgreich.
+Die nächste automatische Kette mit tatsächlich neuem Import ist noch nicht
+live beobachtet; die erfolgte manuelle Wiederherstellung wird davon getrennt.
 
 ### Nachweis des ersten Schutzpakets
 
