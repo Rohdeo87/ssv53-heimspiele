@@ -228,7 +228,8 @@ def test_stale_or_expired_model_is_unknown():
     assert old["validCompletedSections"] == 0
 
 
-def test_actual_live_status_uses_live_battery_with_one_cached_query_and_preserves_gates():
+@pytest.mark.parametrize("include_details", [True, False])
+def test_actual_live_status_uses_live_battery_with_one_cached_query_and_preserves_gates(include_details):
     _STATISTICS_CACHE.clear()
     rows = history() + current()
     queries = []
@@ -256,9 +257,9 @@ def test_actual_live_status_uses_live_battery_with_one_cached_query_and_preserve
             first = live_status(ENV, NOW)
             later = NOW + timedelta(minutes=4)
             cycle.details["mower"].update(live_mower(later, 68))
-            second = live_status(ENV, later)
+            second = live_status(ENV, later, include_details=include_details)
             cycle.details["mower"].update(live_mower(later, 50))
-            regressed = live_status(ENV, later)
+            regressed = live_status(ENV, later, include_details=include_details)
         assert len(queries) == 1
         assert first["coordination"]["chargingEndEstimate"]["currentBatteryPercent"] == 60
         assert second["coordination"]["chargingEndEstimate"]["currentBatteryPercent"] == 68

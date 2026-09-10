@@ -9,6 +9,7 @@ import secrets
 import threading
 import urllib.parse
 import urllib.request
+from copy import deepcopy
 from pathlib import Path
 from zoneinfo import ZoneInfo
 from dataclasses import replace
@@ -50,6 +51,7 @@ from mower.irrigation_schedule import (
 from mower.irrigation_operating_window import validate_fresh_start
 from daily_safety_report import dashboard_irrigation_statistics, dashboard_statistics, estimate_charging_end
 from mower.statistics_cache import (
+    peek_dashboard_statistics,
     get_dashboard_statistics,
     _STATISTICS_CACHE,
     _STATISTICS_CACHE_LOCK,
@@ -94,6 +96,31 @@ _MATCH_DISPLAY_CACHE: dict[str, Any] = {"path": None, "mtime_ns": None, "matches
 
 def _dashboard_statistics(environment: Mapping[str, str], now_utc: datetime) -> dict[str, Any]:
     return get_dashboard_statistics(environment, now_utc, loader=dashboard_statistics)
+
+
+def _peek_display_cache(cache: dict, lock: Any, now_utc: datetime) -> dict[str, Any]:
+    """No I/O and no waiting behind an in-flight optional display query."""
+    pending = {"available": False, "loading": True}
+    if not lock.acquire(blocking=False):
+        return pending
+    try:
+        expires = cache.get("expires")
+        if isinstance(expires, datetime) and expires - timedelta(minutes=5) <= now_utc < expires:
+            return deepcopy({key: value for key, value in cache.items() if key != "expires"})
+        return pending
+    except Exception:
+        cache.clear()
+        return pending
+    finally:
+        lock.release()
+
+
+def _drop_display_cache(cache: dict, lock: Any) -> None:
+    if lock.acquire(blocking=False):
+        try:
+            cache.clear()
+        finally:
+            lock.release()
 
 
 def _dashboard_irrigation_statistics(
@@ -1299,7 +1326,8 @@ def _operator_display_fallback(settings, environment, now_utc):
                        {"mower": mower, "current_plan": {}, "hydrawise": {}})
 
 
-def live_status(environment: Mapping[str, str], now_utc: datetime) -> dict[str, Any]:
+def live_status(environment: Mapping[str, str], now_utc: datetime, *,
+                include_details: bool = True) -> dict[str, Any]:
     controls_available = True
     dashboard_snapshot_only = str(environment.get("HYDRAWISE_DASHBOARD_OBSERVATION_MODE") or "OFF").strip().upper() != "OFF"
     data_quality = {
@@ -1458,57 +1486,78 @@ def live_status(environment: Mapping[str, str], now_utc: datetime) -> dict[str, 
     ]
     device_statistics = dict(mower.get("statistics") or {})
     statistics = {
-        **_dashboard_statistics(environment, now_utc),
+        **(_dashboard_statistics(environment, now_utc) if include_details else
+           peek_dashboard_statistics(environment, now_utc) or {"available": False, "loading": True}),
         "currentAreaProgress": target.get("progress"),
         "bladeUsageSeconds": device_statistics.get("cutting_blade_usage_seconds"),
         "totalRunningSeconds": device_statistics.get("total_running_seconds"),
     }
-    # Recalculate against this request's fresh live battery. The five-minute
-    # cache contains historical evidence only, never a cached charging permit.
-    charging_end_estimate = estimate_charging_end(
-        statistics.pop("_chargingEvidence", None), dict(details.get("mower") or {}), now_utc,
-    )
-    completed_cycles = statistics.get("estimatedAreaCycles7d", statistics.get("completedAreaCycles7d"))
-    statistics["mownAreaEquivalentsEstimated"] = True
-    current_progress = statistics.get("currentAreaProgress")
-    if completed_cycles is not None and current_progress is not None:
-        statistics["mownAreaEquivalents7d"] = round(
-            float(completed_cycles) + max(0.0, min(100.0, float(current_progress))) / 100,
-            2,
+    try:
+        # Recalculate against this request's fresh live battery. The five-minute
+        # cache contains historical evidence only, never a cached charging permit.
+        charging_end_estimate = estimate_charging_end(
+            statistics.pop("_chargingEvidence", None), dict(details.get("mower") or {}), now_utc,
         )
-    else:
-        statistics["mownAreaEquivalents7d"] = None
-    irrigation_statistics = _dashboard_irrigation_statistics(environment, now_utc)
+        completed_cycles = statistics.get("estimatedAreaCycles7d", statistics.get("completedAreaCycles7d"))
+        statistics["mownAreaEquivalentsEstimated"] = True
+        current_progress = statistics.get("currentAreaProgress")
+        if completed_cycles is not None and current_progress is not None:
+            statistics["mownAreaEquivalents7d"] = round(
+                float(completed_cycles) + max(0.0, min(100.0, float(current_progress))) / 100,
+                2,
+            )
+        else:
+            statistics["mownAreaEquivalents7d"] = None
+    except Exception:
+        # Malformed optional history must not replace a valid live safety read.
+        _drop_display_cache(_STATISTICS_CACHE, _STATISTICS_CACHE_LOCK)
+        statistics = {"available": False, "loading": True,
+                      "currentAreaProgress": target.get("progress"),
+                      "bladeUsageSeconds": device_statistics.get("cutting_blade_usage_seconds"),
+                      "totalRunningSeconds": device_statistics.get("total_running_seconds")}
+        charging_end_estimate = None
+    irrigation_statistics = (_dashboard_irrigation_statistics(environment, now_utc)
+                             if include_details else _peek_display_cache(
+                                 _IRRIGATION_STATISTICS_CACHE, _IRRIGATION_STATISTICS_CACHE_LOCK, now_utc))
     zone_names = {
         int(zone["relay_id"]): str(zone.get("name") or f"Zone {zone.get('zone')}")
         for zone in hydrawise.get("zones", [])
         if isinstance(zone, dict) and zone.get("relay_id") is not None
     }
-    measured_zone_minutes = {
-        int(item.get("relayId") or 0): int(item.get("minutes") or 0)
-        for item in irrigation_statistics.get("zoneMinutes7d") or []
-        if isinstance(item, dict) and item.get("relayId") is not None
-    }
-    attention = irrigation_statistics.get("attention")
-    if isinstance(attention, dict):
-        for affected in attention.get("affectedRuns") or []:
-            if not isinstance(affected, dict):
-                continue
-            affected["confirmedZoneNames"] = [
-                zone_names[relay_id]
-                for relay_id in affected.get("confirmedRelayIds") or []
-                if relay_id in zone_names
-            ]
-    irrigation_statistics["zoneMinutes7d"] = [
-        {
-            "relayId": relay_id,
-            "name": name,
-            "minutes": measured_zone_minutes.get(relay_id, 0),
+    try:
+        measured_zone_minutes = {
+            int(item.get("relayId") or 0): int(item.get("minutes") or 0)
+            for item in irrigation_statistics.get("zoneMinutes7d") or []
+            if isinstance(item, dict) and item.get("relayId") is not None
         }
-        for relay_id, name in zone_names.items()
-    ]
+        attention = irrigation_statistics.get("attention")
+        if isinstance(attention, dict):
+            for affected in attention.get("affectedRuns") or []:
+                if not isinstance(affected, dict):
+                    continue
+                affected["confirmedZoneNames"] = [
+                    zone_names[relay_id]
+                    for relay_id in affected.get("confirmedRelayIds") or []
+                    if relay_id in zone_names
+                ]
+        irrigation_statistics["zoneMinutes7d"] = [
+            {
+                "relayId": relay_id,
+                "name": name,
+                "minutes": measured_zone_minutes.get(relay_id, 0),
+            }
+            for relay_id, name in zone_names.items()
+        ]
+    except Exception:
+        _drop_display_cache(_IRRIGATION_STATISTICS_CACHE, _IRRIGATION_STATISTICS_CACHE_LOCK)
+        irrigation_statistics = {"available": False, "loading": True}
+    clubhouse = (_clubhouse_events(environment, now_utc) if include_details else
+                 _peek_display_cache(_CLUBHOUSE_CACHE, _CLUBHOUSE_CACHE_LOCK, now_utc)
+                 if str(environment.get("SSV53_CLUBHOUSE_RESERVATION_URL") or "").strip()
+                 else {"available": False, "events": []})
     return {
         "generatedAt": now_utc.astimezone(timezone.utc).isoformat(),
+        "detailsDeferred": any(item.get("loading") for item in (statistics, irrigation_statistics, clubhouse)),
         "controlsAvailable": controls_available,
         "deviceControlsAvailable": device_controls_available,
         "protection": _protection_payload(settings),
@@ -1567,7 +1616,7 @@ def live_status(environment: Mapping[str, str], now_utc: datetime) -> dict[str, 
             state,
             [zone for zone in hydrawise.get("zones", []) if isinstance(zone, dict)],
         ),
-        "clubhouse": _clubhouse_events(environment, now_utc),
+        "clubhouse": clubhouse,
     }
 
 

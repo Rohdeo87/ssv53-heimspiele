@@ -124,6 +124,83 @@ def test_disabled_snapshot_option_preserves_existing_app_read_path(tmp_path):
         assert ctx.vendor.call_count == 1
 
 
+@pytest.mark.parametrize("seconds", [30, 181])
+def test_fast_status_preserves_all_safety_fields_without_optional_io(tmp_path, seconds):
+    with pipeline(tmp_path) as ctx:
+        control_read(ctx)
+        at = NOW + timedelta(seconds=seconds)
+        full = live_status(ENV, at)
+        before = ctx.state.load()
+        with ExitStack() as stack:
+            for name in ("_dashboard_statistics", "_dashboard_irrigation_statistics", "_clubhouse_events"):
+                stack.enter_context(patch("platzwart_console." + name,
+                                          side_effect=AssertionError("Optional I/O blocks live status")))
+            stack.enter_context(patch("platzwart_console.peek_dashboard_statistics", return_value=None))
+            stack.enter_context(patch("platzwart_console._peek_display_cache",
+                                      return_value={"available": False, "loading": True}))
+            fast = live_status(ENV, at, include_details=False)
+        for key in ("generatedAt", "controlsAvailable", "deviceControlsAvailable", "actionCapabilities",
+                    "manualControl", "dataQuality", "overall", "mower", "irrigation", "occupancy",
+                    "automation", "trainingControl", "irrigationSchedule", "protection", "operatorCommands"):
+            assert fast[key] == full[key], key
+        assert fast["coordination"] == full["coordination"]
+        assert fast["detailsDeferred"] is True
+        assert fast["statistics"]["loading"] is True
+        assert "_chargingEvidence" not in fast["statistics"]
+        assert ctx.state.load() == before and ctx.vendor.call_count == 1
+
+
+def test_fast_display_cache_is_nonblocking_deep_copied_and_time_bounded():
+    import threading
+    from platzwart_console import _peek_display_cache
+    lock = threading.Lock()
+    cache = {"expires": NOW + timedelta(minutes=5), "available": True, "events": [{"title": "A"}]}
+    with lock:
+        assert _peek_display_cache(cache, lock, NOW)["loading"] is True
+    result = _peek_display_cache(cache, lock, NOW)
+    result["events"][0]["title"] = "changed"
+    assert cache["events"][0]["title"] == "A"
+    for at in (NOW - timedelta(seconds=1), NOW + timedelta(minutes=5)):
+        assert _peek_display_cache(cache, lock, at)["loading"] is True
+    cache["expires"] = NOW.replace(tzinfo=None)
+    assert _peek_display_cache(cache, lock, NOW)["loading"] is True
+    assert cache == {}
+
+
+def test_no_clubhouse_integration_does_not_cause_endless_optional_reads(tmp_path):
+    with pipeline(tmp_path) as ctx:
+        control_read(ctx)
+        with patch("platzwart_console.peek_dashboard_statistics", return_value={"available": True}), \
+                patch("platzwart_console._peek_display_cache", return_value={"available": True}) as peek:
+            fast = live_status(ENV, NOW, include_details=False)
+        assert fast["detailsDeferred"] is False
+        assert fast["clubhouse"] == {"available": False, "events": []}
+        assert peek.call_count == 1  # irrigation only, no cache for an unconfigured integration
+
+
+@pytest.mark.parametrize("history,water", [
+    ({"estimatedAreaCycles7d": "bad"}, {}),
+    ({}, {"zoneMinutes7d": 1}),
+    ({}, {"zoneMinutes7d": [{"relayId": "bad", "minutes": 1}]}),
+    ({}, {"attention": {"affectedRuns": 1}}),
+    ({}, {"attention": {"affectedRuns": [{"confirmedRelayIds": [{}]}]}}),
+])
+def test_corrupt_optional_contents_never_destroy_a_live_safety_response(tmp_path, history, water):
+    with pipeline(tmp_path) as ctx:
+        result = control_read(ctx)
+        result.details["mower"]["target_work_area"] = {"progress": 50}
+        with patch("platzwart_console.run_read_only_cycle", return_value=result), \
+                patch("platzwart_console.peek_dashboard_statistics", return_value=history), \
+                patch("platzwart_console._peek_display_cache", return_value=water), \
+                patch("platzwart_console._drop_display_cache") as drop:
+            output = live_status(ENV, NOW, include_details=False)
+        assert output["mower"]["activity"] == "CHARGING"
+        assert output["irrigation"]["safety"]["fresh"] is True
+        assert output["detailsDeferred"] is True
+        assert output["coordination"]["chargingEndEstimate"] is None
+        drop.assert_called_once()
+
+
 def test_full_failsafe_canonical_reader_publishes_with_all_command_gates_locked(tmp_path):
     with pipeline(tmp_path) as ctx, patch(
         "mower.dry_run.dashboard_observation_store_from_environment", return_value=ctx.store
