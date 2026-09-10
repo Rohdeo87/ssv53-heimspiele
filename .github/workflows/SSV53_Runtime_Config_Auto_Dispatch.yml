@@ -46,7 +46,7 @@ jobs:
     steps:
       - name: Runtime-Config-Workflow sicher starten
         id: runtime_dispatch
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           IMPORT_WORKFLOW_RUN: ${{ github.event_name == 'workflow_run' }}
           SOURCE_SHA: ${{ github.event_name == 'push' && github.sha || '' }}
