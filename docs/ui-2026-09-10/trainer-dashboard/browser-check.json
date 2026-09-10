@@ -1,0 +1,111 @@
+{
+  "synthetic": true,
+  "networkBlocked": true,
+  "deviceAcceptance": false,
+  "results": [
+    {
+      "case": "possible-gap",
+      "width": 320,
+      "title": "Rasenpause zur Sicherheit",
+      "overall": "JETZT\nRasenpause zur Sicherheit\nLetzte Bewässerung unklar. Bitte den Platz prüfen.",
+      "dryingLabel": "Rasenpause zur Sicherheit bis",
+      "dryTime": "Heute, 18:25 Uhr",
+      "chargeTime": "Noch offen",
+      "overflow": false,
+      "assertionsPassed": true,
+      "blockedNetworkRequests": 0,
+      "errors": []
+    },
+    {
+      "case": "possible-gap",
+      "width": 390,
+      "title": "Rasenpause zur Sicherheit",
+      "overall": "JETZT\nRasenpause zur Sicherheit\nLetzte Bewässerung unklar. Bitte den Platz prüfen.",
+      "dryingLabel": "Rasenpause zur Sicherheit bis",
+      "dryTime": "Heute, 18:25 Uhr",
+      "chargeTime": "Noch offen",
+      "overflow": false,
+      "assertionsPassed": true,
+      "blockedNetworkRequests": 0,
+      "errors": []
+    },
+    {
+      "case": "irrigation-end",
+      "width": 320,
+      "title": "Rasen trocknet",
+      "overall": "JETZT\nRasen trocknet\nDer Mäher wartet nach der Bewässerung.",
+      "dryingLabel": "Wartezeit nach Bewässerung bis",
+      "dryTime": "Heute, 18:25 Uhr",
+      "chargeTime": "Noch offen",
+      "overflow": false,
+      "assertionsPassed": true,
+      "blockedNetworkRequests": 0,
+      "errors": []
+    },
+    {
+      "case": "irrigation-end",
+      "width": 390,
+      "title": "Rasen trocknet",
+      "overall": "JETZT\nRasen trocknet\nDer Mäher wartet nach der Bewässerung.",
+      "dryingLabel": "Wartezeit nach Bewässerung bis",
+      "dryTime": "Heute, 18:25 Uhr",
+      "chargeTime": "Noch offen",
+      "overflow": false,
+      "assertionsPassed": true,
+      "blockedNetworkRequests": 0,
+      "errors": []
+    },
+    {
+      "case": "charging",
+      "width": 320,
+      "title": "Mäher lädt",
+      "overall": "JETZT\nMäher lädt\nDu musst nichts tun.",
+      "dryingLabel": "Wartezeit nach Bewässerung bis",
+      "dryTime": "Wird geladen",
+      "chargeTime": "Heute, 17:10 Uhr",
+      "overflow": false,
+      "assertionsPassed": true,
+      "blockedNetworkRequests": 0,
+      "errors": []
+    },
+    {
+      "case": "charging",
+      "width": 390,
+      "title": "Mäher lädt",
+      "overall": "JETZT\nMäher lädt\nDu musst nichts tun.",
+      "dryingLabel": "Wartezeit nach Bewässerung bis",
+      "dryTime": "Wird geladen",
+      "chargeTime": "Heute, 17:10 Uhr",
+      "overflow": false,
+      "assertionsPassed": true,
+      "blockedNetworkRequests": 0,
+      "errors": []
+    },
+    {
+      "case": "water-unknown",
+      "width": 320,
+      "title": "Bewässerungsstand fehlt",
+      "overall": "JETZT\nBewässerungsstand fehlt\nBitte aktualisieren und die Bewässerungsanlage prüfen. Keine Geräte starten.",
+      "dryingLabel": "Wartezeit nach Bewässerung bis",
+      "dryTime": "Wird geladen",
+      "chargeTime": "Noch offen",
+      "overflow": false,
+      "assertionsPassed": true,
+      "blockedNetworkRequests": 0,
+      "errors": []
+    },
+    {
+      "case": "water-unknown",
+      "width": 390,
+      "title": "Bewässerungsstand fehlt",
+      "overall": "JETZT\nBewässerungsstand fehlt\nBitte aktualisieren und die Bewässerungsanlage prüfen. Keine Geräte starten.",
+      "dryingLabel": "Wartezeit nach Bewässerung bis",
+      "dryTime": "Wird geladen",
+      "chargeTime": "Noch offen",
+      "overflow": false,
+      "assertionsPassed": true,
+      "blockedNetworkRequests": 0,
+      "errors": []
+    }
+  ]
+}
