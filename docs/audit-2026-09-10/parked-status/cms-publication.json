@@ -1,0 +1,16 @@
+{
+  "published": true,
+  "template": "Platzpflege.tpl",
+  "template_id": "6a86ab6c4b3c829dd60de9b7",
+  "source_commit": "043421d36d45c22b21e9392b835d62215921feb1",
+  "saved_at_utc": "2026-09-10T18:55:04.228Z",
+  "readback_at_utc": "2026-09-10T18:56:02.346Z",
+  "sha256_lf": "bf0e8a755400df23a19a5b280e16db04e575c2938318d3cad06f061e2d630998",
+  "previous_sha256_lf": "07ec7d68eecc1807e095612cc04ea7cd7f742d04110de57f3e0a54db5d934b4a",
+  "full_reload_then_editor_readback": true,
+  "identical_to_tested_template": true,
+  "azure_deployment_performed": false,
+  "device_commands_sent": 0,
+  "calendar_changed": false,
+  "native_authenticated_status_verified": false
+}

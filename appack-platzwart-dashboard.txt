@@ -213,17 +213,33 @@
       var at=new Date(estimate.at);if(isNaN(at.getTime())||at<=now||at-now>24*60*60*1000)return null;
       return at;
     }
+    function parkedReportPending(s) {
+      // Display only: idle vendor reports arrive about every 15 minutes. This
+      // never changes telemetryFresh or any device/start/irrigation permission.
+      var m=s.mower||{},a=s.automation||{},o=s.occupancy||{},w=s.irrigation&&s.irrigation.safety||{},manual=s.manualControl||{},now=new Date(s.generatedAt),stamp=m.statusTimestamp;
+      if(m.telemetryFresh!==false||m.connected!==true||m.activity!=="PARKED_IN_CS"||m.mode!=="HOME"||["RESTRICTED","IN_OPERATION"].indexOf(m.state)<0||m.errorCode!==0||hasActiveMowerError(m))return false;
+      if(s.controlsAvailable!==true||!s.protection||s.protection.automaticStartEnabled!==true||s.operationMode==="MANUAL"||m.operationMode==="MANUAL"||manual.enabled===true&&manual.status!=="AUTOMATIC")return false;
+      if(!a.parkedByAutomation&&!a.continuousMowingOwned||a.irrigationPhase||w.available!==true||w.fresh!==true||w.clear_now!==true||w.active_zone_count!==0)return false;
+      var blocks=s.coordination&&s.coordination.blockers,commands=s.operatorCommands||{};
+      if(!Array.isArray(blocks)||!blocks.every(function(b){return b&&typeof b.code==="string"})||!blocks.some(function(b){return b.code==="MOWER_TELEMETRY"}))return false;
+      if(!o.current||!blocks.some(function(b){return b.code==="OCCUPANCY"&&typeof b.until==="string"&&Date.parse(b.until)===Date.parse(o.current.end)}))return false;
+      if(["START_MOWING","START_MOWING_OCCUPANCY_OVERRIDE","PARK_MOWER"].some(function(action){return["QUEUED","PENDING","RESERVED","SENT_UNCONFIRMED","CONFIRMING","UNKNOWN"].indexOf(String(commands[action]&&commands[action].status||"").toUpperCase())>=0}))return false;
+      if(!o.current||typeof stamp!=="number"&&typeof stamp!=="string"||!stamp||isNaN(now.getTime()))return false;
+      var report=new Date(stamp),start=new Date(o.current.start),end=new Date(o.current.end),age=now-report,source=String(o.current.source||"").split("+");
+      return typeof m.statusAgeSeconds==="number"&&Number.isFinite(m.statusAgeSeconds)&&m.statusAgeSeconds>180&&m.statusAgeSeconds<=1200&&!isNaN(report.getTime())&&Math.abs(age-m.statusAgeSeconds*1000)<=1000&&age>180000&&age<=1200000&&!isNaN(start.getTime())&&!isNaN(end.getTime())&&start<=now&&end>now&&source.length>0&&source.every(function(part){return["training","match"].indexOf(part)>=0});
+    }
     function nextStartInfo(s) {
       var m=s.mower||{},a=s.automation||{},c=s.coordination,o=s.occupancy||{},code=s.overall&&s.overall.code,protection=s.protection||{},startCommand=s.operatorCommands&&(s.operatorCommands.START_MOWING||s.operatorCommands.START_MOWING_OCCUPANCY_OVERRIDE),startStatus=String(startCommand&&startCommand.status||"").toUpperCase(),startPending=["QUEUED","PENDING","RESERVED","SENT_UNCONFIRMED","CONFIRMING"].indexOf(startStatus)>=0;
       var open={at:null,text:"Noch offen"};
       if(mowerTelemetryFresh(s)&&!hasActiveMowerError(m)&&["MOWING","LEAVING"].indexOf(m.activity)>=0)return {at:null,text:m.activity==="MOWING"?"Mäher läuft bereits":"Fährt zum Platz"};
       if(protection.automaticStartEnabled===false){if(a.pendingAction==="START_MOWING"||a.mowerStartOutcomeUnconfirmed||startPending)return {at:null,text:"Mäherstart angefragt"};return {at:null,text:"Start nur manuell"}}
       if(coordinationExecutionBlocked(s))return open;
-      if(!deviceControlsOpen(s)||!mowerTelemetryFresh(s)||m.connected!==true||hasActiveMowerError(m)||!c||isSearching(m))return open;
+      var waitingForReport=parkedReportPending(s);
+      if(!deviceControlsOpen(s)||!mowerTelemetryFresh(s)&&!waitingForReport||m.connected!==true||hasActiveMowerError(m)||!c||isSearching(m))return open;
       if(a.mowerStartOutcomeUnconfirmed||a.pendingAction||irrigationScheduleChangePending(s))return open;
       var blocks=Array.isArray(c.blockers)?c.blockers:[];
       if(blocks.some(function(b){return b.code==="MANUAL_STOP"})||isMowerPaused(m)||["STOPPED","OFF"].indexOf(m.state)>=0||code==="OPERATOR_PARK_HOLD"||code==="EXTERNAL_OVERRIDE"&&!a.continuousMowingOwned)return {at:null,text:"Automatik pausiert"};
-      if(blocks.some(function(b){return["CHARGING","OCCUPANCY","DRYING_OR_CONFIRMATION"].indexOf(b.code)<0}))return open;
+      if(blocks.some(function(b){return["CHARGING","OCCUPANCY","DRYING_OR_CONFIRMATION"].indexOf(b.code)<0&&!(waitingForReport&&b.code==="MOWER_TELEMETRY")}))return open;
       if(["MOWING","LEAVING"].indexOf(m.activity)>=0)return {at:null,text:m.activity==="MOWING"?"Bereits im Einsatz":"Fährt zum Platz"};
       if(a.irrigationPhase&&a.irrigationPhase!=="COMPLETE_HOLD")return open;
       if(["PARKED_IN_CS","CHARGING"].indexOf(m.activity)<0)return open;
@@ -244,7 +260,8 @@
         if(isNaN(start.getTime())||isNaN(deadline.getTime())||!Number.isFinite(minimum)||minimum<=0)continue;
         var candidate=new Date(Math.ceil(Math.max(earliest.getTime(),start.getTime())/300000)*300000);
         if(deadline-candidate<minimum*60000)continue;
-        return {at:candidate.toISOString(),text:null};
+        if(waitingForReport&&candidate<=now)return open;
+        return {at:candidate.toISOString(),text:null,awaitingMowerReport:waitingForReport};
       }
       return open;
     }
@@ -260,7 +277,16 @@
       if(hasActiveMowerError(m)||has("MOWER_ERROR"))return message("Mäher braucht Hilfe",Number(m.errorCode)===93?"Standort nicht gefunden. Bitte am Mäher nachsehen.":"Bitte die Meldung am Mäher prüfen und die Störung beheben.","bad");
       if(has("CONTROLLER_STALE"))return message("Automatik antwortet nicht","Bitte den Mäher prüfen und die Anzeige aktualisieren.","bad");
       if(has("DATA_QUALITY"))return message("Platzbelegung bitte prüfen","Bitte den aktuellen Belegungsplan prüfen. Bis dahin nicht starten.","bad");
-      if(has("MOWER_TELEMETRY"))return message("Mähermeldung ist älter","Bitte aktualisieren. Die angezeigten Gerätedaten sind der letzte bestätigte Stand.","warn");
+      if(has("MOWER_TELEMETRY")){
+        if(w.safety&&w.safety.available===true&&w.safety.fresh===true&&Number(w.safety.active_zone_count)>0){
+          if(["MOWING","LEAVING"].indexOf(m.activity)>=0)return message("Bewässerung läuft","Bitte den Mäher parken und den Platz noch nicht betreten.","bad");
+          if(irrigationOutsideWindow(s))return message("Bewässerung bitte beenden","Die Bewässerung läuft außerhalb von 03:30 bis 08:00 Uhr. Bitte die Anlage vor Ort prüfen und beenden.","bad");
+          return message("Bewässerung läuft","Bitte den Platz noch nicht betreten.","warn");
+        }
+        var planned=nextStartInfo(s);
+        if(planned.at&&planned.awaitingMowerReport)return message("Platz ist belegt","Belegt bis: "+calendarTime(o.current.end,s.generatedAt)+".","warn");
+        return message("Mähermeldung ist älter","Die letzte Rückmeldung steht unten. Bleibt sie aus, bitte am Mäher nachsehen.","warn");
+      }
       if(has("IRRIGATION_TELEMETRY"))return message("Bewässerung nicht erreichbar","Bitte aktualisieren. Bleibt die Meldung, die Anlage vor Ort prüfen.","warn");
       if(a.irrigationPhase==="FAILED"&&["IRRIGATION_WINDOW_CANNOT_FIT","IRRIGATION_OPERATING_WINDOW","IRRIGATION_ACTIVE_OUTSIDE_OPERATING_WINDOW"].indexOf(code)<0)return message("Bewässerung braucht Hilfe","Bitte die Bewässerungsanlage vor Ort prüfen. Nicht erneut starten.","bad");
       if(m.connected!==true||!s.coordination||!w.safety||w.safety.available!==true||w.safety.fresh!==true)return message("Aktuelle Angaben fehlen","Bitte aktualisieren. Bis zur Klärung keine Geräte starten.","warn");
@@ -362,7 +388,7 @@
     }
     function irrigationOutsideWindow(s){var at=new Date(s.generatedAt||Date.now());if(isNaN(at.getTime()))return false;var clock=at.toLocaleTimeString("en-GB",{timeZone:EVENT_TIME_ZONE,hour:"2-digit",minute:"2-digit",hourCycle:"h23"});return clock<"03:30"||clock>="08:00"}
     function waterTitle(s){var a=s.automation||{},safe=s.irrigation&&s.irrigation.safety||{};if(safe.available!==true||safe.fresh!==true)return"Rückmeldung fehlt";if(a.irrigationPhase==="FAILED")return"Bitte Anlage prüfen";if(Number(safe.active_zone_count||0)>0)return"Läuft";return phase(a.irrigationPhase)}
-    function renderCoordination(s){var c=s.coordination||{},m=s.mower||{},info=nextStartInfo(s),charge=chargingEnd(s),dry=c.dryUntil?new Date(c.dryUntil):null,now=new Date(s.generatedAt||Date.now());text("mower-next-start",info.at?calendarTime(info.at,now):info.text);document.getElementById("next-start-note").textContent=info.at?"Voraussichtlich":"";document.getElementById("charge-end-row").classList.toggle("hidden",m.activity!=="CHARGING");text("charge-end-time",charge?calendarTime(charge,now):"Noch offen");document.getElementById("charge-end-note").textContent=charge?"Voraussichtlich":"Die Zeit wird noch ermittelt.";var drying=s.controlsAvailable!==false&&dry&&!isNaN(dry.getTime())&&dry>now;document.getElementById("drying-end-row").classList.toggle("hidden",!drying);text("drying-end-label",c.dryingReason==="POSSIBLE_IRRIGATION_DURING_GAP"?"Rasenpause zur Sicherheit bis":c.dryingReason==="DATA_GAP"?"Kurze Prüfung bis":"Wartezeit nach Bewässerung bis");if(drying)text("drying-end-time",dryingTime(dry,now));text("water-next-start",nextWaterStart(s))}
+    function renderCoordination(s){var c=s.coordination||{},m=s.mower||{},info=nextStartInfo(s),charge=chargingEnd(s),dry=c.dryUntil?new Date(c.dryUntil):null,now=new Date(s.generatedAt||Date.now());text("mower-next-start",info.at?calendarTime(info.at,now):info.text);document.getElementById("next-start-note").textContent=info.at?(info.awaitingMowerReport?"Geplant · Neue Mähermeldung erforderlich.":"Voraussichtlich"):"";document.getElementById("charge-end-row").classList.toggle("hidden",m.activity!=="CHARGING");text("charge-end-time",charge?calendarTime(charge,now):"Noch offen");document.getElementById("charge-end-note").textContent=charge?"Voraussichtlich":"Die Zeit wird noch ermittelt.";var drying=s.controlsAvailable!==false&&dry&&!isNaN(dry.getTime())&&dry>now;document.getElementById("drying-end-row").classList.toggle("hidden",!drying);text("drying-end-label",c.dryingReason==="POSSIBLE_IRRIGATION_DURING_GAP"?"Rasenpause zur Sicherheit bis":c.dryingReason==="DATA_GAP"?"Kurze Prüfung bis":"Wartezeit nach Bewässerung bis");if(drying)text("drying-end-time",dryingTime(dry,now));text("water-next-start",nextWaterStart(s))}
     function load(){if(state.loading)return Promise.resolve(state.status);state.loading=true;document.getElementById("refresh").disabled=true;document.getElementById("refresh-spinner").classList.remove("hidden");text("refresh-label","Daten werden geladen");return api("/status").then(function(s){clearActionError();render(s);return s}).catch(function(e){if(e.status===401){sessionStorage.removeItem(SESSION_KEY);show("login")}else{var box=document.getElementById("action-error");box.textContent=friendlyError(e,"status");box.classList.remove("hidden");if(state.status)state.status.controlsAvailable=false;document.getElementById("overall").className="notice warn";text("overall-title","Verbindung unterbrochen");text("overall-text","Bitte die Internetverbindung prüfen und aktualisieren. Bis dahin keine Geräte starten.");text("mower-connection","Nicht aktuell");text("mower-title","Nicht aktuell");text("water-title","Nicht aktuell");text("water-text","Bitte aktualisieren.");text("mower-next-start","Noch offen");document.getElementById("next-start-note").textContent="";text("charge-end-time","Noch offen");document.getElementById("charge-end-note").textContent="";document.getElementById("drying-end-row").classList.add("hidden");text("water-next-start","Noch offen");renderOccupancy({available:false});renderTrainingControl({});text("updated","Nicht aktuell – zuletzt geladene Angaben");document.querySelectorAll("[data-action],.zone-start,#height-save,#irrigation-stop,#plan-save-custom,#plan-pause,#plan-skip,#plan-resume").forEach(function(b){b.disabled=true});text("overall-title","Verbindung unterbrochen")}return null}).finally(function(){state.loading=false;document.getElementById("refresh").disabled=false;document.getElementById("refresh-spinner").classList.add("hidden");text("refresh-label","Aktualisieren")})}
     function operatorActionPending(s,action){var c=s&&s.operatorCommands&&s.operatorCommands[action];return !!c&&["QUEUED","PENDING","RESERVED","SENT_UNCONFIRMED","CONFIRMING"].indexOf(String(c.status||"").toUpperCase())>=0}
     document.getElementById("activate-button").onclick=function(){var button=this,code=document.getElementById("activation-code").value.trim(),box=document.getElementById("activate-error");button.disabled=true;box.classList.add("hidden");api("/enroll",{method:"POST",body:{activationCode:code}}).then(function(d){localStorage.setItem(DEVICE_KEY,JSON.stringify(d));show("login")}).catch(function(e){box.textContent=friendlyError(e,"activation");box.classList.remove("hidden")}).finally(function(){button.disabled=false})};

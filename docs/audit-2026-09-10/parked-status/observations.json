@@ -1,0 +1,5425 @@
+{
+  "retrieved_at_utc": "2026-09-10T18:33:48.845337+00:00",
+  "read_only": true,
+  "count": 180,
+  "older_than_180_seconds": 142,
+  "max_status_age_seconds": 923.092,
+  "report_intervals_seconds": [
+    929.998,
+    930.0,
+    929.918,
+    930.004,
+    929.998,
+    622.415,
+    5.039,
+    134.796,
+    156.631,
+    930.0,
+    929.925,
+    929.995,
+    930.0,
+    929.999
+  ],
+  "observations": [
+    {
+      "at": "2026-09-10T15:34:02.3399761Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789054149568,
+        "error_code": 0
+      },
+      "status_age_seconds": 292.772,
+      "status_at_utc": "2026-09-10T15:29:09.568000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T15:34:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T15:35:02.9123143Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789054149568,
+        "error_code": 0
+      },
+      "status_age_seconds": 353.344,
+      "status_at_utc": "2026-09-10T15:29:09.568000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T15:35:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T15:36:02.5126296Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789054149568,
+        "error_code": 0
+      },
+      "status_age_seconds": 412.945,
+      "status_at_utc": "2026-09-10T15:29:09.568000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T15:36:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T15:37:02.4463668Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789054149568,
+        "error_code": 0
+      },
+      "status_age_seconds": 472.878,
+      "status_at_utc": "2026-09-10T15:29:09.568000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T15:37:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T15:38:02.2721479Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789054149568,
+        "error_code": 0
+      },
+      "status_age_seconds": 532.704,
+      "status_at_utc": "2026-09-10T15:29:09.568000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T15:38:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T15:39:02.4285443Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789054149568,
+        "error_code": 0
+      },
+      "status_age_seconds": 592.861,
+      "status_at_utc": "2026-09-10T15:29:09.568000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T15:39:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T15:40:02.7587454Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789054149568,
+        "error_code": 0
+      },
+      "status_age_seconds": 653.191,
+      "status_at_utc": "2026-09-10T15:29:09.568000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T15:40:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T15:41:02.2117333Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789054149568,
+        "error_code": 0
+      },
+      "status_age_seconds": 712.644,
+      "status_at_utc": "2026-09-10T15:29:09.568000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T15:41:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T15:42:02.5260428Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789054149568,
+        "error_code": 0
+      },
+      "status_age_seconds": 772.958,
+      "status_at_utc": "2026-09-10T15:29:09.568000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T15:42:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T15:43:02.3157828Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789054149568,
+        "error_code": 0
+      },
+      "status_age_seconds": 832.748,
+      "status_at_utc": "2026-09-10T15:29:09.568000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T15:43:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T15:44:02.8922299Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789054149568,
+        "error_code": 0
+      },
+      "status_age_seconds": 893.324,
+      "status_at_utc": "2026-09-10T15:29:09.568000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T15:44:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T15:45:02.7129823Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789055079566,
+        "error_code": 0
+      },
+      "status_age_seconds": 23.147,
+      "status_at_utc": "2026-09-10T15:44:39.566000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T15:45:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T15:46:02.2324572Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789055079566,
+        "error_code": 0
+      },
+      "status_age_seconds": 82.666,
+      "status_at_utc": "2026-09-10T15:44:39.566000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T15:46:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T15:47:02.2580094Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789055079566,
+        "error_code": 0
+      },
+      "status_age_seconds": 142.692,
+      "status_at_utc": "2026-09-10T15:44:39.566000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T15:47:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T15:48:02.5292131Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789055079566,
+        "error_code": 0
+      },
+      "status_age_seconds": 202.963,
+      "status_at_utc": "2026-09-10T15:44:39.566000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T15:48:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T15:49:02.8161057Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789055079566,
+        "error_code": 0
+      },
+      "status_age_seconds": 263.25,
+      "status_at_utc": "2026-09-10T15:44:39.566000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T15:49:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T15:50:02.7125973Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789055079566,
+        "error_code": 0
+      },
+      "status_age_seconds": 323.147,
+      "status_at_utc": "2026-09-10T15:44:39.566000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T15:50:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T15:51:02.3253573Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789055079566,
+        "error_code": 0
+      },
+      "status_age_seconds": 382.759,
+      "status_at_utc": "2026-09-10T15:44:39.566000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T15:51:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T15:52:02.2572706Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789055079566,
+        "error_code": 0
+      },
+      "status_age_seconds": 442.691,
+      "status_at_utc": "2026-09-10T15:44:39.566000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T15:52:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T15:53:02.3581774Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789055079566,
+        "error_code": 0
+      },
+      "status_age_seconds": 502.792,
+      "status_at_utc": "2026-09-10T15:44:39.566000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T15:53:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T15:54:02.1426082Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789055079566,
+        "error_code": 0
+      },
+      "status_age_seconds": 562.577,
+      "status_at_utc": "2026-09-10T15:44:39.566000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T15:54:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T15:55:02.4705868Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789055079566,
+        "error_code": 0
+      },
+      "status_age_seconds": 622.905,
+      "status_at_utc": "2026-09-10T15:44:39.566000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T15:55:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T15:56:02.2556855Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789055079566,
+        "error_code": 0
+      },
+      "status_age_seconds": 682.69,
+      "status_at_utc": "2026-09-10T15:44:39.566000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T15:56:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T15:57:02.1158739Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789055079566,
+        "error_code": 0
+      },
+      "status_age_seconds": 742.55,
+      "status_at_utc": "2026-09-10T15:44:39.566000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T15:57:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T15:58:02.2562193Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789055079566,
+        "error_code": 0
+      },
+      "status_age_seconds": 802.69,
+      "status_at_utc": "2026-09-10T15:44:39.566000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T15:58:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T15:59:02.2421046Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789055079566,
+        "error_code": 0
+      },
+      "status_age_seconds": 862.676,
+      "status_at_utc": "2026-09-10T15:44:39.566000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T15:59:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:00:02.6584053Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789055079566,
+        "error_code": 0
+      },
+      "status_age_seconds": 923.092,
+      "status_at_utc": "2026-09-10T15:44:39.566000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:00:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:01:02.6490407Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789056009566,
+        "error_code": 0
+      },
+      "status_age_seconds": 53.083,
+      "status_at_utc": "2026-09-10T16:00:09.566000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:01:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:02:02.3583723Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789056009566,
+        "error_code": 0
+      },
+      "status_age_seconds": 112.792,
+      "status_at_utc": "2026-09-10T16:00:09.566000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:02:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:03:02.4558979Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789056009566,
+        "error_code": 0
+      },
+      "status_age_seconds": 172.89,
+      "status_at_utc": "2026-09-10T16:00:09.566000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:03:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:04:02.7418586Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789056009566,
+        "error_code": 0
+      },
+      "status_age_seconds": 233.176,
+      "status_at_utc": "2026-09-10T16:00:09.566000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:04:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:05:02.5558236Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789056009566,
+        "error_code": 0
+      },
+      "status_age_seconds": 292.99,
+      "status_at_utc": "2026-09-10T16:00:09.566000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:05:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:06:02.1123269Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789056009566,
+        "error_code": 0
+      },
+      "status_age_seconds": 352.546,
+      "status_at_utc": "2026-09-10T16:00:09.566000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:06:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:07:02.2131163Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789056009566,
+        "error_code": 0
+      },
+      "status_age_seconds": 412.647,
+      "status_at_utc": "2026-09-10T16:00:09.566000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:07:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:08:02.2126394Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789056009566,
+        "error_code": 0
+      },
+      "status_age_seconds": 472.647,
+      "status_at_utc": "2026-09-10T16:00:09.566000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:08:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:09:02.3142058Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789056009566,
+        "error_code": 0
+      },
+      "status_age_seconds": 532.748,
+      "status_at_utc": "2026-09-10T16:00:09.566000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:09:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:10:02.5142233Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789056009566,
+        "error_code": 0
+      },
+      "status_age_seconds": 592.948,
+      "status_at_utc": "2026-09-10T16:00:09.566000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:10:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:11:02.2844216Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789056009566,
+        "error_code": 0
+      },
+      "status_age_seconds": 652.718,
+      "status_at_utc": "2026-09-10T16:00:09.566000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:11:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:12:02.3692247Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789056009566,
+        "error_code": 0
+      },
+      "status_age_seconds": 712.803,
+      "status_at_utc": "2026-09-10T16:00:09.566000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:12:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:13:02.2880853Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789056009566,
+        "error_code": 0
+      },
+      "status_age_seconds": 772.722,
+      "status_at_utc": "2026-09-10T16:00:09.566000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:13:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:14:02.812697Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789056009566,
+        "error_code": 0
+      },
+      "status_age_seconds": 833.247,
+      "status_at_utc": "2026-09-10T16:00:09.566000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:14:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:15:02.6573821Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789056009566,
+        "error_code": 0
+      },
+      "status_age_seconds": 893.091,
+      "status_at_utc": "2026-09-10T16:00:09.566000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:15:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:16:02.2123085Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789056939484,
+        "error_code": 0
+      },
+      "status_age_seconds": 22.728,
+      "status_at_utc": "2026-09-10T16:15:39.484000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:16:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:17:02.5142489Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789056939484,
+        "error_code": 0
+      },
+      "status_age_seconds": 83.03,
+      "status_at_utc": "2026-09-10T16:15:39.484000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:17:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:18:02.3291814Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789056939484,
+        "error_code": 0
+      },
+      "status_age_seconds": 142.845,
+      "status_at_utc": "2026-09-10T16:15:39.484000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:18:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:19:02.4597891Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789056939484,
+        "error_code": 0
+      },
+      "status_age_seconds": 202.976,
+      "status_at_utc": "2026-09-10T16:15:39.484000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:19:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:20:02.4471716Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789056939484,
+        "error_code": 0
+      },
+      "status_age_seconds": 262.963,
+      "status_at_utc": "2026-09-10T16:15:39.484000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:20:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:21:02.5151819Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789056939484,
+        "error_code": 0
+      },
+      "status_age_seconds": 323.031,
+      "status_at_utc": "2026-09-10T16:15:39.484000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:21:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:22:02.2326731Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789056939484,
+        "error_code": 0
+      },
+      "status_age_seconds": 382.749,
+      "status_at_utc": "2026-09-10T16:15:39.484000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:22:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:23:02.6484921Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789056939484,
+        "error_code": 0
+      },
+      "status_age_seconds": 443.164,
+      "status_at_utc": "2026-09-10T16:15:39.484000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:23:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:24:02.8129121Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789056939484,
+        "error_code": 0
+      },
+      "status_age_seconds": 503.329,
+      "status_at_utc": "2026-09-10T16:15:39.484000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:24:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:25:02.9159837Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789056939484,
+        "error_code": 0
+      },
+      "status_age_seconds": 563.432,
+      "status_at_utc": "2026-09-10T16:15:39.484000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:25:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:26:02.3128123Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789056939484,
+        "error_code": 0
+      },
+      "status_age_seconds": 622.829,
+      "status_at_utc": "2026-09-10T16:15:39.484000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:26:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:27:02.3551388Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789056939484,
+        "error_code": 0
+      },
+      "status_age_seconds": 682.871,
+      "status_at_utc": "2026-09-10T16:15:39.484000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:27:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:28:02.3167432Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789056939484,
+        "error_code": 0
+      },
+      "status_age_seconds": 742.833,
+      "status_at_utc": "2026-09-10T16:15:39.484000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:28:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:29:02.270475Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789056939484,
+        "error_code": 0
+      },
+      "status_age_seconds": 802.786,
+      "status_at_utc": "2026-09-10T16:15:39.484000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:29:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:30:02.6146458Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789056939484,
+        "error_code": 0
+      },
+      "status_age_seconds": 863.131,
+      "status_at_utc": "2026-09-10T16:15:39.484000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:30:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:31:02.2575304Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789056939484,
+        "error_code": 0
+      },
+      "status_age_seconds": 922.774,
+      "status_at_utc": "2026-09-10T16:15:39.484000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:31:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:32:03.0156689Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789057869488,
+        "error_code": 0
+      },
+      "status_age_seconds": 53.528,
+      "status_at_utc": "2026-09-10T16:31:09.488000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:32:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:33:02.4307026Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789057869488,
+        "error_code": 0
+      },
+      "status_age_seconds": 112.943,
+      "status_at_utc": "2026-09-10T16:31:09.488000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:33:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:34:02.5154901Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789057869488,
+        "error_code": 0
+      },
+      "status_age_seconds": 173.027,
+      "status_at_utc": "2026-09-10T16:31:09.488000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:34:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:35:02.4851649Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789057869488,
+        "error_code": 0
+      },
+      "status_age_seconds": 232.997,
+      "status_at_utc": "2026-09-10T16:31:09.488000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:35:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:36:02.3821784Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789057869488,
+        "error_code": 0
+      },
+      "status_age_seconds": 292.894,
+      "status_at_utc": "2026-09-10T16:31:09.488000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:36:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:37:02.4136176Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789057869488,
+        "error_code": 0
+      },
+      "status_age_seconds": 352.926,
+      "status_at_utc": "2026-09-10T16:31:09.488000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:37:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:38:02.6786705Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789057869488,
+        "error_code": 0
+      },
+      "status_age_seconds": 413.191,
+      "status_at_utc": "2026-09-10T16:31:09.488000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:38:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:39:02.3126663Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789057869488,
+        "error_code": 0
+      },
+      "status_age_seconds": 472.825,
+      "status_at_utc": "2026-09-10T16:31:09.488000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:39:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:40:03.1772409Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789057869488,
+        "error_code": 0
+      },
+      "status_age_seconds": 533.689,
+      "status_at_utc": "2026-09-10T16:31:09.488000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:40:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:41:02.4262148Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789057869488,
+        "error_code": 0
+      },
+      "status_age_seconds": 592.938,
+      "status_at_utc": "2026-09-10T16:31:09.488000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:41:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:42:02.61419Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789057869488,
+        "error_code": 0
+      },
+      "status_age_seconds": 653.126,
+      "status_at_utc": "2026-09-10T16:31:09.488000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:42:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:43:02.4813134Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789057869488,
+        "error_code": 0
+      },
+      "status_age_seconds": 712.993,
+      "status_at_utc": "2026-09-10T16:31:09.488000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:43:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:44:03.529834Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789057869488,
+        "error_code": 0
+      },
+      "status_age_seconds": 774.042,
+      "status_at_utc": "2026-09-10T16:31:09.488000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:44:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:45:02.5553937Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789057869488,
+        "error_code": 0
+      },
+      "status_age_seconds": 833.067,
+      "status_at_utc": "2026-09-10T16:31:09.488000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:45:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:46:02.657564Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789057869488,
+        "error_code": 0
+      },
+      "status_age_seconds": 893.17,
+      "status_at_utc": "2026-09-10T16:31:09.488000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:46:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:47:02.3692919Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789058799486,
+        "error_code": 0
+      },
+      "status_age_seconds": 22.883,
+      "status_at_utc": "2026-09-10T16:46:39.486000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:47:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:48:02.5833066Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789058799486,
+        "error_code": 0
+      },
+      "status_age_seconds": 83.097,
+      "status_at_utc": "2026-09-10T16:46:39.486000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:48:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:49:02.3283819Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789058799486,
+        "error_code": 0
+      },
+      "status_age_seconds": 142.842,
+      "status_at_utc": "2026-09-10T16:46:39.486000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:49:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:50:02.5277307Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789058799486,
+        "error_code": 0
+      },
+      "status_age_seconds": 203.042,
+      "status_at_utc": "2026-09-10T16:46:39.486000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:50:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:51:02.2550729Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789058799486,
+        "error_code": 0
+      },
+      "status_age_seconds": 262.769,
+      "status_at_utc": "2026-09-10T16:46:39.486000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:51:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:52:02.7130862Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789058799486,
+        "error_code": 0
+      },
+      "status_age_seconds": 323.227,
+      "status_at_utc": "2026-09-10T16:46:39.486000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:52:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:53:02.4790541Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789058799486,
+        "error_code": 0
+      },
+      "status_age_seconds": 382.993,
+      "status_at_utc": "2026-09-10T16:46:39.486000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:53:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:54:02.3122468Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789058799486,
+        "error_code": 0
+      },
+      "status_age_seconds": 442.826,
+      "status_at_utc": "2026-09-10T16:46:39.486000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:54:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:55:02.3551177Z",
+      "decision": "MANUAL_START_SESSION_ENDED_AT_CHARGE",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789058799486,
+        "error_code": 0
+      },
+      "status_age_seconds": 502.869,
+      "status_at_utc": "2026-09-10T16:46:39.486000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:55:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:56:15.7186173Z",
+      "decision": "PARK_COMMAND_SENT",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "MAIN_AREA",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789058799486,
+        "error_code": 0
+      },
+      "status_age_seconds": 576.233,
+      "status_at_utc": "2026-09-10T16:46:39.486000+00:00",
+      "command_sent": true,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:56:04+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:57:03.817366Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789059421901,
+        "error_code": 0
+      },
+      "status_age_seconds": 1.916,
+      "status_at_utc": "2026-09-10T16:57:01.901000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:57:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:58:03.5391546Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789059426940,
+        "error_code": 0
+      },
+      "status_age_seconds": 56.599,
+      "status_at_utc": "2026-09-10T16:57:06.940000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:58:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T16:59:04.3169704Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789059426940,
+        "error_code": 0
+      },
+      "status_age_seconds": 117.377,
+      "status_at_utc": "2026-09-10T16:57:06.940000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T16:59:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:00:04.2154226Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789059561736,
+        "error_code": 0
+      },
+      "status_age_seconds": 42.479,
+      "status_at_utc": "2026-09-10T16:59:21.736000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:00:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:01:02.7515583Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789059561736,
+        "error_code": 0
+      },
+      "status_age_seconds": 101.016,
+      "status_at_utc": "2026-09-10T16:59:21.736000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:01:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:02:02.9206984Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789059718367,
+        "error_code": 0
+      },
+      "status_age_seconds": 4.554,
+      "status_at_utc": "2026-09-10T17:01:58.367000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:02:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:03:03.9158236Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789059718367,
+        "error_code": 0
+      },
+      "status_age_seconds": 65.549,
+      "status_at_utc": "2026-09-10T17:01:58.367000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:03:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:04:02.5419314Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789059718367,
+        "error_code": 0
+      },
+      "status_age_seconds": 124.175,
+      "status_at_utc": "2026-09-10T17:01:58.367000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:04:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:05:02.6315173Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789059718367,
+        "error_code": 0
+      },
+      "status_age_seconds": 184.265,
+      "status_at_utc": "2026-09-10T17:01:58.367000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:05:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:06:02.4374344Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789059718367,
+        "error_code": 0
+      },
+      "status_age_seconds": 244.07,
+      "status_at_utc": "2026-09-10T17:01:58.367000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:06:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:07:02.7385473Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789059718367,
+        "error_code": 0
+      },
+      "status_age_seconds": 304.372,
+      "status_at_utc": "2026-09-10T17:01:58.367000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:07:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:08:02.5157451Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789059718367,
+        "error_code": 0
+      },
+      "status_age_seconds": 364.149,
+      "status_at_utc": "2026-09-10T17:01:58.367000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:08:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:09:02.6734737Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789059718367,
+        "error_code": 0
+      },
+      "status_age_seconds": 424.306,
+      "status_at_utc": "2026-09-10T17:01:58.367000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:09:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:10:03.4426632Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789059718367,
+        "error_code": 0
+      },
+      "status_age_seconds": 485.076,
+      "status_at_utc": "2026-09-10T17:01:58.367000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:10:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:11:02.6712904Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789059718367,
+        "error_code": 0
+      },
+      "status_age_seconds": 544.304,
+      "status_at_utc": "2026-09-10T17:01:58.367000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:11:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:12:03.2309521Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789059718367,
+        "error_code": 0
+      },
+      "status_age_seconds": 604.864,
+      "status_at_utc": "2026-09-10T17:01:58.367000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:12:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:13:02.5192763Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789059718367,
+        "error_code": 0
+      },
+      "status_age_seconds": 664.152,
+      "status_at_utc": "2026-09-10T17:01:58.367000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:13:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:14:02.9879576Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789059718367,
+        "error_code": 0
+      },
+      "status_age_seconds": 724.621,
+      "status_at_utc": "2026-09-10T17:01:58.367000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:14:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:15:02.716563Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789059718367,
+        "error_code": 0
+      },
+      "status_age_seconds": 784.35,
+      "status_at_utc": "2026-09-10T17:01:58.367000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:15:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:16:02.6178786Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789059718367,
+        "error_code": 0
+      },
+      "status_age_seconds": 844.251,
+      "status_at_utc": "2026-09-10T17:01:58.367000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:16:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:17:02.6415916Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789059718367,
+        "error_code": 0
+      },
+      "status_age_seconds": 904.275,
+      "status_at_utc": "2026-09-10T17:01:58.367000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:17:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:18:02.9887375Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789060648367,
+        "error_code": 0
+      },
+      "status_age_seconds": 34.622,
+      "status_at_utc": "2026-09-10T17:17:28.367000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:18:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:19:02.6328269Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789060648367,
+        "error_code": 0
+      },
+      "status_age_seconds": 94.266,
+      "status_at_utc": "2026-09-10T17:17:28.367000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:19:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:20:03.7186636Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789060648367,
+        "error_code": 0
+      },
+      "status_age_seconds": 155.352,
+      "status_at_utc": "2026-09-10T17:17:28.367000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:20:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:21:02.4378466Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789060648367,
+        "error_code": 0
+      },
+      "status_age_seconds": 214.071,
+      "status_at_utc": "2026-09-10T17:17:28.367000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:21:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:22:02.5032317Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789060648367,
+        "error_code": 0
+      },
+      "status_age_seconds": 274.136,
+      "status_at_utc": "2026-09-10T17:17:28.367000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:22:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:23:02.6155599Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789060648367,
+        "error_code": 0
+      },
+      "status_age_seconds": 334.249,
+      "status_at_utc": "2026-09-10T17:17:28.367000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:23:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:24:03.0726051Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789060648367,
+        "error_code": 0
+      },
+      "status_age_seconds": 394.706,
+      "status_at_utc": "2026-09-10T17:17:28.367000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:24:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:25:02.8452719Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789060648367,
+        "error_code": 0
+      },
+      "status_age_seconds": 454.478,
+      "status_at_utc": "2026-09-10T17:17:28.367000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:25:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:26:02.8161906Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789060648367,
+        "error_code": 0
+      },
+      "status_age_seconds": 514.449,
+      "status_at_utc": "2026-09-10T17:17:28.367000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:26:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:27:02.716455Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789060648367,
+        "error_code": 0
+      },
+      "status_age_seconds": 574.349,
+      "status_at_utc": "2026-09-10T17:17:28.367000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:27:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:28:02.4184847Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789060648367,
+        "error_code": 0
+      },
+      "status_age_seconds": 634.051,
+      "status_at_utc": "2026-09-10T17:17:28.367000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:28:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:29:02.7429247Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789060648367,
+        "error_code": 0
+      },
+      "status_age_seconds": 694.376,
+      "status_at_utc": "2026-09-10T17:17:28.367000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:29:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:30:03.2309706Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789060648367,
+        "error_code": 0
+      },
+      "status_age_seconds": 754.864,
+      "status_at_utc": "2026-09-10T17:17:28.367000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:30:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:31:02.5886453Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789060648367,
+        "error_code": 0
+      },
+      "status_age_seconds": 814.222,
+      "status_at_utc": "2026-09-10T17:17:28.367000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:31:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:32:03.1184436Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789060648367,
+        "error_code": 0
+      },
+      "status_age_seconds": 874.751,
+      "status_at_utc": "2026-09-10T17:17:28.367000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:32:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:33:02.7715583Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789061578292,
+        "error_code": 0
+      },
+      "status_age_seconds": 4.48,
+      "status_at_utc": "2026-09-10T17:32:58.292000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:33:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:34:02.6163247Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789061578292,
+        "error_code": 0
+      },
+      "status_age_seconds": 64.324,
+      "status_at_utc": "2026-09-10T17:32:58.292000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:34:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:35:02.8274842Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789061578292,
+        "error_code": 0
+      },
+      "status_age_seconds": 124.535,
+      "status_at_utc": "2026-09-10T17:32:58.292000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:35:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:36:02.2752994Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789061578292,
+        "error_code": 0
+      },
+      "status_age_seconds": 183.983,
+      "status_at_utc": "2026-09-10T17:32:58.292000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:36:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:37:02.5714384Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789061578292,
+        "error_code": 0
+      },
+      "status_age_seconds": 244.279,
+      "status_at_utc": "2026-09-10T17:32:58.292000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:37:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:38:02.4725661Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789061578292,
+        "error_code": 0
+      },
+      "status_age_seconds": 304.181,
+      "status_at_utc": "2026-09-10T17:32:58.292000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:38:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:39:05.0367584Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789061578292,
+        "error_code": 0
+      },
+      "status_age_seconds": 366.745,
+      "status_at_utc": "2026-09-10T17:32:58.292000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:39:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:40:03.1469085Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789061578292,
+        "error_code": 0
+      },
+      "status_age_seconds": 424.855,
+      "status_at_utc": "2026-09-10T17:32:58.292000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:40:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:41:02.844066Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789061578292,
+        "error_code": 0
+      },
+      "status_age_seconds": 484.552,
+      "status_at_utc": "2026-09-10T17:32:58.292000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:41:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:42:03.7433413Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789061578292,
+        "error_code": 0
+      },
+      "status_age_seconds": 545.451,
+      "status_at_utc": "2026-09-10T17:32:58.292000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:42:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:43:02.8187337Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789061578292,
+        "error_code": 0
+      },
+      "status_age_seconds": 604.527,
+      "status_at_utc": "2026-09-10T17:32:58.292000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:43:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:44:02.654162Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789061578292,
+        "error_code": 0
+      },
+      "status_age_seconds": 664.362,
+      "status_at_utc": "2026-09-10T17:32:58.292000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:44:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:45:03.0378405Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789061578292,
+        "error_code": 0
+      },
+      "status_age_seconds": 724.746,
+      "status_at_utc": "2026-09-10T17:32:58.292000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:45:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:46:02.5925535Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789061578292,
+        "error_code": 0
+      },
+      "status_age_seconds": 784.301,
+      "status_at_utc": "2026-09-10T17:32:58.292000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:46:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:47:02.5454561Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789061578292,
+        "error_code": 0
+      },
+      "status_age_seconds": 844.253,
+      "status_at_utc": "2026-09-10T17:32:58.292000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:47:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:48:02.7188322Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789061578292,
+        "error_code": 0
+      },
+      "status_age_seconds": 904.427,
+      "status_at_utc": "2026-09-10T17:32:58.292000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:48:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:49:02.6159486Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789062508287,
+        "error_code": 0
+      },
+      "status_age_seconds": 34.329,
+      "status_at_utc": "2026-09-10T17:48:28.287000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:49:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:50:03.2159435Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789062508287,
+        "error_code": 0
+      },
+      "status_age_seconds": 94.929,
+      "status_at_utc": "2026-09-10T17:48:28.287000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:50:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:51:03.0848312Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789062508287,
+        "error_code": 0
+      },
+      "status_age_seconds": 154.798,
+      "status_at_utc": "2026-09-10T17:48:28.287000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:51:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:52:03.9306998Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789062508287,
+        "error_code": 0
+      },
+      "status_age_seconds": 215.644,
+      "status_at_utc": "2026-09-10T17:48:28.287000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:52:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:53:03.0176472Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789062508287,
+        "error_code": 0
+      },
+      "status_age_seconds": 274.731,
+      "status_at_utc": "2026-09-10T17:48:28.287000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:53:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:54:02.9711788Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789062508287,
+        "error_code": 0
+      },
+      "status_age_seconds": 334.684,
+      "status_at_utc": "2026-09-10T17:48:28.287000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:54:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:55:03.1327827Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789062508287,
+        "error_code": 0
+      },
+      "status_age_seconds": 394.846,
+      "status_at_utc": "2026-09-10T17:48:28.287000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:55:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:56:03.4152234Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789062508287,
+        "error_code": 0
+      },
+      "status_age_seconds": 455.128,
+      "status_at_utc": "2026-09-10T17:48:28.287000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:56:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:57:02.818524Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789062508287,
+        "error_code": 0
+      },
+      "status_age_seconds": 514.532,
+      "status_at_utc": "2026-09-10T17:48:28.287000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:57:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:58:02.5148501Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789062508287,
+        "error_code": 0
+      },
+      "status_age_seconds": 574.228,
+      "status_at_utc": "2026-09-10T17:48:28.287000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:58:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T17:59:03.054268Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789062508287,
+        "error_code": 0
+      },
+      "status_age_seconds": 634.767,
+      "status_at_utc": "2026-09-10T17:48:28.287000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T17:59:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T18:00:03.7716705Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789062508287,
+        "error_code": 0
+      },
+      "status_age_seconds": 695.485,
+      "status_at_utc": "2026-09-10T17:48:28.287000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T18:00:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T18:01:03.9720348Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789062508287,
+        "error_code": 0
+      },
+      "status_age_seconds": 755.685,
+      "status_at_utc": "2026-09-10T17:48:28.287000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T18:01:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T18:02:02.8430757Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789062508287,
+        "error_code": 0
+      },
+      "status_age_seconds": 814.556,
+      "status_at_utc": "2026-09-10T17:48:28.287000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T18:02:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T18:03:02.9180989Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789062508287,
+        "error_code": 0
+      },
+      "status_age_seconds": 874.631,
+      "status_at_utc": "2026-09-10T17:48:28.287000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T18:03:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T18:04:02.3739667Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789063438287,
+        "error_code": 0
+      },
+      "status_age_seconds": 4.087,
+      "status_at_utc": "2026-09-10T18:03:58.287000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T18:04:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T18:05:02.8742068Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789063438287,
+        "error_code": 0
+      },
+      "status_age_seconds": 64.587,
+      "status_at_utc": "2026-09-10T18:03:58.287000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T18:05:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T18:06:02.6539065Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789063438287,
+        "error_code": 0
+      },
+      "status_age_seconds": 124.367,
+      "status_at_utc": "2026-09-10T18:03:58.287000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T18:06:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T18:07:02.4056311Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789063438287,
+        "error_code": 0
+      },
+      "status_age_seconds": 184.119,
+      "status_at_utc": "2026-09-10T18:03:58.287000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T18:07:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T18:08:02.5755681Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789063438287,
+        "error_code": 0
+      },
+      "status_age_seconds": 244.289,
+      "status_at_utc": "2026-09-10T18:03:58.287000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T18:08:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T18:09:02.5452082Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789063438287,
+        "error_code": 0
+      },
+      "status_age_seconds": 304.258,
+      "status_at_utc": "2026-09-10T18:03:58.287000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T18:09:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T18:10:03.0324196Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789063438287,
+        "error_code": 0
+      },
+      "status_age_seconds": 364.745,
+      "status_at_utc": "2026-09-10T18:03:58.287000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T18:10:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T18:11:02.3714382Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789063438287,
+        "error_code": 0
+      },
+      "status_age_seconds": 424.084,
+      "status_at_utc": "2026-09-10T18:03:58.287000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T18:11:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T18:12:02.6013282Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789063438287,
+        "error_code": 0
+      },
+      "status_age_seconds": 484.314,
+      "status_at_utc": "2026-09-10T18:03:58.287000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T18:12:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T18:13:02.5164842Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789063438287,
+        "error_code": 0
+      },
+      "status_age_seconds": 544.229,
+      "status_at_utc": "2026-09-10T18:03:58.287000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T18:13:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T18:14:02.5430846Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789063438287,
+        "error_code": 0
+      },
+      "status_age_seconds": 604.256,
+      "status_at_utc": "2026-09-10T18:03:58.287000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T18:14:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T18:15:03.0163334Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789063438287,
+        "error_code": 0
+      },
+      "status_age_seconds": 664.729,
+      "status_at_utc": "2026-09-10T18:03:58.287000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T18:15:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T18:16:02.5437671Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789063438287,
+        "error_code": 0
+      },
+      "status_age_seconds": 724.257,
+      "status_at_utc": "2026-09-10T18:03:58.287000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T18:16:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T18:17:02.5166284Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789063438287,
+        "error_code": 0
+      },
+      "status_age_seconds": 784.23,
+      "status_at_utc": "2026-09-10T18:03:58.287000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T18:17:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T18:18:02.5155547Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789063438287,
+        "error_code": 0
+      },
+      "status_age_seconds": 844.229,
+      "status_at_utc": "2026-09-10T18:03:58.287000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T18:18:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T18:19:02.3717013Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789063438287,
+        "error_code": 0
+      },
+      "status_age_seconds": 904.085,
+      "status_at_utc": "2026-09-10T18:03:58.287000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T18:19:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T18:20:02.9302856Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789064368286,
+        "error_code": 0
+      },
+      "status_age_seconds": 34.644,
+      "status_at_utc": "2026-09-10T18:19:28.286000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T18:20:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T18:21:02.5868757Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789064368286,
+        "error_code": 0
+      },
+      "status_age_seconds": 94.301,
+      "status_at_utc": "2026-09-10T18:19:28.286000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T18:21:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T18:22:02.7160459Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789064368286,
+        "error_code": 0
+      },
+      "status_age_seconds": 154.43,
+      "status_at_utc": "2026-09-10T18:19:28.286000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T18:22:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T18:23:02.6164358Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789064368286,
+        "error_code": 0
+      },
+      "status_age_seconds": 214.33,
+      "status_at_utc": "2026-09-10T18:19:28.286000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T18:23:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T18:24:02.6177285Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789064368286,
+        "error_code": 0
+      },
+      "status_age_seconds": 274.332,
+      "status_at_utc": "2026-09-10T18:19:28.286000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T18:24:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T18:25:02.9712319Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789064368286,
+        "error_code": 0
+      },
+      "status_age_seconds": 334.685,
+      "status_at_utc": "2026-09-10T18:19:28.286000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T18:25:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T18:26:02.5511714Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789064368286,
+        "error_code": 0
+      },
+      "status_age_seconds": 394.265,
+      "status_at_utc": "2026-09-10T18:19:28.286000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T18:26:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T18:27:02.435283Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789064368286,
+        "error_code": 0
+      },
+      "status_age_seconds": 454.149,
+      "status_at_utc": "2026-09-10T18:19:28.286000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T18:27:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T18:28:02.4533565Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789064368286,
+        "error_code": 0
+      },
+      "status_age_seconds": 514.167,
+      "status_at_utc": "2026-09-10T18:19:28.286000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T18:28:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T18:29:02.4011661Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789064368286,
+        "error_code": 0
+      },
+      "status_age_seconds": 574.115,
+      "status_at_utc": "2026-09-10T18:19:28.286000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T18:29:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T18:30:02.818159Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789064368286,
+        "error_code": 0
+      },
+      "status_age_seconds": 634.532,
+      "status_at_utc": "2026-09-10T18:19:28.286000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T18:30:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T18:31:02.5159746Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789064368286,
+        "error_code": 0
+      },
+      "status_age_seconds": 694.23,
+      "status_at_utc": "2026-09-10T18:19:28.286000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T18:31:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T18:32:02.7165741Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789064368286,
+        "error_code": 0
+      },
+      "status_age_seconds": 754.431,
+      "status_at_utc": "2026-09-10T18:19:28.286000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T18:32:01+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    },
+    {
+      "at": "2026-09-10T18:33:02.3471337Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789064368286,
+        "error_code": 0
+      },
+      "status_age_seconds": 814.061,
+      "status_at_utc": "2026-09-10T18:19:28.286000+00:00",
+      "command_sent": false,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T18:33:00+00:00"
+      },
+      "block": {
+        "start": "2026-09-10T16:30:00+02:00",
+        "end": "2026-09-10T22:00:00+02:00",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren",
+        "resource_id": null
+      }
+    }
+  ]
+}

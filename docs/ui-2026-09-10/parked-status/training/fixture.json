@@ -1,0 +1,94 @@
+{
+  "synthetic": true,
+  "payload": {
+    "ok": true,
+    "generatedAt": "2026-09-10T18:31:00Z",
+    "controlsAvailable": true,
+    "deviceControlsAvailable": true,
+    "overall": {
+      "code": "OCCUPANCY_OR_IRRIGATION_HOLD"
+    },
+    "operationMode": "AUTOMATIC",
+    "protection": {
+      "automaticStartEnabled": true,
+      "protectiveParkingEnabled": true
+    },
+    "mower": {
+      "activity": "PARKED_IN_CS",
+      "state": "RESTRICTED",
+      "mode": "HOME",
+      "connected": true,
+      "telemetryFresh": false,
+      "statusAgeSeconds": 720,
+      "statusTimestamp": 1789064340000,
+      "errorCode": 0,
+      "batteryPercent": 100,
+      "restartBatteryPercent": 90,
+      "workAreaProgress": 100,
+      "model": "Automower 580 EPOS",
+      "cuttingHeightMm": 25
+    },
+    "automation": {
+      "parkedByAutomation": true,
+      "continuousMowingOwned": false,
+      "irrigationPhase": null
+    },
+    "manualControl": {
+      "enabled": true,
+      "status": "AUTOMATIC",
+      "canStart": false,
+      "canPark": true,
+      "canResume": false,
+      "title": "Automatik",
+      "message": "Der M\u00e4her folgt der Platzpflegeplanung."
+    },
+    "irrigation": {
+      "safety": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0
+      },
+      "zones": []
+    },
+    "occupancy": {
+      "available": true,
+      "current": {
+        "start": "2026-09-10T14:30:00Z",
+        "end": "2026-09-10T20:00:00Z",
+        "source": "training",
+        "title": "Training E1; Training A; Training Herren"
+      },
+      "upcoming": [],
+      "safeWindows": [
+        {
+          "start": "2026-09-10T20:00:00Z",
+          "command_deadline": "2026-09-11T01:56:00Z",
+          "minimum_mowing_minutes": 30
+        }
+      ]
+    },
+    "coordination": {
+      "explanationOnly": true,
+      "blockers": [
+        {
+          "code": "MOWER_TELEMETRY"
+        },
+        {
+          "code": "OCCUPANCY",
+          "until": "2026-09-10T20:00:00Z"
+        }
+      ],
+      "dryUntil": "2026-09-10T16:25:00Z",
+      "releaseNotBefore": "2026-09-10T16:25:00Z",
+      "chargingEndEstimate": null
+    },
+    "dataQuality": {
+      "displayOnly": false
+    },
+    "irrigationSchedule": {},
+    "statistics": {},
+    "irrigationStatistics": {},
+    "clubhouseEvents": []
+  }
+}

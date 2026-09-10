@@ -1,0 +1,55 @@
+{
+  "synthetic": true,
+  "networkBlocked": true,
+  "deviceAcceptance": false,
+  "results": [
+    {
+      "case": "training",
+      "width": 320,
+      "title": "Platz ist belegt",
+      "at": "Heute, 22:00 Uhr",
+      "note": "Geplant · Neue Mähermeldung erforderlich.",
+      "manualStartDisabled": true,
+      "parkAvailable": true,
+      "wateringStartHidden": true,
+      "errors": [],
+      "passed": true
+    },
+    {
+      "case": "training",
+      "width": 390,
+      "title": "Platz ist belegt",
+      "at": "Heute, 22:00 Uhr",
+      "note": "Geplant · Neue Mähermeldung erforderlich.",
+      "manualStartDisabled": true,
+      "parkAvailable": true,
+      "wateringStartHidden": true,
+      "errors": [],
+      "passed": true
+    },
+    {
+      "case": "missing-report",
+      "width": 320,
+      "title": "Mähermeldung ist älter",
+      "at": "Noch offen",
+      "note": "",
+      "manualStartDisabled": true,
+      "parkAvailable": true,
+      "wateringStartHidden": true,
+      "errors": [],
+      "passed": true
+    },
+    {
+      "case": "missing-report",
+      "width": 390,
+      "title": "Mähermeldung ist älter",
+      "at": "Noch offen",
+      "note": "",
+      "manualStartDisabled": true,
+      "parkAvailable": true,
+      "wateringStartHidden": true,
+      "errors": [],
+      "passed": true
+    }
+  ]
+}
