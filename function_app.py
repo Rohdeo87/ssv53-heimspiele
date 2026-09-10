@@ -908,7 +908,19 @@ def ssv53_platzwart_status(req: func.HttpRequest) -> func.HttpResponse:
     now = datetime.now(timezone.utc)
     try:
         require_platzwart_session(_platzwart_token(req), os.environ, now)
-        return _platzwart_response(req, platzwart_live_status(os.environ, now))
+        # Opt-in keeps installed older templates compatible. No live state or
+        # permission is cached; only unrelated historical/display I/O is deferred.
+        from time import perf_counter
+        started = perf_counter()
+        fast = req.params.get("view") == "live"
+        payload = (platzwart_live_status(os.environ, now, include_details=False)
+                   if fast else platzwart_live_status(os.environ, now))
+        elapsed_ms = round((perf_counter() - started) * 1000, 1)
+        LOGGER.info("SSV53_PLATZWART_PAGE_TIMING view=%s duration_ms=%.1f",
+                    "live" if fast else "full", elapsed_ms)
+        response = _platzwart_response(req, payload)
+        response.headers["Server-Timing"] = f"status;dur={elapsed_ms}"
+        return response
     except PlatzwartError as exc:
         return _platzwart_response(req, {"code": exc.code, "error": str(exc)}, exc.status_code)
     except Exception:

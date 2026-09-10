@@ -1,0 +1,85 @@
+{
+  "retrieved_at_utc": "2026-09-10T20:13:08.096497+00:00",
+  "read_only": true,
+  "hours": 6,
+  "requests": [
+    {
+      "name": "ssv53_platzwart_login",
+      "resultCode": "200",
+      "samples": 7,
+      "success_count": 7,
+      "p50_ms": 242.2449,
+      "p95_ms": 1490.8588,
+      "max_ms": 1490.8588
+    },
+    {
+      "name": "ssv53_platzwart_status",
+      "resultCode": "200",
+      "samples": 60,
+      "success_count": 60,
+      "p50_ms": 2596.6078,
+      "p95_ms": 15213.9611,
+      "max_ms": 17872.223
+    },
+    {
+      "name": "ssv53_platzwart_status",
+      "resultCode": "401",
+      "samples": 28,
+      "success_count": 28,
+      "p50_ms": 7.175,
+      "p95_ms": 24.645,
+      "max_ms": 77.9771
+    }
+  ],
+  "dependencies": [],
+  "slow_requests": [
+    {
+      "timestamp": "2026-09-10T17:22:13.6671189Z",
+      "duration": 17872.223,
+      "success": "True",
+      "resultCode": "200"
+    },
+    {
+      "timestamp": "2026-09-10T19:08:51.9997721Z",
+      "duration": 16314.1111,
+      "success": "True",
+      "resultCode": "200"
+    },
+    {
+      "timestamp": "2026-09-10T19:03:18.232956Z",
+      "duration": 15437.3292,
+      "success": "True",
+      "resultCode": "200"
+    },
+    {
+      "timestamp": "2026-09-10T18:57:18.2785819Z",
+      "duration": 15213.9611,
+      "success": "True",
+      "resultCode": "200"
+    },
+    {
+      "timestamp": "2026-09-10T17:27:32.470734Z",
+      "duration": 14802.9034,
+      "success": "True",
+      "resultCode": "200"
+    },
+    {
+      "timestamp": "2026-09-10T18:51:18.6311301Z",
+      "duration": 14639.2323,
+      "success": "True",
+      "resultCode": "200"
+    },
+    {
+      "timestamp": "2026-09-10T19:08:18.2696988Z",
+      "duration": 14608.3984,
+      "success": "True",
+      "resultCode": "200"
+    },
+    {
+      "timestamp": "2026-09-10T14:20:04.4911009Z",
+      "duration": 14077.0173,
+      "success": "True",
+      "resultCode": "200"
+    }
+  ]
+}

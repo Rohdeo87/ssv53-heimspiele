@@ -1,0 +1,37 @@
+{
+  "synthetic": true,
+  "networkBlocked": true,
+  "deviceAcceptance": false,
+  "assumedCoreMs": 200,
+  "assumedOptionalMs": 2500,
+  "results": [
+    {
+      "version": "before",
+      "width": 320,
+      "status_ms": 2863,
+      "requests": 1,
+      "passed": true
+    },
+    {
+      "version": "after",
+      "width": 320,
+      "status_ms": 294,
+      "requests": 2,
+      "passed": true
+    },
+    {
+      "version": "before",
+      "width": 390,
+      "status_ms": 2777,
+      "requests": 1,
+      "passed": true
+    },
+    {
+      "version": "after",
+      "width": 390,
+      "status_ms": 293,
+      "requests": 2,
+      "passed": true
+    }
+  ]
+}
