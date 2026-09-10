@@ -1,0 +1,236 @@
+{
+  "activation": {
+    "verified_at_utc": "2026-09-10T09:42:44.705444+00:00",
+    "user_authorization": "Bitte aktivieren",
+    "function_app": "func-ssv53platzpflege-prod-q7kbw54s",
+    "before": {
+      "CONTROL_MODE": "OPERATOR_ONLY",
+      "ENABLE_MANUAL_SESSIONS": null,
+      "ENABLE_START_COMMANDS": "false",
+      "ENABLE_IRRIGATION_COMMANDS": "false",
+      "FULL_MOWER_CONFIRMATION": "LOCKED",
+      "FULL_FAILSAFE_CONFIRMATION": "LOCKED",
+      "COORDINATION_EXECUTION_ENABLED": "false",
+      "COORDINATION_EXECUTION_CONFIRMATION": null
+    },
+    "after": {
+      "CONTROL_MODE": "FULL_FAILSAFE",
+      "ENABLE_MANUAL_SESSIONS": "true",
+      "ENABLE_START_COMMANDS": "true",
+      "ENABLE_IRRIGATION_COMMANDS": "true",
+      "FULL_MOWER_CONFIRMATION": "SSV53-TRAINING-MATCH-PARK-START",
+      "FULL_FAILSAFE_CONFIRMATION": "SSV53-MOWER-HYDRAWISE-7-ZONES-150-MINUTES-ADAPTIVE-V1",
+      "COORDINATION_EXECUTION_ENABLED": "true",
+      "COORDINATION_EXECUTION_CONFIRMATION": "SSV53-COORDINATED-IRRIGATION-PILOT-V1"
+    },
+    "other_settings_unchanged": true,
+    "device_commands_sent_by_activation_script": false,
+    "persistent_manual_locks_modified": false,
+    "first_controller_cycle_observed": true,
+    "observed_controller_commands": [
+      {
+        "time": "2026-09-10T09:44:07.0154892Z",
+        "decision": "PARK_COMMAND_REASSERTED"
+      }
+    ],
+    "coordination_can_advance_watering": false,
+    "coordination_blocker": "APPROVED_COORDINATION_CONFIG_DISABLED",
+    "onsite_physical_verification": false
+  },
+  "observations": [
+    {
+      "time": "2026-09-10T09:45:03.2463244Z",
+      "mode": "FULL_FAILSAFE",
+      "decision": "MANUAL_OR_ERROR_HOLD",
+      "message": "Manueller, externer oder fehlerhafter Zustand wird nicht automatisch aufgehoben.",
+      "sent": false,
+      "mower": {
+        "activity": "NOT_APPLICABLE",
+        "mode": "HOME",
+        "state": "IN_OPERATION",
+        "battery_percent": 95,
+        "status_timestamp_ms": 1789033446967
+      },
+      "water": {
+        "active_relay_ids": [],
+        "active_zone_count": 0,
+        "age_seconds": 0,
+        "available": true,
+        "clear_now": true,
+        "expected_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "fresh": true,
+        "imminent_relay_ids": [],
+        "imminent_zone_count": 0,
+        "observed_at_utc": "2026-09-10T09:45:01+00:00",
+        "observed_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "reason": "Hydrawise meldet alle ausgew\u00e4hlten Zonen aktuell frei.",
+        "relay_set_valid": true,
+        "selected_zone_count": 7
+      },
+      "coordination": {
+        "available": false,
+        "blockers": [
+          "APPROVED_COORDINATION_CONFIG_DISABLED"
+        ],
+        "charging_end_estimate": null,
+        "need": null,
+        "needs": [],
+        "permission_to_start": false,
+        "previous_cycle": null,
+        "schema_version": 1
+      },
+      "manual": {
+        "enabled": true,
+        "epoch": null,
+        "kind": null,
+        "permission_code": "MANUAL_SESSIONS_DISABLED",
+        "session_id": null,
+        "status": null
+      },
+      "manifest": "67600a05061ca393037ae872f2db6f6a4cb41499f06c0d622bfe3a351c990abc"
+    },
+    {
+      "time": "2026-09-10T09:44:07.0154892Z",
+      "mode": "FULL_FAILSAFE",
+      "decision": "PARK_COMMAND_REASSERTED",
+      "message": "Der automatische Parkbefehl wurde wegen erneuter Platzfahrt sicher wiederholt.",
+      "sent": true,
+      "mower": {
+        "activity": "LEAVING",
+        "mode": "MAIN_AREA",
+        "state": "IN_OPERATION",
+        "battery_percent": 95,
+        "status_timestamp_ms": 1789033417091
+      },
+      "water": {
+        "active_relay_ids": [],
+        "active_zone_count": 0,
+        "age_seconds": -1,
+        "available": true,
+        "clear_now": true,
+        "expected_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "fresh": true,
+        "imminent_relay_ids": [],
+        "imminent_zone_count": 0,
+        "observed_at_utc": "2026-09-10T09:44:02+00:00",
+        "observed_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "reason": "Hydrawise meldet alle ausgew\u00e4hlten Zonen aktuell frei.",
+        "relay_set_valid": true,
+        "selected_zone_count": 7
+      },
+      "coordination": {
+        "available": false,
+        "blockers": [
+          "APPROVED_COORDINATION_CONFIG_DISABLED"
+        ],
+        "charging_end_estimate": null,
+        "need": null,
+        "needs": [],
+        "permission_to_start": false,
+        "previous_cycle": null,
+        "schema_version": 1
+      },
+      "manual": {
+        "enabled": true,
+        "epoch": null,
+        "kind": null,
+        "permission_code": "MANUAL_SESSIONS_DISABLED",
+        "session_id": null,
+        "status": null
+      },
+      "manifest": "67600a05061ca393037ae872f2db6f6a4cb41499f06c0d622bfe3a351c990abc"
+    },
+    {
+      "time": "2026-09-10T09:43:02.4693619Z",
+      "mode": "OPERATOR_ONLY",
+      "decision": "EXTERNAL_OVERRIDE",
+      "message": "Planner-Override \u201eFORCE_MOW\u201c ist aktiv. Er wird als manuelle oder externe Bedienung behandelt.",
+      "sent": false,
+      "mower": {
+        "activity": "LEAVING",
+        "mode": "MAIN_AREA",
+        "state": "IN_OPERATION",
+        "battery_percent": 95,
+        "status_timestamp_ms": 1789033357087
+      },
+      "water": {
+        "active_relay_ids": [],
+        "active_zone_count": 0,
+        "age_seconds": 0,
+        "available": true,
+        "clear_now": true,
+        "expected_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "fresh": true,
+        "imminent_relay_ids": [],
+        "imminent_zone_count": 0,
+        "observed_at_utc": "2026-09-10T09:43:00+00:00",
+        "observed_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "reason": "Hydrawise meldet alle ausgew\u00e4hlten Zonen aktuell frei.",
+        "relay_set_valid": true,
+        "selected_zone_count": 7
+      },
+      "coordination": {
+        "available": false,
+        "blockers": [
+          "APPROVED_COORDINATION_CONFIG_DISABLED"
+        ],
+        "charging_end_estimate": null,
+        "need": null,
+        "needs": [],
+        "permission_to_start": false,
+        "previous_cycle": null,
+        "schema_version": 1
+      },
+      "manual": null,
+      "manifest": "67600a05061ca393037ae872f2db6f6a4cb41499f06c0d622bfe3a351c990abc"
+    }
+  ]
+}
