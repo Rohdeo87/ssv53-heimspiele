@@ -789,20 +789,38 @@ def _platzwart_token(req: func.HttpRequest) -> str:
 
 
 def _authorize_occupancy_write(req: func.HttpRequest, body: dict, now_utc: datetime) -> dict:
-    """Temporary operator bridge; never derive write authority from Appack JSON.
-
-    Until a verified trainer identity provider is integrated, only an enrolled,
-    PIN-authenticated Platzwart session may change occupancy. Public reads remain
-    available. The session subject, not a submitted role/creator ID, is authoritative.
-    """
-    session = require_platzwart_session(_platzwart_token(req), os.environ, now_utc)
+    """Appack trainers use their verified profile; operators keep PIN access."""
+    authorization = str(req.headers.get("Authorization") or "").strip()
+    if not authorization.lower().startswith("bearer "):
+        raise PlatzwartError(
+            "SESSION_MISSING",
+            "Bitte die Platzbelegung in der angemeldeten SSV53-App erneut öffnen.",
+            401,
+        )
+    token = authorization[7:].strip()
+    if token.count(".") == 2:
+        from occupancy.appack_identity import require_appack_occupancy_identity
+        # Appack JWTs and our two-part Platzwart sessions are distinct formats.
+        # Verification failure never falls back to submitted identity/roles.
+        principal = require_appack_occupancy_identity(token, now_utc)
+        verified = {**body, **principal, "_occupancyIdentityProvider": "appack"}
+        if "commandId" in body:
+            requested = str(body.get("commandId") or "").strip()
+            if not requested or len(requested) > 240:
+                raise PlatzwartError("COMMAND_ID_INVALID", "Bitte den Termin erneut speichern.", 400)
+            verified["commandId"] = "appack:" + hashlib.sha256(
+                json.dumps([principal["requesterId"], requested], separators=(",", ":")).encode()
+            ).hexdigest()
+        return verified
+    session = require_platzwart_session(token, os.environ, now_utc)
     device_id = str(session.get("did") or "").strip()
     if not device_id:
         raise PlatzwartError("SESSION_INVALID", "Die Anmeldung enthält keine gültige Gerätekennung.", 401)
     subject = "platzwart:" + device_id
     creator = dict(body.get("creator") or {}) if isinstance(body.get("creator"), dict) else {}
     creator["id"] = subject
-    return {**body, "requesterId": subject, "isAppAdministrator": True, "creator": creator}
+    return {**body, "requesterId": subject, "isAppAdministrator": True,
+            "creator": creator, "_occupancyIdentityProvider": "platzwart"}
 
 
 @app.route(
@@ -1380,7 +1398,7 @@ def _trainer_training_occurrence(
 
 @app.route(
     route="trainer-occupancies",
-    methods=["POST", "OPTIONS"],
+    methods=["GET", "POST", "OPTIONS"],
     auth_level=func.AuthLevel.ANONYMOUS,
 )
 def ssv53_trainer_occupancies(req: func.HttpRequest) -> func.HttpResponse:
@@ -1392,6 +1410,16 @@ def ssv53_trainer_occupancies(req: func.HttpRequest) -> func.HttpResponse:
         )
 
     try:
+        if req.method.upper() == "GET":
+            # Read-only access check for the app and release verification.
+            # No training, storage or controller operations are performed here.
+            principal = _authorize_occupancy_write(req, {}, datetime.now(timezone.utc))
+            return _trainer_occupancy_response({
+                "ok": True,
+                "canManageTrainings": True,
+                "isAppAdministrator": principal["isAppAdministrator"],
+                "creator": {key: principal["creator"].get(key, "") for key in ("id", "name")},
+            }, status_code=200)
         if not special_occupancy_enabled(os.environ):
             raise SpecialOccupancyError(
                 "SPECIAL_OCCUPANCY_DISABLED",
@@ -1636,8 +1664,20 @@ def ssv53_trainer_occupancies(req: func.HttpRequest) -> func.HttpResponse:
             raise SpecialOccupancyError("DATETIME_TIMEZONE_REQUIRED", "Das Ende muss eine Zeitzone enthalten.")
         end = end.astimezone(ZoneInfo("Europe/Berlin"))
         resource_id = str(body.get("resourceId") or "").strip().lower()
+        create_event_id = str(body.get("eventId") or "")
+        if body.get("_occupancyIdentityProvider") == "appack":
+            # A trainer-created ID lives in the verified caller's namespace.
+            # Guessing another event's ID cannot turn create into an overwrite,
+            # including two concurrent requests. Retries keep the same ID.
+            if not create_event_id.strip() or len(create_event_id) > 160:
+                raise SpecialOccupancyError("EVENT_ID_INVALID", "Bitte den Termin erneut anlegen.")
+            create_event_id = "trainer-" + hashlib.sha256(
+                json.dumps([body["requesterId"], create_event_id], separators=(",", ":")).encode()
+            ).hexdigest()[:40]
         conflicts = _trainer_occupancy_conflicts(
             start=start, end=end, resource_id=resource_id, store=store,
+            ignored_event_ids={create_event_id, "one-off:" + create_event_id}
+            if body.get("_occupancyIdentityProvider") == "appack" else None,
             now_utc=now_utc, control_snapshot=request_training_control,
         )
         if conflicts and body.get("overlapConfirmation") != "UEBERSCHNEIDUNG_TROTZDEM_SPEICHERN":
@@ -1650,7 +1690,7 @@ def ssv53_trainer_occupancies(req: func.HttpRequest) -> func.HttpResponse:
             "commandId": str(body.get("commandId") or ""),
             "action": "upsert",
             "event": {
-                "id": str(body.get("eventId") or ""),
+                "id": create_event_id,
                 "title": body.get("title"),
                 "start": body.get("start"),
                 "end": body.get("end"),
@@ -2004,4 +2044,3 @@ def ssv53_order_mail(req: func.HttpRequest) -> func.HttpResponse:
             },
             status_code=500,
         )
-

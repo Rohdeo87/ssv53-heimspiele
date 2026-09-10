@@ -72,9 +72,9 @@ test("aktive technische Trainerrolle TR wird freigeschaltet", () => {
   );
 });
 
-test("aktive ausgeschriebene Trainer- oder Mitarbeiterrolle wird erkannt", () => {
-  assert.equal(api.hasActiveTrainerRole({ roles: [{ value: "Trainerin" }] }), true);
-  assert.equal(api.hasActiveTrainerRole({ roles: [{ value: "Mitarbeiter" }] }), true);
+test("nur aktive technische Trainerrolle TR wird erkannt", () => {
+  assert.equal(api.hasActiveTrainerRole({ roles: [{ value: "Trainerin" }] }), false);
+  assert.equal(api.hasActiveTrainerRole({ roles: [{ value: "Mitarbeiter" }] }), false);
 });
 
 test("beantragte Rolle, Vorstand und fehlendes Profil bleiben verborgen", () => {
@@ -85,7 +85,7 @@ test("beantragte Rolle, Vorstand und fehlendes Profil bleiben verborgen", () => 
 });
 
 test("App-Administrator und Profildaten werden aus dem aktiven Appack-Profil gelesen", () => {
-  assert.equal(api.hasActiveAppAdministratorRole({roles: [{value: "App-Administrator"}]}), true);
+  assert.equal(api.hasActiveAppAdministratorRole({roleKeys: ["AA"]}), true);
   const creator = api.getCurrentAppackCreator({
     id: "user-42",
     firstName: "Jule",
@@ -289,12 +289,18 @@ test("Trainingsabsage übermittelt ausschließlich eine aktuelle angemeldete Ses
   );
 });
 
-test("Belegungsänderungen geben fehlende, kaputte und abgelaufene Sitzungen nicht weiter", () => {
-  const readHeaders = value => new Function("sessionStorage", extractFunction("occupancyWriteHeaders") + "\nreturn occupancyWriteHeaders;")({getItem: () => value})();
+test("Belegungsänderungen wählen Appack-JWT, Platzwart-Fallback oder melden fehlende Auth", () => {
+  const source = ["normalizeAppackJwt", "readAppackJwtFromSource", "occupancyWriteTokenCandidateFromUrl", "occupancyWriteHeaders"].map(extractFunction).join("\n");
+  const readHeaders = (value, cookie = "", query = "") => new Function("sessionStorage", "document", "window", source + "\nreturn occupancyWriteHeaders;")({getItem: () => value}, {cookie}, {location: {search: query}})();
   for (const value of [null, "broken", "{}", JSON.stringify({token:"example",expiresAt:"invalid"}), JSON.stringify({token:"example",expiresAt:"2000-01-01T00:00:00Z"})]) {
-    assert.throws(() => readHeaders(value), /aktuelle Platzwart-Anmeldung/);
+    assert.throws(() => readHeaders(value), /angemeldeten SSV53-App/);
   }
   assert.equal(readHeaders(JSON.stringify({token:"signed-at-login",expiresAt:"2099-01-01T00:00:00Z"})).Authorization, "Bearer signed-at-login");
+  assert.equal(readHeaders(null, "jwt=aaa.bbb.ccc").Authorization, "Bearer aaa.bbb.ccc");
+  assert.equal(readHeaders(null, "", "?jwt=xxx.yyy.zzz").Authorization, "Bearer xxx.yyy.zzz");
+  assert.equal(readHeaders(null, "jwt=aaa.bbb.ccc", "?jwt=xxx.yyy.zzz").Authorization, "Bearer xxx.yyy.zzz");
+  assert.equal(readHeaders(null, "jwt=aaa.bbb.ccc", "?jwt=%not-a-token").Authorization, "Bearer aaa.bbb.ccc");
+  assert.throws(() => readHeaders(null, "jwt=%broken", "?jwt=bad"), /angemeldeten SSV53-App/);
   assert.equal((html.match(/headers: occupancyWriteHeaders\(\)/g) || []).length, 5);
 });
 

@@ -763,6 +763,7 @@ def _coordination_payload(details, state, current_plan, environment, now_utc, da
         "explanationOnly": True, "primaryBlocker": blockers[0] if blockers else None,
         "blockers": blockers, "dryingMinutes": int(environment.get("POST_IRRIGATION_DRYING_MINUTES", "150")),
         "dryUntil": release.get("dry_until_utc"), "releaseNotBefore": release.get("release_at_utc"),
+        "dryingReason": state.hydrawise_clear_origin,
         "telemetryConfirmed": release.get("telemetry_confirmed"),
         "chargingEndEstimate": charging_end_estimate,
         "dataAgeSeconds": {"mower": mower_age, "irrigation": age(safety.get("observed_at_utc")),

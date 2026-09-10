@@ -1863,11 +1863,73 @@ const TRAINING_CANCELLATION_API_URL =
 "https://func-ssv53platzpflege-prod-q7kbw54s.azurewebsites.net/api/training-cancellations";
 const TRAINER_OCCUPANCY_API_URL =
 "https://func-ssv53platzpflege-prod-q7kbw54s.azurewebsites.net/api/trainer-occupancies";
+function normalizeAppackJwt(rawToken) {
+const token = String(rawToken || "").trim();
+if (!token) return "";
+
+let normalized = token;
+if (/^Bearer\s+/i.test(normalized)) {
+    normalized = normalized.replace(/^Bearer\s+/i, "");
+}
+
+if (
+    (normalized.startsWith('"') && normalized.endsWith('"')) ||
+    (normalized.startsWith("'") && normalized.endsWith("'"))
+) {
+    normalized = normalized.substring(1, normalized.length - 1);
+}
+
+if (!normalized) return "";
+
+const jwtShape = /^[A-Za-z0-9_-]+=*\.[A-Za-z0-9_-]+=*\.[A-Za-z0-9_-]+=*$/;
+return jwtShape.test(normalized) ? normalized : "";
+}
+
+function readAppackJwtFromSource(source) {
+const parts = String(source || "").replace(/^#/, "").replace(/^[?]/, "").split("&");
+const paramKeys = ["jwt", "token", "access_token", "appack_jwt", "appack-token", "appToken", "apptoken"];
+let value = "";
+parts.forEach(function (part) {
+if (value) return;
+const pair = part.split("=");
+if (pair.length < 2) return;
+const key = pair[0].toLowerCase();
+if (!paramKeys.includes(key)) return;
+try {
+value = decodeURIComponent(pair.slice(1).join("="));
+} catch (error) {
+value = pair.slice(1).join("=");
+}
+});
+return normalizeAppackJwt(value);
+}
+
+function occupancyWriteTokenCandidateFromUrl() {
+const search = window.location.search || "";
+const hash = window.location.hash || "";
+const bySearch = readAppackJwtFromSource(search);
+if (bySearch) return bySearch;
+if (hash) {
+const hashQueryIndex = hash.indexOf("?");
+if (hashQueryIndex >= 0) {
+const fromHash = readAppackJwtFromSource(hash.slice(hashQueryIndex + 1));
+if (fromHash) return fromHash;
+}
+}
+return "";
+}
+
 function occupancyWriteHeaders() {
+const queryToken = occupancyWriteTokenCandidateFromUrl();
+let cookieToken = "";
+try { cookieToken = decodeURIComponent((document.cookie.match(/(?:^|;\s*)jwt=([^;]+)/) || [])[1] || ""); } catch (error) { cookieToken = ""; }
+
+const appackToken = queryToken || normalizeAppackJwt(cookieToken);
+if (appackToken) return {"Accept": "application/json", "Content-Type": "application/json", "Authorization": "Bearer " + appackToken};
 let session = null;
 try { session = JSON.parse(sessionStorage.getItem("ssv53_platzwart_session_v1") || "null"); } catch (error) { session = null; }
 if (!session || !session.token || !session.expiresAt || new Date(session.expiresAt).getTime() <= Date.now() || !Number.isFinite(new Date(session.expiresAt).getTime())) {
-throw new Error("Für Belegungsänderungen ist eine aktuelle Platzwart-Anmeldung erforderlich. Bitte im Bereich Platzpflege anmelden. Trainerrollen allein erteilen keine Backendfreigabe.");
+throw new Error("Bitte den Kalender innerhalb der angemeldeten SSV53-App erneut öffnen.");
 }
 return {"Accept": "application/json", "Content-Type": "application/json", "Authorization": "Bearer " + session.token};
 }
@@ -1960,8 +2022,9 @@ currentDateInfo: null,
 currentDialogEvent: null,
 currentDialogEventKey: "",
 trainerOccupancyMoveEvent: null,
-canManageTrainingCancellations: hasActiveTrainerRole(profileJSON),
-canCreateTrainerOccupancies: hasActiveTrainerRole(profileJSON),
+canManageTrainingCancellations: hasActiveTrainerRole(profileJSON) || hasActiveAppAdministratorRole(profileJSON),
+canManageTrainings: hasActiveTrainerRole(profileJSON) || hasActiveAppAdministratorRole(profileJSON),
+canCreateTrainerOccupancies: hasActiveTrainerRole(profileJSON) || hasActiveAppAdministratorRole(profileJSON),
 canAdministerTrainerOccupancies: hasActiveAppAdministratorRole(profileJSON),
 currentCreator: getCurrentAppackCreator(profileJSON)
 };
@@ -3189,10 +3252,7 @@ const activeRole = role || {};
 const enumKey = String(activeRole.enumKey || "")
 .trim()
 .toUpperCase();
-const value = normalizeAppackRoleText(activeRole.value);
-return enumKey === "TR" ||
-value.includes("trainer") ||
-value.includes("mitarbeiter");
+return enumKey === "TR";
 });
 }
 
@@ -3208,17 +3268,9 @@ return false;
 
 function hasActiveAppAdministratorRole(profile) {
 if (!profile || typeof profile !== "object") return false;
-const values = [];
-if (Array.isArray(profile.roleKeys)) values.push.apply(values, profile.roleKeys);
-if (Array.isArray(profile.roles)) {
-profile.roles.forEach(function (role) {
-values.push(role && role.enumKey, role && role.value);
-});
-}
-return values.some(function (value) {
-const normalized = normalizeAppackRoleText(value).replace(/[\s_-]+/g, "");
-return normalized === "appadministrator" || normalized === "appadmin";
-});
+if (Array.isArray(profile.roleKeys) && profile.roleKeys.some(function (value) { return String(value || "").trim().toUpperCase() === "AA"; })) return true;
+if (Array.isArray(profile.roles) && profile.roles.some(function (role) { return String(role && role.enumKey || "").trim().toUpperCase() === "AA"; })) return true;
+return false;
 }
 
 function getAppackProfileValue(profile, keys, depth) {
@@ -6438,7 +6490,7 @@ function renderTrainerOccupancyMoveAction(event) {
 const action = elements.trainerOccupancyMove;
 action.hidden = true;
 action.disabled = false;
-if (!state.canManageTrainingCancellations || !event) return;
+if (!state.canManageTrainings || !event) return;
 const props = event.extendedProps || {};
 const recurringTraining = props.eventKind === "training" &&
 Boolean(props.occurrenceId) && props.cancelled !== true;

@@ -432,3 +432,29 @@ test("Statuspolling wartet tatsächlich auf die passende neue Bestätigung", asy
  const answer=await poll(0,"SET_CUTTING_HEIGHT","new",true);
  assert.equal(reads,3);assert.equal(answer.operatorCommands.SET_CUTTING_HEIGHT.requestId,"new");
 });
+
+test("Unklare Bewässerungslücke behauptet keine sichere Trockenzeit", () => {
+ const s=snapshot();s.mower.activity="PARKED_IN_CS";s.automation.irrigationPhase=null;s.coordination.blockers=[];s.coordination.dryUntil="2026-09-09T16:25:00Z";s.coordination.dryingReason="POSSIBLE_IRRIGATION_DURING_GAP";s.generatedAt="2026-09-09T14:30:00Z";
+ const message=view.dashboardMessage(s);assert.equal(message.title,"Rasenpause zur Sicherheit");assert.equal(message.text,"Letzte Bewässerung unklar. Bitte den Platz prüfen.");
+});
+
+test("Bekannte Trockenzeit und Datenlücke zeigen Grund und Ablaufzeit in der Zeitleiste", () => {
+ const s=snapshot();s.mower.activity="PARKED_IN_CS";s.automation.irrigationPhase=null;s.coordination.blockers=[];s.coordination.dryUntil="2026-09-09T16:25:00Z";s.generatedAt="2026-09-09T14:30:00Z";
+ assert.equal(view.dashboardMessage(s).title,"Rasen trocknet");s.coordination.dryingReason="DATA_GAP";assert.match(view.dashboardMessage(s).title,/Kurze Prüfung bis/);
+ const nodes = new Map();
+ const document = {getElementById(id) {
+   if (!nodes.has(id)) nodes.set(id, {textContent:"", classList:{toggle(name, enabled){this[name]=enabled;}}});
+   return nodes.get(id);
+ }};
+ const render = new Function("document", "text", "nextStartInfo", "chargingEnd", "calendarTime", "dryingTime", "nextWaterStart", sourceOf("renderCoordination") + ";return renderCoordination;")(
+   document, (id,value)=>document.getElementById(id).textContent=value,
+   view.nextStartInfo,view.chargingEnd,view.calendarTime,view.dryingTime,view.nextWaterStart);
+ for (const [reason,label] of [["IRRIGATION_END","Wartezeit nach Bewässerung bis"],["DATA_GAP","Kurze Prüfung bis"],["POSSIBLE_IRRIGATION_DURING_GAP","Rasenpause zur Sicherheit bis"]]) {
+   s.coordination.dryingReason=reason;render(s);
+   assert.equal(nodes.get("drying-end-label").textContent,label);
+   assert.equal(nodes.get("drying-end-time").textContent,"Heute, 18:25 Uhr");
+   assert.equal(nodes.get("drying-end-row").classList.hidden,false);
+ }
+ s.generatedAt="2026-09-09T16:26:00Z";render(s);
+ assert.equal(nodes.get("drying-end-row").classList.hidden,true);
+});
