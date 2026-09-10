@@ -2,6 +2,11 @@ name: SSV53 Runtime-Config automatisch aktualisieren
 
 on:
   workflow_dispatch:
+  workflow_run:
+    workflows:
+      - SSV53 Heimspiele aktualisieren
+    types:
+      - completed
   push:
     branches:
       - main
@@ -25,14 +30,48 @@ jobs:
     name: Geprüften Wiederherstellungs-Publish anstoßen
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    # Commits made by the importer's GITHUB_TOKEN deliberately do not cause a
+    # push-triggered workflow. A completed successful own-repository main
+    # import is therefore an explicit, source-SHA-neutral hand-off. The
+    # rollout reads the then-current atomic main publication itself.
+    if: >-
+      ${{ github.event_name != 'workflow_run' ||
+          (github.event.workflow_run.conclusion == 'success' &&
+           (github.event.workflow_run.event == 'schedule' ||
+            github.event.workflow_run.event == 'workflow_dispatch' ||
+            github.event.workflow_run.event == 'push') &&
+           github.event.workflow_run.head_branch == github.event.repository.default_branch &&
+           github.event.workflow_run.head_repository.full_name == github.repository) }}
 
     steps:
       - name: Runtime-Config-Workflow sicher starten
+        id: runtime_dispatch
         uses: actions/github-script@v8
         env:
+          IMPORT_WORKFLOW_RUN: ${{ github.event_name == 'workflow_run' }}
           SOURCE_SHA: ${{ github.event_name == 'push' && github.sha || '' }}
         with:
           script: |
+            if (process.env.IMPORT_WORKFLOW_RUN === "true") {
+              const { data } = await github.rest.actions.listJobsForWorkflowRun({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: context.payload.workflow_run.id,
+                per_page: 100,
+              });
+              const jobs = Array.isArray(data?.jobs) ? data.jobs : [];
+              const update = jobs.find((job) => job?.name === "update" && job?.conclusion === "success");
+              const steps = Array.isArray(update?.steps) ? update.steps : [];
+              const succeeded = (name) => steps.some(
+                (step) => step?.name === name && step?.conclusion === "success"
+              );
+              if (!succeeded("Heimspiele zurückhaltend abrufen") ||
+                  !succeeded("Daten und Schutzstatus konfliktfrei speichern")) {
+                core.setOutput("dispatched", "false");
+                core.info("Der Importlauf hat keinen nachgewiesenen Datencommit; kein Runtime-Publish.");
+                return;
+              }
+            }
             await github.rest.actions.createWorkflowDispatch({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -44,8 +83,12 @@ jobs:
                 source_sha: process.env.SOURCE_SHA,
               },
             });
+            core.setOutput("dispatched", "true");
 
       - name: Ergebnis zusammenfassen
+        if: >-
+          ${{ github.event_name != 'workflow_run' ||
+              steps.runtime_dispatch.outputs.dispatched == 'true' }}
         shell: bash
         run: |
           {
@@ -55,6 +98,8 @@ jobs:
             echo "- Zielbranch: **feature/azure-mower-migration**"
             if [ "$GITHUB_EVENT_NAME" = "push" ]; then
               echo "- Quelldaten: **exakter Commit ${GITHUB_SHA} des neuen Spielbestands**"
+            elif [ "$GITHUB_EVENT_NAME" = "workflow_run" ]; then
+              echo "- Quelldaten: **neuster atomar veröffentlichter main-Stand nach erfolgreichem Import**"
             else
               echo "- Quelldaten: **neuester freigegebener Stand aus main**"
             fi
