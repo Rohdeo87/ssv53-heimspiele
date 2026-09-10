@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Callable
 
 from mower.hydrawise import HydrawiseError, _get_json
 
@@ -25,6 +25,7 @@ def suspend_zone_until(
     controller_id: str | int | None = None,
     *,
     timeout: int = 20,
+    before_send: Callable[[], None] | None = None,
 ) -> dict[str, Any]:
     """Suspendiert genau eine geplante Zone bis zu einem UTC-Epochenwert.
 
@@ -46,7 +47,7 @@ def suspend_zone_until(
         "relay_id": int(relay_id),
         **_controller_parameters(controller_id),
     }
-    return _get_json("setzone.php", parameters, timeout=timeout)
+    return _get_json("setzone.php", parameters, timeout=timeout, **({"before_send": before_send} if before_send else {}))
 
 
 def start_zone_for(
@@ -56,6 +57,7 @@ def start_zone_for(
     controller_id: str | int | None = None,
     *,
     timeout: int = 20,
+    before_send: Callable[[], None] | None = None,
 ) -> dict[str, Any]:
     """Startet genau eine Zone für die aus dem Plan übernommene Laufzeit."""
 
@@ -72,7 +74,7 @@ def start_zone_for(
         "relay_id": int(relay_id),
         **_controller_parameters(controller_id),
     }
-    return _get_json("setzone.php", parameters, timeout=timeout)
+    return _get_json("setzone.php", parameters, timeout=timeout, **({"before_send": before_send} if before_send else {}))
 
 
 def stop_zone_now(
@@ -81,6 +83,7 @@ def stop_zone_now(
     controller_id: str | int | None = None,
     *,
     timeout: int = 20,
+    before_send: Callable[[], None] | None = None,
 ) -> dict[str, Any]:
     """Stoppt genau die aktuell laufende Hydrawise-Zone.
 
@@ -98,4 +101,4 @@ def stop_zone_now(
         "relay_id": int(relay_id),
         **_controller_parameters(controller_id),
     }
-    return _get_json("setzone.php", parameters, timeout=timeout)
+    return _get_json("setzone.php", parameters, timeout=timeout, **({"before_send": before_send} if before_send else {}))

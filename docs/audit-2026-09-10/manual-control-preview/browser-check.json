@@ -1,0 +1,70 @@
+{
+  "synthetic": true,
+  "productionRequestsAllowed": false,
+  "deviceAcceptance": false,
+  "records": [
+    {
+      "fragment": "moving",
+      "width": 320,
+      "title": "Manuell gestartet",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "fragment": "park",
+      "width": 320,
+      "title": "Mäher in Station geparkt",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "fragment": "conflict",
+      "width": 320,
+      "title": "Bewässerung läuft",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "fragment": "moving",
+      "width": 390,
+      "title": "Manuell gestartet",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "fragment": "park",
+      "width": 390,
+      "title": "Mäher in Station geparkt",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "fragment": "conflict",
+      "width": 390,
+      "title": "Bewässerung läuft",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "fragment": "moving",
+      "width": 1120,
+      "title": "Manuell gestartet",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "fragment": "park",
+      "width": 1120,
+      "title": "Mäher in Station geparkt",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "fragment": "conflict",
+      "width": 1120,
+      "title": "Bewässerung läuft",
+      "errors": [],
+      "overflow": false
+    }
+  ]
+}

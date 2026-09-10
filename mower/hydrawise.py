@@ -4,7 +4,7 @@ import json
 import re
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import Any, Callable
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -619,9 +619,12 @@ def selected_zone_schedule(
     )
 
 
-def _get_json(endpoint: str, parameters: dict[str, str | int], timeout: int = 20) -> dict[str, Any]:
+def _get_json(endpoint: str, parameters: dict[str, str | int], timeout: int = 20,
+              *, before_send: Callable[[], None] | None = None) -> dict[str, Any]:
     url = f"{API_BASE}/{endpoint}?{urlencode(parameters)}"
     request = Request(url, headers={"Accept": "application/json", "User-Agent": USER_AGENT})
+    if before_send is not None:
+        before_send()
     try:
         with urlopen(request, timeout=timeout) as response:  # noqa: S310 - feste HTTPS-Domain
             payload = response.read().decode("utf-8")

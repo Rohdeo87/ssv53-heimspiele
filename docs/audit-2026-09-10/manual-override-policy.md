@@ -1,13 +1,12 @@
 # Manuelle Bedienung und Vorrang vor der Automatik
 
 Stand: 10.09.2026, Untersuchung ab 08:23 Uhr Europe/Berlin.
-**Entscheidungsentwurf, noch keine freigegebene neue Betriebsregel.**
+**Bestätigte Nutzerregeln; technische Umsetzung und Live-Abnahme stehen noch aus.**
 
 ## Geprüfter Ausgangspunkt
 
-- Entwicklungsbasis: `356ad2bd3234b288cb4dae9eb719c13ead9c0594`
-  auf `feature/azure-mower-migration`; neuer Arbeitsbranch
-  `feature/manual-override-policy-20260910`.
+- Entwicklungsstand: Branch `feature/manual-session-control-20260910`, Basis
+  `4c2c022c761aaad0d5ff65aed78312e427bc3952`.
 - Installierter Paketmanifest-Hash:
   `298313e2008280b522ee8f5d07fdfd3fd2b06155345398f3cc6bc39fbf894458`.
   Der getrennte [Installationsnachweis](calendar-final-source-parity.json)
@@ -96,41 +95,41 @@ Nach Integration der Korrektur im Eingabedaten-Ausfallschutz sind die
 separaten Agenten bearbeitet, durch die Hauptinstanz geprüft und anschließend
 gemeinsam getestet. Der Python-Testlauf sperrt Netzwerkzugriffe standardmäßig.
 
-Diese Änderungen sind noch nicht in Produktion installiert. Auch die
-neue manuelle Vorrangregel ist noch nicht umgesetzt. Die folgenden offenen
-Entscheidungen sind dafür verbindliche Voraussetzungen.
+Diese Änderungen sind noch nicht in Produktion installiert. Die neue manuelle
+Vorrangregel ist fachlich entschieden, aber technisch und live noch nicht
+abgenommen.
 
-## Offene Entscheidungen des Betreibers
+## Bestätigte Entscheidungen des Betreibers
 
-Die erste Antwort des Betreibers am 10.09.2026 ist übernommen:
+Die Nutzerentscheidungen vom 10.09.2026 sind verbindlich übernommen:
 
-- Ein manueller Start darf Training und Spiele **nach ausdrücklicher
-  Bestätigung** übergehen. Daraus folgt keine Freigabe verbindlicher
-  Platzsperren und keine stillschweigende Freigabe unbekannter Belegung.
-- Bei jedem Bewässerungskonflikt soll der Betreiber wählen; es gibt keine
-  pauschale dauerhafte Bevorzugung von Mäher oder Bewässerung.
-- Ein manueller Start gilt bis zur nächsten Ladefahrt.
-- Eingriffe über Husqvarna sollen denselben Vorrang wie App-Eingriffe haben.
-  Fehlende Informationen der Geräteschnittstelle dürfen dabei nicht durch
-  eine erfundene Bestätigung ersetzt werden.
-
-Nachfragen zu Parkdauer, Trocknung und Bestätigung externer Konfliktstarts
-sind noch offen. Die folgende Tabelle dokumentiert diese Entscheidungsgrenzen.
+- Ein manueller Start darf Training und Spiele nur nach ausdrücklicher
+  Bestätigung „Platz ist tatsächlich frei“ übergehen und gilt bis zur
+  nächsten Ladefahrt.
+- Aktive oder unbekannte Bewässerung, feste Sperren, Fehler und unbekannte
+  Belegung dürfen niemals übergangen werden. Bei jedem bekannten
+  Bewässerungskonflikt ist ausdrücklich „Mähen“ oder „Bewässern“ zu wählen.
+- Eine Trocknungszeitausnahme benötigt die ausdrückliche Bestätigung
+  „Platz vor Ort geprüft, ausreichend trocken“.
+- Manuelles Parken bleibt bis zu einer ausdrücklichen Freigabe in der App oder
+  am Mäher bestehen; es wird nicht automatisch aufgehoben.
+- Husqvarna-Eingriffe benötigen eine Vorbereitung und Bestätigung über die
+  App. Ein Status allein beweist weder Herkunft noch Bedienperson.
 
 | Entscheidung | Zu klärende Möglichkeiten | Ohne Entscheidung |
 | --- | --- | --- |
-| Umfang eines bewussten manuellen Starts | Training und Spiele sind ausdrücklich bestätigbar; Behandlung der Trocknungszeit noch offen. | Bestehende Trocknungsregel bleibt unverändert. |
-| Vorrang bei notwendiger oder laufender Bewässerung | Entscheidung je Konflikt ist vereinbart. | Keine Freigabe ohne die zum Konflikt gehörende Entscheidung. |
-| Dauer eines manuellen Starts | Bis zur nächsten Ladefahrt vereinbart. | Keine Verlängerung über weitere Ladezyklen. |
-| Dauer eines manuellen Parkens | Bis zur ausdrücklichen Freigabe oder bis zu einer gewählten Zeit. | Keine automatische Aufhebung einer Stoppsperre. |
-| Bedienung über Husqvarna-App oder am Gerät | Gleicher Vorrang vereinbart; zusätzliche ausdrückliche Konfliktbestätigung vorab oder nach Erkennung noch zu entscheiden. | Gerätezustand wird angezeigt, aber keine vermeintlich bekannte Bestätigung oder Person behauptet. |
+| Manueller Start | Training/Spiele nur mit „Platz ist tatsächlich frei“; Ende bei nächster Ladefahrt. | Keine Startfreigabe bei aktiver/unbekannter Sperre, Wasser, Fehlern oder unbekannter Belegung. |
+| Trocknung | Nur mit „Platz vor Ort geprüft, ausreichend trocken“. | Trocknungssperre bleibt bestehen. |
+| Bewässerung | Pro Konflikt „Mähen“ oder „Bewässern“, ohne Vorauswahl. | Kein Start ohne diese Wahl. |
+| Manuelles Parken | Bis ausdrückliche Freigabe in App oder am Mäher. | Keine automatische Aufhebung. |
+| Husqvarna | App-Vorbereitung und Bestätigung erforderlich. | Status allein ordnet keine Herkunft zu. |
 
 Eine manuelle Aktion außerhalb unserer App erreicht das Gerät vor der
 zentralen Prüfung. Die regelmäßige Abfrage kann deshalb keinen garantiert
 gleichzeitigen Bewässerungsstopp vor der ersten Mäherbewegung herstellen.
 Dieser Unterschied muss im vereinbarten Bedienablauf berücksichtigt werden.
 
-## Abhängig von den Antworten vorzubereitende Umsetzung
+## Umsetzung und Abnahme
 
 Eine gemeinsame, dauerhaft gespeicherte Entscheidung für Bedienauftrag,
 Gültigkeit, Zielgerät, Auftragsgeneration und Rückkehr zur Automatik muss vor
@@ -142,8 +141,8 @@ Bewegung auslösen. Ein abgelaufener Lock beweist nicht, dass ein alter Befehl
 nicht mehr wirksam werden kann.
 
 Die App soll das Ergebnis in einfacher Sprache zeigen, etwa „Manuell gestartet
-bis 10:00 Uhr“, „Manuell geparkt“ oder „Start wartet: Bewässerung läuft“.
-Diese Texte sind Beispiele, keine vorweggenommene Entscheidung zur Gültigkeit.
+– bis zur nächsten Ladefahrt“, „Manuell geparkt“ oder „Start wartet: Bewässerung läuft“.
+Die Gültigkeit richtet sich nach den oben bestätigten Regeln.
 Angefordert, bestätigt und unbekannt müssen weiterhin unterscheidbar sein.
 
 Gezielt abzusichern sind mindestens: Neustart während eines Auftrags; zwei
@@ -153,8 +152,16 @@ mehrere Bewässerungszonen; geräteeigener Zeitplan; externer Start ohne bekannt
 Urheberschaft. Die Tests verwenden nachgebildete Sender und keine echten
 Gerätebefehle.
 
-Vor dem vollständigen Livebetrieb müssen zusätzlich Dauerparken, die
-vereinbarte manuelle Vorrangregel und die kontrollierte Zuständigkeit für den
-Hydrawise-Zeitplan nachgewiesen sein. Eine Ladung allein darf keine zusätzliche
-Bewässerung auslösen. Die vereinbarte Bewässerungsgrenze 03:30–08:00 Uhr und
-die vollständige erforderliche Wasserversorgung bleiben erhalten.
+## Entwicklungsstand nach Abschlussprüfung
+
+Die Entwicklung auf `feature/manual-session-control-20260910` enthält die
+bestätigten Regeln und wurde lokal mit 1.337 Python-Tests plus 449 Untertests,
+135 Appack-Tests und einer Browserprüfung auf drei Bildschirmbreiten geprüft.
+Die neuen Tests decken Park/Freigabe, Neustart, neue Konflikte, unterbrochene
+Geräteanfragen und die Reihenfolge Schutzparken → bestätigter Wasserstopp →
+bestätigtes Aussetzen des ursprünglichen Wasserplans ab.
+
+Die vollständigen Belege, die unabhängige Nachprüfung und die verbleibende
+betriebliche Prüflücke zur Aktualität ruhender Gerätemeldungen stehen im
+[Lieferbericht](manual-control-delivery.md). Diese Nachweise sind Tests und
+Simulationen, keine Live-Abnahme. Eine Aktivierung ist hier nicht behauptet.

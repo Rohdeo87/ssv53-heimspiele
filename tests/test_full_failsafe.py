@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import unittest
 from copy import deepcopy
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 
 from mower.full_failsafe import (
@@ -15,6 +16,8 @@ from mower.runtime import CycleResult, RuntimeSettings
 from mower.safety import CommandIntent
 from mower.state import AutomationState
 from mower.state_store import InMemoryStateStore
+from mower.manual_session import dump_manual_session, new_session, with_session_status
+from mower.manual_water_conflict import water_conflict_context
 
 
 NOW = datetime(2026, 8, 13, 2, 0, tzinfo=timezone.utc)
@@ -22,7 +25,7 @@ RELAYS = [9104894, 9104906, 9104909, 9104911, 9104913, 9104920, 9104921]
 RUN_SECONDS = [1200, 1200, 1200, 1200, 1200, 1800, 1800]
 
 
-def settings(*, live: bool = True) -> RuntimeSettings:
+def settings(*, live: bool = True, manual: bool = False) -> RuntimeSettings:
     return RuntimeSettings.from_mapping(
         {
             "CONTROL_MODE": "FULL_FAILSAFE",
@@ -33,6 +36,7 @@ def settings(*, live: bool = True) -> RuntimeSettings:
             "FULL_MOWER_CONFIRMATION": "SSV53-TRAINING-MATCH-PARK-START" if live else "LOCKED",
             "FULL_FAILSAFE_CONFIRMATION": "SSV53-MOWER-HYDRAWISE-7-ZONES-150-MINUTES-ADAPTIVE-V1" if live else "LOCKED",
             "PARK_LOOKAHEAD_MINUTES": "10",
+            "ENABLE_MANUAL_SESSIONS": str(manual).lower(),
         }
     )
 
@@ -166,6 +170,8 @@ def result(
                     "relay_set_valid": relay_set_valid,
                     "active_zone_count": len(active_ids),
                     "active_relay_ids": active_ids,
+                    "imminent_zone_count": 0,
+                    "imminent_relay_ids": [],
                     "reason": "frei" if clear else "läuft",
                 },
             },
@@ -173,6 +179,7 @@ def result(
                 "mower_id": "mower-1",
                 "model": "Husqvarna Automower 580 EPOS",
                 "connected": True,
+                "mode": "HOME" if activity in {"PARKED_IN_CS", "CHARGING"} else "MAIN_AREA",
                 "activity": activity,
                 "state": mower_state,
                 "override_action": (
@@ -262,14 +269,15 @@ def irrigation_state(*, phase: str, current: int | None = None) -> AutomationSta
 
 
 class FullFailsafeTests(unittest.TestCase):
-    def _run(self, state: AutomationState, cycle: CycleResult, *, now: datetime = NOW, **senders):
+    def _run(self, state: AutomationState, cycle: CycleResult, *, now: datetime = NOW,
+             manual: bool = False, **senders):
         cycle = deepcopy(cycle)
         cycle.details["mower"]["status_timestamp_ms"] = int(now.timestamp() * 1000)
         cycle.details["hydrawise"]["safety"]["observed_at_utc"] = now.isoformat()
         store = InMemoryStateStore(state)
         output = run_full_failsafe_cycle(
             now_utc=now,
-            settings=settings(),
+            settings=settings(manual=manual),
             environment=ENV,
             past_due=False,
             source="test",
@@ -286,17 +294,22 @@ class FullFailsafeTests(unittest.TestCase):
         )
         return output, store
 
-    def _continue(self, store, cycle: CycleResult, *, now: datetime, **senders):
+    def _continue(self, store, cycle: CycleResult, *, now: datetime,
+                  manual: bool = False,
+                  hydrawise_observed_at: datetime | None = None,
+                  **senders):
         cycle = deepcopy(cycle)
         cycle.details["mower"]["status_timestamp_ms"] = int(now.timestamp() * 1000)
-        cycle.details["hydrawise"]["safety"]["observed_at_utc"] = now.isoformat()
+        cycle.details["hydrawise"]["safety"]["observed_at_utc"] = (
+            hydrawise_observed_at or now
+        ).isoformat()
         output = run_full_failsafe_cycle(
             now_utc=now,
-            settings=settings(),
+            settings=settings(manual=manual),
             environment=ENV,
             past_due=False,
             source="test",
-            read_only_runner=lambda **kwargs: observed_cycle(cycle, kwargs["now_utc"]),
+            read_only_runner=lambda **kwargs: deepcopy(cycle),
             state_store_factory=lambda _env: store,
             park_sender=senders.get("park", lambda *_: {"accepted": True}),
             start_sender=senders.get("start", lambda *_: {"accepted": True}),
@@ -2189,6 +2202,7 @@ class FullFailsafeTests(unittest.TestCase):
             override_action="NOT_ACTIVE",
             external_reason_id=None,
         )
+        paused_cycle.details["mower"]["mode"] = "HOME"
         second, _ = self._continue(
             store,
             paused_cycle,
@@ -3516,6 +3530,359 @@ class FullFailsafeTests(unittest.TestCase):
         self.assertEqual(output.decision_code, "IRRIGATION_SCHEDULE_REQUEST_REJECTED")
         self.assertEqual(store.load().operator_request_status, "REJECTED")
         self.assertEqual(calls, [])
+
+    def test_water_start_requires_reported_home_mode(self) -> None:
+        initial = irrigation_state(phase="READY")
+        cycle = result(block_source="irrigation", activity="PARKED_IN_CS")
+        cycle.details["mower"]["mode"] = "MAIN_AREA"
+        calls = []
+
+        output, store = self._run(
+            initial, cycle, zone=lambda *args: calls.append(args),
+        )
+
+        self.assertEqual(output.decision_code, "IRRIGATION_WAIT_FOR_CONFIRMED_PARK")
+        self.assertEqual(calls, [])
+
+    def test_running_water_end_remains_reachable_after_mower_mode_loss(self) -> None:
+        relay = RELAYS[0]
+        initial = irrigation_state(phase="RUNNING", current=relay)
+        cycle = result(
+            block_source="irrigation", activity="PARKED_IN_CS",
+            active_ids=[], clear=True,
+        )
+        cycle.details["mower"]["mode"] = "UNKNOWN"
+
+        output, _ = self._run(initial, cycle)
+
+        self.assertEqual(output.decision_code, "IRRIGATION_CONFIRM_ZONE_END")
+
+    def test_manual_start_session_ends_on_first_later_homeward_observation(self) -> None:
+        session = new_session(
+            session_id="session-end", epoch=1, mower_id="mower-1",
+            kind="START", source="APP", now_utc=NOW - timedelta(hours=1),
+        )
+        session = with_session_status(session, "ACTIVE", now_utc=NOW - timedelta(minutes=50))
+        session["departure_observed_utc"] = (NOW - timedelta(minutes=45)).isoformat()
+        initial = AutomationState(
+            manual_session_json=dump_manual_session(session),
+            continuous_mowing_owned=True,
+            continuous_mowing_work_area_id=849199,
+            continuous_mowing_window_end_utc=(NOW + timedelta(hours=4)).isoformat(),
+        )
+
+        output, store = self._run(
+            initial, result(activity="GOING_HOME"), manual=True,
+            start=lambda *_: self.fail("Die Ladefahrt darf nicht umgedreht werden."),
+        )
+
+        saved = json.loads(store.load().manual_session_json or "{}")
+        self.assertEqual(saved["status"], "ENDED")
+        self.assertEqual(output.decision_code, "MANUAL_START_SESSION_ENDED_AT_CHARGE")
+
+    def test_mower_water_choice_parks_before_suspend_or_stop(self) -> None:
+        relay = RELAYS[0]
+        cycle = result(activity="MOWING", active_ids=[relay], clear=False)
+        context = water_conflict_context(AutomationState(), cycle.details, NOW)
+        self.assertTrue(context["known"])
+        session = new_session(
+            session_id="session-water", epoch=1, mower_id="mower-1",
+            kind="START", source="APP", now_utc=NOW,
+            water_conflict_id=context["id"], water_choice="MOWER",
+        )
+        session = with_session_status(session, "PENDING", now_utc=NOW)
+        initial = AutomationState(
+            manual_session_json=dump_manual_session(session),
+            operator_request_id="request-water",
+            operator_request_action="START_MOWING",
+            operator_requested_utc=NOW.isoformat(),
+            operator_request_expires_utc=(NOW + timedelta(minutes=10)).isoformat(),
+            operator_request_status="PENDING",
+            operator_request_session_id="session-water",
+            operator_request_session_epoch=1,
+        )
+        park_calls, suspend_calls, stop_calls = [], [], []
+
+        output, store = self._run(
+            initial, cycle, manual=True,
+            park=lambda *args: park_calls.append(args) or {"accepted": True},
+            suspend=lambda *args: suspend_calls.append(args),
+            stop_zone=lambda *args: stop_calls.append(args),
+            start=lambda *_: self.fail("Kein Mäherstart während aktivem Wasser."),
+        )
+
+        self.assertEqual(output.decision_code, "MANUAL_WATER_PROTECTIVE_PARK_SENT")
+        self.assertEqual(len(park_calls), 1)
+        self.assertEqual(suspend_calls, [])
+        self.assertEqual(stop_calls, [])
+
+        homeward = result(activity="GOING_HOME", active_ids=[relay], clear=False)
+        second, _ = self._continue(
+            store, homeward, now=NOW + timedelta(minutes=1), manual=True,
+            park=lambda *args: park_calls.append(args) or {"accepted": True},
+            suspend=lambda *args: suspend_calls.append(args),
+            stop_zone=lambda *args: stop_calls.append(args) or {"message_type": "info"},
+            start=lambda *_: self.fail("Kein Mäherstart während aktivem Wasser."),
+        )
+        self.assertEqual(second.decision_code, "MANUAL_WATER_STOP_SENT")
+        self.assertEqual(len(park_calls), 1)
+        self.assertEqual(len(stop_calls), 1)
+        self.assertEqual(suspend_calls, [])
+
+    def test_mower_water_choice_finishes_original_occurrence_before_start(self) -> None:
+        relay = RELAYS[0]
+        first_cycle = result(activity="MOWING", active_ids=[relay], clear=False)
+        context = water_conflict_context(AutomationState(), first_cycle.details, NOW)
+        session = new_session(
+            session_id="session-water-sequence", epoch=2, mower_id="mower-1",
+            kind="START", source="APP", now_utc=NOW,
+            water_conflict_id=context["id"], water_choice="MOWER",
+        )
+        session = with_session_status(session, "PENDING", now_utc=NOW)
+        initial = AutomationState(
+            manual_session_json=dump_manual_session(session),
+            operator_request_id="request-water-sequence",
+            operator_request_action="START_MOWING",
+            operator_requested_utc=NOW.isoformat(),
+            operator_request_expires_utc=(NOW + timedelta(minutes=10)).isoformat(),
+            operator_request_status="PENDING",
+            operator_request_session_id="session-water-sequence",
+            operator_request_session_epoch=2,
+        )
+        calls = {"park": [], "stop": [], "suspend": [], "start": []}
+        senders = {
+            "park": lambda *args: calls["park"].append(args) or {"accepted": True},
+            "stop_zone": lambda *args: calls["stop"].append(args) or {"message_type": "info"},
+            "suspend": lambda *args: calls["suspend"].append(args) or {"message_type": "info"},
+            "start": lambda *args: calls["start"].append(args) or {"accepted": True},
+        }
+
+        parked, store = self._run(initial, first_cycle, manual=True, **senders)
+        self.assertEqual(parked.decision_code, "MANUAL_WATER_PROTECTIVE_PARK_SENT")
+        stopped, _ = self._continue(
+            store, result(activity="GOING_HOME", active_ids=[relay], clear=False),
+            now=NOW + timedelta(seconds=10), manual=True, **senders,
+        )
+        self.assertEqual(stopped.decision_code, "MANUAL_WATER_STOP_SENT")
+
+        confirmed_suspended: set[int] = set()
+        for index, expected_relay in enumerate(RELAYS):
+            at = NOW + timedelta(seconds=20 + index * 10)
+            cycle = result(activity="PARKED_IN_CS", active_ids=[], clear=True)
+            for observation in cycle.details["hydrawise"]["zone_observations"]:
+                if observation["relay_id"] in confirmed_suspended:
+                    observation["scheduled"] = False
+            sent, _ = self._continue(store, cycle, now=at, manual=True, **senders)
+            self.assertEqual(sent.decision_code, "MANUAL_WATER_SUSPEND_SENT")
+            self.assertEqual(calls["suspend"][-1][1], expected_relay)
+            confirmed_suspended.add(expected_relay)
+
+        all_suspended = suspended_result(activity="PARKED_IN_CS")
+        confirming, _ = self._continue(
+            store, all_suspended, now=NOW + timedelta(minutes=2),
+            manual=True, **senders,
+        )
+        self.assertEqual(confirming.decision_code, "MANUAL_WATER_CLEAR_CONFIRMING")
+        confirmed, _ = self._continue(
+            store, all_suspended, now=NOW + timedelta(minutes=4, seconds=1),
+            manual=True, **senders,
+        )
+        self.assertEqual(confirmed.decision_code, "HYDRAWISE_CLEAR_CONFIRMATION_HOLD")
+
+        # Stopping water does not implicitly waive the 150-minute physical
+        # drying hold.  A fresh session must confirm its exact persisted
+        # horizon before the parked mower can be started.
+        before_reconfirmation = store.load()
+        drying_since = datetime.fromisoformat(
+            before_reconfirmation.hydrawise_drying_since_utc or ""
+        )
+        dry_until = drying_since + timedelta(minutes=150)
+        reconfirmed_session = new_session(
+            session_id="session-water-reconfirmed", epoch=3, mower_id="mower-1",
+            kind="START", source="APP", now_utc=NOW + timedelta(minutes=5),
+            confirmed_dry_until_utc=dry_until,
+        )
+        reconfirmed_session = with_session_status(
+            reconfirmed_session, "PENDING", now_utc=NOW + timedelta(minutes=5),
+        )
+        reconfirmed = replace(
+            before_reconfirmation,
+            revision=before_reconfirmation.revision + 1,
+            manual_session_json=dump_manual_session(reconfirmed_session),
+            operator_request_id="request-water-reconfirmed",
+            operator_requested_utc=(NOW + timedelta(minutes=5)).isoformat(),
+            operator_request_expires_utc=(NOW + timedelta(minutes=15)).isoformat(),
+            operator_request_status="PENDING",
+            operator_request_session_id="session-water-reconfirmed",
+            operator_request_session_epoch=3,
+        )
+        store.save(reconfirmed, expected_revision=before_reconfirmation.revision)
+        started, _ = self._continue(
+            store, all_suspended, now=NOW + timedelta(minutes=6, seconds=2),
+            manual=True, **senders,
+        )
+
+        self.assertEqual(started.decision_code, "CONTINUOUS_MOWING_START_SENT")
+        self.assertEqual(len(calls["park"]), 1)
+        self.assertEqual(len(calls["stop"]), 1)
+        self.assertEqual([call[1] for call in calls["suspend"]], RELAYS)
+        self.assertEqual(len(calls["start"]), 1)
+
+    def test_manual_water_receipts_reject_cached_pre_dispatch_observations(self) -> None:
+        relay = RELAYS[0]
+        initial_cycle = result(activity="MOWING", active_ids=[relay], clear=False)
+        context = water_conflict_context(AutomationState(), initial_cycle.details, NOW)
+        session = new_session(
+            session_id="session-water-cache", epoch=4, mower_id="mower-1",
+            kind="START", source="APP", now_utc=NOW,
+            water_conflict_id=context["id"], water_choice="MOWER",
+        )
+        session = with_session_status(session, "PENDING", now_utc=NOW)
+        initial = AutomationState(
+            manual_session_json=dump_manual_session(session),
+            operator_request_id="request-water-cache",
+            operator_request_action="START_MOWING",
+            operator_requested_utc=NOW.isoformat(),
+            operator_request_expires_utc=(NOW + timedelta(minutes=10)).isoformat(),
+            operator_request_status="PENDING",
+            operator_request_session_id="session-water-cache",
+            operator_request_session_epoch=4,
+        )
+        suspend_calls, stop_calls = [], []
+        senders = {
+            "park": lambda *_: {"accepted": True},
+            "stop_zone": lambda *args: stop_calls.append(args) or {"message_type": "info"},
+            "suspend": lambda *args: suspend_calls.append(args) or {"message_type": "info"},
+            "start": lambda *_: self.fail("Ein ungeklärter Wasserbeleg darf keinen Start zulassen."),
+        }
+        _, store = self._run(initial, initial_cycle, manual=True, **senders)
+        stopped, _ = self._continue(
+            store, result(activity="GOING_HOME", active_ids=[relay], clear=False),
+            now=NOW + timedelta(minutes=1), manual=True, **senders,
+        )
+        self.assertEqual(stopped.decision_code, "MANUAL_WATER_STOP_SENT")
+
+        cached_inactive = result(activity="PARKED_IN_CS", active_ids=[], clear=True)
+        waiting_stop, _ = self._continue(
+            store, cached_inactive, now=NOW + timedelta(minutes=2),
+            hydrawise_observed_at=NOW + timedelta(minutes=1),
+            manual=True, **senders,
+        )
+        self.assertEqual(waiting_stop.decision_code, "MANUAL_WATER_STOP_CONFIRMING")
+        self.assertEqual(suspend_calls, [])
+
+        sent_suspend, _ = self._continue(
+            store, cached_inactive, now=NOW + timedelta(minutes=3),
+            manual=True, **senders,
+        )
+        self.assertEqual(sent_suspend.decision_code, "MANUAL_WATER_SUSPEND_SENT")
+        self.assertEqual(len(suspend_calls), 1)
+
+        scheduled_false = result(activity="PARKED_IN_CS", active_ids=[], clear=True)
+        scheduled_false.details["hydrawise"]["zone_observations"][0]["scheduled"] = False
+        waiting_suspend, _ = self._continue(
+            store, scheduled_false, now=NOW + timedelta(minutes=4),
+            hydrawise_observed_at=NOW + timedelta(minutes=3),
+            manual=True, **senders,
+        )
+        self.assertEqual(waiting_suspend.decision_code, "MANUAL_WATER_SUSPEND_CONFIRMING")
+        self.assertEqual(len(suspend_calls), 1)
+
+        next_suspend, _ = self._continue(
+            store, scheduled_false, now=NOW + timedelta(minutes=5),
+            manual=True, **senders,
+        )
+        self.assertEqual(next_suspend.decision_code, "MANUAL_WATER_SUSPEND_SENT")
+        self.assertEqual(len(suspend_calls), 2)
+        self.assertEqual(len(stop_calls), 1)
+
+    def test_new_imminent_water_conflict_parks_active_session_until_choice(self) -> None:
+        session = new_session(
+            session_id="session-imminent-water", epoch=5, mower_id="mower-1",
+            kind="START", source="APP", now_utc=NOW - timedelta(hours=1),
+        )
+        session = with_session_status(
+            session, "ACTIVE", now_utc=NOW - timedelta(minutes=50),
+        )
+        session["departure_observed_utc"] = (NOW - timedelta(minutes=45)).isoformat()
+        initial = AutomationState(
+            manual_session_json=dump_manual_session(session),
+            continuous_mowing_owned=True,
+            continuous_mowing_work_area_id=849199,
+            continuous_mowing_window_end_utc=(NOW + timedelta(hours=4)).isoformat(),
+            last_hydrawise_active_count=0,
+            hydrawise_clear_since_utc=(NOW - timedelta(minutes=5)).isoformat(),
+            hydrawise_drying_since_utc=(NOW - timedelta(minutes=5)).isoformat(),
+            hydrawise_clear_origin="DATA_GAP",
+        )
+        cycle = result(
+            activity="MOWING", active_ids=[], clear=True,
+            irrigation_start=NOW + timedelta(minutes=10),
+        )
+        cycle.details["current_plan"]["next_irrigation_start_utc"] = (
+            NOW + timedelta(minutes=10)
+        ).isoformat()
+        calls = []
+
+        output, store = self._run(
+            initial, cycle, manual=True,
+            park=lambda *args: calls.append(args) or {"accepted": True},
+            start=lambda *_: self.fail("Ein neuer Wasserkonflikt braucht zuerst eine Wahl."),
+        )
+
+        self.assertEqual(
+            output.decision_code, "PARK_COMMAND_SENT",
+        )
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(store.load().automation_park_source, "irrigation")
+
+    def test_manual_park_session_reasserts_once_after_external_start_and_restart(self) -> None:
+        session = new_session(
+            session_id="park-latch", epoch=3, mower_id="mower-1",
+            kind="PARK", source="APP", now_utc=NOW,
+        )
+        session = with_session_status(session, "ACTIVE", now_utc=NOW)
+        initial = AutomationState(manual_session_json=dump_manual_session(session))
+        calls = []
+
+        first, store = self._run(
+            initial, result(activity="MOWING"), manual=True,
+            park=lambda *args: calls.append(args) or {"accepted": True},
+        )
+        second, _ = self._continue(
+            store, result(activity="MOWING"), now=NOW + timedelta(minutes=1),
+            manual=True,
+            park=lambda *args: calls.append(args) or {"accepted": True},
+        )
+
+        self.assertEqual(first.decision_code, "MANUAL_PARK_SESSION_REASSERTED")
+        self.assertEqual(second.decision_code, "DEVICE_OUTCOME_UNCONFIRMED")
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(json.loads(store.load().manual_session_json or "{}")["status"], "ACTIVE")
+
+    def test_guarded_water_start_is_physically_reconciled_before_running(self) -> None:
+        relay = RELAYS[0]
+        calls = []
+        first, store = self._run(
+            irrigation_state(phase="READY"),
+            result(block_source="irrigation"), manual=True,
+            zone=lambda *args: calls.append(args) or {"message_type": "info"},
+        )
+        self.assertEqual(first.decision_code, "IRRIGATION_ZONE_START_SENT")
+        journal = json.loads(store.load().device_send_journal_json or "[]")
+        self.assertEqual(journal[-1]["status"], "SENT_UNCONFIRMED")
+
+        second, _ = self._continue(
+            store,
+            result(block_source="irrigation", active_ids=[relay], clear=False),
+            now=NOW + timedelta(minutes=1), manual=True,
+            zone=lambda *args: calls.append(args) or {"message_type": "info"},
+        )
+
+        self.assertEqual(second.decision_code, "IRRIGATION_ZONE_CONFIRMED_RUNNING")
+        journal = json.loads(store.load().device_send_journal_json or "[]")
+        self.assertEqual(journal[-1]["status"], "CONFIRMED")
+        self.assertEqual(len(calls), 1)
 
 
 if __name__ == "__main__":
