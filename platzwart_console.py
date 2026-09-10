@@ -670,6 +670,42 @@ def _runtime_device_controls_enabled(settings: RuntimeSettings) -> bool:
     )
 
 
+def _protection_payload(settings: RuntimeSettings) -> dict[str, bool]:
+    """Expose the two independent safety outcomes used by the dashboard."""
+    automatic_start = (
+        settings.control_mode is ControlMode.FULL_FAILSAFE
+        and settings.enable_live_reads
+        and settings.full_failsafe_write_gate_enabled
+    ) or (
+        settings.control_mode is ControlMode.FULL_MOWER
+        and settings.enable_live_reads
+        and settings.full_mower_write_gate_enabled
+    )
+    if settings.control_mode is ControlMode.OPERATOR_ONLY:
+        protective_parking = (
+            settings.enable_operator_safety_guard
+            and settings.operator_control_gate_enabled
+            and settings.enable_park_commands
+        )
+    elif settings.control_mode in {
+        ControlMode.PARK_ONLY, ControlMode.FULL_MOWER, ControlMode.FULL_FAILSAFE
+    }:
+        protective_parking = (
+            settings.enable_live_reads
+            and settings.enable_park_commands
+            and (
+                settings.control_mode is ControlMode.PARK_ONLY
+                or settings.full_mower_write_gate_enabled
+            )
+        )
+    else:
+        protective_parking = False
+    return {
+        "automaticStartEnabled": bool(automatic_start),
+        "protectiveParkingEnabled": bool(protective_parking),
+    }
+
+
 def _coordination_payload(details, state, current_plan, environment, now_utc, data_quality, *, charging_end_estimate=None):
     """Read-only explanation of simultaneous conditions; never a start permit."""
     now = now_utc.astimezone(timezone.utc)
@@ -1410,6 +1446,7 @@ def live_status(environment: Mapping[str, str], now_utc: datetime) -> dict[str, 
         "generatedAt": now_utc.astimezone(timezone.utc).isoformat(),
         "controlsAvailable": controls_available,
         "deviceControlsAvailable": device_controls_available,
+        "protection": _protection_payload(settings),
         "actionCapabilities": action_capabilities,
         "operatorCommands": operator_commands,
         "dataQuality": data_quality,
@@ -1479,6 +1516,10 @@ def unavailable_live_status(now_utc: datetime) -> dict[str, Any]:
         "generatedAt": now_utc.astimezone(timezone.utc).isoformat(),
         "controlsAvailable": False,
         "deviceControlsAvailable": False,
+        "protection": {
+            "automaticStartEnabled": False,
+            "protectiveParkingEnabled": False,
+        },
         "actionCapabilities": {action: {"available": False, "reason": "STATE_UNAVAILABLE"} for action in ALLOWED_ACTIONS},
         "operatorCommands": {},
         "dataQuality": {

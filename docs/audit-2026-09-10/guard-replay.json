@@ -1,0 +1,178 @@
+{
+  "kind": "independent-observation-replay-with-fake-senders",
+  "input_sha256": "2cf0ae91664affefb086b06ce117eb50586b3acaf3253a6fd24820bd34227bef",
+  "source_sha256": {
+    "mower/operator_controls.py": "2062073bda63c3a6fb50dc798bac353aac931b7cdfdc60469fe524b0fd984e57",
+    "mower/runtime.py": "d9fd90a9a16db0d186b721ce9e2b6dcd015d9fe43de889fe993dcb59cfb9df38"
+  },
+  "network_allowed": false,
+  "real_device_commands": 0,
+  "physical_prevention_or_mowing_minutes_proven": false,
+  "cases": [
+    {
+      "case": "before_water",
+      "observed_at_utc": "2026-09-10T01:50:03.1930616Z",
+      "mower_activity": "MOWING",
+      "mower_state": "IN_OPERATION",
+      "active_zone_count": 0,
+      "outcomes": {
+        "guard_off": {
+          "fake_park_calls": 0,
+          "automatic_restart_allowed": false,
+          "physical_hold_confirmed": false,
+          "guard": {
+            "enabled": false,
+            "protected": false,
+            "reason": "DISABLED",
+            "requestPending": false,
+            "requestStatus": null
+          }
+        },
+        "guard_on": {
+          "fake_park_calls": 1,
+          "automatic_restart_allowed": false,
+          "physical_hold_confirmed": false,
+          "guard": {
+            "enabled": true,
+            "protected": false,
+            "reason": "OCCUPANCY_OR_IMMINENT_WATER",
+            "requestPending": true,
+            "requestStatus": "QUEUED"
+          }
+        }
+      }
+    },
+    {
+      "case": "active_water",
+      "observed_at_utc": "2026-09-10T02:30:02.4067628Z",
+      "mower_activity": "MOWING",
+      "mower_state": "IN_OPERATION",
+      "active_zone_count": 1,
+      "outcomes": {
+        "guard_off": {
+          "fake_park_calls": 0,
+          "automatic_restart_allowed": false,
+          "physical_hold_confirmed": false,
+          "guard": {
+            "enabled": false,
+            "protected": false,
+            "reason": "DISABLED",
+            "requestPending": false,
+            "requestStatus": null
+          }
+        },
+        "guard_on": {
+          "fake_park_calls": 1,
+          "automatic_restart_allowed": false,
+          "physical_hold_confirmed": false,
+          "guard": {
+            "enabled": true,
+            "protected": false,
+            "reason": "OCCUPANCY_OR_IMMINENT_WATER",
+            "requestPending": true,
+            "requestStatus": "QUEUED"
+          }
+        }
+      }
+    },
+    {
+      "case": "charging_during_water",
+      "observed_at_utc": "2026-09-10T02:54:02.2767844Z",
+      "mower_activity": "CHARGING",
+      "mower_state": "IN_OPERATION",
+      "active_zone_count": 1,
+      "outcomes": {
+        "guard_off": {
+          "fake_park_calls": 0,
+          "automatic_restart_allowed": false,
+          "physical_hold_confirmed": false,
+          "guard": {
+            "enabled": false,
+            "protected": false,
+            "reason": "DISABLED",
+            "requestPending": false,
+            "requestStatus": null
+          }
+        },
+        "guard_on": {
+          "fake_park_calls": 1,
+          "automatic_restart_allowed": false,
+          "physical_hold_confirmed": false,
+          "guard": {
+            "enabled": true,
+            "protected": false,
+            "reason": "OCCUPANCY_OR_IMMINENT_WATER",
+            "requestPending": true,
+            "requestStatus": "QUEUED"
+          }
+        }
+      }
+    },
+    {
+      "case": "leaving_during_water",
+      "observed_at_utc": "2026-09-10T03:45:02.3051988Z",
+      "mower_activity": "LEAVING",
+      "mower_state": "IN_OPERATION",
+      "active_zone_count": 1,
+      "outcomes": {
+        "guard_off": {
+          "fake_park_calls": 0,
+          "automatic_restart_allowed": false,
+          "physical_hold_confirmed": false,
+          "guard": {
+            "enabled": false,
+            "protected": false,
+            "reason": "DISABLED",
+            "requestPending": false,
+            "requestStatus": null
+          }
+        },
+        "guard_on": {
+          "fake_park_calls": 1,
+          "automatic_restart_allowed": false,
+          "physical_hold_confirmed": false,
+          "guard": {
+            "enabled": true,
+            "protected": false,
+            "reason": "OCCUPANCY_OR_IMMINENT_WATER",
+            "requestPending": true,
+            "requestStatus": "QUEUED"
+          }
+        }
+      }
+    },
+    {
+      "case": "manual_pause",
+      "observed_at_utc": "2026-09-10T04:28:02.1768705Z",
+      "mower_activity": "NOT_APPLICABLE",
+      "mower_state": "PAUSED",
+      "active_zone_count": 1,
+      "outcomes": {
+        "guard_off": {
+          "fake_park_calls": 0,
+          "automatic_restart_allowed": false,
+          "physical_hold_confirmed": false,
+          "guard": {
+            "enabled": false,
+            "protected": false,
+            "reason": "DISABLED",
+            "requestPending": false,
+            "requestStatus": null
+          }
+        },
+        "guard_on": {
+          "fake_park_calls": 0,
+          "automatic_restart_allowed": false,
+          "physical_hold_confirmed": false,
+          "guard": {
+            "enabled": true,
+            "protected": false,
+            "reason": "NO_PROTECTIVE_EVIDENCE",
+            "requestPending": false,
+            "requestStatus": null
+          }
+        }
+      }
+    }
+  ]
+}

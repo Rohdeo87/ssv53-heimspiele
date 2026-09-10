@@ -80,6 +80,7 @@ class RuntimeSettings:
     # command-free until this opt-in mode is explicitly configured.
     enable_operator_cutting_height_commands: bool = False
     operator_control_confirmation: str = ""
+    enable_operator_safety_guard: bool = False
 
     @classmethod
     def from_mapping(cls, values: Mapping[str, str]) -> "RuntimeSettings":
@@ -144,6 +145,10 @@ class RuntimeSettings:
             operator_control_confirmation=str(
                 values.get("OPERATOR_CONTROL_CONFIRMATION", "")
             ).strip(),
+            enable_operator_safety_guard=_parse_bool(
+                values.get("ENABLE_OPERATOR_SAFETY_GUARD"),
+                default=False,
+            ),
             park_lookahead_minutes=park_lookahead_minutes,
         )
 

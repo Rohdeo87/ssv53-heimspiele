@@ -7,6 +7,7 @@ legacy console requests are never replayed here.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 from dataclasses import replace
 from datetime import datetime, timedelta, timezone
@@ -36,6 +37,12 @@ GENERATION = "operator-only-v1"
 MAX_JOURNAL_ENTRIES = 32
 REQUEST_LIFETIME = timedelta(minutes=10)
 CONFIRMATION_TIMEOUT = timedelta(minutes=10)
+# A physical mower status must advance beyond a certain terminal guard record
+# (CONFIRMED, REJECTED, or EXPIRED; never UNKNOWN) before a still-blocked
+# episode may be asserted again.  This is deliberately short enough for a
+# renewed departure near active water, while rejecting a minute-by-minute
+# replay of an unchanged vendor snapshot.
+GUARD_REASSERT_COOLDOWN = timedelta(seconds=30)
 
 
 class OperatorControlError(RuntimeError):
@@ -107,7 +114,7 @@ def _load_journal(state: AutomationState) -> list[dict[str, Any]]:
     if not isinstance(entries, list) or len(entries) > MAX_JOURNAL_ENTRIES:
         raise OperatorControlError("JOURNAL_INVALID")
     required = {"version", "action", "request_id", "mode", "generation", "status", "requested_at", "expires_at"}
-    known = required | {"target_mm", "reserved_at", "sent_at", "confirmed_at", "message_code", "mower_id", "area_id"}
+    known = required | {"target_mm", "reserved_at", "sent_at", "confirmed_at", "message_code", "mower_id", "area_id", "origin", "guard_key"}
     clean: list[dict[str, Any]] = []
     seen: set[str] = set()
     for item in entries:
@@ -116,6 +123,15 @@ def _load_journal(state: AutomationState) -> list[dict[str, Any]]:
         if item.get("version") != JOURNAL_VERSION or item.get("action") not in OPERATOR_ACTIONS:
             raise OperatorControlError("JOURNAL_INVALID")
         if item.get("mode") != ControlMode.OPERATOR_ONLY.value or item.get("generation") != GENERATION:
+            raise OperatorControlError("JOURNAL_INVALID")
+        origin = item.get("origin", "MANUAL")
+        if origin not in {"MANUAL", "SAFETY_GUARD"}:
+            raise OperatorControlError("JOURNAL_INVALID")
+        if origin == "SAFETY_GUARD":
+            if (item.get("action") != "PARK_MOWER" or not isinstance(item.get("guard_key"), str)
+                    or not item["guard_key"] or len(item["guard_key"]) > 256):
+                raise OperatorControlError("JOURNAL_INVALID")
+        elif "guard_key" in item:
             raise OperatorControlError("JOURNAL_INVALID")
         request_id = item.get("request_id")
         if not isinstance(request_id, str) or not request_id or len(request_id) > 64 or request_id in seen:
@@ -196,6 +212,8 @@ def queue_operator_action(
     *,
     mower_id: str,
     cutting_height_mm: int | None = None,
+    origin: str = "MANUAL",
+    guard_key: str | None = None,
 ) -> dict[str, Any]:
     now = _utc(now_utc)
     normalized = str(action or "").strip().upper()
@@ -215,6 +233,16 @@ def queue_operator_action(
             raise OperatorControlError("TARGET_INVALID")
     elif cutting_height_mm is not None:
         raise OperatorControlError("TARGET_INVALID")
+    origin = str(origin or "").strip().upper()
+    if origin not in {"MANUAL", "SAFETY_GUARD"}:
+        raise OperatorControlError("ACTION_UNAVAILABLE")
+    if origin == "SAFETY_GUARD":
+        if not settings.enable_operator_safety_guard:
+            raise OperatorControlError("SAFETY_GUARD_DISABLED")
+        if normalized != "PARK_MOWER" or not isinstance(guard_key, str) or not guard_key or len(guard_key) > 256:
+            raise OperatorControlError("ACTION_UNAVAILABLE")
+    elif guard_key is not None:
+        raise OperatorControlError("ACTION_UNAVAILABLE")
     state = store.load()
     entries = _load_journal(state)
     for entry in entries:
@@ -248,6 +276,9 @@ def queue_operator_action(
     }
     if normalized == "SET_CUTTING_HEIGHT":
         entry["target_mm"] = cutting_height_mm
+    if origin == "SAFETY_GUARD":
+        entry["origin"] = origin
+        entry["guard_key"] = guard_key
     updated = replace(state, revision=state.revision + 1, operator_commands_json=_dump_journal([*entries, entry]))
     store.save(updated, expected_revision=state.revision)
     return operator_commands_payload(updated)[normalized]
@@ -274,6 +305,141 @@ def _compact_certain_terminal_history(entries: list[dict[str, Any]]) -> list[dic
     return retained
 
 
+def _guard_signal(result: CycleResult, mower: Mapping[str, Any]) -> tuple[str, str] | None:
+    """Return a stable, evidence-derived protective-park episode key."""
+    details = result.details if isinstance(result.details, dict) else None
+    activity = str(mower.get("activity") or "").upper()
+    state = str(mower.get("state") or "").upper()
+    if state in {"PAUSED", "STOPPED"} or activity == "STOPPED_IN_GARDEN":
+        return None
+    if details is None:
+        return "water-safety-unavailable", "WATER_SAFETY_UNAVAILABLE"
+    plan_value = details.get("current_plan")
+    plan = plan_value if isinstance(plan_value, dict) else None
+    if plan is None or "parking_block" not in plan:
+        return "water-safety-unavailable", "WATER_SAFETY_UNAVAILABLE"
+    block_value = plan.get("parking_block")
+    block = block_value if isinstance(block_value, dict) else None
+    blocked_now_value = plan.get("blocked_now")
+    blocked_now = blocked_now_value if isinstance(blocked_now_value, dict) else None
+    hydrawise_value = details.get("hydrawise")
+    hydrawise = hydrawise_value if isinstance(hydrawise_value, dict) else None
+    safety_value = hydrawise.get("safety") if hydrawise is not None else None
+    safety = safety_value if isinstance(safety_value, dict) else None
+    release_value = hydrawise.get("release_confirmation") if hydrawise is not None else None
+    release = release_value if isinstance(release_value, dict) else None
+    override = str(mower.get("override_action") or "").upper()
+    active_raw = safety.get("active_relay_ids", []) if safety is not None else None
+    imminent_raw = safety.get("imminent_relay_ids", []) if safety is not None else None
+    relay_lists_valid = isinstance(active_raw, (list, tuple)) and isinstance(imminent_raw, (list, tuple))
+    active = [str(value) for value in active_raw] if relay_lists_valid else []
+    imminent = [str(value) for value in imminent_raw] if relay_lists_valid else []
+    active_block = blocked_now if blocked_now_value is not None else block
+    if active_block is not None:
+        try:
+            block_end = _parse_time(active_block.get("end"))
+            block_source = str(active_block.get("source") or "").strip()
+            if not block_source:
+                raise ValueError
+        except (TypeError, ValueError, OverflowError, OSError):
+            return "water-safety-unavailable", "WATER_SAFETY_UNAVAILABLE"
+        # Irrigation's current-zone projection deliberately rolls its start
+        # on every poll.  It is not an episode identity.  A rounded end makes
+        # harmless second-level projection jitter stable without making an
+        # unbounded per-minute queue.
+        end_bucket = int(block_end.timestamp() // 300)
+        return f"occupancy|{block_source}|{end_bucket}|{override}", "OCCUPANCY_OR_IMMINENT_WATER"
+    if active:
+        return "active-water|" + ",".join(sorted(active)), "ACTIVE_WATER"
+    if imminent:
+        return "imminent-water|" + ",".join(sorted(imminent)), "IMMINENT_WATER"
+    if release is not None and release.get("allowed") is False:
+        return "drying|" + str(release.get("release_at_utc") or "pending"), "DRYING_HOLD"
+    active_count = safety.get("active_zone_count") if safety is not None else None
+    imminent_count = safety.get("imminent_zone_count") if safety is not None else None
+    counts_valid = (
+        type(active_count) is int and active_count >= 0
+        and type(imminent_count) is int and imminent_count >= 0
+        and (active_count == 0) == (not active)
+        and (imminent_count == 0) == (not imminent)
+    )
+    if (block_value is not None and block is None
+            or blocked_now_value is not None and blocked_now is None
+            or hydrawise is None or safety is None or release is None
+            or not relay_lists_valid or not counts_valid
+            or safety.get("available") is not True or safety.get("fresh") is not True
+            or safety.get("relay_set_valid") is not True or safety.get("clear_now") is not True
+            or release.get("allowed") is not True):
+        return "water-safety-unavailable", "WATER_SAFETY_UNAVAILABLE"
+    if str(details.get("decision", {}).get("hypothetical_command") if isinstance(details.get("decision"), dict) else "").upper() == "PARK":
+        return "decision-park|" + str(result.decision_code), "PARK_DECISION"
+    return None
+
+
+def _guard_request_id(guard_key: str) -> str:
+    return "guard-" + hashlib.sha256(guard_key.encode("utf-8")).hexdigest()[:48]
+
+
+def _guard_base(guard_key: str) -> str:
+    return guard_key.split("|reassert|", 1)[0]
+
+
+def _mower_observed_at(mower: Mapping[str, Any]) -> datetime | None:
+    try:
+        return datetime.fromtimestamp(float(mower.get("status_timestamp_ms")) / 1000, timezone.utc)
+    except (KeyError, TypeError, ValueError, OverflowError, OSError):
+        return None
+
+
+def _station_held(mower: Mapping[str, Any], now: datetime, *, expected_mower_id: str = "") -> bool:
+    return (
+        _mower_age_fresh(mower, now)
+        and bool(expected_mower_id)
+        and str(mower.get("mower_id") or "") == expected_mower_id
+        and str(mower.get("activity") or "").upper() in {"CHARGING", "PARKED_IN_CS"}
+        and str(mower.get("override_action") or "").upper() == "FORCE_PARK"
+    )
+
+
+def _guard_reassert_key(
+    guard_key: str, entries: list[dict[str, Any]], mower: Mapping[str, Any], *, expected_mower_id: str = "",
+) -> str | None:
+    """Give a renewed departure a new deterministic guard request identity."""
+    observed = _mower_observed_at(mower)
+    activity = str(mower.get("activity") or "").upper()
+    state = str(mower.get("state") or "").upper()
+    if (observed is None or state in {"PAUSED", "STOPPED"}
+            or activity == "STOPPED_IN_GARDEN"
+            or _station_held(mower, observed, expected_mower_id=expected_mower_id)):
+        return None
+    matching = [
+        entry for entry in entries
+        if entry.get("origin") == "SAFETY_GUARD"
+        and _guard_base(str(entry.get("guard_key") or "")) == _guard_base(guard_key)
+        and entry.get("status") in {"CONFIRMED", "REJECTED", "EXPIRED"}
+    ]
+    if not matching:
+        return None
+    anchors: list[datetime] = []
+    for entry in matching:
+        try:
+            anchors.append(_parse_time(entry.get("confirmed_at") or entry["requested_at"]))
+        except (KeyError, TypeError, ValueError):
+            continue
+    if not anchors or observed < max(anchors) + GUARD_REASSERT_COOLDOWN:
+        return None
+    return f"{_guard_base(guard_key)}|reassert|{int(observed.timestamp() * 1000)}"
+
+
+def _guard_status(settings: RuntimeSettings, result: CycleResult, mower: Mapping[str, Any]) -> tuple[str | None, str | None]:
+    if not settings.enable_operator_safety_guard:
+        return None, "DISABLED"
+    if not settings.operator_control_gate_enabled or not settings.enable_park_commands:
+        return None, "PARK_GATE_LOCKED"
+    signal = _guard_signal(result, mower)
+    return signal if signal is not None else (None, "NO_PROTECTIVE_EVIDENCE")
+
+
 def _save_entries(store: StateStore, state: AutomationState, entries: list[dict[str, Any]], **state_changes: Any) -> AutomationState:
     updated = replace(state, revision=state.revision + 1, operator_commands_json=_dump_journal(entries), **state_changes)
     store.save(updated, expected_revision=state.revision)
@@ -283,7 +449,7 @@ def _save_entries(store: StateStore, state: AutomationState, entries: list[dict[
 def _mower_age_fresh(mower: Mapping[str, Any], now: datetime, maximum: int = 180) -> bool:
     try:
         stamp = datetime.fromtimestamp(float(mower.get("status_timestamp_ms")) / 1000, timezone.utc)
-    except (KeyError, TypeError, ValueError, OSError):
+    except (KeyError, TypeError, ValueError, OverflowError, OSError):
         return False
     return mower.get("connected") is True and -30 <= (now - stamp).total_seconds() <= maximum
 
@@ -460,14 +626,120 @@ def run_operator_cycle(
     if normalized != entries:
         state = _save_entries(store, state, normalized)
         entries = normalized
+    configured_mower_id = str(environment.get("HUSQVARNA_MOWER_ID") or "").strip()
+    guard_key, guard_reason = _guard_status(settings, result, mower)
+    station_held = bool(guard_key) and _station_held(
+        mower, now, expected_mower_id=configured_mower_id,
+    )
+    guard_details: dict[str, Any] = {
+        "enabled": settings.enable_operator_safety_guard,
+        # This is only physical proof from the current fresh mower snapshot;
+        # a queued/reserved command is intentionally reported separately.
+        "protected": station_held,
+        "reason": guard_reason,
+        "requestPending": False,
+        "requestStatus": None,
+    }
+    if guard_key is not None:
+        existing_park = [entry for entry in entries if entry["action"] == "PARK_MOWER"]
+        existing_unknown = any(entry["status"] == "UNKNOWN" for entry in existing_park)
+        existing_pending = any(entry["status"] not in TERMINAL for entry in existing_park)
+        guard_history = [
+            entry for entry in existing_park
+            if entry.get("origin") == "SAFETY_GUARD"
+            and _guard_base(str(entry.get("guard_key") or "")) == _guard_base(guard_key)
+        ]
+        guard_details["reason"] = guard_reason
+        if station_held:
+            # A current FORCE_PARK observation proves the physical hold.  Do
+            # not issue a duplicate Park command merely because the calendar
+            # or water block still exists.
+            queued_guard = next((entry for entry in guard_history if entry["status"] == "QUEUED"), None)
+            if queued_guard is not None:
+                entries = _replace_entry(
+                    entries, queued_guard["request_id"], status="CONFIRMED",
+                    confirmed_at=now.isoformat(), message_code="ALREADY_FORCE_PARK",
+                )
+                state = _save_entries(store, state, entries)
+        elif existing_unknown:
+            guard_details.update(requestPending=True, requestStatus="UNKNOWN", reason="UNKNOWN_PARK_NOT_REPLAYED")
+        elif existing_pending:
+            pending = next(entry for entry in existing_park if entry["status"] not in TERMINAL)
+            guard_details.update(requestPending=True, requestStatus=pending["status"], reason="EXISTING_PARK_REQUEST")
+        else:
+            reassert_key = _guard_reassert_key(
+                guard_key, entries, mower, expected_mower_id=configured_mower_id,
+            )
+            if guard_history and reassert_key is None:
+                guard_details["reason"] = "EPISODE_ALREADY_HANDLED"
+            else:
+                queued_guard_key = reassert_key or guard_key
+                configured_id = configured_mower_id
+                observed_id = str(mower.get("mower_id") or "").strip()
+                if not configured_id or observed_id != configured_id or mower.get("connected") is not True:
+                    guard_details["reason"] = "MOWER_TARGET_UNAVAILABLE"
+                else:
+                    try:
+                        queue_operator_action(
+                            store, settings, "PARK_MOWER", _guard_request_id(queued_guard_key), now,
+                            mower_id=configured_id, origin="SAFETY_GUARD", guard_key=queued_guard_key,
+                        )
+                        state = store.load()
+                        entries = _load_journal(state)
+                        guard_details.update(requestPending=True, requestStatus="QUEUED", reason=guard_reason)
+                    except (OperatorControlError, StateConflictError):
+                        guard_details["reason"] = "GUARD_RESERVATION_FAILED"
+    result = replace(result, details={**result.details, "operatorSafetyGuard": guard_details})
     entry = _next_dispatch(entries, now)
     if entry is None:
         return replace(result, control_mode=ControlMode.OPERATOR_ONLY.value, details={**result.details, "operatorCommands": operator_commands_payload(state)})
+    if entry.get("origin") == "SAFETY_GUARD" and (
+        str(mower.get("state") or "").upper() in {"PAUSED", "STOPPED"}
+        or str(mower.get("activity") or "").upper() == "STOPPED_IN_GARDEN"
+    ):
+        entries = _replace_entry(
+            entries, entry["request_id"], status="REJECTED",
+            message_code="MANUAL_PAUSE_RESPECTED",
+        )
+        state = _save_entries(store, state, entries)
+        details = {**result.details, "operatorCommands": operator_commands_payload(state)}
+        details["operatorSafetyGuard"] = {
+            **guard_details, "protected": False, "requestPending": False,
+            "requestStatus": "REJECTED", "reason": "MANUAL_PAUSE_RESPECTED",
+        }
+        return replace(result, control_mode=ControlMode.OPERATOR_ONLY.value, details=details)
+    if entry.get("origin") == "SAFETY_GUARD":
+        current_signal = _guard_signal(result, mower)
+        live_guard_key = str(entry.get("guard_key") or "")
+        disabled = (not settings.enable_operator_safety_guard
+                    or not settings.operator_control_gate_enabled
+                    or not settings.enable_park_commands)
+        cleared = (current_signal is None
+                   or _guard_base(current_signal[0]) != _guard_base(live_guard_key))
+        current_station_held = _station_held(
+            mower, now, expected_mower_id=configured_mower_id,
+        )
+        if disabled or cleared or current_station_held:
+            status = "CONFIRMED" if current_station_held and not disabled else "REJECTED"
+            message = (
+                "ALREADY_FORCE_PARK" if status == "CONFIRMED" else
+                "SAFETY_GUARD_REVOKED" if disabled else "SAFETY_CONDITION_CLEARED"
+            )
+            changes: dict[str, Any] = {"status": status, "message_code": message}
+            if status == "CONFIRMED":
+                changes["confirmed_at"] = now.isoformat()
+            entries = _replace_entry(entries, entry["request_id"], **changes)
+            state = _save_entries(store, state, entries)
+            details = {**result.details, "operatorCommands": operator_commands_payload(state)}
+            details["operatorSafetyGuard"] = {
+                **guard_details, "protected": status == "CONFIRMED",
+                "requestPending": False, "requestStatus": status, "reason": message,
+            }
+            return replace(result, control_mode=ControlMode.OPERATOR_ONLY.value, details=details)
     caps = action_capabilities(settings)
     if caps[entry["action"]]["available"] is not True:
         return replace(result, control_mode=ControlMode.OPERATOR_ONLY.value, details={**result.details, "operatorCommands": operator_commands_payload(state)})
     mower_id = str(mower.get("mower_id") or "").strip()
-    configured_mower_id = str(environment.get("HUSQVARNA_MOWER_ID") or "").strip()
     requested_mower_id = str(entry.get("mower_id") or "").strip()
     if entry["action"] == "PARK_MOWER":
         # A device error is a reason to park, not a reason to suppress a
@@ -507,6 +779,15 @@ def run_operator_cycle(
             raise OperatorControlError("CAPABILITY_REVOKED")
         if str(environment.get("HUSQVARNA_MOWER_ID") or "").strip() != requested_mower_id:
             raise OperatorControlError("MOWER_TARGET_CHANGED")
+        if entry.get("origin") == "SAFETY_GUARD":
+            current_signal = _guard_signal(result, mower)
+            if (not settings.enable_operator_safety_guard
+                    or current_signal is None
+                    or _guard_base(current_signal[0]) != _guard_base(str(entry.get("guard_key") or ""))
+                    or _station_held(
+                        mower, _utc(command_clock()), expected_mower_id=requested_mower_id,
+                    )):
+                raise OperatorControlError("SAFETY_CONDITION_CLEARED")
         transport_started = True
 
     try:

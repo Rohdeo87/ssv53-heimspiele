@@ -40,11 +40,12 @@ def settings(**overrides: str) -> RuntimeSettings:
     return RuntimeSettings.from_mapping(values)
 
 
-def mower(*, now: datetime = NOW, activity="MOWING", height=12) -> dict:
+def mower(*, now: datetime = NOW, activity="MOWING", state="IN_OPERATION",
+          override="NOT_ACTIVE", height=12) -> dict:
     return {
         "mower_id": "mower-1", "connected": True, "activity": activity,
-        "state": "IN_OPERATION", "error_code": 0, "model": "Automower 580 EPOS",
-        "override_action": "NOT_ACTIVE", "status_timestamp_ms": int(now.timestamp() * 1000),
+        "state": state, "error_code": 0, "model": "Automower 580 EPOS",
+        "override_action": override, "status_timestamp_ms": int(now.timestamp() * 1000),
         "target_work_area": {"id": 1, "name": "Rasenfläche", "enabled": True,
                              "use_global_cutting_height": False, "cutting_height_percent": height},
     }
@@ -56,10 +57,34 @@ def reader(snapshot: dict):
     return run
 
 
-def run(store, snapshot, *, moment=NOW, environment=None, state_store_factory=None, command_clock=None, **kwargs):
+def safety_reader(snapshot: dict, *, parking_block=None, active=(), imminent=(),
+                  safety_available=True, safety_fresh=True, relay_set_valid=True,
+                  release_allowed=None, hypothetical="PARK"):
+    hydrawise = {"safety": {
+        "available": safety_available, "fresh": safety_fresh,
+        "relay_set_valid": relay_set_valid, "active_relay_ids": list(active),
+        "imminent_relay_ids": list(imminent), "active_zone_count": len(active),
+        "imminent_zone_count": len(imminent),
+        "clear_now": not active and not imminent,
+    }}
+    if release_allowed is not None:
+        hydrawise["release_confirmation"] = {"allowed": release_allowed}
+    details = {
+        "mower": snapshot, "hydrawise": hydrawise,
+        "decision": {"hypothetical_command": hypothetical},
+        "current_plan": {"parking_block": parking_block},
+    }
+    def guarded(**_kwargs):
+        return CycleResult(2, NOW.isoformat(), "incident-replay", "DRY_RUN", False,
+                           "WOULD_PARK", False, "WOULD_PARK", details)
+    return guarded
+
+
+def run(store, snapshot, *, moment=NOW, environment=None, state_store_factory=None,
+        command_clock=None, settings_value=None, read_only_runner=None, **kwargs):
     return run_operator_cycle(
-        now_utc=moment, settings=settings(), environment=environment or {"HUSQVARNA_MOWER_ID": "mower-1"}, past_due=False, source="test",
-        read_only_runner=reader(snapshot), state_store_factory=state_store_factory or (lambda _: store),
+        now_utc=moment, settings=settings_value or settings(), environment=environment or {"HUSQVARNA_MOWER_ID": "mower-1"}, past_due=False, source="test",
+        read_only_runner=read_only_runner or reader(snapshot), state_store_factory=state_store_factory or (lambda _: store),
         command_clock=command_clock or (lambda: moment), **kwargs,
     )
 
@@ -359,3 +384,345 @@ def test_byte_budget_never_deletes_unresolved_requests():
              "mower_id": "m" * 128, "message_code": "UNCONFIRMED" * 40}
     with pytest.raises(OperatorControlError, match="JOURNAL_FULL"):
         _dump_journal([entry] * 32)
+
+
+@pytest.mark.parametrize(
+    ("label", "guarded_reader"),
+    [
+        (
+            "incident-pre-water",
+            lambda snapshot: safety_reader(
+                snapshot,
+                parking_block={
+                    "start": "2026-09-10T02:30:00+00:00",
+                    "end": "2026-09-10T05:10:00+00:00",
+                    "source": "hydrwise-native",
+                },
+            ),
+        ),
+        ("incident-active-water", lambda snapshot: safety_reader(snapshot, active=("6",))),
+    ],
+)
+def test_operator_safety_guard_parks_for_replayed_incident_water_evidence(label, guarded_reader):
+    """The 10 September incident states must create only a target-bound park."""
+    store = InMemoryStateStore()
+    sent = []
+    output = run(
+        store, mower(),
+        settings_value=settings(ENABLE_OPERATOR_SAFETY_GUARD="true"),
+        read_only_runner=guarded_reader(mower()),
+        park_sender=lambda *_a, before_send=None: before_send() or sent.append(label) or {"ok": True},
+    )
+    records = json.loads(store.load().operator_commands_json)
+    assert sent == [label]
+    assert output.command_sent
+    assert output.details["operatorSafetyGuard"].items() >= {
+        "enabled": True, "protected": False, "requestPending": True,
+        "reason": "OCCUPANCY_OR_IMMINENT_WATER" if label == "incident-pre-water" else "ACTIVE_WATER",
+    }.items()
+    assert len(records) == 1
+    assert records[0]["action"] == "PARK_MOWER"
+    assert records[0]["origin"] == "SAFETY_GUARD"
+    assert records[0]["mower_id"] == "mower-1"
+    assert store.load().automation_restart_allowed is False
+
+
+def test_operator_safety_guard_holds_charging_mower_when_force_park_is_missing():
+    store = InMemoryStateStore()
+    sent = []
+    snapshot = mower(activity="CHARGING", override="FORCE_MOW")
+    output = run(
+        store, snapshot,
+        settings_value=settings(ENABLE_OPERATOR_SAFETY_GUARD="true"),
+        read_only_runner=safety_reader(snapshot, imminent=("7",)),
+        park_sender=lambda *_a, before_send=None: before_send() or sent.append("park") or {},
+    )
+    assert sent == ["park"]
+    assert output.details["operatorSafetyGuard"]["reason"] == "IMMINENT_WATER"
+
+
+def test_operator_safety_guard_never_claims_a_wrong_mower_is_held():
+    store = InMemoryStateStore()
+    snapshot = mower(activity="PARKED_IN_CS", override="FORCE_PARK")
+    snapshot["mower_id"] = "other-mower"
+    output = run(
+        store, snapshot,
+        settings_value=settings(ENABLE_OPERATOR_SAFETY_GUARD="true"),
+        read_only_runner=safety_reader(snapshot, active=("6",)),
+        park_sender=lambda *_a, **_k: pytest.fail("wrong mower must never receive a command"),
+    )
+    assert output.command_sent is False
+    assert output.details["operatorSafetyGuard"].items() >= {
+        "enabled": True, "protected": False, "reason": "MOWER_TARGET_UNAVAILABLE",
+    }.items()
+    assert not store.load().operator_commands_json
+    unconfigured_store = InMemoryStateStore()
+    unconfigured = run(
+        unconfigured_store, mower(activity="PARKED_IN_CS", override="FORCE_PARK"),
+        environment={"HUSQVARNA_MOWER_ID": ""},
+        settings_value=settings(ENABLE_OPERATOR_SAFETY_GUARD="true"),
+        read_only_runner=safety_reader(mower(activity="PARKED_IN_CS", override="FORCE_PARK"), active=("6",)),
+        park_sender=lambda *_a, **_k: pytest.fail("unconfigured mower must never receive a command"),
+    )
+    assert unconfigured.details["operatorSafetyGuard"].items() >= {
+        "protected": False, "reason": "MOWER_TARGET_UNAVAILABLE",
+    }.items()
+    assert not unconfigured_store.load().operator_commands_json
+
+
+def test_operator_safety_guard_respects_manual_pause_without_a_device_command():
+    store = InMemoryStateStore()
+    snapshot = mower(activity="PAUSED", state="PAUSED", override="FORCE_MOW")
+    output = run(
+        store, snapshot,
+        settings_value=settings(ENABLE_OPERATOR_SAFETY_GUARD="true"),
+        read_only_runner=safety_reader(snapshot, active=("6",)),
+        park_sender=lambda *_a, **_k: pytest.fail("a manual pause must not move the mower"),
+    )
+    assert output.command_sent is False
+    assert output.details["operatorSafetyGuard"].items() >= {
+        "enabled": True, "protected": False, "requestPending": False,
+        "reason": "NO_PROTECTIVE_EVIDENCE",
+    }.items()
+    assert not store.load().operator_commands_json
+
+
+@pytest.mark.parametrize("overrides", [
+    {"ENABLE_OPERATOR_SAFETY_GUARD": "false"},
+    {"ENABLE_OPERATOR_SAFETY_GUARD": "true", "ENABLE_PARK_COMMANDS": "false"},
+    {"ENABLE_OPERATOR_SAFETY_GUARD": "true", "OPERATOR_CONTROL_CONFIRMATION": "LOCKED"},
+])
+def test_operator_safety_guard_never_commands_without_its_opt_in_and_park_gate(overrides):
+    store = InMemoryStateStore()
+    snapshot = mower()
+    output = run(
+        store, snapshot, settings_value=settings(**overrides),
+        read_only_runner=safety_reader(snapshot, active=("6",)),
+        park_sender=lambda *_a, **_k: pytest.fail("closed guard must not command"),
+    )
+    assert output.command_sent is False
+    assert not store.load().operator_commands_json
+    expected = "DISABLED" if overrides.get("ENABLE_OPERATOR_SAFETY_GUARD") == "false" else "PARK_GATE_LOCKED"
+    assert output.details["operatorSafetyGuard"]["reason"] == expected
+
+
+def test_operator_safety_guard_reuses_pending_manual_park_without_another_queue_or_send():
+    store = InMemoryStateStore()
+    queue_operator_action(store, settings(), "PARK_MOWER", "manual-park", NOW)
+    snapshot = mower()
+    sent = []
+    output = run(
+        store, snapshot, settings_value=settings(ENABLE_OPERATOR_SAFETY_GUARD="true"),
+        read_only_runner=safety_reader(snapshot, active=("6",)),
+        park_sender=lambda *_a, before_send=None: before_send() or sent.append("manual") or {},
+    )
+    records = json.loads(store.load().operator_commands_json)
+    assert sent == ["manual"]
+    assert len(records) == 1 and records[0].get("origin") is None
+    assert output.details["operatorSafetyGuard"].items() >= {
+        "enabled": True, "protected": False, "requestPending": True,
+        "reason": "EXISTING_PARK_REQUEST",
+    }.items()
+
+
+def test_operator_safety_guard_keeps_lost_response_unknown_and_never_replays_it():
+    store = InMemoryStateStore()
+    snapshot = mower()
+    calls = []
+    def loss(*_args, before_send=None):
+        before_send()
+        calls.append("sent")
+        raise TimeoutError()
+    guarded = safety_reader(snapshot, active=("6",))
+    guarded_settings = settings(ENABLE_OPERATOR_SAFETY_GUARD="true")
+    run(store, snapshot, settings_value=guarded_settings, read_only_runner=guarded, park_sender=loss)
+    later = NOW + timedelta(minutes=11)
+    later_snapshot = mower(now=later)
+    output = run(
+        store, later_snapshot, moment=later, settings_value=guarded_settings,
+        read_only_runner=safety_reader(later_snapshot, active=("6",)),
+        park_sender=lambda *_a, **_k: pytest.fail("uncertain guard park must not replay"),
+    )
+    assert calls == ["sent"]
+    assert operator_commands_payload(store.load())["PARK_MOWER"]["status"] == "UNKNOWN"
+    assert output.details["operatorSafetyGuard"].items() >= {
+        "enabled": True, "protected": False, "requestPending": True,
+        "reason": "UNKNOWN_PARK_NOT_REPLAYED",
+    }.items()
+
+
+def test_operator_safety_guard_competing_cycles_send_one_target_bound_park():
+    store = InMemoryStateStore()
+    snapshot = mower()
+    calls = []
+    guarded_settings = settings(ENABLE_OPERATOR_SAFETY_GUARD="true")
+    guarded = safety_reader(snapshot, active=("6",))
+    run(
+        store, snapshot, settings_value=guarded_settings, read_only_runner=guarded,
+        park_sender=lambda *_a, before_send=None: before_send() or calls.append("one") or {},
+    )
+    run(
+        store, snapshot, settings_value=guarded_settings, read_only_runner=guarded,
+        park_sender=lambda *_a, **_k: pytest.fail("same protection episode must not send twice"),
+    )
+    assert calls == ["one"]
+    records = json.loads(store.load().operator_commands_json)
+    assert len(records) == 1
+
+
+def test_safety_guard_origin_requires_opt_in_and_an_old_queued_guard_cannot_send_after_revocation():
+    store = InMemoryStateStore()
+    with pytest.raises(OperatorControlError, match="SAFETY_GUARD_DISABLED"):
+        _queue_operator_action(
+            store, settings(), "PARK_MOWER", "guard-direct", NOW, mower_id="mower-1",
+            origin="SAFETY_GUARD", guard_key="active-water|6",
+        )
+    enabled = settings(ENABLE_OPERATOR_SAFETY_GUARD="true")
+    _queue_operator_action(
+        store, enabled, "PARK_MOWER", "guard-direct", NOW, mower_id="mower-1",
+        origin="SAFETY_GUARD", guard_key="active-water|6",
+    )
+    snapshot = mower()
+    output = run(
+        store, snapshot, settings_value=settings(ENABLE_OPERATOR_SAFETY_GUARD="false"),
+        read_only_runner=safety_reader(snapshot, active=("6",)),
+        park_sender=lambda *_a, **_k: pytest.fail("revoked guard must not dispatch"),
+    )
+    assert output.command_sent is False
+    assert operator_commands_payload(store.load())["PARK_MOWER"]["status"] == "REJECTED"
+
+
+def test_old_guard_is_rejected_when_current_evidence_is_clear_before_dispatch():
+    store = InMemoryStateStore()
+    enabled = settings(ENABLE_OPERATOR_SAFETY_GUARD="true")
+    _queue_operator_action(
+        store, enabled, "PARK_MOWER", "guard-direct", NOW, mower_id="mower-1",
+        origin="SAFETY_GUARD", guard_key="active-water|6",
+    )
+    snapshot = mower()
+    output = run(
+        store, snapshot, settings_value=enabled,
+        read_only_runner=safety_reader(snapshot, release_allowed=True, hypothetical="WAIT"),
+        park_sender=lambda *_a, **_k: pytest.fail("cleared safety condition must not dispatch"),
+    )
+    assert output.command_sent is False
+    payload = operator_commands_payload(store.load())["PARK_MOWER"]
+    assert payload["status"] == "REJECTED"
+    assert payload["messageCode"] == "SAFETY_CONDITION_CLEARED"
+
+
+def test_guard_reassert_needs_new_motion_but_ignores_rolling_block_start_time():
+    store = InMemoryStateStore()
+    guarded_settings = settings(ENABLE_OPERATOR_SAFETY_GUARD="true")
+    first_block = {
+        "start": NOW.isoformat(), "end": (NOW + timedelta(minutes=180)).isoformat(),
+        "source": "hydrwise-native",
+    }
+    calls = []
+    run(
+        store, mower(override="FORCE_MOW"), settings_value=guarded_settings,
+        read_only_runner=safety_reader(mower(override="FORCE_MOW"), parking_block=first_block),
+        park_sender=lambda *_a, before_send=None: before_send() or calls.append("first") or {},
+    )
+    confirmed_at = NOW + timedelta(minutes=1)
+    rolling_block = {
+        "start": (NOW + timedelta(minutes=1)).isoformat(),
+        "end": (NOW + timedelta(minutes=180, seconds=1)).isoformat(),
+        "source": "hydrwise-native",
+    }
+    held = mower(now=confirmed_at, activity="CHARGING", override="FORCE_PARK")
+    held_output = run(
+        store, held, moment=confirmed_at, settings_value=guarded_settings,
+        read_only_runner=safety_reader(held, parking_block=rolling_block),
+        park_sender=lambda *_a, **_k: pytest.fail("fresh FORCE_PARK is sufficient physical hold"),
+    )
+    assert held_output.details["operatorSafetyGuard"]["protected"] is True
+    departed_at = confirmed_at + timedelta(minutes=1)
+    departed = mower(now=departed_at, activity="MOWING", override="FORCE_MOW")
+    run(
+        store, departed, moment=departed_at, settings_value=guarded_settings,
+        read_only_runner=safety_reader(departed, parking_block=rolling_block),
+        park_sender=lambda *_a, before_send=None: before_send() or calls.append("reassert") or {},
+    )
+    records = json.loads(store.load().operator_commands_json)
+    assert calls == ["first", "reassert"]
+    assert len(records) == 2
+    assert records[-1]["guard_key"].endswith(str(int(departed_at.timestamp() * 1000)))
+
+
+def test_guard_reasserts_a_station_without_force_park_after_a_terminal_attempt():
+    store = InMemoryStateStore()
+    guarded_settings = settings(ENABLE_OPERATOR_SAFETY_GUARD="true")
+    block = {
+        "start": NOW.isoformat(), "end": (NOW + timedelta(minutes=180)).isoformat(),
+        "source": "hydrwise-native",
+    }
+    first = mower(activity="CHARGING", override="FORCE_MOW")
+    run(
+        store, first, settings_value=guarded_settings,
+        read_only_runner=safety_reader(first, parking_block=block),
+        park_sender=lambda *_a, **_k: (_ for _ in ()).throw(RuntimeError("oauth failed")),
+    )
+    assert operator_commands_payload(store.load())["PARK_MOWER"]["status"] == "REJECTED"
+    later = NOW + timedelta(minutes=2)
+    not_held = mower(now=later, activity="CHARGING", override="FORCE_MOW")
+    calls = []
+    run(
+        store, not_held, moment=later, settings_value=guarded_settings,
+        read_only_runner=safety_reader(not_held, parking_block=block),
+        park_sender=lambda *_a, before_send=None: before_send() or calls.append("reassert") or {},
+    )
+    assert calls == ["reassert"]
+    assert len(json.loads(store.load().operator_commands_json)) == 2
+
+
+def test_malformed_water_safety_is_fail_closed_without_throwing():
+    store = InMemoryStateStore()
+    snapshot = mower()
+    def malformed(**_kwargs):
+        return CycleResult(2, NOW.isoformat(), "test", "DRY_RUN", False, "READ", False, "READ", {
+            "mower": snapshot,
+            "current_plan": {"parking_block": None},
+            "hydrawise": {"safety": {"available": True, "fresh": True,
+                                        "relay_set_valid": True, "clear_now": True,
+                                        "active_relay_ids": [], "active_zone_count": 1,
+                                        "imminent_relay_ids": [], "imminent_zone_count": 0},
+                          "release_confirmation": {}},
+        })
+    sent = []
+    output = run(
+        store, snapshot, settings_value=settings(ENABLE_OPERATOR_SAFETY_GUARD="true"),
+        read_only_runner=malformed,
+        park_sender=lambda *_a, before_send=None: before_send() or sent.append("park") or {},
+    )
+    assert sent == ["park"]
+    assert output.details["operatorSafetyGuard"]["reason"] == "WATER_SAFETY_UNAVAILABLE"
+
+
+def test_guard_treats_missing_plan_key_as_unknown_and_blocked_now_as_a_hold():
+    guarded_settings = settings(ENABLE_OPERATOR_SAFETY_GUARD="true")
+    snapshot = mower()
+    clear = safety_reader(snapshot, release_allowed=True, hypothetical="WAIT")
+    def missing_plan(**kwargs):
+        result = clear(**kwargs)
+        return CycleResult(**{**result.__dict__, "details": {**result.details, "current_plan": {}}})
+    missing_store = InMemoryStateStore()
+    missing = run(
+        missing_store, snapshot, settings_value=guarded_settings, read_only_runner=missing_plan,
+        park_sender=lambda *_a, before_send=None: before_send() or {},
+    )
+    assert missing.details["operatorSafetyGuard"]["reason"] == "WATER_SAFETY_UNAVAILABLE"
+
+    def blocked_now(**kwargs):
+        result = clear(**kwargs)
+        details = {**result.details, "current_plan": {
+            "parking_block": None,
+            "blocked_now": {"end": (NOW + timedelta(minutes=20)).isoformat(), "source": "calendar"},
+        }}
+        return CycleResult(**{**result.__dict__, "details": details})
+    blocked_store = InMemoryStateStore()
+    blocked = run(
+        blocked_store, snapshot, settings_value=guarded_settings, read_only_runner=blocked_now,
+        park_sender=lambda *_a, before_send=None: before_send() or {},
+    )
+    assert blocked.details["operatorSafetyGuard"]["reason"] == "OCCUPANCY_OR_IMMINENT_WATER"
