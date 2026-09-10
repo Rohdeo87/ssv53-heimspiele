@@ -22,6 +22,15 @@ def _normalize_optional_int(value: Any) -> int | None:
     return int(value)
 
 
+def _normalize_optional_positive_int(value: Any) -> int | None:
+    if type(value) is bool:
+        raise ValueError("Optionaler Zähler muss ganzzahlig sein.")
+    normalized = _normalize_optional_int(value)
+    if normalized is not None and (type(normalized) is not int or normalized < 1):
+        raise ValueError("Optionaler Zähler muss positiv sein.")
+    return normalized
+
+
 def _normalize_optional_bool(value: Any) -> bool | None:
     if value in (None, ""):
         return None
@@ -114,6 +123,18 @@ class AutomationState:
     operator_request_cutting_height_mm: int | None = None
     operator_request_occupancy_override_key: str | None = None
     operator_request_irrigation_schedule_json: str | None = None
+    # One manual-policy session fences the existing legacy START transport.
+    # It is intentionally not a second command queue.
+    manual_session_json: str | None = None
+    operator_request_session_id: str | None = None
+    operator_request_session_epoch: int | None = None
+    mower_start_pending_session_id: str | None = None
+    mower_start_pending_session_epoch: int | None = None
+    # Owners validate their transaction/journal schemas.  The state boundary
+    # only guarantees bounded, syntactically valid JSON for safe round-trips.
+    manual_water_conflict_json: str | None = None
+    device_send_journal_json: str | None = None
+    manual_control_receipts_json: str | None = None
     # Isolated OPERATOR_ONLY command journal. Legacy console request fields
     # remain deliberately separate and can never be replayed by this path.
     operator_commands_json: str | None = None
@@ -173,6 +194,34 @@ class AutomationState:
                 raise ValueError("operator_commands_json ist kein gültiges JSON.") from exc
             if not isinstance(journal, list) or len(journal) > 32:
                 raise ValueError("operator_commands_json hat ein ungültiges Format.")
+        if self.manual_session_json is not None:
+            try:
+                from mower.manual_session import load_manual_session
+                load_manual_session(self.manual_session_json)
+            except (ImportError, ValueError) as exc:
+                raise ValueError("manual_session_json ist ungültig.") from exc
+        for field_name in (
+            "manual_water_conflict_json",
+            "device_send_journal_json",
+            "manual_control_receipts_json",
+        ):
+            raw = getattr(self, field_name)
+            if raw is None:
+                continue
+            if len(raw.encode("utf-8")) > 16_384:
+                raise ValueError(f"{field_name} ist zu groß.")
+            try:
+                json.loads(raw)
+            except (TypeError, ValueError) as exc:
+                raise ValueError(f"{field_name} ist kein gültiges JSON.") from exc
+        for id_field, epoch_field in (
+            ("operator_request_session_id", "operator_request_session_epoch"),
+            ("mower_start_pending_session_id", "mower_start_pending_session_epoch"),
+        ):
+            identifier = getattr(self, id_field)
+            epoch = getattr(self, epoch_field)
+            if (identifier is None) != (epoch is None):
+                raise ValueError(f"{id_field} und {epoch_field} müssen zusammen gesetzt sein.")
         for field_name in (
             "last_cycle_started_utc",
             "last_success_utc",
@@ -452,6 +501,30 @@ class AutomationState:
             ),
             operator_request_irrigation_schedule_json=_normalize_optional_text(
                 values.get("operator_request_irrigation_schedule_json")
+            ),
+            manual_session_json=_normalize_optional_text(
+                values.get("manual_session_json")
+            ),
+            operator_request_session_id=_normalize_optional_text(
+                values.get("operator_request_session_id")
+            ),
+            operator_request_session_epoch=_normalize_optional_positive_int(
+                values.get("operator_request_session_epoch")
+            ),
+            mower_start_pending_session_id=_normalize_optional_text(
+                values.get("mower_start_pending_session_id")
+            ),
+            mower_start_pending_session_epoch=_normalize_optional_positive_int(
+                values.get("mower_start_pending_session_epoch")
+            ),
+            manual_water_conflict_json=_normalize_optional_text(
+                values.get("manual_water_conflict_json")
+            ),
+            device_send_journal_json=_normalize_optional_text(
+                values.get("device_send_journal_json")
+            ),
+            manual_control_receipts_json=_normalize_optional_text(
+                values.get("manual_control_receipts_json")
             ),
             operator_commands_json=_normalize_optional_text(
                 values.get("operator_commands_json")

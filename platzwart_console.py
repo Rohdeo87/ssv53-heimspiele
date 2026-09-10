@@ -78,6 +78,7 @@ ALLOWED_ACTIONS = frozenset(
         "STOP_IRRIGATION_NOW",
         "SET_CUTTING_HEIGHT",
         "RESET_BLADE_USAGE",
+        "MANUAL_CONTROL",
         "SET_WINTER_TRAINING",
         *SCHEDULE_ACTIONS,
     }
@@ -1176,6 +1177,63 @@ def _operator_module():
         return None
 
 
+def _manual_module():
+    try:
+        return importlib.import_module("mower.manual_control_api")
+    except ModuleNotFoundError as exc:
+        if exc.name not in {"mower.manual_control_api", "mower.manual_session", "mower.manual_water_conflict"}:
+            raise
+        return None
+
+
+def _manual_status(state, details, environment, now_utc, *, state_available=True, sources_available=True):
+    disabled = {"enabled": False, "canStart": False, "canPark": False, "canResume": False}
+    if not state_available or not RuntimeSettings.from_mapping(environment).enable_manual_sessions:
+        return disabled
+    module = _manual_module()
+    if module is None:
+        return disabled
+    try:
+        return module.manual_context(state, {**details, "manual_sources_available": sources_available}, environment, now_utc)[0]
+    except (ValueError, TypeError, KeyError):
+        return {**disabled, "title": "Manuelle Bedienung nicht verfügbar",
+                "message": "Bitte den Mäher vor Ort prüfen und den Platzwart informieren."}
+
+
+def _request_manual_action(environment, now_utc, request_id, payload, state_store_factory):
+    module = _manual_module()
+    if module is None:
+        raise PlatzwartError("MANUAL_CONTROL_LOCKED", "Die manuelle Vorrangregel ist noch nicht eingeschaltet.", 409)
+    settings = RuntimeSettings.from_mapping(environment)
+    if not settings.enable_manual_sessions or settings.control_mode is not ControlMode.FULL_FAILSAFE or not settings.full_failsafe_write_gate_enabled:
+        raise PlatzwartError("MANUAL_CONTROL_LOCKED", "Die manuelle Vorrangregel ist noch nicht eingeschaltet.", 409)
+    store = state_store_factory(environment)
+    state = store.load()
+    training = (training_control_from_state(state, now_utc=now_utc)
+                if training_control_enabled(environment) else resolve_training_control(environment, now_utc=now_utc))
+    try:
+        read = run_read_only_cycle(now_utc=now_utc, settings=settings, environment=environment,
+                                  past_due=False, source="platzwart-manual-admission", persist_observations=False,
+                                  training_control_snapshot=training)
+        details = read.details
+    except Exception as exc:
+        if not isinstance(payload, Mapping) or payload.get("operation") != "PARK":
+            raise PlatzwartError("MANUAL_INPUTS_UNAVAILABLE", "Start noch nicht möglich. Bitte aktualisieren und den Platzwart informieren.", 409) from exc
+        operator = _operator_module()
+        if operator is None:
+            raise PlatzwartError("MANUAL_PARK_UNAVAILABLE", "Der Mäher ist nicht erreichbar. Bitte am Mäher parken.", 409) from exc
+        details = {"mower": operator.read_operator_mower(environment), "manual_sources_available": False}
+    try:
+        _, response = module.request_manual_control(store=store, state=state, details=details,
+            environment=environment, now_utc=now_utc, request_id=request_id, payload=payload)
+    except module.ManualControlError as exc:
+        raise PlatzwartError(exc.code, str(exc), 409) from exc
+    except StateConflictError as exc:
+        raise PlatzwartError("MANUAL_CONTEXT_CHANGED", "Der Auftrag wurde zwischenzeitlich geändert. Bitte erneut prüfen.", 409) from exc
+    ConsoleTableStore.from_environment(environment).audit(now_utc, "MANUAL_CONTROL", "ACCEPTED", request_id)
+    return response
+
+
 def _action_status(settings, state, mower, *, state_available, controls_available,
                    telemetry_fresh, environment):
     module = _operator_module()
@@ -1341,6 +1399,12 @@ def live_status(environment: Mapping[str, str], now_utc: datetime) -> dict[str, 
         controls_available=controls_available, telemetry_fresh=telemetry_fresh,
         environment=environment,
     )
+    manual_control = _manual_status(state, details, environment, now_utc,
+                                    state_available=state_available, sources_available=controls_available)
+    action_capabilities["MANUAL_CONTROL"] = {
+        "available": manual_control.get("enabled") is True and any(manual_control.get(key) for key in ("canStart", "canPark", "canResume")),
+        "reason": "AVAILABLE" if manual_control.get("enabled") else "MANUAL_CONTROL_LOCKED",
+    }
     current_plan = _display_current_plan(
         dict(details.get("current_plan") or {}),
         environment,
@@ -1449,6 +1513,7 @@ def live_status(environment: Mapping[str, str], now_utc: datetime) -> dict[str, 
         "protection": _protection_payload(settings),
         "actionCapabilities": action_capabilities,
         "operatorCommands": operator_commands,
+        "manualControl": manual_control,
         "dataQuality": data_quality,
         "overall": {
             "code": state.last_decision_code if controls_available else data_quality["code"],
@@ -1591,6 +1656,7 @@ def request_action(
     winter_training_enabled: bool | None = None,
     training_revision: str | None = None,
     client_contract_version: int | None = None,
+    manual_control: Mapping[str, Any] | None = None,
     state_store_factory=AzureTableStateStore.from_environment,
 ) -> dict[str, Any]:
     normalized = action.strip().upper()
@@ -1625,6 +1691,22 @@ def request_action(
         parts = normalized_override_key.rsplit("|", 1)
         if len(parts) != 2 or not occupancy_override_allowed({"source": parts[-1]}):
             raise PlatzwartError("OCCUPANCY_OVERRIDE_FORBIDDEN", "Verbindliche oder unbekannte Platzsperren können nicht übersteuert werden.", 409)
+    manual_settings = RuntimeSettings.from_mapping(environment)
+    if manual_settings.enable_manual_sessions and manual_settings.control_mode is ControlMode.FULL_FAILSAFE:
+        if normalized == "PARK_MOWER":
+            # Older cached templates must retain a working protective PARK.
+            return _request_manual_action(environment, now_utc, request_id,
+                {"operation": "PARK", "source": "APP"}, state_store_factory)
+        if normalized == "START_MOWING":
+            raise PlatzwartError("CLIENT_UPDATE_REQUIRED", "Bitte die Platzpflegeseite neu öffnen und den manuellen Start dort bestätigen.", 409)
+    if normalized == "MANUAL_CONTROL":
+        if type(client_contract_version) is not int or client_contract_version != 3:
+            raise PlatzwartError("CLIENT_UPDATE_REQUIRED", "Bitte die Platzpflegeseite neu öffnen.", 409)
+        if any(value is not None for value in (zone, run_seconds, cutting_height_mm, irrigation_schedule, winter_training_enabled, training_revision)):
+            raise PlatzwartError("MANUAL_CONFIRMATION_INVALID", "Bitte die Bedienaktion neu öffnen.")
+        return _request_manual_action(environment, now_utc, request_id, manual_control, state_store_factory)
+    if manual_control is not None:
+        raise PlatzwartError("MANUAL_CONFIRMATION_INVALID", "Die manuelle Bestätigung gehört zu einer anderen Bedienaktion.")
     if normalized == "SET_WINTER_TRAINING":
         if type(winter_training_enabled) is not bool:
             raise PlatzwartError(

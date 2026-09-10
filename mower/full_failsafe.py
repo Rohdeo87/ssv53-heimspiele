@@ -33,7 +33,32 @@ from mower.husqvarna_actions import park_until_further_notice
 from mower.husqvarna_cutting_height_actions import set_work_area_cutting_height
 from mower.husqvarna_statistics_actions import reset_cutting_blade_usage_time
 from mower.husqvarna_start_actions import start_in_work_area
+from mower.full_height_control import reconcile_full_height_sends, run_full_height_control
 from mower.start_dispatch_guard import StartDispatchBlocked, prepare_start_dispatch
+from mower.manual_session import (
+    ManualSessionError,
+    block_key as manual_block_key,
+    dump_manual_session,
+    load_manual_session,
+    observe_session,
+    resolve_manual_permissions,
+    with_session_status,
+)
+from mower.device_send_guard import (
+    DeviceSendBlocked,
+    dispatch_device_send,
+    load_device_send_journal,
+    reconcile_device_send,
+    unresolved_device_sends,
+)
+from mower.manual_water_conflict import (
+    ManualWaterConflictError,
+    dump_transaction as dump_manual_water_transaction,
+    load_transaction as load_manual_water_transaction,
+    new_transaction as new_manual_water_transaction,
+    update_transaction as update_manual_water_transaction,
+    water_conflict_context,
+)
 from mower.hydrawise import (
     evaluate_continuous_clear_confirmation,
     parse_relay_id_allowlist,
@@ -131,6 +156,136 @@ def _env_int(
     return value
 
 
+def _env_enabled(environment: Mapping[str, str], name: str) -> bool:
+    return str(environment.get(name) or "false").strip().lower() == "true"
+
+
+def _manual_dry_release_proof(
+    state: AutomationState,
+    hydrawise_safety: Mapping[str, Any],
+    *,
+    now_utc: datetime,
+    environment: Mapping[str, str],
+) -> dict[str, Any]:
+    full_origins = {
+        "IRRIGATION_ACTIVE", "IRRIGATION_END", "POSSIBLE_IRRIGATION_DURING_GAP",
+    }
+    origin = state.hydrawise_clear_origin or (
+        "IRRIGATION_END" if state.irrigation_phase == "COMPLETE_HOLD" else "DATA_GAP"
+    )
+    minutes = _env_int(
+        environment,
+        "POST_IRRIGATION_DRYING_MINUTES" if origin in full_origins
+        else "HYDRAWISE_DATA_GAP_CONFIRMATION_MINUTES",
+        150 if origin in full_origins else 2,
+        minimum=150 if origin in full_origins else 1,
+        maximum=1440,
+    )
+    proof = evaluate_continuous_clear_confirmation(
+        available=bool(hydrawise_safety.get("available")),
+        fresh=bool(hydrawise_safety.get("fresh")),
+        clear_now=bool(hydrawise_safety.get("clear_now")),
+        physical_reason=str(hydrawise_safety.get("reason") or "Hydrawise ist nicht frei."),
+        clear_since_utc=state.hydrawise_clear_since_utc,
+        now_utc=now_utc,
+        required_clear_minutes=minutes,
+        persistent_state_available=True,
+        drying_since_utc=state.hydrawise_drying_since_utc,
+        telemetry_confirmation_minutes=_env_int(
+            environment, "HYDRAWISE_DATA_GAP_CONFIRMATION_MINUTES", 2,
+            minimum=1, maximum=1440,
+        ),
+    ).to_dict()
+    return {
+        **proof,
+        "current_water_clear": (
+            hydrawise_safety.get("clear_now") is True
+            and int(hydrawise_safety.get("active_zone_count") or 0) == 0
+            and int(hydrawise_safety.get("imminent_zone_count") or 0) == 0
+        ),
+    }
+
+
+def _reconcile_observed_device_writes(
+    state: AutomationState,
+    mower: Mapping[str, Any],
+    details: Mapping[str, Any],
+    *,
+    now_utc: datetime,
+) -> AutomationState:
+    """Confirm only device effects proven by a newer source observation."""
+    current = state
+    try:
+        pending = unresolved_device_sends(current)
+    except DeviceSendBlocked:
+        return current
+    mower_observed = None
+    try:
+        mower_observed = datetime.fromtimestamp(
+            float(mower.get("status_timestamp_ms")) / 1000, tz=timezone.utc,
+        )
+    except (TypeError, ValueError, OSError):
+        pass
+    hydra_observed = _hydrawise_source_observation(dict(details), now_utc=now_utc)
+    active = _active_relay_ids(dict(details))
+    hydra_safety = _as_dict(_as_dict(details.get("hydrawise")).get("safety"))
+    observations = _zone_observation_by_relay(dict(details))
+    try:
+        observed_relays = {int(value) for value in hydra_safety.get("observed_relay_ids", [])}
+        expected_relays = {int(value) for value in hydra_safety.get("expected_relay_ids", [])}
+        active_count = int(hydra_safety.get("active_zone_count"))
+    except (TypeError, ValueError):
+        observed_relays, expected_relays, active_count = set(), set(), -1
+    exact_relay_state = bool(
+        observed_relays
+        and observed_relays == expected_relays
+        and active_count == len(active)
+    )
+    for entry in pending:
+        dispatched = _parse_time(entry.get("dispatched_at_utc"))
+        if dispatched is None:
+            continue
+        kind = entry.get("kind")
+        proven = False
+        evidence = ""
+        if (
+            kind == "PARK" and mower_observed is not None
+            and mower_observed > dispatched
+            and str(mower.get("mode") or "").strip().upper() == "HOME"
+            and str(mower.get("activity") or "").strip().upper() in PARKED_ACTIVITIES
+        ):
+            proven, evidence = True, "fresh-home-station"
+        elif kind == "WATER_START" and hydra_observed is not None and hydra_observed > dispatched:
+            try:
+                relay = int(entry.get("target"))
+            except (TypeError, ValueError):
+                relay = 0
+            if relay > 0 and active == {relay}:
+                proven, evidence = True, f"fresh-active-relay-{relay}"
+        elif kind in {"SUSPEND", "WATER_STOP"} and hydra_observed is not None and hydra_observed > dispatched:
+            try:
+                relay = int(entry.get("target"))
+            except (TypeError, ValueError):
+                relay = 0
+            observation = observations.get(relay, {})
+            if (
+                kind == "SUSPEND" and relay > 0 and exact_relay_state
+                and observation.get("valid") is True
+                and observation.get("scheduled") is False
+            ):
+                proven, evidence = True, f"fresh-suspended-relay-{relay}"
+            elif (
+                kind == "WATER_STOP" and relay > 0 and exact_relay_state
+                and relay not in active
+            ):
+                proven, evidence = True, f"fresh-inactive-relay-{relay}"
+        if proven:
+            current = reconcile_device_send(
+                current, str(entry["intent_key"]), now_utc, evidence,
+            )
+    return current
+
+
 def _source_parts(source: Any) -> frozenset[str]:
     return frozenset(
         part.strip().lower()
@@ -188,12 +343,14 @@ def _park_confirmation_ready(
     now_utc: datetime,
     activity: str,
     mower_state: str,
+    mower_mode: str,
     confirmation_minutes: int,
     required_observations: int,
 ) -> bool:
     confirmed = _parse_time(state.park_confirmed_utc)
     normalized_activity = str(activity or "").strip().upper()
     normalized_state = str(mower_state or "").strip().upper()
+    normalized_mode = str(mower_mode or "").strip().upper()
     safe_station_status = normalized_activity in PARKED_ACTIVITIES or (
         normalized_activity == "NOT_APPLICABLE"
         and normalized_state == "PAUSED"
@@ -202,6 +359,7 @@ def _park_confirmation_ready(
     )
     return (
         state.parked_by_automation
+        and normalized_mode == "HOME"
         and safe_station_status
         and confirmed is not None
         and now_utc - confirmed >= timedelta(minutes=confirmation_minutes)
@@ -1480,6 +1638,7 @@ def _hold_unconfirmed_mower_start(
     environment: Mapping[str, str], now_utc: datetime,
     mower_status_fresh: bool, expected_relay_ids: frozenset[int],
     park_sender: ParkSender, stop_zone_sender: StopZoneSender,
+    command_clock: Clock,
 ) -> CycleResult:
     """An ambiguous START is a durable stop latch, never an expired lease.
 
@@ -1523,8 +1682,30 @@ def _hold_unconfirmed_mower_start(
                                              command_sent=False, error=type(exc).__name__))
         relay_id = next(iter(safe_stop_ids))
         try:
-            response = stop_zone_sender(str(environment.get("HYDRAWISE_API_KEY", "")), relay_id,
-                                        environment.get("HYDRAWISE_CONTROLLER_ID") or None)
+            args = (str(environment.get("HYDRAWISE_API_KEY", "")), relay_id,
+                    environment.get("HYDRAWISE_CONTROLLER_ID") or None)
+            if settings.enable_manual_sessions:
+                sent = dispatch_device_send(
+                    store=store, original=reserved, state=reserved,
+                    sender=stop_zone_sender, args=args, kind="WATER_STOP",
+                    target=str(relay_id),
+                    intent_key=f"unconfirmed-start:water-stop:{relay_id}:{state.operator_request_id}",
+                    now_utc=now_utc, clock=command_clock,
+                    before_send_check=lambda latest, at: None,
+                    deadline_utc=now_utc + timedelta(seconds=30),
+                )
+                response = sent.response
+                reserved = sent.state
+            else:
+                response = stop_zone_sender(*args)
+        except DeviceSendBlocked as exc:
+            blocked_state = exc.state if isinstance(exc.state, AutomationState) else reserved
+            return replace(
+                result, decision_code=exc.code, command_sent=exc.transport_started,
+                message="Wasserstopp bleibt bis zum Live-Abgleich ungeklärt.",
+                details=_decorate(details, state=blocked_state, settings=settings,
+                                  persisted=True, command_sent=exc.transport_started),
+            )
         except Exception as exc:
             details["irrigation_action"] = {"type": "StopZone", "relay_id": relay_id,
                                              "outcome": "UNCONFIRMED", "error_type": type(exc).__name__}
@@ -1562,8 +1743,27 @@ def _hold_unconfirmed_mower_start(
                                details=_decorate(details, state=state, settings=settings, persisted=False,
                                                  command_sent=False, error=type(exc).__name__))
             try:
-                response = park_sender(str(environment.get("HUSQVARNA_CLIENT_ID", "")),
-                                       str(environment.get("HUSQVARNA_CLIENT_SECRET", "")), str(mower["mower_id"]))
+                args = (str(environment.get("HUSQVARNA_CLIENT_ID", "")),
+                        str(environment.get("HUSQVARNA_CLIENT_SECRET", "")), str(mower["mower_id"]))
+                if settings.enable_manual_sessions:
+                    sent = dispatch_device_send(
+                        store=store, original=parked, state=parked,
+                        sender=park_sender, args=args, kind="PARK",
+                        target=str(mower["mower_id"]),
+                        intent_key=f"park:{intent.fingerprint}", now_utc=now_utc,
+                        clock=command_clock, before_send_check=lambda latest, at: None,
+                        deadline_utc=now_utc + timedelta(seconds=30),
+                    )
+                    response = sent.response
+                    parked = sent.state
+                else:
+                    response = park_sender(*args)
+            except DeviceSendBlocked as exc:
+                parked = exc.state if isinstance(exc.state, AutomationState) else parked
+                details["park_action"] = {
+                    "type": "ParkUntilFurtherNotice", "outcome": "UNCONFIRMED",
+                    "error_type": exc.code,
+                }
             except Exception as exc:
                 details["park_action"] = {"type": "ParkUntilFurtherNotice", "outcome": "UNCONFIRMED", "error_type": type(exc).__name__}
             else:
@@ -1945,7 +2145,150 @@ def run_full_failsafe_cycle(
     original = store.load()
     previous_activity = str(original.last_mower_activity or "").upper()
     state = _cycle_state(original, result, now)
+    if settings.enable_manual_sessions:
+        state = _reconcile_observed_device_writes(
+            state, mower, details, now_utc=now,
+        )
+        height_projection = reconcile_full_height_sends(
+            state, mower, environment, now,
+        )
+        if height_projection is not state:
+            # Height receipts are independent of the currently selected
+            # operator action, so persist their fresh physical evidence before
+            # any action-specific early return.  Downstream work receives a
+            # new projection over this actual CAS predecessor.
+            try:
+                store.save(height_projection, expected_revision=original.revision)
+            except StateConflictError:
+                return replace(
+                    result,
+                    decision_code="HEIGHT_CONFIRMATION_STATE_CHANGED",
+                    message="Die Schnitthöhenbestätigung wurde wegen einer parallelen Zustandsänderung nicht übernommen.",
+                    details=_decorate(
+                        details, state=height_projection, settings=settings,
+                        persisted=False, command_sent=False,
+                    ),
+                )
+            original = height_projection
+            state = replace(height_projection, revision=height_projection.revision + 1)
     operator_action = _operator_action(state, now)
+
+    manual_session: dict[str, Any] | None = None
+    manual_permission: dict[str, Any] = {
+        "allowed": False,
+        "code": "MANUAL_SESSIONS_DISABLED",
+        "dry_override": False,
+    }
+    if settings.enable_manual_sessions:
+        try:
+            manual_session = load_manual_session(state)
+        except ManualSessionError:
+            return _persist_result(
+                store=store, original=original, state=state, result=result,
+                details=details, settings=settings,
+                decision_code="MANUAL_SESSION_INVALID",
+                message="Die manuelle Sitzung ist nicht eindeutig lesbar; alle Freigaben bleiben gesperrt.",
+            )
+        if manual_session is not None:
+            try:
+                existing_water_tx = load_manual_water_transaction(state)
+            except ManualWaterConflictError:
+                existing_water_tx = None
+            water_coordination_return = bool(
+                existing_water_tx
+                and existing_water_tx.get("choice") == "MOWER"
+                and existing_water_tx.get("phase") not in {
+                    "CLEAR_CONFIRMED", "IRRIGATION_COMPLETED", "FAILED",
+                }
+            )
+            water_coordination_return = water_coordination_return or bool(
+                state.parked_by_automation
+                and state.automation_park_source == "manual_water_conflict"
+            )
+            if water_coordination_return:
+                observed_session, session_changed = manual_session, False
+            else:
+                observed_session, session_changed = observe_session(
+                    manual_session, mower, now_utc=now,
+                )
+            if session_changed:
+                manual_session = observed_session
+                state = replace(
+                    state, revision=state.revision + 1,
+                    manual_session_json=dump_manual_session(manual_session),
+                )
+            if (
+                manual_session.get("kind") == "PARK"
+                and manual_session.get("status") == "ENDED"
+                and state.parked_by_automation
+                and state.automation_park_source == "operator"
+                and state.mower_start_pending_since_utc is None
+            ):
+                # Ending the durable PARK latch restores ordinary eligibility;
+                # it does not clear any ambiguous device-send/start journal.
+                state = replace(
+                    state, revision=state.revision + 1,
+                    automation_restart_allowed=True,
+                )
+
+        expected_kind = {
+            "START_MOWING": "START",
+            "PARK_MOWER": "PARK",
+        }.get(operator_action or "")
+        if expected_kind is not None:
+            session_matches_request = (
+                manual_session is not None
+                and manual_session.get("kind") == expected_kind
+                and manual_session.get("mower_id") == mower_id
+                and manual_session.get("status") in {"PREPARED", "PENDING", "ACTIVE"}
+                and state.operator_request_session_id == manual_session.get("session_id")
+                and state.operator_request_session_epoch == manual_session.get("epoch")
+            )
+            if not session_matches_request:
+                rejected = _finish_operator_request(
+                    state,
+                    "Manuelle Anforderung ohne passende persistente Sitzung abgelehnt.",
+                    status="REJECTED",
+                )
+                return _persist_result(
+                    store=store, original=original, state=rejected, result=result,
+                    details=details, settings=settings,
+                    decision_code="MANUAL_SESSION_REQUEST_MISMATCH",
+                    message="Die manuelle Anforderung wurde nicht an eine aktuelle Sitzung gebunden.",
+                )
+            if manual_session["status"] == "PREPARED":
+                manual_session = with_session_status(
+                    manual_session, "PENDING", now_utc=now,
+                )
+                state = replace(
+                    state, revision=state.revision + 1,
+                    manual_session_json=dump_manual_session(manual_session),
+                )
+
+        if manual_session is not None and manual_session.get("kind") == "START":
+            session_hydra_safety = _as_dict(
+                _as_dict(details.get("hydrawise")).get("safety")
+            )
+            manual_permission = resolve_manual_permissions(
+                manual_session,
+                mower_id=mower_id,
+                now_utc=now,
+                blocked_now=blocked_now,
+                parking_block=parking_block,
+                hydrawise_safety=session_hydra_safety,
+                hydrawise_release=_manual_dry_release_proof(
+                    state, session_hydra_safety, now_utc=now,
+                    environment=environment,
+                ),
+            )
+        details["manual_session"] = {
+            "enabled": True,
+            "session_id": manual_session.get("session_id") if manual_session else None,
+            "epoch": manual_session.get("epoch") if manual_session else None,
+            "kind": manual_session.get("kind") if manual_session else None,
+            "status": manual_session.get("status") if manual_session else None,
+            "permission_code": manual_permission.get("code"),
+        }
     if state.operator_request_status == "PENDING" and operator_action is None:
         state = _finish_operator_request(
             state,
@@ -1971,11 +2314,516 @@ def run_full_failsafe_cycle(
             settings=settings, environment=environment, now_utc=now,
             mower_status_fresh=mower_status_fresh, expected_relay_ids=expected_relay_ids,
             park_sender=park_sender, stop_zone_sender=stop_zone_sender,
+            command_clock=command_clock,
         )
+    if settings.enable_manual_sessions and manual_session is not None:
+        if (
+            manual_session.get("kind") == "START"
+            and manual_session.get("status") == "ENDED"
+        ):
+            return _persist_result(
+                store=store, original=original, state=state, result=result,
+                details=details, settings=settings,
+                decision_code="MANUAL_START_SESSION_ENDED_AT_CHARGE",
+                message="Die bestätigte Start-Sitzung endete mit der nächsten beobachteten Ladefahrt.",
+            )
+        if (
+            manual_session.get("kind") == "PARK"
+            and manual_session.get("status") != "ENDED"
+            and operator_action != "PARK_MOWER"
+        ):
+            if activity in PARKABLE_ACTIVITIES and settings.enable_park_commands:
+                base_key = f"manual-park:{manual_session['session_id']}:{manual_session['epoch']}"
+                previous = [
+                    entry for entry in load_device_send_journal(state)
+                    if str(entry.get("intent_key") or "").startswith(base_key)
+                ]
+                last_confirmed = next(
+                    (entry for entry in reversed(previous) if entry.get("status") == "CONFIRMED"),
+                    None,
+                )
+                park_key = (
+                    f"{base_key}:{last_confirmed.get('confirmed_at_utc')}"
+                    if last_confirmed is not None else base_key
+                )
+                intent = CommandIntent(
+                    action="PARK", target=mower_id,
+                    reason=park_key, valid_until_utc=now + timedelta(days=1),
+                )
+                working = state.record_command(
+                    fingerprint=intent.fingerprint, sent_utc=now, action="PARK",
+                    park_until_utc=now + timedelta(days=1), park_source="operator",
+                    restart_allowed=False,
+                )
+                try:
+                    sent = dispatch_device_send(
+                        store=store, original=original, state=working,
+                        sender=park_sender,
+                        args=(str(environment.get("HUSQVARNA_CLIENT_ID", "")),
+                              str(environment.get("HUSQVARNA_CLIENT_SECRET", "")), mower_id),
+                        kind="PARK", target=mower_id, intent_key=park_key,
+                        now_utc=now, clock=command_clock,
+                        before_send_check=lambda latest, at: None,
+                        deadline_utc=now + timedelta(seconds=30),
+                    )
+                except DeviceSendBlocked as exc:
+                    blocked_state = exc.state if isinstance(exc.state, AutomationState) else state
+                    return replace(
+                        result, decision_code=exc.code, command_sent=exc.transport_started,
+                        message="Die bestätigte Park-Sitzung hält einen ungeklärten Gerätestart fest.",
+                        details=_decorate(details, state=blocked_state, settings=settings,
+                                          persisted=True, command_sent=exc.transport_started),
+                    )
+                return replace(
+                    result, decision_code="MANUAL_PARK_SESSION_REASSERTED",
+                    message="Der externe Mäherstart wurde durch die bestätigte Park-Sitzung zurückgerufen.",
+                    command_sent=sent.sent,
+                    details=_decorate(details, state=sent.state, settings=settings,
+                                      persisted=True, command_sent=sent.sent),
+                )
+            return _persist_result(
+                store=store, original=original, state=state, result=result,
+                details=details, settings=settings,
+                decision_code="MANUAL_PARK_SESSION_HOLD",
+                message="Die bestätigte Park-Sitzung bleibt bis zur ausdrücklichen Freigabe aktiv.",
+            )
 
     block_source = str(parking_block.get("source") or "").strip().lower()
     irrigation_due = "irrigation" in _source_parts(block_source)
     hydra_safety = _as_dict(_as_dict(details.get("hydrawise")).get("safety"))
+    try:
+        manual_water_context = water_conflict_context(state, details, now)
+    except ManualWaterConflictError:
+        manual_water_context = {
+            "id": None, "required": True, "known": False, "phase": "INVALID",
+        }
+    if settings.enable_manual_sessions and manual_session is not None:
+        selected_conflict = manual_session.get("water_conflict_id")
+        selected_choice = manual_session.get("water_choice")
+        if manual_water_context.get("required") is True:
+            replaceable_terminal_tx = False
+            choice_matches = (
+                manual_water_context.get("known") is True
+                and selected_conflict == manual_water_context.get("id")
+                and selected_choice in {"MOWER", "IRRIGATION"}
+            )
+            if not choice_matches:
+                manual_permission = {
+                    "allowed": False,
+                    "code": (
+                        "MANUAL_WATER_CONFLICT_UNKNOWN"
+                        if manual_water_context.get("known") is not True
+                        else "MANUAL_WATER_CHOICE_REQUIRED"
+                    ),
+                    "dry_override": False,
+                }
+            elif selected_choice == "IRRIGATION":
+                manual_permission = {
+                    "allowed": False,
+                    "code": "MANUAL_WATER_IRRIGATION_PRIORITY",
+                    "dry_override": False,
+                }
+            else:
+                try:
+                    existing_manual_tx = load_manual_water_transaction(state)
+                except ManualWaterConflictError:
+                    existing_manual_tx = None
+                replaceable_terminal_tx = (
+                    existing_manual_tx is not None
+                    and existing_manual_tx.get("phase") in {
+                        "CLEAR_CONFIRMED", "IRRIGATION_COMPLETED", "FAILED",
+                    }
+                    and existing_manual_tx.get("id") != manual_water_context.get("id")
+                )
+            if choice_matches and selected_choice in {"MOWER", "IRRIGATION"} and (
+                state.manual_water_conflict_json is None or replaceable_terminal_tx
+            ):
+                try:
+                    transaction = new_manual_water_transaction(
+                        manual_water_context, session=manual_session, now_utc=now,
+                    )
+                except ManualWaterConflictError:
+                    manual_permission = {
+                        "allowed": False, "code": "MANUAL_WATER_PLAN_UNKNOWN",
+                        "dry_override": False,
+                    }
+                else:
+                    transaction_changes: dict[str, Any] = {
+                        "manual_water_conflict_json": dump_manual_water_transaction(transaction),
+                    }
+                    if selected_choice == "IRRIGATION" and state.irrigation_phase is None:
+                        controlled_plan = list(transaction.get("plan") or [])
+                        transaction_changes.update({
+                            "irrigation_phase": "PLANNED",
+                            "irrigation_plan_id": str(transaction.get("id")),
+                            "irrigation_plan_json": json.dumps(
+                                controlled_plan, sort_keys=True, separators=(",", ":"),
+                            ),
+                            "irrigation_suspended_relay_ids_json": "[]",
+                            "irrigation_completed_relay_ids_json": "[]",
+                        })
+                    state = replace(
+                        state, revision=state.revision + 1, **transaction_changes,
+                    )
+                    manual_permission = {
+                        "allowed": False, "code": "MANUAL_WATER_COORDINATION_PENDING",
+                        "dry_override": False,
+                    }
+    details["manual_water_conflict"] = {
+        key: value for key, value in manual_water_context.items() if key != "plan"
+    }
+    manual_water_transaction = None
+    if settings.enable_manual_sessions:
+        try:
+            manual_water_transaction = load_manual_water_transaction(state)
+        except ManualWaterConflictError:
+            return _persist_result(
+                store=store, original=original, state=state, result=result,
+                details=details, settings=settings,
+                decision_code="MANUAL_WATER_TRANSACTION_INVALID",
+                message="Die persistente Wasserkonflikt-Transaktion ist ungültig; es wurde kein Befehl gesendet.",
+            )
+    if (
+        manual_water_transaction is not None
+        and manual_water_transaction.get("phase") != "CLEAR_CONFIRMED"
+    ):
+        manual_permission = {
+            "allowed": False, "code": "MANUAL_WATER_COORDINATION_PENDING",
+            "dry_override": False,
+        }
+
+    # A MOWER choice first suppresses the exact original native occurrence,
+    # then stops at most one positively identified active relay.  Every write
+    # is reserved by the shared journal before transport; an ambiguous result
+    # is observed, never replayed.
+    if (
+        settings.enable_manual_sessions
+        and manual_water_transaction is not None
+        and manual_water_transaction.get("choice") == "MOWER"
+        and manual_water_transaction.get("phase") not in {"CLEAR_CONFIRMED", "FAILED"}
+    ):
+        transaction = manual_water_transaction
+        if (
+            manual_session is None
+            or transaction.get("session_id") != manual_session.get("session_id")
+            or transaction.get("session_epoch") != manual_session.get("epoch")
+            or transaction.get("id") != manual_session.get("water_conflict_id")
+        ):
+            failed_tx = update_manual_water_transaction(
+                transaction, now_utc=now, phase="FAILED",
+                error_code="MANUAL_WATER_SESSION_CHANGED",
+            )
+            failed_state = replace(
+                state, revision=state.revision + 1,
+                manual_water_conflict_json=dump_manual_water_transaction(failed_tx),
+            )
+            return _persist_result(
+                store=store, original=original, state=failed_state, result=result,
+                details=details, settings=settings,
+                decision_code="MANUAL_WATER_SESSION_CHANGED",
+                message="Die Wasserkonflikt-Freigabe passt nicht mehr zur manuellen Sitzung.",
+            )
+        plan = list(transaction.get("plan") or [])
+        suspend_until = _parse_time(transaction.get("suspend_until_utc"))
+        if suspend_until is None:
+            ends = [_parse_time(zone.get("scheduled_end_utc")) for zone in plan]
+            if not ends or any(value is None for value in ends):
+                failed_tx = update_manual_water_transaction(
+                    transaction, now_utc=now, phase="FAILED",
+                    error_code="MANUAL_WATER_PLAN_UNKNOWN",
+                )
+                failed_state = replace(
+                    state, revision=state.revision + 1,
+                    manual_water_conflict_json=dump_manual_water_transaction(failed_tx),
+                )
+                return _persist_result(
+                    store=store, original=original, state=failed_state, result=result,
+                    details=details, settings=settings,
+                    decision_code="MANUAL_WATER_PLAN_UNKNOWN",
+                    message="Der ursprüngliche Hydrawise-Lauf ist nicht vollständig nachweisbar.",
+                )
+            suspend_until = max(value for value in ends if value is not None) + timedelta(minutes=60)
+            transaction = update_manual_water_transaction(
+                transaction, now_utc=now,
+                suspend_until_utc=suspend_until.isoformat(),
+            )
+
+        active_ids = _active_relay_ids(details)
+        if active_ids and activity in PARKABLE_ACTIVITIES:
+            if not settings.enable_park_commands:
+                return _persist_result(
+                    store=store, original=original, state=state, result=result,
+                    details=details, settings=settings,
+                    decision_code="MANUAL_WATER_PROTECTIVE_PARK_LOCKED",
+                    message="Mäher und Wasser sind gleichzeitig aktiv; der Schutz-Parkbefehl ist gesperrt.",
+                )
+            if transaction.get("protective_park_reserved_utc") is not None:
+                return _persist_result(
+                    store=store, original=original, state=state, result=result,
+                    details=details, settings=settings,
+                    decision_code="MANUAL_WATER_PROTECTIVE_PARK_CONFIRMING",
+                    message="Der einmal gesendete Schutz-Parkbefehl wartet auf den Live-Nachweis.",
+                )
+            park_tx = update_manual_water_transaction(
+                transaction, now_utc=now, phase="PARKING",
+                protective_park_reserved_utc=now.isoformat(),
+            )
+            park_intent = CommandIntent(
+                action="PARK", target=mower_id,
+                reason=f"manual-water-conflict|{transaction['id']}",
+                valid_until_utc=now + timedelta(minutes=10),
+            )
+            working = state.record_command(
+                fingerprint=park_intent.fingerprint, sent_utc=now,
+                action="PARK", park_until_utc=now + timedelta(minutes=10),
+                park_source="manual_water_conflict", restart_allowed=False,
+            )
+            working = replace(
+                working,
+                manual_water_conflict_json=dump_manual_water_transaction(park_tx),
+            )
+            try:
+                sent = dispatch_device_send(
+                    store=store, original=original, state=working,
+                    sender=park_sender,
+                    args=(str(environment.get("HUSQVARNA_CLIENT_ID", "")),
+                          str(environment.get("HUSQVARNA_CLIENT_SECRET", "")), mower_id),
+                    kind="PARK", target=mower_id,
+                    intent_key=f"manual-water:{transaction['id']}:protective-park",
+                    now_utc=now, clock=command_clock,
+                    before_send_check=lambda latest, at: None,
+                    deadline_utc=now + timedelta(seconds=30),
+                )
+            except DeviceSendBlocked as exc:
+                blocked_state = exc.state if isinstance(exc.state, AutomationState) else state
+                return replace(
+                    result, decision_code=exc.code, command_sent=exc.transport_started,
+                    message="Der Schutz-Parkbefehl bleibt bis zum Live-Abgleich ungeklärt.",
+                    details=_decorate(details, state=blocked_state, settings=settings,
+                                      persisted=True, command_sent=exc.transport_started),
+                )
+            return replace(
+                result, decision_code="MANUAL_WATER_PROTECTIVE_PARK_SENT",
+                command_sent=sent.sent,
+                message="Der Mäher wurde vor der Wasserkoordination schützend nach Hause geschickt.",
+                details=_decorate(details, state=sent.state, settings=settings,
+                                  persisted=True, command_sent=sent.sent),
+            )
+
+        observations = _zone_observation_by_relay(details)
+        suspended_ids = {int(v) for v in transaction.get("suspended_relay_ids") or []}
+        reserved_relay = transaction.get("suspend_reserved_relay_id")
+        if reserved_relay is not None:
+            relay = int(reserved_relay)
+            intent_key = f"manual-water:{transaction['id']}:suspend:{relay}"
+            journal_entry = next(
+                (
+                    entry for entry in load_device_send_journal(state)
+                    if entry.get("intent_key") == intent_key
+                ),
+                None,
+            )
+            if journal_entry is None or journal_entry.get("status") != "CONFIRMED":
+                return _persist_result(
+                    store=store, original=original, state=state, result=result,
+                    details=details, settings=settings,
+                    decision_code="MANUAL_WATER_SUSPEND_CONFIRMING",
+                    message="Die Unterdrückung des ursprünglichen Hydrawise-Laufs wird bestätigt.",
+                )
+            suspended_ids.add(relay)
+            transaction = update_manual_water_transaction(
+                transaction, now_utc=now,
+                suspended_relay_ids=sorted(suspended_ids),
+                suspend_reserved_relay_id=None,
+            )
+            state = replace(
+                state, revision=state.revision + 1,
+                manual_water_conflict_json=dump_manual_water_transaction(transaction),
+            )
+
+        if transaction.get("stop_reserved_utc") is not None:
+            stopped_relay = int((transaction.get("active_relay_ids") or [0])[0])
+            stop_key = f"manual-water:{transaction['id']}:stop:{stopped_relay}"
+            stop_entry = next(
+                (
+                    entry for entry in load_device_send_journal(state)
+                    if entry.get("intent_key") == stop_key
+                ),
+                None,
+            )
+            if stop_entry is None or stop_entry.get("status") != "CONFIRMED":
+                return _persist_result(
+                    store=store, original=original, state=state, result=result,
+                    details=details, settings=settings,
+                    decision_code="MANUAL_WATER_STOP_CONFIRMING",
+                    message="Der Wasserstopp wartet auf einen neuen Hydrawise-Quellnachweis.",
+                )
+
+        pending_zone = None if active_ids else next(
+            (zone for zone in plan if int(zone.get("relay_id") or 0) not in suspended_ids),
+            None,
+        )
+        if pending_zone is not None:
+            relay = int(pending_zone["relay_id"])
+            reserved_tx = update_manual_water_transaction(
+                transaction, now_utc=now, phase="SUSPENDING",
+                suspend_reserved_relay_id=relay,
+            )
+            working = replace(
+                state, revision=state.revision + 1,
+                manual_water_conflict_json=dump_manual_water_transaction(reserved_tx),
+            )
+
+            def check_manual_suspend(latest: AutomationState, at: datetime) -> None:
+                current_session = load_manual_session(latest)
+                current_tx = load_manual_water_transaction(latest)
+                if (
+                    latest.maintenance_mode
+                    or current_session is None or current_tx is None
+                    or current_session.get("session_id") != transaction.get("session_id")
+                    or current_session.get("epoch") != transaction.get("session_epoch")
+                    or current_session.get("water_choice") != "MOWER"
+                    or current_tx.get("id") != transaction.get("id")
+                    or int(current_tx.get("suspend_reserved_relay_id") or 0) != relay
+                    or at >= suspend_until
+                ):
+                    raise DeviceSendBlocked("MANUAL_WATER_SUSPEND_REVOKED")
+
+            try:
+                sent = dispatch_device_send(
+                    store=store, original=original, state=working,
+                    sender=suspend_zone_sender,
+                    args=(str(environment.get("HYDRAWISE_API_KEY", "")).strip(), relay,
+                          int(suspend_until.timestamp()),
+                          str(environment.get("HYDRAWISE_CONTROLLER_ID", "")).strip() or None),
+                    kind="SUSPEND", target=str(relay),
+                    intent_key=f"manual-water:{transaction['id']}:suspend:{relay}",
+                    now_utc=now, clock=command_clock,
+                    before_send_check=check_manual_suspend,
+                    deadline_utc=min(suspend_until, now + timedelta(seconds=30)),
+                )
+            except DeviceSendBlocked as exc:
+                blocked_state = exc.state if isinstance(exc.state, AutomationState) else state
+                return replace(
+                    result, decision_code=exc.code, command_sent=exc.transport_started,
+                    message="Der Hydrawise-Suspendierungsbefehl wurde nicht wiederholt.",
+                    details=_decorate(details, state=blocked_state, settings=settings,
+                                      persisted=True, command_sent=exc.transport_started),
+                )
+            return replace(
+                result, decision_code="MANUAL_WATER_SUSPEND_SENT", command_sent=sent.sent,
+                message="Eine Zone des ursprünglichen Hydrawise-Laufs wurde zur Bestätigung suspendiert.",
+                details=_decorate(details, state=sent.state, settings=settings,
+                                  persisted=True, command_sent=sent.sent),
+            )
+
+        if len(active_ids) > 1:
+            failed_tx = update_manual_water_transaction(
+                transaction, now_utc=now, phase="FAILED",
+                error_code="MANUAL_WATER_STOP_TARGET_UNCLEAR",
+            )
+            failed_state = replace(
+                state, revision=state.revision + 1,
+                manual_water_conflict_json=dump_manual_water_transaction(failed_tx),
+            )
+            return _persist_result(
+                store=store, original=original, state=failed_state, result=result,
+                details=details, settings=settings,
+                decision_code="MANUAL_WATER_STOP_TARGET_UNCLEAR",
+                message="Mehrere aktive Relays verhindern einen eindeutigen Wasserstopp.",
+            )
+        if active_ids:
+            relay = next(iter(active_ids))
+            stop_key = f"manual-water:{transaction['id']}:stop:{relay}"
+            if transaction.get("stop_reserved_utc") is not None:
+                return _persist_result(
+                    store=store, original=original, state=state, result=result,
+                    details=details, settings=settings,
+                    decision_code="MANUAL_WATER_STOP_CONFIRMING",
+                    message="Der einmal gesendete Wasserstopp wartet auf den Live-Nachweis.",
+                )
+            stopping_tx = update_manual_water_transaction(
+                transaction, now_utc=now, phase="STOPPING",
+                active_relay_ids=[relay], stop_reserved_utc=now.isoformat(),
+            )
+            working = replace(
+                state, revision=state.revision + 1,
+                manual_water_conflict_json=dump_manual_water_transaction(stopping_tx),
+            )
+
+            def check_manual_stop(latest: AutomationState, at: datetime) -> None:
+                current_tx = load_manual_water_transaction(latest)
+                if (
+                    current_tx is None or current_tx.get("id") != transaction.get("id")
+                    or current_tx.get("phase") != "STOPPING"
+                    or list(current_tx.get("active_relay_ids") or []) != [relay]
+                ):
+                    raise DeviceSendBlocked("MANUAL_WATER_STOP_REVOKED")
+
+            try:
+                sent = dispatch_device_send(
+                    store=store, original=original, state=working,
+                    sender=stop_zone_sender,
+                    args=(str(environment.get("HYDRAWISE_API_KEY", "")), relay,
+                          environment.get("HYDRAWISE_CONTROLLER_ID") or None),
+                    kind="WATER_STOP", target=str(relay), intent_key=stop_key,
+                    now_utc=now, clock=command_clock,
+                    before_send_check=check_manual_stop,
+                    deadline_utc=now + timedelta(seconds=30),
+                )
+            except DeviceSendBlocked as exc:
+                blocked_state = exc.state if isinstance(exc.state, AutomationState) else state
+                return replace(
+                    result, decision_code=exc.code, command_sent=exc.transport_started,
+                    message="Der Wasserstopp bleibt bis zum Live-Abgleich ungeklärt.",
+                    details=_decorate(details, state=blocked_state, settings=settings,
+                                      persisted=True, command_sent=exc.transport_started),
+                )
+            return replace(
+                result, decision_code="MANUAL_WATER_STOP_SENT", command_sent=sent.sent,
+                message="Der eindeutig aktive Hydrawise-Relay wurde einmalig gestoppt.",
+                details=_decorate(details, state=sent.state, settings=settings,
+                                  persisted=True, command_sent=sent.sent),
+            )
+
+        observed = _hydrawise_source_observation(details, now_utc=now)
+        clear_since = _parse_time(transaction.get("clear_since_utc"))
+        if hydra_safety.get("clear_now") is not True or observed is None:
+            return _persist_result(
+                store=store, original=original, state=state, result=result,
+                details=details, settings=settings,
+                decision_code="MANUAL_WATER_CLEAR_UNKNOWN",
+                message="Das Wasserende ist noch nicht eindeutig bestätigt.",
+            )
+        if clear_since is None:
+            confirming_tx = update_manual_water_transaction(
+                transaction, now_utc=now, phase="CLEAR_CONFIRMING",
+                clear_since_utc=observed.isoformat(),
+            )
+            confirming = replace(
+                state, revision=state.revision + 1,
+                manual_water_conflict_json=dump_manual_water_transaction(confirming_tx),
+            )
+            return _persist_result(
+                store=store, original=original, state=confirming, result=result,
+                details=details, settings=settings,
+                decision_code="MANUAL_WATER_CLEAR_CONFIRMING",
+                message="Der erste freie Hydrawise-Nachweis wurde gespeichert.",
+            )
+        if observed - clear_since < timedelta(minutes=2):
+            return _persist_result(
+                store=store, original=original, state=state, result=result,
+                details=details, settings=settings,
+                decision_code="MANUAL_WATER_CLEAR_CONFIRMING",
+                message="Das Wasserende wird fortlaufend bestätigt.",
+            )
+        confirmed_tx = update_manual_water_transaction(
+            transaction, now_utc=now, phase="CLEAR_CONFIRMED",
+        )
+        state = replace(
+            state, revision=state.revision + 1,
+            manual_water_conflict_json=dump_manual_water_transaction(confirmed_tx),
+        )
     observed_relay_ids = {
         int(value) for value in hydra_safety.get("observed_relay_ids", [])
     }
@@ -2400,6 +3248,7 @@ def run_full_failsafe_cycle(
                     now_utc=now,
                     activity=activity,
                     mower_state=mower_state,
+                    mower_mode=str(mower.get("mode") or ""),
                     confirmation_minutes=1,
                     required_observations=required_park_observations,
                 )
@@ -2501,11 +3350,79 @@ def run_full_failsafe_cycle(
                     for key, value in dict(schedule_override.get("attempts") or {}).items()
                 }
                 try:
-                    response = suspend_zone_sender(
+                    args = (
                         str(environment.get("HYDRAWISE_API_KEY", "")).strip(),
                         pending_relay,
                         int(command_until.timestamp()),
                         str(environment.get("HYDRAWISE_CONTROLLER_ID", "")).strip() or None,
+                    )
+                    if settings.enable_manual_sessions:
+                        schedule_key = (
+                            f"schedule:{schedule_override.get('request_id')}:"
+                            f"{override_kind}:{pending_relay}:{command_until.isoformat()}"
+                        )
+
+                        def check_schedule_write(latest: AutomationState, at: datetime) -> None:
+                            current_override = load_irrigation_schedule_object(
+                                latest.irrigation_schedule_override_json
+                            )
+                            if (
+                                latest.maintenance_mode or current_override is None
+                                or current_override.get("request_id") != schedule_override.get("request_id")
+                                or current_override.get("status") != "APPLYING"
+                                or at >= command_until
+                            ):
+                                raise DeviceSendBlocked("IRRIGATION_SCHEDULE_SEND_REVOKED")
+                            if override_kind == "RESUME":
+                                observed_at = _parse_time(hydra_safety.get("observed_at_utc"))
+                                latest_session = load_manual_session(latest)
+                                if (
+                                    str(mower.get("mode") or "").strip().upper() != "HOME"
+                                    or not _mower_status_is_fresh(
+                                        mower, now_utc=at,
+                                        max_age_seconds=mower_status_max_age_seconds,
+                                    )
+                                    or observed_at is None
+                                    or not -60 <= (at - observed_at).total_seconds()
+                                    <= hydrawise_status_max_age_seconds
+                                    or hydra_safety.get("clear_now") is not True
+                                    or int(hydra_safety.get("active_zone_count") or 0) != 0
+                                    or int(hydra_safety.get("imminent_zone_count") or 0) != 0
+                                    or (
+                                        latest_session is not None
+                                        and latest_session.get("kind") == "START"
+                                        and latest_session.get("status") != "ENDED"
+                                        and (
+                                            latest_session.get("water_choice") != "IRRIGATION"
+                                            or latest_session.get("water_conflict_id")
+                                            != manual_water_context.get("id")
+                                        )
+                                    )
+                                ):
+                                    raise DeviceSendBlocked("NATIVE_RESUME_REVOKED")
+
+                        sent = dispatch_device_send(
+                            store=store, original=original, state=state,
+                            sender=suspend_zone_sender, args=args,
+                            kind=("NATIVE_RESUME" if override_kind == "RESUME" else "SUSPEND"),
+                            target=str(pending_relay), intent_key=schedule_key,
+                            now_utc=now, clock=command_clock,
+                            before_send_check=check_schedule_write,
+                            deadline_utc=min(command_until, now + timedelta(seconds=30)),
+                        )
+                        response = sent.response
+                        state = sent.state
+                        original = sent.state
+                    else:
+                        response = suspend_zone_sender(*args)
+                except DeviceSendBlocked as exc:
+                    blocked_state = exc.state if isinstance(exc.state, AutomationState) else state
+                    return replace(
+                        result, decision_code=exc.code,
+                        message="Die Hydrawise-Planänderung wurde an der persistenten Sendegrenze angehalten.",
+                        command_sent=exc.transport_started,
+                        details=_decorate(details, state=blocked_state, settings=settings,
+                                          persisted=True, command_sent=exc.transport_started),
                     )
                 except Exception as exc:
                     key = str(pending_relay)
@@ -2679,6 +3596,21 @@ def run_full_failsafe_cycle(
                     decision_code="IRRIGATION_SCHEDULE_CONFIRMING",
                     message="Die zweite Hydrawise-Bestätigung steht noch aus.",
                 )
+            if settings.enable_manual_sessions and now_suspend_until is not None:
+                schedule_prefix = (
+                    f"schedule:{schedule_override.get('request_id')}:{override_kind}:"
+                )
+                for entry in unresolved_device_sends(state):
+                    dispatched = _parse_time(entry.get("dispatched_at_utc"))
+                    if (
+                        str(entry.get("intent_key") or "").startswith(schedule_prefix)
+                        and dispatched is not None
+                        and proof_now > dispatched
+                    ):
+                        state = reconcile_device_send(
+                            state, str(entry["intent_key"]), now,
+                            f"relay-{entry.get('target')}-schedule-confirmed",
+                        )
             if override_kind == "RESUME":
                 completed_state = replace(
                     state,
@@ -3112,6 +4044,51 @@ def run_full_failsafe_cycle(
             command_sent=True,
         )
     if operator_action == "SET_CUTTING_HEIGHT" and height_cycle_is_clear:
+        if settings.enable_manual_sessions:
+            height_result = run_full_height_control(
+                store=store, original=original, state=state, mower=mower,
+                environment=environment, settings=settings, now_utc=now,
+                clock=command_clock, sender=cutting_height_sender,
+            )
+            details["cutting_height_action"] = {
+                "millimetres": height_result.target_mm,
+                "percent": height_result.target_percent,
+                "area_id": height_result.area_id,
+                "status": height_result.status,
+                "reason_code": height_result.reason_code,
+            }
+            if height_result.status == "CONFIRMED":
+                completed = _finish_operator_request(
+                    height_result.state,
+                    f"Die Schnitthöhe wurde auf {height_result.target_mm} mm eingestellt.",
+                )
+                return _persist_result(
+                    store=store, original=original, state=completed,
+                    result=result, details=details, settings=settings,
+                    decision_code="CUTTING_HEIGHT_CONFIRMED",
+                    message="Die neue Schnitthöhe wurde am Gerät frisch bestätigt.",
+                )
+            if height_result.status in {"SENT_UNCONFIRMED", "UNKNOWN"}:
+                return replace(
+                    result, decision_code=height_result.reason_code,
+                    message="Die Schnitthöhe wartet auf eine frische Gerätebestätigung.",
+                    command_sent=height_result.command_sent,
+                    details=_decorate(
+                        details, state=height_result.state, settings=settings,
+                        persisted=True, command_sent=height_result.command_sent,
+                    ),
+                )
+            rejected = _finish_operator_request(
+                height_result.state,
+                "Die Schnitthöhe wurde wegen fehlender sicherer Gerätebindung nicht geändert.",
+                status="REJECTED",
+            )
+            return _persist_result(
+                store=store, original=original, state=rejected, result=result,
+                details=details, settings=settings,
+                decision_code=height_result.reason_code,
+                message="Die Schnitthöhe blieb unverändert.",
+            )
         requested_mm = state.operator_request_cutting_height_mm
         area_id = int(target_area.get("id") or 0)
         safe_to_change = (
@@ -3370,6 +4347,7 @@ def run_full_failsafe_cycle(
 
     occupancy_only_sources = frozenset({"training", "match", "special"})
     current_occupancy_key = _occupancy_block_key(blocked_now)
+    current_manual_block_key = manual_block_key(blocked_now)
     current_occupancy_end = _parse_time(blocked_now.get("end"))
     all_current_block_sources = (
         _source_parts(blocked_now.get("source"))
@@ -3420,7 +4398,24 @@ def run_full_failsafe_cycle(
         and saved_override_until == current_occupancy_end
         and now < saved_override_until
     )
-    occupancy_override_active = occupancy_override_request or saved_override_valid
+    manual_confirmed_keys = (
+        set(manual_session.get("confirmed_block_keys", []))
+        if settings.enable_manual_sessions
+        and manual_session is not None
+        and manual_session.get("kind") == "START"
+        and manual_session.get("status") in {"PENDING", "ACTIVE"}
+        else set()
+    )
+    manual_occupancy_override_active = (
+        manual_permission.get("allowed") is True
+        and current_manual_block_key is not None
+        and current_manual_block_key in manual_confirmed_keys
+    )
+    occupancy_override_active = (
+        occupancy_override_request
+        or saved_override_valid
+        or manual_occupancy_override_active
+    )
     if occupancy_override_request:
         state = replace(
             state,
@@ -3450,6 +4445,7 @@ def run_full_failsafe_cycle(
             else None
         ),
         "does_not_override_irrigation": True,
+        "manual_session": manual_occupancy_override_active,
     }
 
     # This covers water that the controller did not initiate too.  Do not
@@ -3738,7 +4734,6 @@ def run_full_failsafe_cycle(
                 )
             client_id = str(environment.get("HUSQVARNA_CLIENT_ID", "")).strip()
             client_secret = str(environment.get("HUSQVARNA_CLIENT_SECRET", "")).strip()
-            response = park_sender(client_id, client_secret, mower_id)
             command_state = state.record_command(
                 fingerprint=intent.fingerprint,
                 sent_utc=now,
@@ -3748,10 +4743,46 @@ def run_full_failsafe_cycle(
                 restart_allowed=_restart_allowed(park_source),
             )
             if operator_action == "PARK_MOWER":
+                if settings.enable_manual_sessions and manual_session is not None:
+                    active_park = with_session_status(
+                        manual_session, "ACTIVE", now_utc=now,
+                    )
+                    command_state = replace(
+                        command_state,
+                        manual_session_json=dump_manual_session(active_park),
+                    )
                 command_state = _finish_operator_request(
                     command_state,
                     "Der sichere Parkbefehl wurde gesendet.",
                 )
+            if settings.enable_manual_sessions:
+                def check_park(latest: AutomationState, at: datetime) -> None:
+                    if latest.maintenance_mode or not mower_id or at >= block_end:
+                        raise DeviceSendBlocked("PARK_SEND_REVOKED")
+                try:
+                    sent = dispatch_device_send(
+                        store=store, original=original, state=command_state,
+                        sender=park_sender, args=(client_id, client_secret, mower_id),
+                        kind="PARK", target=mower_id,
+                        intent_key=f"park:{intent.fingerprint}", now_utc=now,
+                        clock=command_clock, before_send_check=check_park,
+                        deadline_utc=min(block_end, now + timedelta(seconds=30)),
+                    )
+                except DeviceSendBlocked as exc:
+                    blocked_state = exc.state if isinstance(exc.state, AutomationState) else state
+                    return replace(
+                        result, decision_code=exc.code,
+                        message="Der Parkbefehl wurde an der persistenten Sendegrenze angehalten.",
+                        command_sent=exc.transport_started,
+                        details=_decorate(details, state=blocked_state, settings=settings,
+                                          persisted=True, command_sent=exc.transport_started),
+                    )
+                response = sent.response
+                command_state = sent.state
+                original = sent.state
+                command_state = replace(command_state, revision=command_state.revision + 1)
+            else:
+                response = park_sender(client_id, client_secret, mower_id)
             details["park_action"] = {
                 "type": "ParkUntilFurtherNotice",
                 "response": response,
@@ -4260,13 +5291,8 @@ def run_full_failsafe_cycle(
                 )
             api_key = str(environment.get("HYDRAWISE_API_KEY", "")).strip()
             controller_id = str(environment.get("HYDRAWISE_CONTROLLER_ID", "")).strip() or None
-            response = suspend_zone_sender(
-                api_key,
-                int(pending["relay_id"]),
-                int(suspend_until.timestamp()),
-                controller_id,
-            )
-            suspended.append(int(pending["relay_id"]))
+            relay = int(pending["relay_id"])
+            suspended.append(relay)
             updated = replace(
                 state,
                 revision=state.revision + 1,
@@ -4279,6 +5305,49 @@ def run_full_failsafe_cycle(
                 irrigation_suspension_revalidation_last_seen_utc=None,
                 irrigation_suspension_revalidation_observations=0,
             )
+            if settings.enable_manual_sessions:
+                suspend_key = (
+                    f"irrigation:{state.irrigation_plan_id}:suspend:{relay}:"
+                    f"{suspend_until.isoformat()}"
+                )
+
+                def check_irrigation_suspend(latest: AutomationState, at: datetime) -> None:
+                    if (
+                        latest.maintenance_mode
+                        or latest.irrigation_plan_id != state.irrigation_plan_id
+                        or latest.irrigation_phase not in {"SUSPENDING", "READY"}
+                        or relay not in set(_json_ints(latest.irrigation_suspended_relay_ids_json))
+                        or at >= suspend_until
+                    ):
+                        raise DeviceSendBlocked("IRRIGATION_SUSPEND_REVOKED")
+
+                try:
+                    sent = dispatch_device_send(
+                        store=store, original=original, state=updated,
+                        sender=suspend_zone_sender,
+                        args=(api_key, relay, int(suspend_until.timestamp()), controller_id),
+                        kind="SUSPEND", target=str(relay), intent_key=suspend_key,
+                        now_utc=now, clock=command_clock,
+                        before_send_check=check_irrigation_suspend,
+                        deadline_utc=min(suspend_until, now + timedelta(seconds=30)),
+                    )
+                except DeviceSendBlocked as exc:
+                    blocked_state = exc.state if isinstance(exc.state, AutomationState) else state
+                    return replace(
+                        result, decision_code=exc.code,
+                        message="Der Hydrawise-Suspendierungsbefehl wurde nicht wiederholt.",
+                        command_sent=exc.transport_started,
+                        details=_decorate(details, state=blocked_state, settings=settings,
+                                          persisted=True, command_sent=exc.transport_started),
+                    )
+                response = sent.response
+                updated = sent.state
+                original = sent.state
+                updated = replace(updated, revision=updated.revision + 1)
+            else:
+                response = suspend_zone_sender(
+                    api_key, relay, int(suspend_until.timestamp()), controller_id,
+                )
             details["irrigation_action"] = {
                 "type": "SuspendScheduledZone",
                 "relay_id": int(pending["relay_id"]),
@@ -4396,12 +5465,16 @@ def run_full_failsafe_cycle(
         fresh_park_event_accepted = (
             mower_status_fresh or not fresh_park_event_required
         )
-        if (
+        park_gate_required = state.irrigation_phase in {
+            "PLANNED", "SUSPENDING", "READY",
+        }
+        if park_gate_required and (
             not _park_confirmation_ready(
                 state,
                 now_utc=now,
                 activity=activity,
                 mower_state=mower_state,
+                mower_mode=str(mower.get("mode") or ""),
                 confirmation_minutes=confirmation_minutes,
                 required_observations=required_park_observations,
             )
@@ -4902,6 +5975,29 @@ def run_full_failsafe_cycle(
                         for observation in observations.values()
                     )
                 )
+                if settings.enable_manual_sessions and ordinary_live_suspension_proof_valid:
+                    source_observed = _hydrawise_source_observation(details, now_utc=now)
+                    for relay in sorted(expected_relay_ids):
+                        intent_key = (
+                            f"irrigation:{state.irrigation_plan_id}:suspend:{relay}:"
+                            f"{stored_suspend_until.isoformat()}"
+                        )
+                        entry = next(
+                            (
+                                item for item in unresolved_device_sends(state)
+                                if item.get("intent_key") == intent_key
+                            ),
+                            None,
+                        )
+                        dispatched = _parse_time(entry.get("dispatched_at_utc")) if entry else None
+                        if (
+                            source_observed is not None and dispatched is not None
+                            and source_observed > dispatched
+                        ):
+                            state = reconcile_device_send(
+                                state, intent_key, now,
+                                f"relay-{relay}-scheduled-after-suspension",
+                            )
                 suspension_proof_valid = (
                     ordinary_suspension_proof_valid
                     or schedule_override_suspension_proof_valid
@@ -5305,12 +6401,82 @@ def run_full_failsafe_cycle(
                     message="Bewässerung ist nur ab 03:30 möglich und muss bis 08:00 beendet sein. Bitte früheren Start wählen.",
                     details=_decorate(details, state=reopened, settings=settings, persisted=True, command_sent=False),
                 )
-            response = start_zone_sender(
-                api_key,
-                int(next_zone["relay_id"]),
-                int(next_zone["run_seconds"]),
-                controller_id,
-            )
+            if settings.enable_manual_sessions:
+                relay = int(next_zone["relay_id"])
+                start_key = (
+                    f"water-start:{state.irrigation_plan_id}:{relay}:"
+                    f"{reserved.irrigation_zone_start_reserved_utc}"
+                )
+
+                def check_water_start(latest: AutomationState, at: datetime) -> None:
+                    latest_session = load_manual_session(latest)
+                    observed_at = _parse_time(hydra_safety.get("observed_at_utc"))
+                    hydra_still_fresh_clear = (
+                        observed_at is not None
+                        and -60 <= (at - observed_at).total_seconds()
+                        <= hydrawise_status_max_age_seconds
+                        and hydra_safety.get("available") is True
+                        and hydra_safety.get("fresh") is True
+                        and hydra_safety.get("relay_set_valid") is True
+                        and hydra_safety.get("clear_now") is True
+                        and int(hydra_safety.get("active_zone_count") or 0) == 0
+                        and int(hydra_safety.get("imminent_zone_count") or 0) == 0
+                    )
+                    if (
+                        latest.maintenance_mode
+                        or latest.irrigation_phase != "START_RESERVED"
+                        or latest.irrigation_current_relay_id != relay
+                        or str(mower.get("mode") or "").strip().upper() != "HOME"
+                        or not _mower_status_is_fresh(
+                            mower, now_utc=at,
+                            max_age_seconds=mower_status_max_age_seconds,
+                        )
+                        or not hydra_still_fresh_clear
+                    ):
+                        raise DeviceSendBlocked("WATER_START_REVOKED")
+                    if (
+                        latest_session is not None
+                        and latest_session.get("kind") == "START"
+                        and latest_session.get("status") != "ENDED"
+                        and (
+                            latest_session.get("water_choice") != "IRRIGATION"
+                            or latest_session.get("water_conflict_id")
+                            != manual_water_context.get("id")
+                        )
+                    ):
+                        raise DeviceSendBlocked("MANUAL_WATER_CHOICE_REVOKED")
+
+                try:
+                    sent = dispatch_device_send(
+                        store=store, original=reserved, state=reserved,
+                        sender=start_zone_sender,
+                        args=(api_key, relay, int(next_zone["run_seconds"]), controller_id),
+                        kind="WATER_START", target=str(relay), intent_key=start_key,
+                        now_utc=now, clock=command_clock,
+                        before_send_check=check_water_start,
+                        deadline_utc=min(
+                            dispatch_window.latest_start_utc or dispatch_now + timedelta(seconds=30),
+                            dispatch_now + timedelta(seconds=30),
+                        ),
+                    )
+                except DeviceSendBlocked as exc:
+                    blocked_state = exc.state if isinstance(exc.state, AutomationState) else reserved
+                    return replace(
+                        result, decision_code=exc.code,
+                        message="Der Zonenstart wurde an der persistenten Sendegrenze angehalten.",
+                        command_sent=exc.transport_started,
+                        details=_decorate(details, state=blocked_state, settings=settings,
+                                          persisted=True, command_sent=exc.transport_started),
+                    )
+                response = sent.response
+                reserved = sent.state
+            else:
+                response = start_zone_sender(
+                    api_key,
+                    int(next_zone["relay_id"]),
+                    int(next_zone["run_seconds"]),
+                    controller_id,
+                )
             details["irrigation_action"] = {
                 "type": "StartZone",
                 "relay_id": int(next_zone["relay_id"]),
@@ -5402,7 +6568,39 @@ def run_full_failsafe_cycle(
             api_key = str(environment.get("HYDRAWISE_API_KEY", "")).strip()
             controller_id = str(environment.get("HYDRAWISE_CONTROLLER_ID", "")).strip() or None
             try:
-                response = stop_zone_sender(api_key, int(current_id), controller_id)
+                if settings.enable_manual_sessions:
+                    relay = int(current_id)
+
+                    def check_water_stop(latest: AutomationState, at: datetime) -> None:
+                        if (
+                            latest.irrigation_phase != "STOPPING"
+                            or latest.irrigation_current_relay_id != relay
+                        ):
+                            raise DeviceSendBlocked("WATER_STOP_REVOKED")
+
+                    sent = dispatch_device_send(
+                        store=store, original=stopping, state=stopping,
+                        sender=stop_zone_sender,
+                        args=(api_key, relay, controller_id), kind="WATER_STOP",
+                        target=str(relay),
+                        intent_key=f"water-stop:{state.irrigation_plan_id}:{relay}:{now.isoformat()}",
+                        now_utc=now, clock=command_clock,
+                        before_send_check=check_water_stop,
+                        deadline_utc=now + timedelta(seconds=30),
+                    )
+                    response = sent.response
+                    stopping = sent.state
+                else:
+                    response = stop_zone_sender(api_key, int(current_id), controller_id)
+            except DeviceSendBlocked as exc:
+                blocked_state = exc.state if isinstance(exc.state, AutomationState) else stopping
+                return replace(
+                    result, decision_code=exc.code,
+                    message="Der Zonenstopp wurde an der persistenten Sendegrenze angehalten.",
+                    command_sent=exc.transport_started,
+                    details=_decorate(details, state=blocked_state, settings=settings,
+                                      persisted=True, command_sent=exc.transport_started),
+                )
             except Exception as exc:
                 failed = _finish_operator_request(
                     _failed_irrigation(
@@ -5516,12 +6714,23 @@ def run_full_failsafe_cycle(
                     decision_code="IRRIGATION_CONFIRM_DIRECT_STOP",
                     message="Das direkte Zonenende wird fortlaufend bestätigt.",
                 )
+            confirmed_stop_state = confirming
+            if settings.enable_manual_sessions:
+                for entry in unresolved_device_sends(confirmed_stop_state):
+                    if (
+                        entry.get("kind") == "WATER_STOP"
+                        and str(entry.get("target")) == str(current_id)
+                    ):
+                        confirmed_stop_state = reconcile_device_send(
+                            confirmed_stop_state, str(entry["intent_key"]), now,
+                            f"relay-{current_id}-continuously-inactive",
+                        )
             stopped = replace(
                 _finish_operator_request(
-                    state,
+                    confirmed_stop_state,
                     "Die Zone ist sicher beendet; keine weitere Zone startet.",
                 ),
-                revision=state.revision + 2,
+                revision=confirmed_stop_state.revision + 2,
                 irrigation_phase="COMPLETE_HOLD",
                 irrigation_current_relay_id=None,
                 irrigation_zone_start_reserved_utc=None,
@@ -5888,9 +7097,17 @@ def run_full_failsafe_cycle(
             release_minutes if release_origin in full_release_origins else None
         ),
         "cancelled_without_run_release": cancelled_without_run_release,
-        "effective_allowed": release.allowed or cancelled_without_run_release,
+        "manual_dry_override": manual_permission.get("dry_override") is True,
+        "effective_allowed": (
+            release.allowed or cancelled_without_run_release
+            or manual_permission.get("dry_override") is True
+        ),
     }
-    if not release.allowed and not cancelled_without_run_release:
+    if (
+        not release.allowed
+        and not cancelled_without_run_release
+        and manual_permission.get("dry_override") is not True
+    ):
         if activity in PARKABLE_ACTIVITIES and settings.enable_park_commands:
             intent = CommandIntent(
                 action="PARK",
@@ -5902,7 +7119,6 @@ def run_full_failsafe_cycle(
             if gate.allowed and mower_id and error_code == 0 and mower_state not in ERROR_STATES:
                 client_id = str(environment.get("HUSQVARNA_CLIENT_ID", "")).strip()
                 client_secret = str(environment.get("HUSQVARNA_CLIENT_SECRET", "")).strip()
-                response = park_sender(client_id, client_secret, mower_id)
                 parked = state.record_command(
                     fingerprint=intent.fingerprint,
                     sent_utc=now,
@@ -5911,6 +7127,34 @@ def run_full_failsafe_cycle(
                     park_source="hydrawise_unconfirmed",
                     restart_allowed=True,
                 )
+                if settings.enable_manual_sessions:
+                    try:
+                        sent = dispatch_device_send(
+                            store=store, original=original, state=parked,
+                            sender=park_sender, args=(client_id, client_secret, mower_id),
+                            kind="PARK", target=mower_id,
+                            intent_key=f"park:{intent.fingerprint}", now_utc=now,
+                            clock=command_clock,
+                            before_send_check=lambda latest, at: (
+                                None if not latest.maintenance_mode
+                                else (_ for _ in ()).throw(DeviceSendBlocked("PARK_SEND_REVOKED"))
+                            ),
+                            deadline_utc=now + timedelta(seconds=30),
+                        )
+                    except DeviceSendBlocked as exc:
+                        blocked_state = exc.state if isinstance(exc.state, AutomationState) else state
+                        return replace(
+                            result, decision_code=exc.code,
+                            message="Der Schutz-Parkbefehl wurde an der Sendegrenze angehalten.",
+                            command_sent=exc.transport_started,
+                            details=_decorate(details, state=blocked_state, settings=settings,
+                                              persisted=True, command_sent=exc.transport_started),
+                        )
+                    response = sent.response
+                    parked = replace(sent.state, revision=sent.state.revision + 1)
+                    original = sent.state
+                else:
+                    response = park_sender(client_id, client_secret, mower_id)
                 details["park_action"] = {"type": "ParkUntilFurtherNotice", "response": response}
                 return _persist_result(
                     store=store,
@@ -5934,9 +7178,48 @@ def run_full_failsafe_cycle(
             message=release.reason,
         )
 
+    manual_start_requested = (
+        operator_action == "START_MOWING"
+        or (
+            settings.enable_manual_sessions
+            and manual_session is not None
+            and manual_session.get("kind") == "START"
+            and manual_session.get("status") in {"PENDING", "ACTIVE"}
+        )
+    )
+    if settings.enable_manual_sessions and manual_session is not None:
+        if (
+            manual_session.get("kind") == "PARK"
+            and manual_session.get("status") != "ENDED"
+            and operator_action != "PARK_MOWER"
+        ):
+            return _persist_result(
+                store=store, original=original, state=state, result=result,
+                details=details, settings=settings,
+                decision_code="MANUAL_PARK_SESSION_HOLD",
+                message="Die bestätigte Park-Sitzung bleibt bis zur ausdrücklichen Freigabe aktiv.",
+            )
+        if manual_session.get("kind") == "START" and manual_session.get("status") == "ENDED":
+            return _persist_result(
+                store=store, original=original, state=state, result=result,
+                details=details, settings=settings,
+                decision_code="MANUAL_START_SESSION_ENDED_AT_CHARGE",
+                message="Die bestätigte Start-Sitzung endete mit der nächsten beobachteten Ladefahrt.",
+            )
+        if manual_start_requested and manual_permission.get("allowed") is not True:
+            permission_code = str(
+                manual_permission.get("code") or "MANUAL_SESSION_BLOCKED"
+            )
+            return _persist_result(
+                store=store, original=original, state=state, result=result,
+                details=details, settings=settings,
+                decision_code=permission_code,
+                message="Die manuelle Start-Sitzung wartet auf alle ausdrücklich bestätigten Sicherheitsnachweise.",
+            )
+
     manual_lock = activity in MANUAL_ACTIVITIES or mower_state in MANUAL_STATES
     confirmed_operator_paused_start = (
-        operator_action == "START_MOWING"
+        manual_start_requested
         and mower_state == "PAUSED"
         and activity == "NOT_APPLICABLE"
         and (state.parked_by_automation or state.continuous_mowing_owned)
@@ -5961,7 +7244,7 @@ def run_full_failsafe_cycle(
         (manual_lock and not confirmed_operator_paused_start)
         or error_code != 0
         or mower_state in ERROR_STATES
-        or (external_override and operator_action != "START_MOWING")
+        or (external_override and not manual_start_requested)
     ):
         return _persist_result(
             store=store,
@@ -5977,7 +7260,7 @@ def run_full_failsafe_cycle(
     if (
         state.parked_by_automation
         and not state.automation_restart_allowed
-        and operator_action != "START_MOWING"
+        and not manual_start_requested
     ):
         return _persist_result(
             store=store,
@@ -6035,7 +7318,17 @@ def run_full_failsafe_cycle(
         state.continuous_mowing_owned
         or previous_activity in MOWING_ACTIVITIES
     )
-    turnaround_before_dock = activity == "GOING_HOME" and state.continuous_mowing_owned
+    manual_start_active = bool(
+        settings.enable_manual_sessions
+        and manual_session is not None
+        and manual_session.get("kind") == "START"
+        and manual_session.get("status") in {"PENDING", "ACTIVE"}
+    )
+    turnaround_before_dock = (
+        activity == "GOING_HOME"
+        and state.continuous_mowing_owned
+        and not manual_start_active
+    )
 
     if activity == "GOING_HOME" and not turnaround_before_dock:
         return _persist_result(
@@ -6164,7 +7457,7 @@ def run_full_failsafe_cycle(
         "failsafe_refresh_required": failsafe_refresh,
     }
     if mowing_now and not failsafe_refresh:
-        if operator_action == "START_MOWING":
+        if manual_start_requested:
             work_area_id = int(target_area.get("id") or 0)
             if work_area_id <= 0 or target_area.get("enabled") is False:
                 return _persist_result(
@@ -6276,7 +7569,6 @@ def run_full_failsafe_cycle(
             )
         client_id = str(environment.get("HUSQVARNA_CLIENT_ID", "")).strip()
         client_secret = str(environment.get("HUSQVARNA_CLIENT_SECRET", "")).strip()
-        response = park_sender(client_id, client_secret, mower_id)
         owned = state.record_command(
             fingerprint=intent.fingerprint,
             sent_utc=now,
@@ -6285,6 +7577,34 @@ def run_full_failsafe_cycle(
             park_source="continuous",
             restart_allowed=True,
         )
+        if settings.enable_manual_sessions:
+            try:
+                sent = dispatch_device_send(
+                    store=store, original=original, state=owned,
+                    sender=park_sender, args=(client_id, client_secret, mower_id),
+                    kind="PARK", target=mower_id,
+                    intent_key=f"park:{intent.fingerprint}", now_utc=now,
+                    clock=command_clock,
+                    before_send_check=lambda latest, at: (
+                        None if not latest.maintenance_mode
+                        else (_ for _ in ()).throw(DeviceSendBlocked("PARK_SEND_REVOKED"))
+                    ),
+                    deadline_utc=min(safe_command_deadline, now + timedelta(seconds=30)),
+                )
+            except DeviceSendBlocked as exc:
+                blocked_state = exc.state if isinstance(exc.state, AutomationState) else state
+                return replace(
+                    result, decision_code=exc.code,
+                    message="Der Besitz-Parkbefehl wurde an der Sendegrenze angehalten.",
+                    command_sent=exc.transport_started,
+                    details=_decorate(details, state=blocked_state, settings=settings,
+                                      persisted=True, command_sent=exc.transport_started),
+                )
+            response = sent.response
+            owned = replace(sent.state, revision=sent.state.revision + 1)
+            original = sent.state
+        else:
+            response = park_sender(client_id, client_secret, mower_id)
         details["park_action"] = {"type": "ParkUntilFurtherNotice", "response": response}
         return _persist_result(
             store=store,
@@ -6347,7 +7667,14 @@ def run_full_failsafe_cycle(
         mowing_window_end_utc=command_end,
         continuous_mowing=True,
     )
-    if operator_action == "START_MOWING":
+    if (
+        settings.enable_manual_sessions
+        and manual_session is not None
+        and manual_session.get("kind") == "PARK"
+        and manual_session.get("status") == "ENDED"
+    ):
+        command_state = replace(command_state, automation_restart_allowed=True)
+    if manual_start_requested:
         command_state = _finish_operator_request(
             command_state,
             "Der sichere Mähstart wurde gesendet.",
@@ -6367,6 +7694,12 @@ def run_full_failsafe_cycle(
         last_command_fingerprint=intent.fingerprint, last_command_utc=now.isoformat(),
         mower_start_pending_since_utc=now.isoformat(),
         mower_start_pending_deadline_utc=command_end.isoformat(),
+        mower_start_pending_session_id=(
+            str(manual_session["session_id"]) if manual_start_active else None
+        ),
+        mower_start_pending_session_epoch=(
+            int(manual_session["epoch"]) if manual_start_active else None
+        ),
     )
     try:
         store.save(reserved, expected_revision=original.revision)
@@ -6390,6 +7723,12 @@ def run_full_failsafe_cycle(
             requested_duration_minutes=duration,
             mower_status_max_age_seconds=mower_status_max_age_seconds,
             hydrawise_status_max_age_seconds=hydrawise_status_max_age_seconds,
+            manual_session_id=(
+                str(manual_session["session_id"]) if manual_start_active else None
+            ),
+            manual_session_epoch=(
+                int(manual_session["epoch"]) if manual_start_active else None
+            ),
         )
 
     try:
@@ -6418,6 +7757,21 @@ def run_full_failsafe_cycle(
             details=_decorate(details, state=reserved, settings=settings, persisted=True, command_sent=False),
         )
     except Exception as exc:
+        unknown_state = reserved
+        if manual_start_active and manual_session is not None:
+            unknown_session = with_session_status(
+                manual_session, "UNKNOWN", now_utc=now,
+            )
+            candidate = replace(
+                reserved, revision=reserved.revision + 1,
+                manual_session_json=dump_manual_session(unknown_session),
+            )
+            try:
+                store.save(candidate, expected_revision=reserved.revision)
+            except Exception:
+                pass
+            else:
+                unknown_state = candidate
         details["start_action"] = {
             "type": "StartInWorkArea", "outcome": "UNCONFIRMED", "error_type": type(exc).__name__,
             "requested_deadline_utc": command_end.isoformat(), "failsafe_refresh": failsafe_refresh,
@@ -6425,11 +7779,12 @@ def run_full_failsafe_cycle(
         return replace(
             result, decision_code="MOWER_START_OUTCOME_UNCONFIRMED", command_sent=True,
             message="Die Startantwort fehlt; weitere Starts bleiben bis zum Abgleich gesperrt.",
-            details=_decorate(details, state=reserved, settings=settings, persisted=True, command_sent=True),
+            details=_decorate(details, state=unknown_state, settings=settings, persisted=True, command_sent=True),
         )
     command_state = replace(
         command_state, revision=reserved.revision + 1,
         mower_start_pending_since_utc=None, mower_start_pending_deadline_utc=None,
+        mower_start_pending_session_id=None, mower_start_pending_session_epoch=None,
     )
     try:
         store.save(command_state, expected_revision=reserved.revision)

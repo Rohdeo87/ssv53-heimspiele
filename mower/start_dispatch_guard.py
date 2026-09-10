@@ -14,6 +14,9 @@ from collections.abc import Callable
 from datetime import datetime, timezone
 from typing import Any, Mapping
 
+from mower.device_send_guard import DeviceSendBlocked, unresolved_device_sends
+from mower.manual_session import load_manual_session, start_dispatch_permission
+
 
 Clock = Callable[[], datetime]
 
@@ -59,7 +62,7 @@ def _mower_observation_fresh(
 
 
 def _hydrawise_observation_fresh(
-    safety: Mapping[str, Any], *, now_utc: datetime, max_age_seconds: int
+    safety: Mapping[str, Any], *, now_utc: datetime, max_age_seconds: int,
 ) -> bool:
     observed = _parse_utc(safety.get("observed_at_utc"))
     if observed is None:
@@ -69,14 +72,16 @@ def _hydrawise_observation_fresh(
         active_zone_count = int(safety.get("active_zone_count") or 0)
     except (TypeError, ValueError):
         return False
-    return (
+    safe_observation = (
         safety.get("available") is True
         and safety.get("fresh") is True
         and safety.get("relay_set_valid") is True
-        and safety.get("clear_now") is True
         and active_zone_count == 0
         and -60 <= age <= max_age_seconds
     )
+    if not safe_observation:
+        return False
+    return safety.get("clear_now") is True
 
 
 def _same_reservation(current: Any, reserved: Any) -> bool:
@@ -88,6 +93,10 @@ def _same_reservation(current: Any, reserved: Any) -> bool:
         == reserved.mower_start_pending_since_utc
         and current.mower_start_pending_deadline_utc
         == reserved.mower_start_pending_deadline_utc
+        and current.mower_start_pending_session_id
+        == reserved.mower_start_pending_session_id
+        and current.mower_start_pending_session_epoch
+        == reserved.mower_start_pending_session_epoch
     )
 
 
@@ -103,6 +112,8 @@ def prepare_start_dispatch(
     requested_duration_minutes: int,
     mower_status_max_age_seconds: int,
     hydrawise_status_max_age_seconds: int,
+    manual_session_id: str | None = None,
+    manual_session_epoch: int | None = None,
 ) -> int:
     """Return the still safe whole-minute duration or block before POST.
 
@@ -133,6 +144,36 @@ def prepare_start_dispatch(
         raise StartDispatchBlocked("START_WINDOW_EXPIRED")
     if not _same_reservation(current, reserved):
         raise StartDispatchBlocked("START_RESERVATION_CHANGED")
+    try:
+        if unresolved_device_sends(current):
+            # A prior Park, valve, suspend, or native-resume call can still
+            # reach a device after a lost response. No mower START may pass
+            # that ambiguity; protective Park/Stop dispatches have their own
+            # guarded paths and are intentionally not handled here.
+            raise StartDispatchBlocked("PREVIOUS_DEVICE_OUTCOME_UNCONFIRMED")
+    except DeviceSendBlocked as exc:
+        raise StartDispatchBlocked(exc.code) from exc
+    if (manual_session_id is None) != (manual_session_epoch is None):
+        raise StartDispatchBlocked("MANUAL_SESSION_FENCE_INVALID")
+    if manual_session_id is not None:
+        if (
+            current.mower_start_pending_session_id != manual_session_id
+            or current.mower_start_pending_session_epoch != manual_session_epoch
+            or reserved.mower_start_pending_session_id != manual_session_id
+            or reserved.mower_start_pending_session_epoch != manual_session_epoch
+            or current.operator_request_session_id != manual_session_id
+            or current.operator_request_session_epoch != manual_session_epoch
+        ):
+            raise StartDispatchBlocked("MANUAL_SESSION_FENCE_CHANGED")
+        try:
+            permission = start_dispatch_permission(
+                load_manual_session(current), session_id=manual_session_id,
+                epoch=manual_session_epoch, mower_id=str(mower.get("mower_id") or ""), now_utc=now,
+            )
+        except Exception as exc:
+            raise StartDispatchBlocked("MANUAL_SESSION_INVALID") from exc
+        if permission.get("allowed") is not True:
+            raise StartDispatchBlocked(str(permission.get("code") or "MANUAL_SESSION_INVALID"))
     if current.maintenance_mode:
         raise StartDispatchBlocked("MAINTENANCE_MODE")
     if (

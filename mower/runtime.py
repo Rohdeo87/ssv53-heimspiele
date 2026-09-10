@@ -81,6 +81,7 @@ class RuntimeSettings:
     enable_operator_cutting_height_commands: bool = False
     operator_control_confirmation: str = ""
     enable_operator_safety_guard: bool = False
+    enable_manual_sessions: bool = False
 
     @classmethod
     def from_mapping(cls, values: Mapping[str, str]) -> "RuntimeSettings":
@@ -149,6 +150,7 @@ class RuntimeSettings:
                 values.get("ENABLE_OPERATOR_SAFETY_GUARD"),
                 default=False,
             ),
+            enable_manual_sessions=_parse_bool(values.get("ENABLE_MANUAL_SESSIONS"), default=False),
             park_lookahead_minutes=park_lookahead_minutes,
         )
 

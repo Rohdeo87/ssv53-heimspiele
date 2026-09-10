@@ -8,6 +8,7 @@ import pytest
 
 from mower.full_failsafe import run_full_failsafe_cycle
 from mower.husqvarna_start_actions import start_in_work_area
+from mower.manual_session import dump_manual_session, new_session
 from mower.start_dispatch_guard import StartDispatchBlocked, prepare_start_dispatch
 from mower.state import AutomationState
 from mower.state_store import InMemoryStateStore
@@ -194,3 +195,75 @@ def test_guard_rejects_invalid_clock_before_any_sender():
     store, reserved = _reserved_store()
     with pytest.raises(StartDispatchBlocked, match="COMMAND_CLOCK_INVALID"):
         _dispatch_callback(store, reserved, lambda: NOW.replace(tzinfo=None))()
+
+
+def _manual_reserved(*, session=None, deadline_minutes=20):
+    session = session or new_session(
+        session_id="session-1", epoch=1, mower_id="mower-1", kind="START", source="APP", now_utc=NOW,
+    )
+    reserved = AutomationState(
+        revision=1, last_command_fingerprint="manual-start", last_command_utc=NOW.isoformat(),
+        mower_start_pending_since_utc=NOW.isoformat(),
+        mower_start_pending_deadline_utc=(NOW + timedelta(minutes=deadline_minutes)).isoformat(),
+        manual_session_json=dump_manual_session(session),
+        operator_request_session_id="session-1", operator_request_session_epoch=1,
+        mower_start_pending_session_id="session-1", mower_start_pending_session_epoch=1,
+    )
+    return reserved
+
+
+def _manual_dispatch(current, reserved, *, now=NOW, safety=None):
+    return prepare_start_dispatch(
+        clock=lambda: now, store=type("Store", (), {"load": lambda _self: current})(), reserved=reserved,
+        mower={"mower_id": "mower-1", "connected": True, "status_timestamp_ms": int(NOW.timestamp() * 1000)},
+        hydrawise_safety=safety or {
+            "available": True, "fresh": True, "relay_set_valid": True, "clear_now": True,
+            "active_zone_count": 0, "observed_at_utc": NOW.isoformat(),
+        },
+        safe_command_deadline_utc=NOW + timedelta(minutes=20), command_end_utc=NOW + timedelta(minutes=20),
+        requested_duration_minutes=10, mower_status_max_age_seconds=180, hydrawise_status_max_age_seconds=180,
+        manual_session_id="session-1", manual_session_epoch=1,
+    )
+
+
+def test_manual_start_epoch_fence_blocks_changed_or_replaced_session_before_post():
+    reserved = _manual_reserved()
+    assert _manual_dispatch(reserved, reserved) == 10
+    changed = new_session(
+        session_id="session-1", epoch=2, mower_id="mower-1", kind="START", source="APP", now_utc=NOW,
+    )
+    with pytest.raises(StartDispatchBlocked, match="MANUAL_SESSION_FENCE_CHANGED"):
+        _manual_dispatch(replace(reserved, manual_session_json=dump_manual_session(changed)), reserved)
+    parked = new_session(
+        session_id="session-2", epoch=2, mower_id="mower-1", kind="PARK", source="APP", now_utc=NOW,
+    )
+    with pytest.raises(StartDispatchBlocked, match="MANUAL_SESSION_FENCE_CHANGED"):
+        _manual_dispatch(replace(reserved, manual_session_json=dump_manual_session(parked)), reserved)
+
+
+def test_manual_start_fence_rejects_expired_preparation_and_never_masks_nonclear_water():
+    reserved = _manual_reserved()
+    with pytest.raises(StartDispatchBlocked, match="MANUAL_SESSION_EXPIRED"):
+        _manual_dispatch(reserved, reserved, now=NOW + timedelta(minutes=11))
+    with pytest.raises(StartDispatchBlocked, match="HYDRAWISE_STATUS_STALE"):
+        _manual_dispatch(
+            reserved, reserved,
+            safety={
+                "available": True, "fresh": True, "relay_set_valid": True, "clear_now": False,
+                "active_zone_count": 0, "active_relay_ids": [], "observed_at_utc": NOW.isoformat(),
+            },
+        )
+
+
+@pytest.mark.parametrize("kind", ["PARK", "SUSPEND", "WATER_START", "WATER_STOP", "NATIVE_RESUME"])
+def test_any_unresolved_device_send_fences_a_new_start(kind):
+    store, reserved = _reserved_store(deadline_minutes=20)
+    outstanding = {
+        "version": 1, "id": "record-1", "kind": kind, "target": "mower-1",
+        "intent_key": "intent-1", "control_binding": "binding-1",
+        "reserved_at_utc": NOW.isoformat(), "deadline_utc": (NOW + timedelta(minutes=2)).isoformat(),
+        "status": "UNKNOWN",
+    }
+    current = replace(reserved, device_send_journal_json=json.dumps([outstanding]))
+    with pytest.raises(StartDispatchBlocked, match="PREVIOUS_DEVICE_OUTCOME_UNCONFIRMED"):
+        _dispatch_callback(type("Store", (), {"load": lambda _self: current})(), current, lambda: NOW, deadline_minutes=20)()
