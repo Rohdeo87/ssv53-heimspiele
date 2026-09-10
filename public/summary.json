@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-09T17:24:56+00:00",
+  "generated_at": "2026-09-10T05:00:10+00:00",
   "selection_mode": "club-wide venue",
   "event_timing": {
     "before_minutes": 60,
@@ -21,12 +21,12 @@
       "ssv53-festival-unclear-duration-90-20260831"
     ]
   },
-  "total": 113,
-  "included": 46,
+  "total": 114,
+  "included": 47,
   "review": 0,
   "excluded": 67,
   "by_calendar": {
-    "Rasen": 41,
+    "Rasen": 42,
     "Kunstrasen": 5
   },
   "by_team": {
@@ -79,8 +79,8 @@
       "review": 0
     },
     "Spielgemeinschaft Schönwalde-Perwenitz-Paaren": {
-      "total": 35,
-      "included": 12,
+      "total": 36,
+      "included": 13,
       "excluded": 23,
       "review": 0
     }
@@ -123,7 +123,7 @@
     {
       "date_from": "2026-10-01",
       "date_to": "2026-12-31",
-      "competition_rows": 36
+      "competition_rows": 37
     },
     {
       "date_from": "2027-01-01",
@@ -139,12 +139,12 @@
   "publication": {
     "schemaVersion": 1,
     "status": "ok",
-    "sourceGeneratedAt": "2026-09-09T17:24:56+00:00",
-    "sourceDigest": "12e15094f4c23d7a3c9434f73f1c4f7234398ee29e9b62b568d3dd7208ffdb12",
-    "sourceCount": 46,
+    "sourceGeneratedAt": "2026-09-10T05:00:10+00:00",
+    "sourceDigest": "ab1c801720524bb9bcb2203dbea04edf12817187722e20ac80037efaa508e17e",
+    "sourceCount": 47,
     "retainedCount": 0,
-    "effectiveCount": 46,
+    "effectiveCount": 47,
     "requiredConsumer": null,
-    "effectiveDigest": "7a195ac7550915e8d31b0fd6349fe2f622680d1e9dca723bb181e19f766becec"
+    "effectiveDigest": "24abea810c5aa902b7eebb2023d232ee2cfd3dcdcac47ca3399920c67ba155c8"
   }
 }

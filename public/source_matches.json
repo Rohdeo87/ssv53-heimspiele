@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-09T17:24:56+00:00",
+  "generatedAt": "2026-09-10T05:00:10+00:00",
   "status": "ok",
   "matches": [
     {
@@ -461,6 +461,33 @@
       "location": "Kunstrasenplatz, Sportplatz Schönwalde Strandbad, Platz 2, KR, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
       "source": "fussball.de",
       "checksum": "79b87566f30374ef8e458e028d66f7584b2c95d30a41fa3101ffce8f8e00508d"
+    },
+    {
+      "id": "dfb:0320RDKT9S000000VS5489BTVT7QHFUC",
+      "title": "Spielgemeinschaft Schönwalde-Perwenitz-Paaren – RSV Eintracht 1949 U23",
+      "start": "2026-10-04T14:00+02:00",
+      "end": "2026-10-04T15:45+02:00",
+      "occupancyStart": "2026-10-04T13:00+02:00",
+      "occupancyEnd": "2026-10-04T16:45+02:00",
+      "kickoff": "2026-10-04T14:00+02:00",
+      "matchDurationMinutes": 105,
+      "durationRule": "dfb-regel-7-herren-2x45+halftime-15",
+      "competitionFormat": "cup",
+      "matchType": "PO",
+      "place": "rasen",
+      "calendar": "Rasen",
+      "team": "Spielgemeinschaft Schönwalde-Perwenitz-Paaren",
+      "teamCategory": "Herren | Kreispokal",
+      "teamRole": "home",
+      "homeTeam": "Spielgemeinschaft Schönwalde-Perwenitz-Paaren",
+      "awayTeam": "RSV Eintracht 1949 U23",
+      "competition": "Herren | Kreispokal",
+      "description": "Herren · Kreispokal",
+      "status": "",
+      "detailLink": "https://www.fussball.de/spiel/spielgemeinschaft-schoenwalde-perwenitz-paaren-rsv-eintracht-1949-u23/-/spiel/0320RDKT9S000000VS5489BTVT7QHFUC",
+      "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+      "source": "fussball.de",
+      "checksum": "cb5cb5d08dfd7926c9e378212e58bcf30423ff6cdb99aa4c078c5d30df565654"
     },
     {
       "id": "dfb:031MFGE2PG000000VS5489BUVVKNMR0J",

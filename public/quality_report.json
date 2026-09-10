@@ -3,7 +3,7 @@
   "errors": [],
   "invalid_included": [],
   "by_calendar": {
-    "Rasen": 41,
+    "Rasen": 42,
     "Kunstrasen": 5
   },
   "event_timing": {
@@ -36,7 +36,7 @@
     {
       "date_from": "2026-10-01",
       "date_to": "2026-12-31",
-      "competition_rows": 36
+      "competition_rows": 37
     },
     {
       "date_from": "2027-01-01",
@@ -81,11 +81,11 @@
       "depth": 0,
       "source_url": "https://www.fussball.de/ajax.club.matchplan/-/id/00ES8GNBL0000049VV0AG08LVUPGND5I/mode/PAGE/show-filter/false/show-venues/true/mime-type/HTML/datum-von/2026-10-01/datum-bis/2026-12-31/max/50",
       "source_scope": "all club teams; inclusion decided only by venue",
-      "competition_rows": 36,
-      "source_detail_ids": 32,
-      "parsed_matches_before_duplicate_merge": 36,
-      "parsed_matches": 36,
-      "parsed_detail_ids": 32,
+      "competition_rows": 37,
+      "source_detail_ids": 33,
+      "parsed_matches_before_duplicate_merge": 37,
+      "parsed_matches": 37,
+      "parsed_detail_ids": 33,
       "missing_detail_ids": [],
       "source_festival_groups": 0,
       "missing_festival_groups": [],
@@ -262,12 +262,12 @@
   "publication": {
     "schemaVersion": 1,
     "status": "ok",
-    "sourceGeneratedAt": "2026-09-09T17:24:56+00:00",
-    "sourceDigest": "12e15094f4c23d7a3c9434f73f1c4f7234398ee29e9b62b568d3dd7208ffdb12",
-    "sourceCount": 46,
+    "sourceGeneratedAt": "2026-09-10T05:00:10+00:00",
+    "sourceDigest": "ab1c801720524bb9bcb2203dbea04edf12817187722e20ac80037efaa508e17e",
+    "sourceCount": 47,
     "retainedCount": 0,
-    "effectiveCount": 46,
+    "effectiveCount": 47,
     "requiredConsumer": null,
-    "effectiveDigest": "7a195ac7550915e8d31b0fd6349fe2f622680d1e9dca723bb181e19f766becec"
+    "effectiveDigest": "24abea810c5aa902b7eebb2023d232ee2cfd3dcdcac47ca3399920c67ba155c8"
   }
 }
