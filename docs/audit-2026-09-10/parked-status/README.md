@@ -91,13 +91,24 @@ grenze allein aufgrund des Meldungsrhythmus ist nicht Bestandteil dieser Änderu
 
 ## Veröffentlichung und Rückfall
 
-Vor dem Speichern wird die aktuell veröffentlichte `Platzpflege.tpl` gegen den
-Vorgänger-Hash `07ec7d68eecc1807e095612cc04ea7cd7f742d04110de57f3e0a54db5d934b4a`
-verglichen. Nach dem Speichern müssen vollständiges Neuladen und erneutes Lesen
-des richtigen Editors die Identität mit dem getesteten Template bestätigen.
-Die Kalenderdatei und die bereits installierte Azure-Steuerung werden nicht
-erneut veröffentlicht. Die konkrete CMS-Bestätigung wird nach dem Speichern
-ergänzt; Entwicklung und Browsernachstellung allein sind kein Rolloutnachweis.
+Die [CMS-Veröffentlichung](cms-publication.json) ist nachgewiesen:
+**10.09.2026, 20:55:04 Uhr** gespeichert, um **20:56:02 Uhr** nach vollständigem
+Neuladen im richtigen Quelltexteditor erneut gelesen. Der gesamte Inhalt stimmt
+nach LF-Normalisierung mit dem geprüften Quellcommit
+`043421d36d45c22b21e9392b835d62215921feb1` überein:
+`bf0e8a755400df23a19a5b280e16db04e575c2938318d3cad06f061e2d630998`.
+Vorher wurde die vorhandene Fassung gegen den erwarteten Vorgänger-Hash
+`07ec7d68eecc1807e095612cc04ea7cd7f742d04110de57f3e0a54db5d934b4a`
+verglichen und lokal gesichert; keine zwischenzeitlichen Änderungen lagen vor.
+
+[CI-Prüfung](https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/34517058571)
+und [Quellpaket-Workflow](https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/34517058689)
+waren für diesen Quellcommit erfolgreich. Der zweite Workflow ist kein neues
+Azure-Deployment; die vorhandene Backendinstallation bleibt unverändert. Die
+Kalendervorlage wurde nicht angefasst. [PR #65](https://github.com/Rohdeo87/ssv53-heimspiele/pull/65)
+enthält die Korrektur und ihre Nachweise. Die tatsächlichen Zustandskarten der
+authentifizierten nativen App nach dieser Veröffentlichung wurden hier noch
+nicht erneut beobachtet.
 
 Bei Darstellungsfehlern kann genau die zuvor gesicherte CMS-Vorlage zurückgespielt
 werden. Es entstehen durch diese Veröffentlichung keine neuen geplanten oder
