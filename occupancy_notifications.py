@@ -22,6 +22,7 @@ from azure.identity import ManagedIdentityCredential
 
 from occupancy.service import build_occupancy_payload
 from occupancy.runtime_source import resolve_occupancy_match_source
+from occupancy.training_control import resolve_training_control
 from occupancy.training_runtime import resolve_training_file, training_mode
 from order_mail import (
     APP_BORDER,
@@ -400,11 +401,17 @@ def _current_payload(now_utc: datetime, values: Mapping[str, str]) -> dict[str, 
         local_tz = ZoneInfo("Europe/Berlin")
         first = datetime.combine(local.date(), time.min, tzinfo=local_tz)
         last = datetime.combine(end_day, time.min, tzinfo=local_tz)
+        # ACTIVE manual-season calendars require the same one persisted
+        # control snapshot as the public occupancy and mower readers.  Without
+        # it the runtime deliberately fails closed with
+        # TRAINING_CONTROL_SNAPSHOT_REQUIRED.
+        control_snapshot = resolve_training_control(values, now_utc=now_utc)
         training = resolve_training_file(
             source.matches_path, consumer="occupancy", environment=values,
             legacy_config=config, range_start=first, range_end=last, now_utc=now_utc,
             cancellations=cancellations,
             source_fresh=source.fresh and not source.fallback_used,
+            control_snapshot=control_snapshot,
         )
         training.require_available()
         training_batch = training.batch

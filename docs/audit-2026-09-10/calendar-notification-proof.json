@@ -1,0 +1,36 @@
+{
+  "queried_at": "2026-09-10T05:58:59.077983+00:00",
+  "from": "2026-09-10T05:46:00Z",
+  "regular_executions": [
+    {
+      "at": "2026-09-10T05:46:32.6424699Z",
+      "message": "Executed 'Functions.ssv53_occupancy_notification_timer' (Succeeded, Id=781c0fbd-7dce-4646-b21c-64f3d565dbeb, Duration=2631ms)"
+    },
+    {
+      "at": "2026-09-10T05:48:36.9063502Z",
+      "message": "Executed 'Functions.ssv53_occupancy_notification_timer' (Succeeded, Id=06e04142-39bd-41e6-b00c-419f3117ae82, Duration=6890ms)"
+    },
+    {
+      "at": "2026-09-10T05:50:32.7155293Z",
+      "message": "Executed 'Functions.ssv53_occupancy_notification_timer' (Succeeded, Id=130257fe-80c6-4b02-913e-a8fc1d13a482, Duration=2704ms)"
+    },
+    {
+      "at": "2026-09-10T05:52:32.6087907Z",
+      "message": "Executed 'Functions.ssv53_occupancy_notification_timer' (Succeeded, Id=414736ab-1e45-495e-be48-b75bbbe18472, Duration=2602ms)"
+    },
+    {
+      "at": "2026-09-10T05:54:32.6721519Z",
+      "message": "Executed 'Functions.ssv53_occupancy_notification_timer' (Succeeded, Id=329df461-2c64-44fb-94b5-4e77e01bc1b3, Duration=2665ms)"
+    },
+    {
+      "at": "2026-09-10T05:56:33.004643Z",
+      "message": "Executed 'Functions.ssv53_occupancy_notification_timer' (Succeeded, Id=458d43be-b9d7-49ff-8bbb-0fee575f8a51, Duration=2994ms)"
+    },
+    {
+      "at": "2026-09-10T05:58:32.8731242Z",
+      "message": "Executed 'Functions.ssv53_occupancy_notification_timer' (Succeeded, Id=1eafe19a-716e-4af1-a359-f3d7461fbeee, Duration=2865ms)"
+    }
+  ],
+  "business_error_count": 0,
+  "manual_notification_invocations": 0
+}

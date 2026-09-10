@@ -1,0 +1,9 @@
+{
+  "head_sha": "4b180db591f6a685ac57bb50c3fccf2794b8d8c5",
+  "ci_run": 34441433682,
+  "artifact_id": 10138074680,
+  "artifact_sha256": "988dd4ca56510d8a3d58d6d60f9a107f66e46a163f980ef38c1b1e3cbbbf97b8",
+  "ci_package_sha256": "2869da80e632869177921798899c4898018dc6a3c99b96ffc35b44c561ba7dd1",
+  "manifest_sha256": "298313e2008280b522ee8f5d07fdfd3fd2b06155345398f3cc6bc39fbf894458",
+  "canonical_entries_equal": 63
+}

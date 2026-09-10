@@ -1,0 +1,19 @@
+{
+  "requested_at": "2026-09-10T05:45:14.445050+00:00",
+  "status": 204,
+  "request": {
+    "ref": "feature/azure-mower-migration",
+    "inputs": {
+      "operation": "publish",
+      "publish_confirmation": "SSV53-RUNTIME-CONFIG-PUBLISH",
+      "source_sha": "20e83f28f6beb683aab96dcaf5671f1ba142c5fd"
+    }
+  },
+  "configuration_and_calendar_approvals": {
+    "SSV53_MANUAL_TRAINING_CONTROL_ENABLED": "true",
+    "SSV53_TRAINING_CONTENT_SHA256": "bc9ccae4f33054cd29dcf4eed044d1b8095cac29c9215182f2646fdb3cdf1eec",
+    "SSV53_TRAINING_APPROVAL_REFERENCE": "SSV53-USER-RELEASE-20260909-160127Z",
+    "SSV53_TRAINING_APPROVED_AT": "2026-09-09T16:01:27Z"
+  },
+  "device_commands_requested": false
+}

@@ -13,9 +13,11 @@ from mower.dry_run import run_read_only_cycle
 from mower.husqvarna import MowerSnapshot
 from mower.runtime import RuntimeSettings
 from mower.safety import occupancy_override_allowed
+from mower.state import AutomationState
 from mower.state_store import InMemoryStateStore
 from occupancy.runtime_source import OccupancyMatchSource
-from occupancy.training_runtime import make_training_envelope
+from occupancy.training_control import resolve_training_control
+from occupancy.training_runtime import RuntimeTraining, TrainingSourceUnavailable, make_training_envelope
 from special_occupancy import InMemorySpecialOccupancyStore
 from training_cancellations import InMemoryCancellationStore
 from test_training_calendar import fixture
@@ -142,3 +144,129 @@ def test_cancellation_store_failure_retains_training_in_both_consumers(runtime, 
     result = controller(runtime)
     assert result.details["training_cancellations"]["fail_closed"]
     assert result.details["current_plan"]["parking_block"] is not None
+
+
+def test_public_calendar_returns_known_suffix_and_marks_pre_history_training_unavailable(runtime, monkeypatch):
+    """The real resolver may not infer the Sept. 8 season for older anchors."""
+    now = datetime(2026, 9, 10, 12, tzinfo=timezone.utc)
+    monkeypatch.setenv("WINTER_TRAINING_CONTROL_ENABLED", "true")
+    state = AutomationState(
+        revision=3,
+        winter_training_enabled=False,
+        winter_training_history_valid_from_utc="2026-09-08T22:00:00+00:00",
+        winter_training_history_approval_reference="approved-d9-anchor",
+    )
+    snapshot = resolve_training_control(
+        {"WINTER_TRAINING_CONTROL_ENABLED": "true", "SHARED_TRAINING_MODE": "ACTIVE"},
+        now_utc=now, state_store_factory=lambda _env: InMemoryStateStore(state),
+    )
+    assert snapshot.available and snapshot.season == "Sommer"
+    monkeypatch.setattr(function_app, "resolve_training_control", lambda *_args, **_kwargs: snapshot)
+    runtime["clock"].now.return_value = now
+    feed = json.loads(runtime["feed_path"].read_text(encoding="utf-8"))
+    feed["matches"] = [{
+        "id": "prefix-match", "calendar": "Rasen", "place": "rasen",
+        "title": "Prefix-Spiel", "team": "Testteam", "teamCategory": "Herren",
+        "teamRole": "home", "homeTeam": "Testteam", "awayTeam": "Gast",
+        "competition": "Testliga", "competitionFormat": "Liga", "matchType": "league",
+        "durationRule": "fixed", "matchDurationMinutes": 120,
+        "kickoff": "2026-09-08T14:00:00+02:00", "start": "2026-09-08T14:00:00+02:00",
+        "end": "2026-09-08T16:00:00+02:00",
+        "occupancyStart": "2026-09-08T13:00:00+02:00",
+        "occupancyEnd": "2026-09-08T17:00:00+02:00",
+    }]
+    runtime["feed_path"].write_text(json.dumps(feed), encoding="utf-8")
+    request = func.HttpRequest(
+        method="GET", url="https://example.test/api/occupancy", headers={},
+        params={"start": "2026-09-07", "end": "2026-09-17", "season": "Sommer"}, body=b"",
+    )
+    response = function_app.ssv53_occupancy(request)
+    assert response.status_code == 200, response.get_body()
+    payload = json.loads(response.get_body())
+    calendar = payload["training_calendar"]
+    assert calendar["active"] and calendar["partial"]
+    assert calendar["unavailableRanges"] == [{
+        "start": "2026-09-07T00:00:00+02:00",
+        "end": "2026-09-10T00:00:00+02:00",
+        "scope": "training",
+        "reasonCode": "TRAINING_CONTROL_HISTORY_UNAVAILABLE",
+    }]
+    training_ids = {item["id"] for item in payload["events"] if item["source"] == "training"}
+    assert "training:sommer:test-e1:2026-09-15" in training_ids
+    assert "training:sommer:test-e1:2026-09-08" not in training_ids
+    assert "match:prefix-match" in {item["id"] for item in payload["events"]}
+
+    with pytest.raises(TrainingSourceUnavailable):
+        function_app._shared_training_for_app(
+            config_path="occupancy/config.json", start="2026-09-07", end="2026-09-17",
+            now_utc=now, match_source=runtime["source"], cancellations=(),
+            control_snapshot=snapshot,
+        )
+
+    unknown_only = func.HttpRequest(
+        method="GET", url="https://example.test/api/occupancy", headers={},
+        params={"start": "2026-09-07", "end": "2026-09-10", "season": "Sommer"}, body=b"",
+    )
+    assert function_app.ssv53_occupancy(unknown_only).status_code == 503
+    known_only = func.HttpRequest(
+        method="GET", url="https://example.test/api/occupancy", headers={},
+        params={"start": "2026-09-10", "end": "2026-09-17", "season": "Sommer"}, body=b"",
+    )
+    known_payload = json.loads(function_app.ssv53_occupancy(known_only).get_body())
+    assert known_payload["training_calendar"]["partial"] is False
+    assert known_payload["training_calendar"]["unavailableRanges"] == []
+
+
+def test_public_calendar_never_splits_when_the_safe_suffix_would_start_after_today(runtime, monkeypatch):
+    now = datetime(2026, 9, 10, 12, tzinfo=timezone.utc)
+    monkeypatch.setenv("WINTER_TRAINING_CONTROL_ENABLED", "true")
+    state = AutomationState(
+        revision=3,
+        winter_training_enabled=False,
+        winter_training_history_valid_from_utc="2026-09-09T22:00:00+00:00",
+        winter_training_history_approval_reference="approved-d10-anchor",
+    )
+    snapshot = resolve_training_control(
+        {"WINTER_TRAINING_CONTROL_ENABLED": "true", "SHARED_TRAINING_MODE": "ACTIVE"},
+        now_utc=now, state_store_factory=lambda _env: InMemoryStateStore(state),
+    )
+    assert snapshot.available
+    monkeypatch.setattr(function_app, "resolve_training_control", lambda *_args, **_kwargs: snapshot)
+    runtime["clock"].now.return_value = now
+    request = func.HttpRequest(
+        method="GET", url="https://example.test/api/occupancy", headers={},
+        params={"start": "2026-09-07", "end": "2026-09-14", "season": "Sommer"}, body=b"",
+    )
+    assert function_app.ssv53_occupancy(request).status_code == 503
+
+
+def test_public_history_split_never_bypasses_a_mixed_runtime_blocker(runtime, monkeypatch):
+    now = datetime(2026, 9, 10, 12, tzinfo=timezone.utc)
+    state = AutomationState(
+        revision=3,
+        winter_training_enabled=False,
+        winter_training_history_valid_from_utc="2026-09-08T22:00:00+00:00",
+        winter_training_history_approval_reference="approved-d9-anchor",
+    )
+    snapshot = resolve_training_control(
+        {"WINTER_TRAINING_CONTROL_ENABLED": "true", "SHARED_TRAINING_MODE": "ACTIVE"},
+        now_utc=now, state_store_factory=lambda _env: InMemoryStateStore(state),
+    )
+    calls = []
+    def mixed_blocker(*_args, **_kwargs):
+        calls.append(True)
+        return RuntimeTraining(
+            "ACTIVE",
+            blockers=("TRAINING_CONTROL_SEASON_UNAVAILABLE", "TRAINING_ENVELOPE_HASH_MISMATCH"),
+            control_snapshot=snapshot,
+        )
+    monkeypatch.setattr(function_app, "resolve_training_file", mixed_blocker)
+    unavailable = []
+    with pytest.raises(TrainingSourceUnavailable):
+        function_app._shared_training_for_app(
+            config_path="occupancy/config.json", start="2026-09-07", end="2026-09-17",
+            now_utc=now, match_source=runtime["source"], control_snapshot=snapshot,
+            unavailable_ranges=unavailable,
+        )
+    assert calls == [True]
+    assert unavailable == []

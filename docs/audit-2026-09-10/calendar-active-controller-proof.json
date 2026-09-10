@@ -1,0 +1,137 @@
+[
+  {
+    "at": "2026-09-10T04:59:02.8042275Z",
+    "training_calendar": {
+      "active": true,
+      "blockers": [],
+      "calendar_revision": 2,
+      "calendar_sha256": "bc9ccae4f33054cd29dcf4eed044d1b8095cac29c9215182f2646fdb3cdf1eec",
+      "candidate_available": true,
+      "envelope_sha256": "804ca739366b1f372947ed661eac9b142567934030091c102cf2707f01b629d5",
+      "fail_closed": false,
+      "mode": "ACTIVE",
+      "trainingControl": {
+        "anchorTransitions": [],
+        "available": true,
+        "effectiveAt": null,
+        "historyValidFrom": "2026-09-08T22:00:00+00:00",
+        "nextEffectiveAt": "2026-09-10T22:00:00+00:00",
+        "pendingEnabled": null,
+        "reasonCode": null,
+        "season": "Sommer",
+        "source": "automation_state",
+        "stateRevision": 1,
+        "trainingRevision": "a0f97f7897e84f9360522e63c5f4a2e7727664052413bcc73def823219997d8f",
+        "winterEnabled": false
+      }
+    }
+  },
+  {
+    "at": "2026-09-10T04:58:02.8531323Z",
+    "training_calendar": {
+      "active": true,
+      "blockers": [],
+      "calendar_revision": 2,
+      "calendar_sha256": "bc9ccae4f33054cd29dcf4eed044d1b8095cac29c9215182f2646fdb3cdf1eec",
+      "candidate_available": true,
+      "envelope_sha256": "804ca739366b1f372947ed661eac9b142567934030091c102cf2707f01b629d5",
+      "fail_closed": false,
+      "mode": "ACTIVE",
+      "trainingControl": {
+        "anchorTransitions": [],
+        "available": true,
+        "effectiveAt": null,
+        "historyValidFrom": "2026-09-08T22:00:00+00:00",
+        "nextEffectiveAt": "2026-09-10T22:00:00+00:00",
+        "pendingEnabled": null,
+        "reasonCode": null,
+        "season": "Sommer",
+        "source": "automation_state",
+        "stateRevision": 1,
+        "trainingRevision": "a0f97f7897e84f9360522e63c5f4a2e7727664052413bcc73def823219997d8f",
+        "winterEnabled": false
+      }
+    }
+  },
+  {
+    "at": "2026-09-10T04:57:02.5833127Z",
+    "training_calendar": {
+      "active": true,
+      "blockers": [],
+      "calendar_revision": 2,
+      "calendar_sha256": "bc9ccae4f33054cd29dcf4eed044d1b8095cac29c9215182f2646fdb3cdf1eec",
+      "candidate_available": true,
+      "envelope_sha256": "804ca739366b1f372947ed661eac9b142567934030091c102cf2707f01b629d5",
+      "fail_closed": false,
+      "mode": "ACTIVE",
+      "trainingControl": {
+        "anchorTransitions": [],
+        "available": true,
+        "effectiveAt": null,
+        "historyValidFrom": "2026-09-08T22:00:00+00:00",
+        "nextEffectiveAt": "2026-09-10T22:00:00+00:00",
+        "pendingEnabled": null,
+        "reasonCode": null,
+        "season": "Sommer",
+        "source": "automation_state",
+        "stateRevision": 1,
+        "trainingRevision": "a0f97f7897e84f9360522e63c5f4a2e7727664052413bcc73def823219997d8f",
+        "winterEnabled": false
+      }
+    }
+  },
+  {
+    "at": "2026-09-10T04:56:02.6889494Z",
+    "training_calendar": {
+      "active": true,
+      "blockers": [],
+      "calendar_revision": 2,
+      "calendar_sha256": "bc9ccae4f33054cd29dcf4eed044d1b8095cac29c9215182f2646fdb3cdf1eec",
+      "candidate_available": true,
+      "envelope_sha256": "804ca739366b1f372947ed661eac9b142567934030091c102cf2707f01b629d5",
+      "fail_closed": false,
+      "mode": "ACTIVE",
+      "trainingControl": {
+        "anchorTransitions": [],
+        "available": true,
+        "effectiveAt": null,
+        "historyValidFrom": "2026-09-08T22:00:00+00:00",
+        "nextEffectiveAt": "2026-09-10T22:00:00+00:00",
+        "pendingEnabled": null,
+        "reasonCode": null,
+        "season": "Sommer",
+        "source": "automation_state",
+        "stateRevision": 1,
+        "trainingRevision": "a0f97f7897e84f9360522e63c5f4a2e7727664052413bcc73def823219997d8f",
+        "winterEnabled": false
+      }
+    }
+  },
+  {
+    "at": "2026-09-10T04:55:02.8840576Z",
+    "training_calendar": {
+      "active": true,
+      "blockers": [],
+      "calendar_revision": 2,
+      "calendar_sha256": "bc9ccae4f33054cd29dcf4eed044d1b8095cac29c9215182f2646fdb3cdf1eec",
+      "candidate_available": true,
+      "envelope_sha256": "804ca739366b1f372947ed661eac9b142567934030091c102cf2707f01b629d5",
+      "fail_closed": false,
+      "mode": "ACTIVE",
+      "trainingControl": {
+        "anchorTransitions": [],
+        "available": true,
+        "effectiveAt": null,
+        "historyValidFrom": "2026-09-08T22:00:00+00:00",
+        "nextEffectiveAt": "2026-09-10T22:00:00+00:00",
+        "pendingEnabled": null,
+        "reasonCode": null,
+        "season": "Sommer",
+        "source": "automation_state",
+        "stateRevision": 1,
+        "trainingRevision": "a0f97f7897e84f9360522e63c5f4a2e7727664052413bcc73def823219997d8f",
+        "winterEnabled": false
+      }
+    }
+  }
+]

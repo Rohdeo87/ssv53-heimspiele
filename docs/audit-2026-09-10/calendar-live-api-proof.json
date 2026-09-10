@@ -1,0 +1,168 @@
+[
+  {
+    "name": "week",
+    "status": 200,
+    "retrieved_at": "2026-09-10T05:47:14.383199+00:00",
+    "start": "2026-09-07",
+    "end": "2026-09-14",
+    "request_season": "Sommer",
+    "training_calendar": {
+      "active": true,
+      "blockers": [],
+      "calendar_revision": 2,
+      "calendar_sha256": "bc9ccae4f33054cd29dcf4eed044d1b8095cac29c9215182f2646fdb3cdf1eec",
+      "candidate_available": true,
+      "envelope_sha256": "804ca739366b1f372947ed661eac9b142567934030091c102cf2707f01b629d5",
+      "fail_closed": false,
+      "mode": "ACTIVE",
+      "partial": true,
+      "trainingControl": {
+        "anchorTransitions": [],
+        "available": true,
+        "effectiveAt": null,
+        "historyValidFrom": "2026-09-08T22:00:00+00:00",
+        "nextEffectiveAt": "2026-09-10T22:00:00+00:00",
+        "pendingEnabled": null,
+        "reasonCode": null,
+        "season": "Sommer",
+        "source": "automation_state",
+        "stateRevision": 1,
+        "trainingRevision": "a0f97f7897e84f9360522e63c5f4a2e7727664052413bcc73def823219997d8f",
+        "winterEnabled": false
+      },
+      "unavailableRanges": [
+        {
+          "end": "2026-09-10T00:00:00+02:00",
+          "reasonCode": "TRAINING_CONTROL_HISTORY_UNAVAILABLE",
+          "scope": "training",
+          "start": "2026-09-07T00:00:00+02:00"
+        }
+      ]
+    },
+    "events": 8,
+    "match_source_fresh": true,
+    "match_source_generated_at_utc": "2026-09-10T05:00:10+00:00",
+    "source_version": null
+  },
+  {
+    "name": "week-winter",
+    "status": 200,
+    "retrieved_at": "2026-09-10T05:47:18.126438+00:00",
+    "start": "2026-09-07",
+    "end": "2026-09-14",
+    "request_season": "Winter",
+    "training_calendar": {
+      "active": true,
+      "blockers": [],
+      "calendar_revision": 2,
+      "calendar_sha256": "bc9ccae4f33054cd29dcf4eed044d1b8095cac29c9215182f2646fdb3cdf1eec",
+      "candidate_available": true,
+      "envelope_sha256": "804ca739366b1f372947ed661eac9b142567934030091c102cf2707f01b629d5",
+      "fail_closed": false,
+      "mode": "ACTIVE",
+      "partial": true,
+      "trainingControl": {
+        "anchorTransitions": [],
+        "available": true,
+        "effectiveAt": null,
+        "historyValidFrom": "2026-09-08T22:00:00+00:00",
+        "nextEffectiveAt": "2026-09-10T22:00:00+00:00",
+        "pendingEnabled": null,
+        "reasonCode": null,
+        "season": "Sommer",
+        "source": "automation_state",
+        "stateRevision": 1,
+        "trainingRevision": "a0f97f7897e84f9360522e63c5f4a2e7727664052413bcc73def823219997d8f",
+        "winterEnabled": false
+      },
+      "unavailableRanges": [
+        {
+          "end": "2026-09-10T00:00:00+02:00",
+          "reasonCode": "TRAINING_CONTROL_HISTORY_UNAVAILABLE",
+          "scope": "training",
+          "start": "2026-09-07T00:00:00+02:00"
+        }
+      ]
+    },
+    "events": 8,
+    "match_source_fresh": true,
+    "match_source_generated_at_utc": "2026-09-10T05:00:10+00:00",
+    "source_version": null
+  },
+  {
+    "name": "suffix",
+    "status": 200,
+    "retrieved_at": "2026-09-10T05:47:21.156934+00:00",
+    "start": "2026-09-10",
+    "end": "2026-09-14",
+    "request_season": "Sommer",
+    "training_calendar": {
+      "active": true,
+      "blockers": [],
+      "calendar_revision": 2,
+      "calendar_sha256": "bc9ccae4f33054cd29dcf4eed044d1b8095cac29c9215182f2646fdb3cdf1eec",
+      "candidate_available": true,
+      "envelope_sha256": "804ca739366b1f372947ed661eac9b142567934030091c102cf2707f01b629d5",
+      "fail_closed": false,
+      "mode": "ACTIVE",
+      "partial": false,
+      "trainingControl": {
+        "anchorTransitions": [],
+        "available": true,
+        "effectiveAt": null,
+        "historyValidFrom": "2026-09-08T22:00:00+00:00",
+        "nextEffectiveAt": "2026-09-10T22:00:00+00:00",
+        "pendingEnabled": null,
+        "reasonCode": null,
+        "season": "Sommer",
+        "source": "automation_state",
+        "stateRevision": 1,
+        "trainingRevision": "a0f97f7897e84f9360522e63c5f4a2e7727664052413bcc73def823219997d8f",
+        "winterEnabled": false
+      },
+      "unavailableRanges": []
+    },
+    "events": 8,
+    "match_source_fresh": true,
+    "match_source_generated_at_utc": "2026-09-10T05:00:10+00:00",
+    "source_version": null
+  },
+  {
+    "name": "nextweek",
+    "status": 200,
+    "retrieved_at": "2026-09-10T05:47:24.517649+00:00",
+    "start": "2026-09-14",
+    "end": "2026-09-21",
+    "request_season": "Sommer",
+    "training_calendar": {
+      "active": true,
+      "blockers": [],
+      "calendar_revision": 2,
+      "calendar_sha256": "bc9ccae4f33054cd29dcf4eed044d1b8095cac29c9215182f2646fdb3cdf1eec",
+      "candidate_available": true,
+      "envelope_sha256": "804ca739366b1f372947ed661eac9b142567934030091c102cf2707f01b629d5",
+      "fail_closed": false,
+      "mode": "ACTIVE",
+      "partial": false,
+      "trainingControl": {
+        "anchorTransitions": [],
+        "available": true,
+        "effectiveAt": null,
+        "historyValidFrom": "2026-09-08T22:00:00+00:00",
+        "nextEffectiveAt": "2026-09-10T22:00:00+00:00",
+        "pendingEnabled": null,
+        "reasonCode": null,
+        "season": "Sommer",
+        "source": "automation_state",
+        "stateRevision": 1,
+        "trainingRevision": "a0f97f7897e84f9360522e63c5f4a2e7727664052413bcc73def823219997d8f",
+        "winterEnabled": false
+      },
+      "unavailableRanges": []
+    },
+    "events": 20,
+    "match_source_fresh": true,
+    "match_source_generated_at_utc": "2026-09-10T05:00:10+00:00",
+    "source_version": null
+  }
+]

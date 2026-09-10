@@ -4,9 +4,10 @@ import hashlib
 import json
 import logging
 import os
+from dataclasses import replace
 from functools import lru_cache
 from pathlib import Path
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 import azure.functions as func
@@ -328,8 +329,8 @@ def _occupancy_matches_path() -> tuple[str, str]:
 
 
 def _shared_training_for_app(*, config_path, start: str, end: str, now_utc: datetime,
-                             match_source=None, cancellations=(),
-                             control_snapshot=None) -> RuntimeTraining:
+                             match_source=None, cancellations=(), control_snapshot=None,
+                             unavailable_ranges: list[dict[str, str]] | None = None) -> RuntimeTraining:
     if (
         training_mode(os.environ) == "OFF"
         and str(os.environ.get("WINTER_TRAINING_CONTROL_ENABLED", "false")).strip().casefold()
@@ -351,6 +352,60 @@ def _shared_training_for_app(*, config_path, start: str, end: str, now_utc: date
         source_fresh=match_source.fresh and not match_source.fallback_used,
         control_snapshot=control_snapshot,
     )
+    if (
+        unavailable_ranges is not None
+        and result.blocking_required
+        and set(result.blockers) == {"TRAINING_CONTROL_SEASON_UNAVAILABLE"}
+        and control_snapshot is not None
+        and control_snapshot.available
+        and control_snapshot.history_valid_from_utc
+    ):
+        # A training occurrence can include the prior local anchor day for an
+        # overnight session.  The first fully provable request day is therefore
+        # one day after the persisted Berlin-midnight history boundary.  Never
+        # infer that missing earlier anchor from the current summer/winter flag.
+        try:
+            history_local = datetime.fromisoformat(
+                control_snapshot.history_valid_from_utc.replace("Z", "+00:00")
+            ).astimezone(ZoneInfo("Europe/Berlin"))
+            now_local = now_utc.astimezone(ZoneInfo("Europe/Berlin"))
+            known_start = datetime.combine(
+                history_local.date() + timedelta(days=1), time.min,
+                tzinfo=ZoneInfo("Europe/Berlin"),
+            )
+            today_start = datetime.combine(
+                now_local.date(), time.min, tzinfo=ZoneInfo("Europe/Berlin"),
+            )
+            if known_start > today_start:
+                raise ValueError("TRAINING_CONTROL_HISTORY_NOT_EFFECTIVE")
+        except (AttributeError, TypeError, ValueError):
+            known_start = None
+        if known_start is not None and first < known_start < last:
+            known = resolve_training_file(
+                match_source.matches_path, consumer="occupancy", environment=os.environ,
+                legacy_config=config, range_start=known_start, range_end=last, now_utc=now_utc,
+                cancellations=cancellations,
+                source_fresh=match_source.fresh and not match_source.fallback_used,
+                control_snapshot=control_snapshot,
+            )
+            if known.batch is not None and not known.blocking_required:
+                # The public payload must span the requested range, but it may
+                # only contain training occurrences resolved from the proven
+                # suffix.  Its explicit unavailable range prevents clients
+                # from interpreting omitted past training as a free pitch.
+                result = replace(
+                    known,
+                    batch=replace(
+                        known.batch,
+                        range_start_utc=first.astimezone(timezone.utc),
+                        range_end_utc=last.astimezone(timezone.utc),
+                    ),
+                )
+                unavailable_ranges.append({
+                    "start": first.isoformat(), "end": known_start.isoformat(),
+                    "scope": "training",
+                    "reasonCode": "TRAINING_CONTROL_HISTORY_UNAVAILABLE",
+                })
     if result.blocking_required:
         LOGGER.error("SSV53_SHARED_TRAINING_UNAVAILABLE %s", json.dumps(result.metadata(), sort_keys=True))
     result.require_available()
@@ -499,16 +554,22 @@ def ssv53_occupancy(req: func.HttpRequest) -> func.HttpResponse:
             # Fail closed: Ein Speicherfehler darf niemals Trainingszeit freigeben.
             cancellation_error = f"{type(exc).__name__}: {exc}"
             LOGGER.exception("SSV53_TRAINING_CANCELLATION_READ_ERROR")
+        training_unavailable_ranges: list[dict[str, str]] = []
         training = _shared_training_for_app(
             config_path=config_path, start=start, end=end, now_utc=now_utc,
             match_source=match_source, cancellations=cancellations,
+            unavailable_ranges=training_unavailable_ranges,
         )
         payload = build_occupancy_payload(
             config_path=config_path, matches_path=matches_path, start=start, end=end,
             season=season, generated_at=now_utc, training_batch=training.batch,
             cancelled_occurrences={item.occurrence_key for item in cancellations},
         )
-        payload["training_calendar"] = training.metadata()
+        payload["training_calendar"] = {
+            **training.metadata(),
+            "partial": bool(training_unavailable_ranges),
+            "unavailableRanges": training_unavailable_ranges,
+        }
         payload["training_cancellations"] = {
             "available": cancellation_error is None,
             "fail_closed": cancellation_error is not None,

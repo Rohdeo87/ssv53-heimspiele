@@ -74,10 +74,11 @@ test("Verbindlicher Trainingskalender zeigt beide Plätze ohne Saisonwahl", () =
   const ui = new Function("state", "document", "storageSet", [
     "const SUMMER_RESOURCE_IDS=['rasen','kunstrasen']; const WINTER_RESOURCE_IDS=['kunstrasen'];",
     "function storageKey(k){return k;} function ensureActiveCalendarSelection(){} function updateResources(){} function renderPlaceFilters(){}",
-    extractFunction("getAllowedCalendarIds"), extractFunction("applySharedTrainingCalendar"), extractFunction("setSeason"),
-    "return {applySharedTrainingCalendar, getAllowedCalendarIds, setSeason};"
+    extractFunction("getAllowedCalendarIds"), extractFunction("sharedTrainingSeason"), extractFunction("applySharedTrainingCalendar"), extractFunction("setSeason"),
+    "return {applySharedTrainingCalendar, getAllowedCalendarIds, setSeason, sharedTrainingSeason};"
   ].join("\n"))(state, {querySelector: () => group}, (...args) => persisted.push(args));
-  ui.applySharedTrainingCalendar({training_calendar: {active: true}});
+  const activePayload = {training_calendar: {active: true, mode: "ACTIVE", trainingControl: {available: true, fail_closed: false, season: "Winter"}}};
+  ui.applySharedTrainingCalendar(activePayload);
   assert.deepEqual(ui.getAllowedCalendarIds(), ["rasen", "kunstrasen"]);
   assert.equal(state.activeCalendarId, "all");
   assert.equal(group.hidden, true);
@@ -85,7 +86,7 @@ test("Verbindlicher Trainingskalender zeigt beide Plätze ohne Saisonwahl", () =
   ui.setSeason("Sommer");
   assert.equal(state.activeSeason, "Winter");
   state.activeCalendarId = "rasen";
-  ui.applySharedTrainingCalendar({training_calendar: {active: true}});
+  ui.applySharedTrainingCalendar(activePayload);
   assert.equal(state.activeCalendarId, "rasen");
   assert.equal(persisted.length, 1);
   ui.applySharedTrainingCalendar({training_calendar: {active: false}});
@@ -101,6 +102,59 @@ test("Unklare Trainingstermine nennen den Platzwart und behalten die Sperre", ()
   assert.doesNotMatch(text({code: "TRAINING_SOURCE_UNAVAILABLE"}), /Azure|SHA|Envelope|Internet/);
   assert.match(text(new Error("raw technical details")), /erneut versuchen/);
   assert.doesNotMatch(text(new Error("raw technical details")), /raw technical/);
+});
+
+test("ACTIVE akzeptiert Request-Echo und übernimmt die persistente Backend-Saison", async () => {
+  const state = {activeSeason: "Winter"};
+  const payload = {
+    data_source: "azure", season: "Winter", resources: [], events: [],
+    training_calendar: {
+      active: true, mode: "ACTIVE",
+      trainingControl: {available: true, fail_closed: false, season: "Sommer"}
+    }
+  };
+  const source = [
+    "const OCCUPANCY_API_URL='https://example.invalid/occupancy'; const OCCUPANCY_FETCH_RETRIES=0; const OCCUPANCY_FETCH_TIMEOUT=1000; const OCCUPANCY_RETRY_DELAY=1;",
+    "const window={};",
+    extractFunction("formatApiDate"), extractFunction("sharedTrainingSeason"),
+    extractFunction("getOccupancyRequestUrl"), "async "+extractFunction("fetchOccupancyPayload"),
+    "return fetchOccupancyPayload;"
+  ].join("\n");
+  const fetchFn = async () => ({ok: true, json: async () => payload});
+  const fetchPayload = await new Function("state", "fetch", "return (async function(){"+source+"})()")(state, fetchFn);
+  const result = await fetchPayload("2026-09-10T00:00:00+02:00", "2026-09-11T00:00:00+02:00");
+  assert.equal(result.season, "Winter");
+  assert.equal(result.training_calendar.trainingControl.season, "Sommer");
+});
+
+test("Historische Trainingslücke bleibt als Hinweis sichtbar und verbirgt keine Spiele", () => {
+  const warning = new Function(extractFunction("trainingHistoryWarning") + ";return trainingHistoryWarning;")();
+  const payload = {
+    training_calendar: {
+      partial: true,
+      unavailableRanges: [{
+        start: "2026-09-01T00:00:00+02:00",
+        end: "2026-09-10T00:00:00+02:00",
+        reasonCode: "TRAINING_CONTROL_HISTORY_UNAVAILABLE",
+        scope: "training"
+      }]
+    }
+  };
+  assert.equal(warning(payload), "Frühere Trainings bis 9. September sind hier nicht verfügbar. Aktuelle Termine werden angezeigt.");
+  for (const [end, day] of [["2026-03-30T00:00:00+02:00", "29. März"], ["2026-10-26T00:00:00+01:00", "25. Oktober"]]) {
+    const changed = JSON.parse(JSON.stringify(payload));
+    changed.training_calendar.unavailableRanges[0].start = "2026-01-01T00:00:00+01:00";
+    changed.training_calendar.unavailableRanges[0].end = end;
+    assert.ok(warning(changed).includes("bis " + day + " sind"));
+  }
+  assert.equal(warning({training_calendar: {partial: false, unavailableRanges: []}}), "");
+  assert.equal(warning({training_calendar: {partial: true, unavailableRanges: [{
+    start: "2026-09-01T00:00:00+02:00", end: "2026-09-10T00:00:00",
+    reasonCode: "TRAINING_CONTROL_HISTORY_UNAVAILABLE", scope: "training"
+  }]}}), "");
+  const combined = "Die Spieldaten werden gerade aktualisiert. Der letzte bestätigte Stand und bekannte Trainings bleiben sichtbar. "+warning(payload);
+  assert.match(combined, /Spieldaten werden gerade aktualisiert/);
+  assert.match(combined, /Frühere Trainings bis 9\. September/);
 });
 
 test("Bedienelemente wechseln nur bei echtem Überlauf in den Großtextmodus", () => {
@@ -132,7 +186,7 @@ test("Bedienelemente wechseln nur bei echtem Überlauf in den Großtextmodus", (
 
 test("kurz verzögerte Spieldaten lassen den Kalender sichtbar", () => {
   assert.match(html, /payload\.match_source_fresh === false/);
-  assert.match(html, /Der letzte bestätigte Stand und alle Trainings bleiben sichtbar/);
+  assert.match(html, /Der letzte bestätigte Stand und bekannte Trainings bleiben sichtbar/);
   assert.match(html, /#calendar-status\[data-state="warning"\]/);
 });
 
