@@ -1,11 +1,11 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-10T05:00:10.743047+00:00",
+  "generatedAt": "2026-09-10T10:00:24.142889+00:00",
   "status": "ok",
   "counts": {
-    "before": 46,
+    "before": 47,
     "after": 47,
-    "added": 1,
+    "added": 0,
     "changed": 0,
     "removed": 0,
     "effectiveAfter": 47,
@@ -21,35 +21,7 @@
       "confirmed": true
     }
   },
-  "added": [
-    {
-      "id": "dfb:0320RDKT9S000000VS5489BTVT7QHFUC",
-      "title": "Spielgemeinschaft Schönwalde-Perwenitz-Paaren – RSV Eintracht 1949 U23",
-      "start": "2026-10-04T14:00+02:00",
-      "end": "2026-10-04T15:45+02:00",
-      "occupancyStart": "2026-10-04T13:00+02:00",
-      "occupancyEnd": "2026-10-04T16:45+02:00",
-      "kickoff": "2026-10-04T14:00+02:00",
-      "matchDurationMinutes": 105,
-      "durationRule": "dfb-regel-7-herren-2x45+halftime-15",
-      "competitionFormat": "cup",
-      "matchType": "PO",
-      "place": "rasen",
-      "calendar": "Rasen",
-      "team": "Spielgemeinschaft Schönwalde-Perwenitz-Paaren",
-      "teamCategory": "Herren | Kreispokal",
-      "teamRole": "home",
-      "homeTeam": "Spielgemeinschaft Schönwalde-Perwenitz-Paaren",
-      "awayTeam": "RSV Eintracht 1949 U23",
-      "competition": "Herren | Kreispokal",
-      "description": "Herren · Kreispokal",
-      "status": "",
-      "detailLink": "https://www.fussball.de/spiel/spielgemeinschaft-schoenwalde-perwenitz-paaren-rsv-eintracht-1949-u23/-/spiel/0320RDKT9S000000VS5489BTVT7QHFUC",
-      "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
-      "source": "fussball.de",
-      "checksum": "cb5cb5d08dfd7926c9e378212e58bcf30423ff6cdb99aa4c078c5d30df565654"
-    }
-  ],
+  "added": [],
   "changed": [],
   "removed": [],
   "retained": [],
@@ -57,8 +29,8 @@
   "publication": {
     "schemaVersion": 1,
     "status": "ok",
-    "sourceGeneratedAt": "2026-09-10T05:00:10+00:00",
-    "sourceDigest": "ab1c801720524bb9bcb2203dbea04edf12817187722e20ac80037efaa508e17e",
+    "sourceGeneratedAt": "2026-09-10T10:00:23+00:00",
+    "sourceDigest": "64802fd48fda14435f54b02e0aa28c557b0365857a890e30dd357dd7b1523d7d",
     "sourceCount": 47,
     "retainedCount": 0,
     "effectiveCount": 47,
