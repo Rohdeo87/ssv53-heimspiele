@@ -26,3 +26,8 @@ hiervon getrennt aktiv.
 [Schalter und beobachtete Steuerungszyklen](manual-activation-proof.json).
 Software und CMS stammen aus den geprüften PRs 59 und 60; diese Dokumentation
 ändert keinen Code und keine weitere Betriebseinstellung.
+
+Die anschließenden Herstellerbeobachtungen um 11:47 und 11:48 Uhr melden
+`PARKED_IN_CS`, `HOME`, Akku 100 %, Fehlercode 0 und keine aktive Wasserzone.
+Die Bediener-Parksperre bleibt gespeichert; keine weiteren Befehle wurden
+in diesen beiden Zyklen gesendet. Siehe `followup_observations` im Nachweis.

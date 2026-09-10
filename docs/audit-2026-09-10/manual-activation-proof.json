@@ -232,5 +232,43 @@
       "manual": null,
       "manifest": "67600a05061ca393037ae872f2db6f6a4cb41499f06c0d622bfe3a351c990abc"
     }
+  ],
+  "followup_observations": [
+    {
+      "time": "2026-09-10T09:48:02.4362798Z",
+      "mode": "FULL_FAILSAFE",
+      "decision": "MANUAL_OR_ERROR_HOLD",
+      "command_sent": false,
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "IN_OPERATION",
+        "error_code": 0,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789033618612
+      },
+      "water_clear": true,
+      "active_zones": 0,
+      "park_source": "operator",
+      "restart_allowed": false
+    },
+    {
+      "time": "2026-09-10T09:47:03.7154632Z",
+      "mode": "FULL_FAILSAFE",
+      "decision": "MANUAL_OR_ERROR_HOLD",
+      "command_sent": false,
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "IN_OPERATION",
+        "error_code": 0,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789033618612
+      },
+      "water_clear": true,
+      "active_zones": 0,
+      "park_source": "operator",
+      "restart_allowed": false
+    }
   ]
 }
