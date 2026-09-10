@@ -171,10 +171,58 @@ berücksichtigen; ein Git-Rücksprung allein ist nicht ausreichend.
   **22:00 Uhr Berliner Zeit**. Die alte vorsorgliche Rasenpause wurde nicht aus
   dem Speicher gelöscht und war zu diesem Zeitpunkt bereits zeitlich abgelaufen.
 
-**Backend live nachgewiesen; Appack-Veröffentlichung noch offen.** Die verfügbare
-CMS-Sitzung war abgelaufen. Erneute Anmeldung wurde angefragt, die beiden
-korrigierten Vorlagen sind vollständig vorbereitet. Ohne bestätigtes Speichern
-und erneutes Lesen aus dem CMS wird hier weder die neue App-Anzeige noch der
-Trainer-Schreibweg aus der installierten App als veröffentlicht bezeichnet.
-Die aktive Trainerrolle wurde beim Anbieter vorab lesend geprüft; die komplette
-neue Handy-Bedienkette bleibt bis zur echten Anmeldung und Nachkontrolle offen.
+## Tatsächliche Appack-Veröffentlichung und Zugangsprüfung
+
+**Backend und beide Appack-Vorlagen sind veröffentlicht.** Nach der erneuten
+Anmeldung am 10.09.2026 wurde zuerst der bestehende CMS-Quelltext vollständig
+gelesen und mit der erwarteten Vorgängerversion verglichen. Beide Vorlagen
+entsprachen dieser Version; keine zwischenzeitlichen Nutzeränderungen wurden
+überschrieben. Anschließend wurden genau die vorbereiteten Dateien aus
+Quellcommit `128b236a93236ba76e5dafdda9f4151ad12ea283` gespeichert.
+
+Der [CMS-Nachweis](trainer-dashboard-cms-published.json) enthält die vollständigen
+SHA256-Prüfsummen, Vorlagen-IDs und Uhrzeiten. Nach jedem Speichern wurde der
+Browser neu geladen, der richtige Quelltexteditor erneut geöffnet und dessen
+gesamter Inhalt nach LF-Normalisierung mit der geprüften Datei verglichen:
+
+| Vorlage | Gespeichert (Berliner Zeit) | Erneut gelesen | Ergebnis |
+| --- | --- | --- | --- |
+| `Belegungsplan_selfmade_2_optimiert.tpl` | 10.09.2026, 19:16:12 | 19:17:09 | Vollständig identisch |
+| `Platzpflege.tpl` | 10.09.2026, 19:17:48 | 19:18:41 | Vollständig identisch |
+
+Der frühere [Vorbereitungsnachweis](trainer-dashboard-templates-prepared.json)
+bleibt als historische Aufnahme mit `cms_published: false` erhalten; maßgeblich
+für die anschließende Veröffentlichung ist der neue CMS-Nachweis.
+
+Die [lesende Live-Zugangsprüfung](trainer-dashboard-live-access.json) um
+**19:24 Uhr** verwendete die in den persönlichen CMS-Einstellungen offiziell
+angezeigte aktuelle Benutzersitzung. Appack bestätigte `ssv53`, ein entsperrtes
+und verifiziertes Profil sowie die aktive Rolle `TR`. Der produktive
+`GET /api/trainer-occupancies` antwortete mit **HTTP 200** und
+`canManageTrainings: true`. Das kurzzeitig lokal verwendete Zugangstoken wurde
+wieder entfernt; der Nachweis enthält keine Zugangsdaten oder Profilidentität.
+
+In der veröffentlichten CMS-Vorschau war bei einem regulären Training die
+Aktion **Termin verlegen** sichtbar. Der [Verlegen-Dialog](../ui-2026-09-10/trainer-dashboard/calendar-live-move-dialog.png)
+öffnete sich mit Platz, Datum und Uhrzeiten und wurde über **Abbrechen**
+geschlossen. Es wurden keine echten Belegungen verändert und keine
+Gerätebefehle durch diese Prüfung versandt.
+
+Die [Nachkontrolle nach der CMS-Veröffentlichung](trainer-dashboard-post-cms.json)
+umfasst **12 Betriebszyklen von 19:15 bis 19:26 Uhr** auf dem neuen Manifest.
+Der Mäher meldete weiterhin Station und 100 % Akku, keine Bewässerungszone war
+aktiv. Die Bewässerungsfreigabe war erteilt; der aktuelle Halt entstand aus den
+Trainings einschließlich Puffer bis **22:00 Uhr**. In diesen Zyklen wurde kein
+neuer Gerätebefehl versandt. Das ist eine zeitlich begrenzte Beobachtung, keine
+Zusage eines Starts um 22:00 Uhr unabhängig von späteren Zustandsänderungen.
+
+**Verbleibende Abnahmegrenzen:** Das verwendete Konto besitzt sowohl `TR` als
+auch `AA`; ein ausschließliches Trainerkonto ist durch Regressionstests, noch
+nicht durch einen Live-Schreibvorgang geprüft. Die komplette Bedienkette auf
+einem echten Trainer-Handy und dessen Cache-Aktualisierung bleiben für die
+nächste tatsächlich gewünschte Terminänderung nachzuweisen. Die Platzpflege-
+CMS-Vorschau verlangt für dieses Browsergerät eine gesonderte Aktivierung;
+deren Live-Zustandskarten wurden hier nicht durch eine neue Geräteaktivierung
+geprüft. Die veröffentlichten Quelldateien, die mobilen Beispielansichten und
+der installierte Backendstand sind jeweils separat nachgewiesen. Keine Aussage
+über einen vollständigen neuen Mäh-/Ladezyklus oder Fehlerfreiheit.

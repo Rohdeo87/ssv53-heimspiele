@@ -1,0 +1,19 @@
+{
+  "checked_at_utc": "2026-09-10T17:24:00.756062+00:00",
+  "provider_http_status": 200,
+  "provider_errors": false,
+  "correct_app_scope": true,
+  "profile_unlocked_and_verified": true,
+  "active_trainer_role": true,
+  "active_app_administrator_role": true,
+  "backend_http_status": 200,
+  "backend_ok": true,
+  "can_manage_trainings": true,
+  "backend_error_code": "",
+  "test_method": "Official current personal CMS session; provider whoami query and backend GET only.",
+  "real_occupancy_writes": 0,
+  "device_commands": 0,
+  "trainer_only_identity_tested_live": false,
+  "native_mobile_write_tested": false,
+  "temporary_token_deleted": true
+}
