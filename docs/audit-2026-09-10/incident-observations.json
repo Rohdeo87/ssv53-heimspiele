@@ -1,0 +1,164 @@
+{
+  "cycles": 404,
+  "first": "2026-09-09T21:50:02.5420973Z",
+  "last": "2026-09-10T04:33:02.296177Z",
+  "overlap_cycles": 64,
+  "overlap_first": "2026-09-10T02:30:02.4067628Z",
+  "overlap_last": "2026-09-10T04:27:02.4021394Z",
+  "events": [
+    {
+      "at": "2026-09-09T21:50:02.5420973Z",
+      "mode": "DRY_RUN",
+      "decision": "EXTERNAL_OVERRIDE",
+      "sent": false,
+      "activity": "MOWING",
+      "connected": true,
+      "water_active": 0,
+      "water_fresh": true,
+      "operators": null
+    },
+    {
+      "at": "2026-09-09T21:57:04.7140736Z",
+      "mode": "OPERATOR_ONLY",
+      "decision": "EXTERNAL_OVERRIDE",
+      "sent": false,
+      "activity": "MOWING",
+      "connected": true,
+      "water_active": 0,
+      "water_fresh": true,
+      "operators": {}
+    },
+    {
+      "at": "2026-09-09T22:59:02.608924Z",
+      "mode": "OPERATOR_ONLY",
+      "decision": "EXTERNAL_OVERRIDE",
+      "sent": false,
+      "activity": "GOING_HOME",
+      "connected": true,
+      "water_active": 0,
+      "water_fresh": true,
+      "operators": {}
+    },
+    {
+      "at": "2026-09-09T23:01:02.5857998Z",
+      "mode": "OPERATOR_ONLY",
+      "decision": "MANUAL_LOCK",
+      "sent": false,
+      "activity": "NOT_APPLICABLE",
+      "connected": true,
+      "water_active": 0,
+      "water_fresh": true,
+      "operators": {}
+    },
+    {
+      "at": "2026-09-09T23:02:02.2988251Z",
+      "mode": "OPERATOR_ONLY",
+      "decision": "EXTERNAL_OVERRIDE",
+      "sent": false,
+      "activity": "CHARGING",
+      "connected": true,
+      "water_active": 0,
+      "water_fresh": true,
+      "operators": {}
+    },
+    {
+      "at": "2026-09-09T23:52:02.302249Z",
+      "mode": "OPERATOR_ONLY",
+      "decision": "EXTERNAL_OVERRIDE",
+      "sent": false,
+      "activity": "LEAVING",
+      "connected": true,
+      "water_active": 0,
+      "water_fresh": true,
+      "operators": {}
+    },
+    {
+      "at": "2026-09-09T23:53:03.2117767Z",
+      "mode": "OPERATOR_ONLY",
+      "decision": "EXTERNAL_OVERRIDE",
+      "sent": false,
+      "activity": "MOWING",
+      "connected": true,
+      "water_active": 0,
+      "water_fresh": true,
+      "operators": {}
+    },
+    {
+      "at": "2026-09-10T01:50:03.1930616Z",
+      "mode": "OPERATOR_ONLY",
+      "decision": "WOULD_PARK",
+      "sent": false,
+      "activity": "MOWING",
+      "connected": true,
+      "water_active": 0,
+      "water_fresh": true,
+      "operators": {}
+    },
+    {
+      "at": "2026-09-10T02:30:02.4067628Z",
+      "mode": "OPERATOR_ONLY",
+      "decision": "WOULD_PARK",
+      "sent": false,
+      "activity": "MOWING",
+      "connected": true,
+      "water_active": 1,
+      "water_fresh": true,
+      "operators": {}
+    },
+    {
+      "at": "2026-09-10T02:52:02.2000419Z",
+      "mode": "OPERATOR_ONLY",
+      "decision": "ALREADY_SAFE",
+      "sent": false,
+      "activity": "GOING_HOME",
+      "connected": true,
+      "water_active": 1,
+      "water_fresh": true,
+      "operators": {}
+    },
+    {
+      "at": "2026-09-10T02:54:02.2767844Z",
+      "mode": "OPERATOR_ONLY",
+      "decision": "ALREADY_SAFE",
+      "sent": false,
+      "activity": "CHARGING",
+      "connected": true,
+      "water_active": 1,
+      "water_fresh": true,
+      "operators": {}
+    },
+    {
+      "at": "2026-09-10T03:45:02.3051988Z",
+      "mode": "OPERATOR_ONLY",
+      "decision": "WOULD_PARK",
+      "sent": false,
+      "activity": "LEAVING",
+      "connected": true,
+      "water_active": 1,
+      "water_fresh": true,
+      "operators": {}
+    },
+    {
+      "at": "2026-09-10T03:46:02.289019Z",
+      "mode": "OPERATOR_ONLY",
+      "decision": "WOULD_PARK",
+      "sent": false,
+      "activity": "MOWING",
+      "connected": true,
+      "water_active": 1,
+      "water_fresh": true,
+      "operators": {}
+    },
+    {
+      "at": "2026-09-10T04:28:02.1768705Z",
+      "mode": "OPERATOR_ONLY",
+      "decision": "MANUAL_STOP_DURING_BLOCK",
+      "sent": false,
+      "activity": "NOT_APPLICABLE",
+      "connected": true,
+      "water_active": 1,
+      "water_fresh": true,
+      "operators": {}
+    }
+  ]
+}

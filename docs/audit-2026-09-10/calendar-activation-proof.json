@@ -1,0 +1,11 @@
+{
+  "shared_mode": "ACTIVE",
+  "calendar_sha256": "bc9ccae4f33054cd29dcf4eed044d1b8095cac29c9215182f2646fdb3cdf1eec",
+  "season": "Sommer",
+  "winter_enabled": false,
+  "same_events_for_summer_and_winter_query_excluding_evaluation_time": true,
+  "all_preexisting_event_fields_preserved": true,
+  "event_count": 38,
+  "training_events_now_with_explicit_30_minute_buffers": 34,
+  "match_events_unchanged": 4
+}

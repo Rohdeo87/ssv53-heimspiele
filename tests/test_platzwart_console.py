@@ -17,6 +17,7 @@ from platzwart_console import (
     _mower_error_message,
     _STATISTICS_CACHE,
     _restart_battery_percent,
+    _protection_payload,
     PlatzwartError,
     create_activation_hash,
     create_pin_hash,
@@ -29,6 +30,7 @@ from platzwart_console import (
 )
 from tests.test_full_failsafe import ENV, NOW, RELAYS, result, settings, zones
 from mower.full_failsafe import run_full_failsafe_cycle
+from mower.runtime import RuntimeSettings
 
 
 SESSION_ENV = {"SSV53_PLATZWART_SESSION_SECRET": "x" * 48}
@@ -288,6 +290,50 @@ class PlatzwartAuthenticationTests(unittest.TestCase):
         self.assertEqual(armed["mower"]["statusAgeSeconds"], 0)
         self.assertFalse(dry_run["deviceControlsAvailable"])
         self.assertFalse(missing_gate["deviceControlsAvailable"])
+
+    def test_live_status_exposes_independent_automatic_and_protective_parking_flags(self) -> None:
+        live_cycle = result(activity="PARKED_IN_CS", battery=100)
+        store = InMemoryStateStore()
+        base_kwargs = dict(
+            return_value=live_cycle,
+        )
+        with patch("platzwart_console.run_read_only_cycle", **base_kwargs), patch(
+            "platzwart_console.AzureTableStateStore.from_environment", return_value=store
+        ), patch("platzwart_console._clubhouse_events", return_value={}), patch(
+            "platzwart_console._dashboard_statistics", return_value={}
+        ), patch("platzwart_console._dashboard_irrigation_statistics", return_value={}):
+            full = live_status(FULL_DEVICE_CONTROL_ENV, NOW)
+            dry = live_status({**FULL_DEVICE_CONTROL_ENV, "CONTROL_MODE": "DRY_RUN"}, NOW)
+            failsafe_without_water = live_status({
+                **FULL_DEVICE_CONTROL_ENV,
+                "ENABLE_IRRIGATION_COMMANDS": "false",
+            }, NOW)
+            operator_settings = RuntimeSettings.from_mapping({
+                **FULL_DEVICE_CONTROL_ENV,
+                "CONTROL_MODE": "OPERATOR_ONLY",
+                "ENABLE_START_COMMANDS": "false",
+                "ENABLE_IRRIGATION_COMMANDS": "false",
+                "FULL_MOWER_CONFIRMATION": "",
+                "FULL_FAILSAFE_CONFIRMATION": "",
+                "ENABLE_OPERATOR_SAFETY_GUARD": "true",
+                "OPERATOR_CONTROL_CONFIRMATION": "SSV53-OPERATOR-PARK-HEIGHT-V1",
+            })
+        self.assertEqual(full["protection"], {
+            "automaticStartEnabled": True,
+            "protectiveParkingEnabled": True,
+        })
+        self.assertEqual(failsafe_without_water["protection"], {
+            "automaticStartEnabled": False,
+            "protectiveParkingEnabled": True,
+        })
+        self.assertEqual(dry["protection"], {
+            "automaticStartEnabled": False,
+            "protectiveParkingEnabled": False,
+        })
+        self.assertEqual(_protection_payload(operator_settings), {
+            "automaticStartEnabled": False,
+            "protectiveParkingEnabled": True,
+        })
 
     def test_stale_connected_mower_is_visible_with_telemetry_blocker_but_open_stop_gate(self) -> None:
         live_cycle = result(activity="PARKED_IN_CS", battery=100)

@@ -400,6 +400,30 @@ test("Parken bleibt auch beim Laden erreichbar und Ladezustand wird nicht durch 
  assert.equal(view.effectiveMowerActions(s).showPark,true);
 });
 
+test("Schutzflags erklären ausgeschaltete Automatik ohne aktive Warnung zu verdecken", () => {
+ const s=snapshot();s.protection={automaticStartEnabled:false,protectiveParkingEnabled:false};s.mower.activity="CHARGING";s.coordination.blockers=[];s.coordination.dryUntil=null;
+ assert.equal(view.dashboardMessage(s).title,"Mäher lädt");
+ assert.equal(view.protectionNotice(s),"Automatik aus. Mäher vor Bewässerung und Platzbelegung parken.");
+ s.protection.protectiveParkingEnabled=true;
+ assert.equal(view.dashboardMessage(s).title,"Mäher lädt");
+ assert.equal(view.protectionNotice(s),"Automatisches Starten aus. Mäherstart nur manuell.");
+ s.mower.activity="MOWING";s.mower.operationMode="MANUAL";
+ assert.equal(view.dashboardMessage(s).title,"Manueller Betrieb");
+ assert.equal(view.protectionNotice(s),"Automatisches Starten aus. Mäherstart nur manuell.");
+});
+
+test("Aktive Bewässerungswarnung hat Vorrang vor dem Automatikschutz-Hinweis", () => {
+ const s=snapshot();s.protection={automaticStartEnabled:false,protectiveParkingEnabled:false};s.generatedAt="2026-09-09T04:00:00Z";s.mower.activity="CHARGING";s.automation.irrigationPhase="RUNNING";s.irrigation.safety.active_zone_count=1;s.coordination.blockers=[];
+ assert.equal(view.dashboardMessage(s).title,"Bewässerung läuft");
+});
+
+test("Ausgeschaltete Automatik verspricht keine berechnete Startuhrzeit", () => {
+ const s=snapshot();s.protection={automaticStartEnabled:false,protectiveParkingEnabled:true};s.mower.activity="PARKED_IN_CS";s.mower.batteryPercent=100;s.mower.restartBatteryPercent=90;s.automation.irrigationPhase=null;s.coordination.blockers=[];s.coordination.dryUntil=null;
+ assert.equal(view.nextMowerStart(s),"Start nur manuell");
+ s.operatorCommands={START_MOWING:{status:"QUEUED",requestId:"start-1"}};
+ assert.equal(view.nextMowerStart(s),"Mäherstart angefragt");
+});
+
 
 test("Statuspolling wartet tatsächlich auf die passende neue Bestätigung", async () => {
  const {sourceOf}=require("./helpers/platzwart_template");
