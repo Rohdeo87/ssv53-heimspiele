@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SSV53 Belegungsplan – Azure-Occupancy mit kompaktem 30-Minuten-Kalender v21 -->
+<!-- SSV53 Belegungsplan – Azure-Occupancy mit kompaktem 30-Minuten-Kalender v22 -->
 <html lang="de">
 
 <head>
@@ -1752,6 +1752,86 @@ animation-iteration-count: 1 !important;
 transition-duration: 0.01ms !important;
 }
 }
+/* SSV53 calendar polish: retain the resource/time grid and event semantics. */
+:root {
+--page: #f4f6f9;
+--surface-soft: #f4f6fa;
+--line: #e1e7ef;
+--text: #213044;
+--muted: #596b80;
+--fc-today-bg-color: #f0f5fc;
+}
+#booking-controls {
+grid-template-areas: "view" "place";
+grid-template-columns: minmax(0, 1fr);
+gap: 6px;
+padding: 6px;
+border-color: var(--line);
+border-radius: 12px;
+background: var(--surface);
+box-shadow: none;
+}
+#booking-controls.ssv-season-choice {
+grid-template-areas: "season view" "place place";
+grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+}
+#booking-controls .ssv-segmented-control {
+background: var(--surface-soft);
+box-shadow: none;
+border-radius: 9px;
+padding: 3px;
+gap: 3px;
+}
+#booking-controls .ssv-segment-button {
+min-height: 40px;
+border: 0;
+border-radius: 7px !important;
+color: var(--muted);
+font-weight: 600 !important;
+}
+#booking-controls .ssv-segment-button[aria-pressed="true"] {
+background: var(--brand);
+color: #fff;
+box-shadow: none;
+}
+#calendar-wrapper {border-radius: 12px 12px 0 0;box-shadow: none;}
+#calendar {padding: 5px 5px 0;}
+#calendar-status[data-state="loading"] {
+min-height: 32px;
+padding: 6px 10px;
+margin: 0;
+border: 0;
+border-radius: 0;
+background: var(--surface);
+font-size: 0.8rem;
+font-weight: 500;
+}
+#calendar-status[data-state="loading"] .status-spinner {width: 15px;height: 15px;border-width: 2px;}
+.fc .fc-col-header-cell,.fc .fc-timegrid-axis,.fc .fc-timegrid-slot-label {background: #f7f9fc;}
+.fc .fc-col-header-cell-cushion {padding: 8px 5px;color: var(--text);font-weight: 600;}
+.fc .fc-col-header-cell.fc-day-today {background: #eaf2fd;}
+.fc .fc-col-header-cell.fc-day-today .fc-col-header-cell-cushion {color: var(--brand);}
+.fc .fc-timegrid-slot-minor {border-top-color: #edf0f5;border-top-style: solid;}
+.fc .fc-v-event {border-radius: 6px;box-shadow: none;}
+.fc .fc-v-event.ssv-official-match {box-shadow: none;}
+.event-title {font-weight: 650;}
+#calendar-navigation {background: var(--surface);padding-top: 4px;padding-bottom: max(4px, env(safe-area-inset-bottom, 0px));}
+.calendar-navigation-button {width: 40px;height: 40px;border-radius: 10px;box-shadow: none;background: var(--surface);border-color: var(--line);}
+#calendar-date-primary {font-weight: 650;}
+#calendar-date-secondary {font-weight: 500;}
+#calendar-today-button {min-height: 40px;border-radius: 10px;box-shadow: none;font-weight: 600;}
+.event-dialog,.action-confirmation-dialog {border-top: 0;border-radius: 16px;}
+.dialog-button,.trainer-contact-retry {min-height: 44px;border-radius: 10px;box-shadow: none;font-weight: 600;}
+@media (min-width: 700px) {
+#booking-controls {grid-template-areas: "place view";grid-template-columns: minmax(0, 2fr) minmax(150px, 1fr);}
+#booking-controls.ssv-season-choice {grid-template-areas: "season place view";grid-template-columns: minmax(0, 1fr) minmax(0, 1.8fr) minmax(140px, 0.8fr);}
+}
+@media (max-width: 300px) {
+#booking-controls.ssv-season-choice {grid-template-areas: "season" "view" "place";grid-template-columns: minmax(0, 1fr);}
+}
+html.ssv-large-text #booking-controls {grid-template-areas: "view" "place";grid-template-columns: minmax(0, 1fr);}
+html.ssv-large-text #booking-controls.ssv-season-choice {grid-template-areas: "season" "view" "place";}
+/* End SSV53 calendar polish. */
 </style>
 
 <script>
@@ -4469,6 +4549,7 @@ const group = document.querySelector(".ssv-control-group--season");
 if (group) {
 group.hidden = shared;
 group.style.display = shared ? "none" : "";
+if (group.parentElement) group.parentElement.classList.toggle("ssv-season-choice", !shared);
 }
 if (!changed) return;
 // A previously selected winter view must not hide confirmed grass training.
@@ -7250,7 +7331,7 @@ initialize();
 
 <body>
 <section id="booking-controls" aria-label="Belegungsplan filtern">
-<div class="ssv-control-group ssv-control-group--season">
+<div class="ssv-control-group ssv-control-group--season" hidden>
 <span class="ssv-control-label" id="season-label">Saison</span>
 <div class="ssv-segmented-control" role="group" aria-labelledby="season-label">
 <button

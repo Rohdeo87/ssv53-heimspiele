@@ -1,0 +1,97 @@
+{
+  "synthetic": true,
+  "externalConnectionsBlocked": true,
+  "screenshotAvailable": false,
+  "results": [
+    {
+      "buttons": [
+        {
+          "clipped": false,
+          "height": 40,
+          "label": "Alle Plätze"
+        },
+        {
+          "clipped": false,
+          "height": 40,
+          "label": "Rasen"
+        },
+        {
+          "clipped": false,
+          "height": 40,
+          "label": "Kunstrasen"
+        },
+        {
+          "clipped": false,
+          "height": 40,
+          "label": "Tag"
+        },
+        {
+          "clipped": false,
+          "height": 40,
+          "label": "Woche"
+        }
+      ],
+      "events": 8,
+      "overflow": false,
+      "resourceHeaders": [
+        "Kunstrasen",
+        "Rasen",
+        "Kunstrasen",
+        "Rasen",
+        "Kunstrasen",
+        "Rasen",
+        "Kunstrasen",
+        "Rasen",
+        "Kunstrasen",
+        "Rasen",
+        "Kunstrasen",
+        "Rasen",
+        "Kunstrasen",
+        "Rasen"
+      ],
+      "seasonHidden": true,
+      "status": "Keine Belegung\n\n\nDaten werden geladen\n\nErneut versuchen",
+      "width": 390
+    },
+    {
+      "buttonClipping": [],
+      "events": 8,
+      "overflow": false,
+      "resourceColumns": 14,
+      "seasonHidden": true,
+      "width": 320
+    },
+    {
+      "buttonClipping": [],
+      "events": 8,
+      "overflow": false,
+      "resourceColumns": 14,
+      "seasonHidden": true,
+      "width": 768
+    },
+    {
+      "case": "trainer-move-dialog",
+      "seasonHidden": true,
+      "submitted": false,
+      "visibleDialogs": [
+        {
+          "label": "trainer-occupancy-title",
+          "overflow": false
+        }
+      ]
+    },
+    {
+      "case": "legacy-after-response",
+      "legacyLayout": true,
+      "overflow": false,
+      "seasonVisible": true
+    },
+    {
+      "case": "failed-load",
+      "errorState": "error",
+      "overflow": false,
+      "seasonHidden": true,
+      "warningVisible": true
+    }
+  ]
+}
