@@ -1,0 +1,10 @@
+{
+  "azure_cli_result": "Deployment was successful.",
+  "verified_new_version_cycles": 5,
+  "first": "2026-09-11T14:56:06.3844261Z",
+  "last": "2026-09-11T15:00:03.4851129Z",
+  "manual_device_test_commands": 0,
+  "commands_in_new_version_cycles": 0,
+  "last_battery": 97,
+  "dry_until_utc": "2026-09-11T07:40:00.002388+00:00"
+}

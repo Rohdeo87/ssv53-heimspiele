@@ -1,8 +1,9 @@
 # Heimfahrt, Trockenmeldung und nächster Mähstart
 
 Untersuchung vom 11.09.2026. Alle im Text genannten Uhrzeiten gelten für Berlin.
-Stand dieses Dokuments: entwickelt und getestet; Veröffentlichungsnachweise
-werden nach der tatsächlichen Bereitstellung ergänzt.
+Stand: am 11.09.2026 veröffentlicht. Azure meldet die neue Version ab 16:56 Uhr;
+Appack zeigt den Speicherzeitpunkt 16:58 Uhr. Der vollständige Vergleich der
+ausgelieferten Vorlage wurde anschließend erfolgreich abgeschlossen.
 
 ## Was die Daten belegen
 
@@ -87,6 +88,40 @@ Mähfenster beginnt um **19:00 Uhr**, Befehlsende 03:50 Uhr am Folgetag.
 | Neuere Persistenz wird als ältere behandelt | Regression mit gleichzeitig neuerem Steuerungsstand; keine Schreibwirkung |
 | Browserbild unterscheidet sich vom Handy | Drei Breiten geprüft; tatsächliche nächste Rückkehr am Handy noch zu beobachten |
 | Neustart bei Azure-Installation | Vorab Stationszustand/Wasser aus prüfen; unveränderte Flags und installierte Dateien danach belegen |
+
+## Tatsächliche Veröffentlichung
+
+- Quelländerung: Commit `828401d8289b4c35ae65df0cc962d5ddb430f96a`;
+  [PR #78](https://github.com/Rohdeo87/ssv53-heimspiele/pull/78) baut auf
+  [PR #77](https://github.com/Rohdeo87/ssv53-heimspiele/pull/77) auf. Beide
+  Freigabe-/Mergezustände sind getrennt vom bereits veröffentlichten Stand.
+- [CI zum exakten Quellcommit](https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/34612594474)
+  erfolgreich. [Paketnachweis](package-proof.json): 70 Dateien, ZIP-SHA256
+  `27c8a826b12e5b9efd0f6414d0d2efe861cbd42bfd5972546033a3ee944aca9c`.
+  Gegen das vorher installierte ZIP unterscheiden sich bytegenau ausschließlich
+  `mower/dry_run.py`, `platzwart_console.py` und das Manifest. Der isolierte
+  Git-Export bewahrt Zeilenenden unveränderter Dateien; insbesondere wurden die
+  enthaltenen Kalenderdateien bytegetreu übernommen.
+- [Installationsnachweis](installed-proof.json): alle 70 Dateien am Host
+  einzeln verglichen, Host läuft, 16 Funktionen, alle 17 kontrollierten
+  Einstellungen unverändert. Neues Manifest:
+  `314afa1f974f3bb9bc682ed8c3ff757dad596fe37f95806e5d7317e98dbeb0fe`.
+- [Vorprüfung](deployment-preflight.json) und
+  [fünf Zyklen mit neuem Manifest](deployment.json), 16:56–17:00 Uhr:
+  Mäher in der Station, Wasser aus, Belegung bleibt gesperrt, keine Gerätebefehle
+  gesendet, Akku zuletzt 97 %, Trockenfrist weiterhin 09:40 Uhr.
+  [Rohbelege in gekürzter Form](postdeployment-cycles.json).
+- [Appack-Nachweis](publication.json): CMS nach Neuladen vollständig ausgelesen
+  und gleich zur getesteten Vorlage; öffentliche Auslieferung HTTP 200,
+  CSS-/JS-Blöcke gleich. Profilabhängige Zeile beim JS-Vergleich ausgenommen.
+  Vorlagen-SHA256 mit LF:
+  `4c76e457d8f4d6f7e83d2673b0b05e46970bb52997504ac249bd1802e7748c4c`.
+  [Unmittelbar vorher gesicherte Vorlage](appack-before.tpl).
+
+Die neue Software ist damit installiert und ihre normale Weiterarbeit
+beobachtet. Der nächste vollständige reale Übergang Heimfahrt → Laden →
+automatischer Start und die tatsächliche Handyansicht bleiben gesonderte
+Betriebsabnahmen. Kein Test hat einen echten Gerätebefehl ausgelöst.
 
 ## Reproduktion und Rückfall
 
