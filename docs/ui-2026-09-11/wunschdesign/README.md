@@ -1,6 +1,11 @@
 # Platzpflege: Umsetzung des gewählten Designs
 
-Stand: 11.09.2026. **Entwickelt und offline geprüft; noch nicht veröffentlicht.**
+Stand: 11.09.2026. **Entwickelt, offline geprüft und nach ausdrücklicher Freigabe veröffentlicht.**
+
+Azure-Installation, gespeicherte Appack-Vorlage und ausgeliefertes Design wurden
+geprüft. Sechs Produktionszyklen zeigen Heimfahrt und Laden. Gerätebedienung
+und vollständiger Bewässerungszyklus bleiben vor Ort zu bestätigen.
+[Veröffentlichung mit Nachweisen](release/README.md).
 
 ## Vereinbarte Gestaltung
 
@@ -113,7 +118,7 @@ serverseitig abgesicherten Bestätigungsvertrag.
 | Browser | **18 Kombinationen**: sechs Zustände × 320/390/768 Pixel; Navigation, Höhenwahl, Konfliktauswahl, Statistiken, Stoppen-Dialog, automatische Planung; keine JS-Fehler und kein horizontaler Überlauf. [Protokoll](browser-check.json) |
 | Unabhängige Reviews | Getrenntes Backend- und UI-Review. Zu breite Ausnahme für fremdes Wasser korrigiert und getestet; fehlender Kalenderzugang ergänzt |
 | Gebautes Artefakt | Neues FULL_FAILSAFE-Quellpaket, 70 Dateien; kein Deployment. [Manifest und Hash](package-manifest-build.json) |
-| Veröffentlichung / Geräteverhalten | **Nicht durchgeführt**, keine neuen Livebefehle; kein Nachweis von produktiver Laufzeit oder zusätzlicher Mähzeit |
+| Veröffentlichung / Geräteverhalten | **Veröffentlicht und Installation geprüft**; sechs Zyklen der neuen Version mit Heimfahrt/Laden beobachtet. Keine Testbefehle, kein vollständiger Wasserzyklus und kein zusätzlicher Mähzeitgewinn live nachgewiesen; [Releasebericht](release/README.md) |
 
 Der erste vollständige lokale Python-Lauf scheiterte am Zugriff auf das
 bestehende temporäre pytest-Verzeichnis. Nach freigegebenem Zugriff bestand
@@ -168,8 +173,9 @@ CMS-Kopierfassung. CI prüft, dass keine Quelle vergessen wurde.
 | Kalenderlink funktioniert im Handy nicht | Originales Modul statt neuer Kalenderlogik; native Navigation vor Freigabe testen | Bestehenden Appack-Menüeintrag Platzbelegung weiter nutzen; Link korrigieren |
 | Veraltete Anzeige / verlorene Befehlsantwort | Bestehende Frische- und Bestätigungsregeln; keine optimistische Gerätebestätigung | Zustand prüfen, keine unbestätigten Starts wiederholen |
 
-Nächster Freigabeschritt ist die Veröffentlichung **dieses geprüften Pakets und
-dieser CMS-Vorlage** nach grüner PR-Prüfung. Vorab aktuellen Geräte-/Wasserzustand,
+Die Veröffentlichung **dieses geprüften Pakets und dieser CMS-Vorlage** wurde
+nach grüner PR-Prüfung und ausdrücklicher Freigabe abgeschlossen, siehe
+[Releasebericht](release/README.md). Für künftige Updates gilt: aktuellen Geräte-/Wasserzustand,
 aktive Aufträge und bestehende Geräteschedules festhalten. Kein Release während
 eines laufenden oder unklaren Bewässerungsauftrags. Nach Backend-Veröffentlichung
 Host, Function-Liste, Paketmanifest und installierte Dateien erneut prüfen;
