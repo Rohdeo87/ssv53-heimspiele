@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 import json
 from pathlib import Path
 import subprocess
+import sys
 
 
 def compact_plan(plan):
@@ -24,6 +25,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--minutes", type=int, default=120)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--recovery-proof", action="store_true")
     args = parser.parse_args()
     if not 1 <= args.minutes <= 1440:
         parser.error("minutes must be between 1 and 1440")
@@ -33,6 +35,12 @@ def main():
         'and message startswith "SSV53_CONTROL_CYCLE " '
         '| project timestamp,message | order by timestamp asc | take 2000'
     )
+    if args.recovery_proof:
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+        from mower.start_recovery import _trace_query
+        query = _trace_query("2026-09-10T20:00:00.004203+00:00")
+        # az.cmd on Windows must receive the Kusto expression on one line.
+        query = " ".join(query.splitlines())
     result = subprocess.run([
         az, "monitor", "app-insights", "query", "-g", "rg-ssv53-platzpflege-prod",
         "--app", "appi-ssv53platzpflege-prod-q7kbw54s", "--analytics-query", query,
@@ -42,6 +50,14 @@ def main():
         text = result.stdout.decode("utf-8")
     except UnicodeDecodeError:
         text = result.stdout.decode("cp1252")
+    if args.recovery_proof:
+        table = json.loads(text)["tables"][0]
+        columns = [column["name"] for column in table["columns"]]
+        rows = [dict(zip(columns, row)) for row in table["rows"]]
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(json.dumps(rows, indent=2) + "\n", encoding="utf-8")
+        print(json.dumps({"count": len(rows), "first": rows[:1]}, ensure_ascii=False))
+        return
     rows = []
     for timestamp, message in json.loads(text)["tables"][0]["rows"]:
         payload = json.loads(message.split(" ", 1)[1])

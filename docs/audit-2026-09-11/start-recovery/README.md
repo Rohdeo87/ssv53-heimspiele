@@ -113,6 +113,21 @@ freigegeben. Eine unabhängige Luna-Prüfung und die zusätzliche Hauptprüfung 
 keine weitere konkrete Abweichung in der Startkorrektur. Die Reparatur selbst wurde
 zusätzlich auf Sperren, Quellenprüfung und Befehlsfreiheit geprüft.
 
-Veröffentlichung,
-Zustandskorrektur und anschließende Beobachtung werden nach tatsächlicher Ausführung
-hier ergänzt. Ein angenommener Startbefehl ist noch kein bestätigtes Mähen.
+PR [#68](https://github.com/Rohdeo87/ssv53-heimspiele/pull/68) wurde nach beiden
+erfolgreichen CI-Prüfungen zusammengeführt; Merge
+`8a16f96302313827d042763e7309a78be08ed7a9`. Das erste Paket wurde installiert:
+Deployment `ddee3074-449e-4b14-8fd4-a537f2cb2463`, 70 Dateien byteweise geprüft,
+16 Funktionen und unveränderte Schutzflags (`installation-first.json`).
+
+Die erste Reparaturvorschau blieb korrekt **inaktiv**, weil die Logabfrage
+UTC-Zeitstempel als Text verglich: Kusto formt `+00:00` in siebenstellige
+Sekundenbruchteile mit `Z` um. Der typisierte Zeitvergleich findet unter 580
+abgerufenen Ablaufspuren genau den geprüften Fehlversuch (`normalized-trace-proof.json`).
+Ein zusätzlicher Regressionstest deckt dieses reale Rückgabeformat ab. Die
+Reparatur verwendet außerdem dieselben strikten Prüfer für manuelle Sitzungen und
+Befehlsnachweise wie die Steuerung. Ein unvollständiger Testzustand wurde bereits
+an der Zustandsgrenze abgewiesen; der entsprechende Test prüft diese Abweisung.
+
+Die Korrektur dieses Nachweisvergleichs, die Zustandskorrektur und die anschließende
+Beobachtung werden nach tatsächlicher Ausführung ergänzt. Es wurde bisher keine
+Sperre zurückgesetzt. Ein angenommener Startbefehl ist noch kein bestätigtes Mähen.

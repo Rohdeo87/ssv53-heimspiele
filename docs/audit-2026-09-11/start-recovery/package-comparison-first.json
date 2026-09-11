@@ -1,0 +1,14 @@
+{
+  "source_commit": "c77c39841b053ce6850dbeded7607439e1cb70c9",
+  "baseline_commit": "8fa7ca36eda77c98ed1335409bae83be4ef1f7b0",
+  "package_sha256": "88c8da3ba0b592be6b0305cc497efe9a93ac0d8890b25d73cafe2e0442db27ec",
+  "manifest_sha256": "3635f6aa9a1942401579f4701dce4dfc94420e3c9d02507425e974f9a92833c9",
+  "changed_package_files": [
+    "function_app.py",
+    "mower/full_failsafe.py",
+    "mower/manual_control_api.py",
+    "mower/start_dispatch_guard.py",
+    "mower/start_recovery.py",
+    "package-manifest.json"
+  ]
+}
