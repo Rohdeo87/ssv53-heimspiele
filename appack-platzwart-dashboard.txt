@@ -155,6 +155,9 @@ body.pflege-design{background:#f3f6fa;color:#172c42;font-family:Arial,Helvetica,
 .pflege-design .stat>.pf-symbol{grid-row:1/span 4;align-self:center}.pflege-design .stat>*:not(.pf-symbol){grid-column:2;min-width:0}
 .pflege-design .stat .stat-label{font-size:13px;color:#526477}.pflege-design .stat .stat-value{font-size:24px;color:#172c42;line-height:1.3;overflow-wrap:anywhere}
 .pflege-design .zone-stat-list li{gap:8px}.pflege-design .zone-stat-list .pf-symbol{width:24px;height:24px;background:transparent;color:#285ca0}
+.pflege-design .stat:has(>#water-stat-zones)>.pf-symbol{grid-row:1;align-self:start}
+.pflege-design #water-stat-zones{grid-column:1/-1;min-width:0;margin:0}
+.pflege-design #water-stat-zones li{grid-template-columns:24px minmax(0,1fr) auto;align-items:center}
 .pflege-design .zone-head{gap:9px}.pflege-design .zone-head>span:not(.pf-symbol){flex:1}.pflege-design .zone-head .pf-symbol{width:32px;height:32px;border-radius:10px}
 .pflege-design .zone-controls{gap:12px}.pflege-design .zone-controls select{min-height:56px}.pflege-design .zone-start{display:flex;align-items:center;justify-content:center;gap:8px;min-height:60px;border-radius:14px;box-shadow:none}
 .pflege-design .pf-command-history{display:grid;gap:12px}.pflege-design .pf-command-history .pf-symbol{margin-right:12px}
