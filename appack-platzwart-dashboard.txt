@@ -855,7 +855,10 @@ SOFTWARE.
     function pfNextMoment(s) {
       var m=s.mower||{},manual=manualControlView(s),info=nextStartInfo(s,true),now=new Date(s.generatedAt),o=s.occupancy||{};
       if(manual.enabled&&["MANUAL_PARKED","PARKING"].indexOf(manual.status)>=0)return {label:"Nächster Mähstart",at:null,text:"Du entscheidest",note:"Erst nach deiner Freigabe."};
-      if(mowerTelemetryFresh(s)&&["MOWING","LEAVING"].indexOf(m.activity)>=0&&o.available!==false){var ends=(o.upcoming||[]).concat(o.next?[o.next]:[]).map(function(x){return new Date(x.start)}).filter(function(d){return !isNaN(d)&&d>now}).sort(function(a,b){return a-b});if(ends.length)return {label:"Spätestens in der Station",at:ends[0],text:"",note:"Vor der nächsten Platzbelegung."}}
+      if(mowerTelemetryFresh(s)&&["MOWING","LEAVING"].indexOf(m.activity)>=0&&o.available!==false){
+        var blocks=(o.upcoming||[]).concat(o.next?[o.next]:[]).filter(function(x){return x&&new Date(x.start)>now}).sort(function(a,b){return new Date(a.start)-new Date(b.start)});
+        if(blocks.length){var first=blocks[0],sources=String(first.source||"").toLowerCase().split("+").map(function(x){return x.trim()}),water=sources.indexOf("irrigation")>=0,other=sources.some(function(x){return x&&x!=="irrigation"});return {label:"Spätestens in der Station",at:new Date(first.start),text:"",note:water?(other?"Danach sind Platzbelegung und Bewässerung geplant.":"Danach wird bewässert."):"Vor der nächsten Platzbelegung."}}
+      }
       return {label:info.earliestOnly?"Frühester Mähstart":"Nächster Mähstart",at:info.at,text:info.text,note:info.at?(info.earliestOnly?"Nach der Platzsperre. Akku muss bereit sein.":info.awaitingMowerReport?"Geplant · Neue Mähermeldung erforderlich.":"Voraussichtlich"):""};
     }
     function pfRenderMoment(s) {

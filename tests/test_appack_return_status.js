@@ -106,3 +106,18 @@ test('Heimfahrt während einer Belegung lässt die Belegungswarnung sichtbar',()
 });
 
 module.exports={returning};
+
+test('Stationsfrist erklärt die Bewässerung statt einer allgemeinen Platzbelegung',()=>{
+  const s=returning();s.generatedAt='2026-09-11T19:20:00Z';s.mower.activity='MOWING';
+  s.occupancy.next={start:'2026-09-12T04:00:00+02:00',source:'irrigation'};
+  s.occupancy.upcoming=[{start:'invalid',source:'training'},{start:'2026-09-11T12:00:00Z',source:'match'},{start:'2026-09-12T12:00:00Z',source:'training'}];
+  assert.equal(nextMoment(s).note,'Danach wird bewässert.');
+  assert.equal(nextMoment(s).at.toISOString(),'2026-09-12T02:00:00.000Z');
+  s.occupancy.upcoming.unshift({start:'2026-09-11T22:00:00Z',source:'training'});
+  assert.equal(nextMoment(s).note,'Vor der nächsten Platzbelegung.');
+  assert.equal(nextMoment(s).at.toISOString(),'2026-09-11T22:00:00.000Z');
+  s.occupancy.upcoming=[];s.occupancy.next.source='irrigation+training';
+  assert.equal(nextMoment(s).note,'Danach sind Platzbelegung und Bewässerung geplant.');
+  delete s.occupancy.next.source;
+  assert.equal(nextMoment(s).note,'Vor der nächsten Platzbelegung.');
+});

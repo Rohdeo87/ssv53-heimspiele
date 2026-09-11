@@ -1,0 +1,12 @@
+{
+  "at_utc": "2026-09-11T19:32:59.981203+00:00",
+  "template_id": "6a86ab6c4b3c829dd60de9b7",
+  "cms_modified_berlin": "2026-09-11 21:28",
+  "editor_matched_before_save": true,
+  "template_sha256_lf": "475f9788034952015a67f70bb5244cf6911130f5b6b3d2c21f0b3c678cf21b85",
+  "render_url": "https://appack.de/rest-api/drender/6a86ab6c4b3c829dd60de9b7",
+  "http_status": 200,
+  "published_pfNextMoment_matches": true,
+  "tests_passed": 26,
+  "device_commands_sent": false
+}
