@@ -1,0 +1,70 @@
+{
+  "network": "blocked",
+  "deviceCommands": 0,
+  "capturedAppResponse": false,
+  "records": [
+    {
+      "scenario": "homeward",
+      "width": 320,
+      "title": "Mäher fährt zur Station",
+      "card": "Frühester Mähstart\n19:00 Uhr\nNach der Platzsperre. Akku muss bereit sein.",
+      "passed": true
+    },
+    {
+      "scenario": "docked",
+      "width": 320,
+      "title": "Platz wird bald belegt",
+      "card": "Frühester Mähstart\n19:00 Uhr\nNach der Platzsperre. Akku muss bereit sein.",
+      "passed": true
+    },
+    {
+      "scenario": "training-wait",
+      "width": 320,
+      "title": "Platz wird bald belegt",
+      "card": "Frühester Mähstart\n19:00 Uhr\nNach der Platzsperre. Akku muss bereit sein.",
+      "passed": true
+    },
+    {
+      "scenario": "homeward",
+      "width": 390,
+      "title": "Mäher fährt zur Station",
+      "card": "Frühester Mähstart\n19:00 Uhr\nNach der Platzsperre. Akku muss bereit sein.",
+      "passed": true
+    },
+    {
+      "scenario": "docked",
+      "width": 390,
+      "title": "Platz wird bald belegt",
+      "card": "Frühester Mähstart\n19:00 Uhr\nNach der Platzsperre. Akku muss bereit sein.",
+      "passed": true
+    },
+    {
+      "scenario": "training-wait",
+      "width": 390,
+      "title": "Platz wird bald belegt",
+      "card": "Frühester Mähstart\n19:00 Uhr\nNach der Platzsperre. Akku muss bereit sein.",
+      "passed": true
+    },
+    {
+      "scenario": "homeward",
+      "width": 768,
+      "title": "Mäher fährt zur Station",
+      "card": "Frühester Mähstart\n19:00 Uhr\nNach der Platzsperre. Akku muss bereit sein.",
+      "passed": true
+    },
+    {
+      "scenario": "docked",
+      "width": 768,
+      "title": "Platz wird bald belegt",
+      "card": "Frühester Mähstart\n19:00 Uhr\nNach der Platzsperre. Akku muss bereit sein.",
+      "passed": true
+    },
+    {
+      "scenario": "training-wait",
+      "width": 768,
+      "title": "Platz wird bald belegt",
+      "card": "Frühester Mähstart\n19:00 Uhr\nNach der Platzsperre. Akku muss bereit sein.",
+      "passed": true
+    }
+  ]
+}

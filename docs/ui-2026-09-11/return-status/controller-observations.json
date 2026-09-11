@@ -1,0 +1,532 @@
+{
+  "source": "Azure Application Insights SSV53_CONTROL_CYCLE",
+  "period_utc": [
+    "2026-09-11T14:17:00Z",
+    "2026-09-11T14:23:00Z"
+  ],
+  "captured_app_response": false,
+  "observations": [
+    {
+      "at": "2026-09-11T14:17:02.3578766Z",
+      "mower": {
+        "activity": "MOWING",
+        "battery_percent": 30,
+        "connected": true,
+        "error_code": 0,
+        "state": "IN_OPERATION",
+        "mode": "MAIN_AREA",
+        "status_timestamp_ms": 1789136196300
+      },
+      "water": {
+        "safety": {
+          "available": true,
+          "fresh": true,
+          "clear_now": true,
+          "active_zone_count": 0
+        },
+        "release": {
+          "allowed": true,
+          "dry_until_utc": "2026-09-11T07:40:00.002388+00:00",
+          "release_at_utc": "2026-09-11T07:40:00.002388+00:00",
+          "telemetry_confirmed": true
+        }
+      },
+      "plan": {
+        "blocked_now": null,
+        "parking_block": null,
+        "next_block": {
+          "details": {
+            "items": [
+              {
+                "details": {
+                  "calendar_revision": 2,
+                  "calendar_sha256": "bc9ccae4f33054cd29dcf4eed044d1b8095cac29c9215182f2646fdb3cdf1eec",
+                  "nominal_end": "2026-09-11T18:30:00+02:00",
+                  "nominal_start": "2026-09-11T17:00:00+02:00",
+                  "occurrence_id": "training:sommer:som-ras-c-fr:2026-09-11",
+                  "schedule_id": "som-ras-c-fr",
+                  "team": "C"
+                },
+                "end": "2026-09-11T19:00:00+02:00",
+                "source": "training",
+                "start": "2026-09-11T16:30:00+02:00",
+                "title": "Training C"
+              }
+            ]
+          },
+          "end": "2026-09-11T19:00:00+02:00",
+          "source": "training",
+          "start": "2026-09-11T16:30:00+02:00",
+          "title": "Training C"
+        },
+        "safe_mowing_windows": [
+          {
+            "command_deadline": "2026-09-12T03:50:00+02:00",
+            "end": "2026-09-12T04:00:00+02:00",
+            "minimum_mowing_minutes": 30,
+            "start": "2026-09-11T19:00:00+02:00"
+          },
+          {
+            "command_deadline": "2026-09-12T09:50:00+02:00",
+            "end": "2026-09-12T10:00:00+02:00",
+            "minimum_mowing_minutes": 30,
+            "start": "2026-09-12T07:10:00+02:00"
+          },
+          {
+            "command_deadline": "2026-09-12T23:50:00+02:00",
+            "end": "2026-09-13T00:00:00+02:00",
+            "minimum_mowing_minutes": 30,
+            "start": "2026-09-12T13:45:00+02:00"
+          }
+        ]
+      }
+    },
+    {
+      "at": "2026-09-11T14:18:02.233332Z",
+      "mower": {
+        "activity": "MOWING",
+        "battery_percent": 30,
+        "connected": true,
+        "error_code": 0,
+        "state": "IN_OPERATION",
+        "mode": "MAIN_AREA",
+        "status_timestamp_ms": 1789136256264
+      },
+      "water": {
+        "safety": {
+          "available": true,
+          "fresh": true,
+          "clear_now": true,
+          "active_zone_count": 0
+        },
+        "release": {
+          "allowed": true,
+          "dry_until_utc": "2026-09-11T07:40:00.002388+00:00",
+          "release_at_utc": "2026-09-11T07:40:00.002388+00:00",
+          "telemetry_confirmed": true
+        }
+      },
+      "plan": {
+        "blocked_now": null,
+        "parking_block": null,
+        "next_block": {
+          "details": {
+            "items": [
+              {
+                "details": {
+                  "calendar_revision": 2,
+                  "calendar_sha256": "bc9ccae4f33054cd29dcf4eed044d1b8095cac29c9215182f2646fdb3cdf1eec",
+                  "nominal_end": "2026-09-11T18:30:00+02:00",
+                  "nominal_start": "2026-09-11T17:00:00+02:00",
+                  "occurrence_id": "training:sommer:som-ras-c-fr:2026-09-11",
+                  "schedule_id": "som-ras-c-fr",
+                  "team": "C"
+                },
+                "end": "2026-09-11T19:00:00+02:00",
+                "source": "training",
+                "start": "2026-09-11T16:30:00+02:00",
+                "title": "Training C"
+              }
+            ]
+          },
+          "end": "2026-09-11T19:00:00+02:00",
+          "source": "training",
+          "start": "2026-09-11T16:30:00+02:00",
+          "title": "Training C"
+        },
+        "safe_mowing_windows": [
+          {
+            "command_deadline": "2026-09-12T03:50:00+02:00",
+            "end": "2026-09-12T04:00:00+02:00",
+            "minimum_mowing_minutes": 30,
+            "start": "2026-09-11T19:00:00+02:00"
+          },
+          {
+            "command_deadline": "2026-09-12T09:50:00+02:00",
+            "end": "2026-09-12T10:00:00+02:00",
+            "minimum_mowing_minutes": 30,
+            "start": "2026-09-12T07:10:00+02:00"
+          },
+          {
+            "command_deadline": "2026-09-12T23:50:00+02:00",
+            "end": "2026-09-13T00:00:00+02:00",
+            "minimum_mowing_minutes": 30,
+            "start": "2026-09-12T13:45:00+02:00"
+          }
+        ]
+      }
+    },
+    {
+      "at": "2026-09-11T14:19:02.2559799Z",
+      "mower": {
+        "activity": "GOING_HOME",
+        "battery_percent": 30,
+        "connected": true,
+        "error_code": 0,
+        "state": "RESTRICTED",
+        "mode": "MAIN_AREA",
+        "status_timestamp_ms": 1789136316292
+      },
+      "water": {
+        "safety": {
+          "available": true,
+          "fresh": true,
+          "clear_now": true,
+          "active_zone_count": 0
+        },
+        "release": {
+          "allowed": true,
+          "dry_until_utc": "2026-09-11T07:40:00.002388+00:00",
+          "release_at_utc": "2026-09-11T07:40:00.002388+00:00",
+          "telemetry_confirmed": true
+        }
+      },
+      "plan": {
+        "blocked_now": null,
+        "parking_block": null,
+        "next_block": {
+          "details": {
+            "items": [
+              {
+                "details": {
+                  "calendar_revision": 2,
+                  "calendar_sha256": "bc9ccae4f33054cd29dcf4eed044d1b8095cac29c9215182f2646fdb3cdf1eec",
+                  "nominal_end": "2026-09-11T18:30:00+02:00",
+                  "nominal_start": "2026-09-11T17:00:00+02:00",
+                  "occurrence_id": "training:sommer:som-ras-c-fr:2026-09-11",
+                  "schedule_id": "som-ras-c-fr",
+                  "team": "C"
+                },
+                "end": "2026-09-11T19:00:00+02:00",
+                "source": "training",
+                "start": "2026-09-11T16:30:00+02:00",
+                "title": "Training C"
+              }
+            ]
+          },
+          "end": "2026-09-11T19:00:00+02:00",
+          "source": "training",
+          "start": "2026-09-11T16:30:00+02:00",
+          "title": "Training C"
+        },
+        "safe_mowing_windows": [
+          {
+            "command_deadline": "2026-09-12T03:50:00+02:00",
+            "end": "2026-09-12T04:00:00+02:00",
+            "minimum_mowing_minutes": 30,
+            "start": "2026-09-11T19:00:00+02:00"
+          },
+          {
+            "command_deadline": "2026-09-12T09:50:00+02:00",
+            "end": "2026-09-12T10:00:00+02:00",
+            "minimum_mowing_minutes": 30,
+            "start": "2026-09-12T07:10:00+02:00"
+          },
+          {
+            "command_deadline": "2026-09-12T23:50:00+02:00",
+            "end": "2026-09-13T00:00:00+02:00",
+            "minimum_mowing_minutes": 30,
+            "start": "2026-09-12T13:45:00+02:00"
+          }
+        ]
+      }
+    },
+    {
+      "at": "2026-09-11T14:20:03.85272Z",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "battery_percent": 27,
+        "connected": true,
+        "error_code": 0,
+        "state": "RESTRICTED",
+        "mode": "MAIN_AREA",
+        "status_timestamp_ms": 1789136398079
+      },
+      "water": {
+        "safety": {
+          "available": true,
+          "fresh": true,
+          "clear_now": true,
+          "active_zone_count": 0
+        },
+        "release": {
+          "allowed": true,
+          "dry_until_utc": "2026-09-11T07:40:00.002388+00:00",
+          "release_at_utc": "2026-09-11T07:40:00.002388+00:00",
+          "telemetry_confirmed": true
+        }
+      },
+      "plan": {
+        "blocked_now": null,
+        "parking_block": {
+          "details": {
+            "items": [
+              {
+                "details": {
+                  "calendar_revision": 2,
+                  "calendar_sha256": "bc9ccae4f33054cd29dcf4eed044d1b8095cac29c9215182f2646fdb3cdf1eec",
+                  "nominal_end": "2026-09-11T18:30:00+02:00",
+                  "nominal_start": "2026-09-11T17:00:00+02:00",
+                  "occurrence_id": "training:sommer:som-ras-c-fr:2026-09-11",
+                  "schedule_id": "som-ras-c-fr",
+                  "team": "C"
+                },
+                "end": "2026-09-11T19:00:00+02:00",
+                "source": "training",
+                "start": "2026-09-11T16:30:00+02:00",
+                "title": "Training C"
+              }
+            ]
+          },
+          "end": "2026-09-11T19:00:00+02:00",
+          "source": "training",
+          "start": "2026-09-11T16:30:00+02:00",
+          "title": "Training C"
+        },
+        "next_block": {
+          "details": {
+            "items": [
+              {
+                "details": {
+                  "calendar_revision": 2,
+                  "calendar_sha256": "bc9ccae4f33054cd29dcf4eed044d1b8095cac29c9215182f2646fdb3cdf1eec",
+                  "nominal_end": "2026-09-11T18:30:00+02:00",
+                  "nominal_start": "2026-09-11T17:00:00+02:00",
+                  "occurrence_id": "training:sommer:som-ras-c-fr:2026-09-11",
+                  "schedule_id": "som-ras-c-fr",
+                  "team": "C"
+                },
+                "end": "2026-09-11T19:00:00+02:00",
+                "source": "training",
+                "start": "2026-09-11T16:30:00+02:00",
+                "title": "Training C"
+              }
+            ]
+          },
+          "end": "2026-09-11T19:00:00+02:00",
+          "source": "training",
+          "start": "2026-09-11T16:30:00+02:00",
+          "title": "Training C"
+        },
+        "safe_mowing_windows": [
+          {
+            "command_deadline": "2026-09-12T03:50:00+02:00",
+            "end": "2026-09-12T04:00:00+02:00",
+            "minimum_mowing_minutes": 30,
+            "start": "2026-09-11T19:00:00+02:00"
+          },
+          {
+            "command_deadline": "2026-09-12T09:50:00+02:00",
+            "end": "2026-09-12T10:00:00+02:00",
+            "minimum_mowing_minutes": 30,
+            "start": "2026-09-12T07:10:00+02:00"
+          },
+          {
+            "command_deadline": "2026-09-12T23:50:00+02:00",
+            "end": "2026-09-13T00:00:00+02:00",
+            "minimum_mowing_minutes": 30,
+            "start": "2026-09-12T13:45:00+02:00"
+          }
+        ]
+      }
+    },
+    {
+      "at": "2026-09-11T14:21:02.2362273Z",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "battery_percent": 27,
+        "connected": true,
+        "error_code": 0,
+        "state": "RESTRICTED",
+        "mode": "HOME",
+        "status_timestamp_ms": 1789136411040
+      },
+      "water": {
+        "safety": {
+          "available": true,
+          "fresh": true,
+          "clear_now": true,
+          "active_zone_count": 0
+        },
+        "release": {
+          "allowed": true,
+          "dry_until_utc": "2026-09-11T07:40:00.002388+00:00",
+          "release_at_utc": "2026-09-11T07:40:00.002388+00:00",
+          "telemetry_confirmed": true
+        }
+      },
+      "plan": {
+        "blocked_now": null,
+        "parking_block": {
+          "details": {
+            "items": [
+              {
+                "details": {
+                  "calendar_revision": 2,
+                  "calendar_sha256": "bc9ccae4f33054cd29dcf4eed044d1b8095cac29c9215182f2646fdb3cdf1eec",
+                  "nominal_end": "2026-09-11T18:30:00+02:00",
+                  "nominal_start": "2026-09-11T17:00:00+02:00",
+                  "occurrence_id": "training:sommer:som-ras-c-fr:2026-09-11",
+                  "schedule_id": "som-ras-c-fr",
+                  "team": "C"
+                },
+                "end": "2026-09-11T19:00:00+02:00",
+                "source": "training",
+                "start": "2026-09-11T16:30:00+02:00",
+                "title": "Training C"
+              }
+            ]
+          },
+          "end": "2026-09-11T19:00:00+02:00",
+          "source": "training",
+          "start": "2026-09-11T16:30:00+02:00",
+          "title": "Training C"
+        },
+        "next_block": {
+          "details": {
+            "items": [
+              {
+                "details": {
+                  "calendar_revision": 2,
+                  "calendar_sha256": "bc9ccae4f33054cd29dcf4eed044d1b8095cac29c9215182f2646fdb3cdf1eec",
+                  "nominal_end": "2026-09-11T18:30:00+02:00",
+                  "nominal_start": "2026-09-11T17:00:00+02:00",
+                  "occurrence_id": "training:sommer:som-ras-c-fr:2026-09-11",
+                  "schedule_id": "som-ras-c-fr",
+                  "team": "C"
+                },
+                "end": "2026-09-11T19:00:00+02:00",
+                "source": "training",
+                "start": "2026-09-11T16:30:00+02:00",
+                "title": "Training C"
+              }
+            ]
+          },
+          "end": "2026-09-11T19:00:00+02:00",
+          "source": "training",
+          "start": "2026-09-11T16:30:00+02:00",
+          "title": "Training C"
+        },
+        "safe_mowing_windows": [
+          {
+            "command_deadline": "2026-09-12T03:50:00+02:00",
+            "end": "2026-09-12T04:00:00+02:00",
+            "minimum_mowing_minutes": 30,
+            "start": "2026-09-11T19:00:00+02:00"
+          },
+          {
+            "command_deadline": "2026-09-12T09:50:00+02:00",
+            "end": "2026-09-12T10:00:00+02:00",
+            "minimum_mowing_minutes": 30,
+            "start": "2026-09-12T07:10:00+02:00"
+          },
+          {
+            "command_deadline": "2026-09-12T23:50:00+02:00",
+            "end": "2026-09-13T00:00:00+02:00",
+            "minimum_mowing_minutes": 30,
+            "start": "2026-09-12T13:45:00+02:00"
+          }
+        ]
+      }
+    },
+    {
+      "at": "2026-09-11T14:22:02.2541972Z",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "battery_percent": 32,
+        "connected": true,
+        "error_code": 0,
+        "state": "RESTRICTED",
+        "mode": "HOME",
+        "status_timestamp_ms": 1789136485411
+      },
+      "water": {
+        "safety": {
+          "available": true,
+          "fresh": true,
+          "clear_now": true,
+          "active_zone_count": 0
+        },
+        "release": {
+          "allowed": true,
+          "dry_until_utc": "2026-09-11T07:40:00.002388+00:00",
+          "release_at_utc": "2026-09-11T07:40:00.002388+00:00",
+          "telemetry_confirmed": true
+        }
+      },
+      "plan": {
+        "blocked_now": null,
+        "parking_block": {
+          "details": {
+            "items": [
+              {
+                "details": {
+                  "calendar_revision": 2,
+                  "calendar_sha256": "bc9ccae4f33054cd29dcf4eed044d1b8095cac29c9215182f2646fdb3cdf1eec",
+                  "nominal_end": "2026-09-11T18:30:00+02:00",
+                  "nominal_start": "2026-09-11T17:00:00+02:00",
+                  "occurrence_id": "training:sommer:som-ras-c-fr:2026-09-11",
+                  "schedule_id": "som-ras-c-fr",
+                  "team": "C"
+                },
+                "end": "2026-09-11T19:00:00+02:00",
+                "source": "training",
+                "start": "2026-09-11T16:30:00+02:00",
+                "title": "Training C"
+              }
+            ]
+          },
+          "end": "2026-09-11T19:00:00+02:00",
+          "source": "training",
+          "start": "2026-09-11T16:30:00+02:00",
+          "title": "Training C"
+        },
+        "next_block": {
+          "details": {
+            "items": [
+              {
+                "details": {
+                  "calendar_revision": 2,
+                  "calendar_sha256": "bc9ccae4f33054cd29dcf4eed044d1b8095cac29c9215182f2646fdb3cdf1eec",
+                  "nominal_end": "2026-09-11T18:30:00+02:00",
+                  "nominal_start": "2026-09-11T17:00:00+02:00",
+                  "occurrence_id": "training:sommer:som-ras-c-fr:2026-09-11",
+                  "schedule_id": "som-ras-c-fr",
+                  "team": "C"
+                },
+                "end": "2026-09-11T19:00:00+02:00",
+                "source": "training",
+                "start": "2026-09-11T16:30:00+02:00",
+                "title": "Training C"
+              }
+            ]
+          },
+          "end": "2026-09-11T19:00:00+02:00",
+          "source": "training",
+          "start": "2026-09-11T16:30:00+02:00",
+          "title": "Training C"
+        },
+        "safe_mowing_windows": [
+          {
+            "command_deadline": "2026-09-12T03:50:00+02:00",
+            "end": "2026-09-12T04:00:00+02:00",
+            "minimum_mowing_minutes": 30,
+            "start": "2026-09-11T19:00:00+02:00"
+          },
+          {
+            "command_deadline": "2026-09-12T09:50:00+02:00",
+            "end": "2026-09-12T10:00:00+02:00",
+            "minimum_mowing_minutes": 30,
+            "start": "2026-09-12T07:10:00+02:00"
+          },
+          {
+            "command_deadline": "2026-09-12T23:50:00+02:00",
+            "end": "2026-09-13T00:00:00+02:00",
+            "minimum_mowing_minutes": 30,
+            "start": "2026-09-12T13:45:00+02:00"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -140,8 +140,45 @@ class ReadOnlyReleaseStatusTests(unittest.TestCase):
             hydrawise_clear_since_utc=(NOW - timedelta(minutes=180)).isoformat(),
             last_hydrawise_success_utc=(NOW - timedelta(seconds=240)).isoformat(),
         )
-        release = self.displayed_status(state)["irrigation"]["releaseConfirmation"]
+        output = self.displayed_status(state)
+        self.assertEqual(output["coordination"]["dryingReason"], "POSSIBLE_IRRIGATION_DURING_GAP")
+        release = output["irrigation"]["releaseConfirmation"]
         self.assertFalse(release["allowed"])
+        self.assertEqual(release["dry_until_utc"], (NOW + timedelta(minutes=150)).isoformat())
+
+    def test_newer_persisted_snapshot_is_not_replayed_into_a_possible_gap(self):
+        drying_since = NOW - timedelta(hours=3)
+        state = AutomationState(
+            hydrawise_clear_since_utc=drying_since.isoformat(),
+            hydrawise_drying_since_utc=drying_since.isoformat(),
+            hydrawise_clear_origin="IRRIGATION_END",
+            last_hydrawise_success_utc=(NOW + timedelta(seconds=1)).isoformat(),
+            last_cycle_started_utc=(NOW + timedelta(seconds=1)).isoformat(),
+        )
+
+        output = self.displayed_status(state)
+        release = output["irrigation"]["releaseConfirmation"]
+        self.assertFalse(release["allowed"])
+        self.assertEqual(
+            release["dry_until_utc"],
+            (drying_since + timedelta(minutes=150)).isoformat(),
+        )
+        self.assertEqual(release["drying_since_utc"], drying_since.isoformat())
+        self.assertEqual(output["automation"]["hydrawiseClearOrigin"], "IRRIGATION_END")
+        self.assertNotEqual(output["coordination"]["dryingReason"], "POSSIBLE_IRRIGATION_DURING_GAP")
+
+    def test_current_clear_after_observed_watering_starts_a_normal_drying_hold(self):
+        state = AutomationState(
+            hydrawise_clear_origin="IRRIGATION_ACTIVE",
+            last_hydrawise_success_utc=(NOW - timedelta(minutes=1)).isoformat(),
+            last_cycle_started_utc=(NOW - timedelta(minutes=1)).isoformat(),
+            last_hydrawise_active_count=1,
+        )
+
+        output = self.displayed_status(state)
+        release = output["irrigation"]["releaseConfirmation"]
+        self.assertFalse(release["allowed"])
+        self.assertEqual(release["drying_since_utc"], NOW.isoformat())
         self.assertEqual(release["dry_until_utc"], (NOW + timedelta(minutes=150)).isoformat())
 
     def test_unavailable_state_produces_no_release_and_disables_controls(self):
