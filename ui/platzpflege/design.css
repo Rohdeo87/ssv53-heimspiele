@@ -2,23 +2,24 @@
 body.pflege-design{background:#f3f6fa;color:#172c42;font-family:Arial,Helvetica,sans-serif}
 .pflege-design [hidden]{display:none!important}
 .pflege-design .shell{width:100%;max-width:620px;margin:0 auto;padding:12px 16px 28px}
-.pflege-design .head{display:flex;align-items:center;justify-content:center;gap:12px;padding:10px 0 16px;margin:0}
-.pflege-design .head .logo{width:42px;height:52px;object-fit:contain;margin:0}
-.pflege-design .head h1{font-size:23px;margin:0}.pflege-design .head .gold{display:none}
+.pflege-design .head{display:none}
 .pflege-design .pf-meta{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
 .pflege-design .pf-meta .updated{margin:0;text-align:left;font-size:12px;color:#526477}
-.pflege-design .pf-meta #refresh{border:0;box-shadow:none;background:transparent;color:#285ca0;font-size:12px;padding:10px 0;width:auto;min-height:44px;white-space:nowrap;margin:0}
+.pflege-design .pf-meta #refresh{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:0;box-shadow:none;background:transparent;color:#285ca0;font-size:12px;padding:10px 0;width:112px;flex:0 0 112px;min-height:44px;white-space:nowrap;margin:0}
+.pflege-design .pf-meta #refresh-spinner{width:14px;height:14px;border-width:2px;margin:0;flex:none}
+.pflege-design .pf-meta #refresh-spinner.hidden{display:inline-block!important;visibility:hidden;animation:none}
 .pflege-design .pf-page{display:flex;flex-direction:column;gap:16px}
 .pflege-design .pf-page-title{display:flex;align-items:center;gap:12px;font-size:23px;margin:8px 0 0}
 .pflege-design .card{border:1px solid #dce4ed;box-shadow:none;border-radius:18px;padding:18px;margin:0}
-.pflege-design #overall{padding:20px;border-radius:18px;box-shadow:none;margin-bottom:16px;border-left:0}
+.pflege-design #overall{display:grid;grid-template-columns:27px minmax(0,1fr);column-gap:9px;padding:20px;border-radius:18px;box-shadow:none;margin-bottom:16px;border-left:0}
+.pflege-design #overall>.eyebrow,.pflege-design #overall-title{grid-column:2}.pflege-design #overall-text,.pflege-design #protection-note,.pflege-design #pf-charge{grid-column:1/-1}
 .pflege-design #overall .big{font-size:24px;line-height:1.25}.pflege-design #overall .muted{font-size:15px;line-height:1.5}
 .pflege-design #overall.warn{background:#fff5df;color:#87570a}.pflege-design #overall.good{background:#e7f4ec;color:#1c624d}
 .pflege-design #overall.bad{background:#fff0ef;color:#ad282a}
 .pflege-design #dashboard:not([data-pf-page=home])[data-pf-urgent=false] #overall{display:none}
 .pflege-design .pf-symbol{display:inline-flex;align-items:center;justify-content:center;width:43px;height:43px;border-radius:13px;background:#285ca0;color:#fff;flex:0 0 auto;vertical-align:middle}
 .pflege-design .pf-symbol svg{width:23px;height:23px}
-.pflege-design #overall>.pf-symbol{width:27px;height:27px;background:transparent;color:inherit;float:left;margin:0 8px 6px 0}
+.pflege-design #overall>.pf-symbol{width:27px;height:27px;background:transparent;color:inherit;grid-column:1;grid-row:2;margin:0;align-self:start}
 .pflege-design #coordination-card{background:#285ca0;border:0;color:white;text-align:center;padding:24px 16px}
 .pflege-design #coordination-card>.eyebrow,.pflege-design #coordination-card>h2{display:none}
 .pflege-design #coordination-card .time-grid{display:block}.pflege-design #coordination-card .time-box{background:transparent;border:0;padding:0;color:inherit;box-shadow:none}
@@ -26,9 +27,12 @@ body.pflege-design{background:#f3f6fa;color:#172c42;font-family:Arial,Helvetica,
 .pflege-design #mower-next-start{font-size:clamp(36px,9vw,54px);font-weight:700;letter-spacing:-1.5px;line-height:1.15;color:white;margin:15px 0 10px;display:block}
 .pflege-design #mower-next-start.pf-unknown-time{font-size:28px;letter-spacing:-.5px}
 .pflege-design #next-start-note{color:#e3edfc;font-size:13px}
-.pflege-design .pf-charge:has(>.hidden){display:none}
-.pflege-design .pf-charge .time-box{padding:18px;border:1px solid #dce4ed;border-radius:18px;background:#fff}
-.pflege-design .pf-charge .time-value{font-size:22px}.pflege-design .pf-charge .time-note{font-size:13px}
+.pflege-design .pf-charge{margin-top:16px;display:grid;gap:10px}
+.pflege-design #pf-charge-caption{font-size:23px;line-height:1.3}
+.pflege-design #pf-charge-progress{display:block;width:100%;height:10px;border:0;border-radius:9px;overflow:hidden;background:#dce4ed;accent-color:#285ca0}
+.pflege-design #pf-charge-progress::-webkit-progress-bar{background:#dce4ed;border-radius:9px}.pflege-design #pf-charge-progress::-webkit-progress-value{background:#285ca0;border-radius:9px}
+.pflege-design .pf-charge .time-box{padding:0;background:transparent;border:0;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px}
+.pflege-design .pf-charge .time-label,.pflege-design .pf-charge .time-value,.pflege-design .pf-charge .time-note{font-size:14px;color:inherit;line-height:1.4;margin:0}
 .pflege-design .pf-home-actions,.pflege-design .pf-home-links,.pflege-design .pf-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .pflege-design .pf-home-actions>.btn{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:13px;min-height:126px;border-radius:18px;border:1px solid #dce4ed;font-size:16px;background:#fff;color:#285ca0;margin:0;padding:20px 10px;box-shadow:none;min-width:0;white-space:normal}
 .pflege-design .pf-home-actions>#manual-start,.pflege-design .pf-home-actions>#mow-start{background:#285ca0;border-color:#285ca0;color:#fff}
@@ -37,6 +41,8 @@ body.pflege-design{background:#f3f6fa;color:#172c42;font-family:Arial,Helvetica,
 .pflege-design .pf-home-actions .pf-symbol{background:transparent;color:inherit;width:40px;height:40px;border-radius:0}
 .pflege-design .pf-home-actions .pf-symbol svg{width:34px;height:34px}
 .pflege-design .pf-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;min-width:0;min-height:126px;width:100%;padding:18px 10px;background:#fff;color:#172c42;border:1px solid #dce4ed;border-radius:18px;font:inherit;font-size:15px;line-height:1.4;text-align:center;cursor:pointer;box-shadow:none;white-space:normal;margin:0}
+.pflege-design .pf-tile{font-weight:700}.pflege-design .pf-label{min-width:0;text-align:inherit;overflow-wrap:anywhere}
+.pflege-design .pf-tile>.pf-label,.pflege-design .pf-home-actions .pf-label{width:100%;text-align:center}
 .pflege-design .pf-tile strong{display:block;font-size:inherit}.pflege-design .pf-tile small{display:block;font-size:13px;color:#526477;font-weight:400;margin-top:5px}
 .pflege-design a.pf-tile{text-decoration:none}
 .pflege-design .pf-categories{display:grid;gap:12px}.pflege-design .pf-category{flex-direction:row;justify-content:flex-start;text-align:left;min-height:100px;padding:20px 16px;gap:16px}
@@ -68,6 +74,23 @@ body.pflege-design{background:#f3f6fa;color:#172c42;font-family:Arial,Helvetica,
 .pflege-design dialog .btn{display:flex;align-items:center;justify-content:center;gap:9px;min-height:60px;border-radius:16px;font-size:16px;box-shadow:none;white-space:normal}
 .pflege-design dialog .btn:not(.secondary):not(.stop):not(.danger):not(.goldbtn){background:#285ca0;color:#fff}
 .pflege-design .btn>.pf-symbol{background:transparent;color:inherit}
+.pflege-design .pf-tile.btn>.pf-symbol{background:#285ca0;color:#fff;width:43px;height:43px;border-radius:13px}
+.pflege-design .dialog-actions{grid-template-columns:repeat(2,minmax(0,1fr))}
+.pflege-design .dialog-actions .btn{min-width:0;width:100%;padding:14px 10px;text-align:center}
+.pflege-design .dialog-actions .btn>.pf-symbol{width:24px;height:24px;flex:none}
+.pflege-design .pf-category>.pf-label{text-align:left}
+.pflege-design .pf-inline-panel .dialog-body{padding:0}
+.pflege-design .pf-inline-panel .stats-grid{margin-top:0}
+.pflege-design .pf-inline-panel .plan-step-head h3{display:flex;align-items:center;gap:10px}
+.pflege-design .pf-inline-panel .plan-step-head h3>.pf-symbol{width:32px;height:32px;border-radius:10px}
+.pflege-design .pf-inline-panel .plan-choice{display:grid;grid-template-columns:43px minmax(0,1fr);column-gap:13px;row-gap:4px;align-items:center;background:#fff;color:#172c42;border:1px solid #dce4ed;box-shadow:none;text-align:left}
+.pflege-design .pf-inline-panel .plan-choice>.pf-symbol{grid-column:1;grid-row:1/span 2;float:none;margin:0;background:#285ca0;color:#fff}
+.pflege-design .pf-inline-panel .plan-choice strong,.pflege-design .pf-inline-panel .plan-choice small{grid-column:2;color:inherit;margin:0}
+.pflege-design .pf-inline-panel .plan-choice small{font-weight:400;color:#526477}
+.pflege-design .facts>span:nth-child(odd){display:flex;align-items:center;gap:8px;min-width:0}
+.pflege-design .facts .pf-symbol{width:24px;height:24px;background:transparent;color:#285ca0}
+.pflege-design .facts .pf-symbol svg{width:20px;height:20px}
+@media(prefers-reduced-motion:reduce){.pflege-design #refresh-spinner{animation:none}}
 .pflege-design .plan-choice{min-height:94px;border-radius:16px;padding:18px;position:relative}
 .pflege-design .plan-choice>.pf-symbol{float:left;margin-right:13px}.pflege-design .plan-choice strong,.pflege-design .plan-choice small{overflow:hidden}
 .pflege-design .profile-row button,.pflege-design .plan-preset-pause{display:flex;align-items:center;justify-content:center;gap:8px;min-height:64px;white-space:normal}
@@ -78,6 +101,9 @@ body.pflege-design{background:#f3f6fa;color:#172c42;font-family:Arial,Helvetica,
 .pflege-design .stat>.pf-symbol{grid-row:1/span 4;align-self:center}.pflege-design .stat>*:not(.pf-symbol){grid-column:2;min-width:0}
 .pflege-design .stat .stat-label{font-size:13px;color:#526477}.pflege-design .stat .stat-value{font-size:24px;color:#172c42;line-height:1.3;overflow-wrap:anywhere}
 .pflege-design .zone-stat-list li{gap:8px}.pflege-design .zone-stat-list .pf-symbol{width:24px;height:24px;background:transparent;color:#285ca0}
+.pflege-design .stat:has(>#water-stat-zones)>.pf-symbol{grid-row:1;align-self:start}
+.pflege-design #water-stat-zones{grid-column:1/-1;min-width:0;margin:0}
+.pflege-design #water-stat-zones li{grid-template-columns:24px minmax(0,1fr) auto;align-items:center}
 .pflege-design .zone-head{gap:9px}.pflege-design .zone-head>span:not(.pf-symbol){flex:1}.pflege-design .zone-head .pf-symbol{width:32px;height:32px;border-radius:10px}
 .pflege-design .zone-controls{gap:12px}.pflege-design .zone-controls select{min-height:56px}.pflege-design .zone-start{display:flex;align-items:center;justify-content:center;gap:8px;min-height:60px;border-radius:14px;box-shadow:none}
 .pflege-design .pf-command-history{display:grid;gap:12px}.pflege-design .pf-command-history .pf-symbol{margin-right:12px}

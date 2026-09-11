@@ -12,6 +12,26 @@ function status(){
   return s;
 }
 
+test('Aktuelles Laden mit 29 Prozent bleibt trotz allgemeiner Akkusperre sichtbar',()=>{
+  const s=status();s.overall.code='MOWER_BATTERY_CHARGING';s.mower.batteryPercent=29;
+  s.coordination.dryUntil=null;s.coordination.releaseNotBefore=null;s.coordination.blockers=[{code:'CHARGING'}];s.automation.irrigationPhase=null;
+  s.coordination.chargingEndEstimate=null;
+  assert.equal(views.dashboardMessage(s).title,'Mäher lädt');
+  assert.deepEqual(presentation('pfChargingInfo')(s),{visible:true,percent:29,at:null});
+  s.mower.activity='PARKED_IN_CS';
+  assert.equal(presentation('pfChargingInfo')(s).visible,false);
+  assert.notEqual(views.dashboardMessage(s).title,'Mäher lädt');
+});
+
+test('Ladeanzeige erfindet weder Akkustand noch Ladung aus alten Daten',()=>{
+  const s=status(),info=presentation('pfChargingInfo');
+  for(const value of [null,undefined,-1,101,NaN,'29']){s.mower.batteryPercent=value;assert.equal(info(s).percent,null);}
+  s.mower.batteryPercent=29;s.mower.telemetryFresh=false;
+  assert.equal(info(s).visible,false);
+  s.mower.telemetryFresh=true;s.controlsAvailable=false;assert.equal(info(s).visible,false);
+  s.controlsAvailable=true;s.mower.errorCode=93;s.mower.errorActive=true;assert.equal(info(s).visible,false);
+});
+
 test('Statusicon gehört zur Meldung, auch wenn der Mäher gleichzeitig lädt',()=>{
   const s=status(),message=views.dashboardMessage;
   assert.equal(s.mower.activity,'CHARGING');

@@ -10,14 +10,15 @@
     }
     function pfButton(label,icon,handler,description) {
       var button=document.createElement("button"),copy=document.createElement("span"),title=document.createElement("strong");
-      button.type="button";button.className="pf-tile";button.appendChild(pfIcon(icon));title.textContent=label;copy.appendChild(title);
+      button.type="button";button.className="pf-tile";copy.className="pf-label";button.appendChild(pfIcon(icon));title.textContent=label;copy.appendChild(title);
       if(description){var note=document.createElement("small");note.textContent=description;copy.appendChild(note);button.classList.add("pf-category")}
       button.appendChild(copy);button.onclick=handler;return button;
     }
     function pfDecorate(element,icon,label) {
       if(!element)return;if(label!==undefined)element.textContent=label;
-      var current=element.querySelector(":scope > .pf-symbol");if(current&&current.dataset.pfIcon!==icon){current.replaceWith(pfIcon(icon));return}
+      var current=element.querySelector(":scope > .pf-symbol");if(current&&current.dataset.pfIcon!==icon){current.replaceWith(pfIcon(icon));current=element.querySelector(":scope > .pf-symbol")}
       if(!current){var old=element.querySelector(":scope > svg");if(old)old.remove();element.prepend(pfIcon(icon))}
+      if(element.tagName==="BUTTON")Array.from(element.childNodes).filter(function(n){return n.nodeType===3&&n.textContent.trim()}).forEach(function(n){var copy=document.createElement("span");copy.className="pf-label";n.replaceWith(copy);copy.appendChild(n)});
     }
     function pfMove(id,parent){var el=document.getElementById(id);if(el)parent.appendChild(el);return el}
     function pfCreatePage(key,title,icon) {
@@ -43,14 +44,32 @@
       // Appack's documented nav:// scheme keeps navigation and user identity in the app.
       var link=document.createElement("a"),text=document.createElement("strong");link.className="pf-tile";link.href="nav://ssv53_TextImage_1761902353516";link.dataset.pfCalendar="true";link.appendChild(pfIcon(icon));text.textContent=label;link.appendChild(text);parent.appendChild(link);return link;
     }
+    function pfInformationPage(id,key,icon) {
+      var old=document.getElementById(id),panel=document.createElement("section"),page=pfCreatePage(key),heading=old.querySelector("h2");
+      panel.id=id;panel.className="pf-inline-panel";while(old.firstChild)panel.appendChild(old.firstChild);old.replaceWith(panel);
+      heading.className="pf-page-title";pfDecorate(heading,icon);page.appendChild(heading);panel.querySelector(".stats-head").remove();page.appendChild(panel);
+      // Keep the original action handlers; opening information now navigates.
+      // close() before a confirmation keeps its originating page underneath.
+      panel.showModal=function(){pfGo(key)};panel.close=function(){};
+      Object.defineProperty(panel,"open",{get:function(){return pfView===key&&!page.hidden}});
+      return panel;
+    }
+    function pfBack() {
+      if(pfView==="water-plan"&&document.getElementById("plan-home").classList.contains("hidden")){showPlanView("home");return}
+      pfGo(pfHistory.pop()||"home",true);
+    }
     function pfMountDesign() {
       var dashboard=document.getElementById("dashboard");document.body.classList.add("pflege-design");
+      var header=document.querySelector(".shell > .head");if(header)header.remove();
       var meta=document.createElement("div");meta.className="pf-meta";pfMove("updated",meta);pfMove("refresh",meta);dashboard.prepend(meta);
-      var back=pfButton("Zurück","ArrowLeft",function(){pfGo(pfHistory.pop()||"home",true)});back.id="pf-back";back.className="pf-back";back.hidden=true;dashboard.insertBefore(back,document.getElementById("overall"));
+      var back=pfButton("Zurück","ArrowLeft",pfBack);back.id="pf-back";back.className="pf-back";back.hidden=true;dashboard.insertBefore(back,document.getElementById("overall"));
       var safety=document.createElement("div");safety.id="pf-safety-actions";safety.className="pf-safety-actions";pfMove("irrigation-stop",safety);dashboard.insertBefore(safety,document.getElementById("overall").nextSibling);
       var pages=document.createElement("div");pages.id="pf-pages";dashboard.appendChild(pages);
       pfCreatePage("home");pfCreatePage("more","Sonstiges","LayoutGrid");pfCreatePage("mower","Mähroboter","Bot");pfCreatePage("controls","Mäher bedienen","Bot");pfCreatePage("height","Schnitthöhe","MoveVertical");pfCreatePage("blades","Klingen","Scissors");pfCreatePage("husqvarna","Am Mäher oder über Husqvarna","Smartphone");pfCreatePage("water","Bewässerung","Droplets");pfCreatePage("zones","Einzelne Zonen","Grid2x2");pfCreatePage("grounds","Platz & Training","CalendarDays");pfCreatePage("today","Platzbelegung","CalendarDays");pfCreatePage("training","Trainingsplan","Snowflake");pfCreatePage("clubhouse","Vereinsheim","Building2");pfCreatePage("history","Letzte Mäheraktionen","History");
-      pfMove("coordination-card",pfPages.home);var charge=document.createElement("div");charge.className="pf-charge";pfMove("charge-end-row",charge);pfPages.home.appendChild(charge);
+      pfMove("coordination-card",pfPages.home);var charge=document.createElement("div");charge.id="pf-charge";charge.className="pf-charge";charge.hidden=true;
+      var chargeCaption=document.createElement("strong");chargeCaption.id="pf-charge-caption";charge.appendChild(chargeCaption);
+      var chargeProgress=document.createElement("progress");chargeProgress.id="pf-charge-progress";chargeProgress.max=100;chargeProgress.setAttribute("aria-label","Akkustand");charge.appendChild(chargeProgress);
+      pfMove("charge-end-row",charge);document.getElementById("overall").appendChild(charge);
       var mowerCard=document.getElementById("mower-title").closest("article"),waterCard=document.getElementById("water-title").closest("article"),occupancyCard=document.getElementById("occupancy-title").closest("article"),clubhouseCard=document.getElementById("clubhouse-events").closest("article");
       pfPages.controls.appendChild(mowerCard);pfPages.water.appendChild(waterCard);pfPages.today.appendChild(occupancyCard);pfPages.clubhouse.appendChild(clubhouseCard);pfMove("training-control-card",pfPages.training);
       var actions=document.createElement("div");actions.id="pf-mower-actions";actions.className="pf-home-actions";["manual-start","manual-park","manual-resume","mow-start","mow-park"].forEach(function(id){pfMove(id,actions)});pfPages.home.appendChild(actions);
@@ -66,6 +85,10 @@
       pfCalendarLink(groundsGrid,"Training verschieben","CalendarClock");pfCalendarLink(groundsGrid,"Termine & Sperren","CalendarDays");pfCalendarLink(pfPages.today,"Vollständigen Kalender öffnen","CalendarDays");
       var history=document.createElement("div");history.id="pf-command-history";history.className="pf-command-history";pfPages.history.appendChild(history);
       var footer=document.createElement("nav");footer.className="pf-nav";footer.setAttribute("aria-label","Platzpflegebereiche");[["home","Übersicht","House"],["today","Heute","CalendarDays"],["more","Sonstiges","Ellipsis"]].forEach(function(item){var b=pfButton(item[1],item[2],function(){pfHistory=[];pfGo(item[0],true)});b.dataset.pfNav=item[0];footer.appendChild(b)});dashboard.appendChild(footer);
+      statsDialog=pfInformationPage("stats-dialog","mower-stats","ChartNoAxesColumn");
+      planDialog=pfInformationPage("water-plan-dialog","water-plan","CalendarClock");
+      pfInformationPage("water-stats-dialog","water-stats","ChartNoAxesColumn");
+      pfInformationPage("water-attention-dialog","water-attention","TriangleAlert");
       pfMove("action-error",safety);pfStyleStatic();pfGo("home",true);pfReady=true;
     }
     function pfStyleStatic() {
@@ -81,6 +104,9 @@
       document.querySelectorAll(".plan-preset-pause").forEach(function(b){pfDecorate(b,"CalendarDays")});
       document.querySelectorAll('input[name="manual-water"]').forEach(function(input){input.addEventListener("change",pfManualChoiceVisibility)});
       var waterNote=pfPages.water.querySelector(".training-note");if(waterNote)waterNote.textContent="Die Zeitgrenzen 03:30–08:00 Uhr gelten für die Automatik. Manuell ist Bewässerung auch zu anderen Zeiten möglich.";
+      document.querySelectorAll(".pf-inline-panel .plan-back").forEach(function(b){b.hidden=true});
+      pfDecorate(document.querySelector("#plan-pause-step h3"),"Pause");pfDecorate(document.querySelector("#plan-custom h3"),"SlidersHorizontal");
+      var toggle=document.getElementById("plan-history-toggle"),toggleBase=toggle.onclick;toggle.onclick=function(){toggleBase.apply(this,arguments);pfDecorate(this,"History")};
     }
     function pfVisibility(s) {
       var m=s.mower||{},manual=manualControlView(s),fresh=mowerTelemetryFresh(s),moving=fresh&&["MOWING","LEAVING","GOING_HOME"].indexOf(m.activity)>=0,busy=operatorActionPending(s,"MANUAL_CONTROL")||!!(state.inFlight&&state.inFlight.MANUAL_CONTROL),parked=manual.status==="MANUAL_PARKED"||manual.status==="PARKING",resumeMeaningful=manual.enabled&&manual.status!=="AUTOMATIC"&&manual.status!=="UNKNOWN";
@@ -97,6 +123,20 @@
       document.querySelector("#coordination-card .time-label").textContent=moment.label;
       el.classList.toggle("pf-unknown-time",!moment.at);el.textContent=moment.at?new Date(moment.at).toLocaleTimeString("de-DE",{timeZone:EVENT_TIME_ZONE,hour:"2-digit",minute:"2-digit",hourCycle:"h23"})+" Uhr":moment.text;
       document.getElementById("next-start-note").textContent=moment.at?(localDay(moment.at)!==localDay(now)?calendarTime(moment.at,now)+" · ":"")+moment.note:moment.note;
+      document.getElementById("coordination-card").hidden=pfChargingInfo(s).visible&&!moment.at&&moment.text==="Noch offen";
+    }
+    function pfChargingInfo(s) {
+      var m=s.mower||{},value=m.batteryPercent,percent=typeof value==="number"&&Number.isFinite(value)&&value>=0&&value<=100?Math.round(value):null;
+      return {visible:m.activity==="CHARGING"&&m.connected===true&&mowerTelemetryFresh(s)&&s.controlsAvailable!==false&&!hasActiveMowerError(m),percent:percent,at:chargingEnd(s)};
+    }
+    function pfRenderCharging(s) {
+      if(!pfReady)return;var info=pfChargingInfo(s),wrap=document.getElementById("pf-charge"),title=document.getElementById("overall-title").textContent;
+      wrap.hidden=!info.visible;if(!info.visible)return;
+      document.getElementById("pf-charge-caption").textContent=(title==="Mäher lädt"?"":"Mäher lädt · ")+"Akku "+(info.percent===null?"unbekannt":info.percent+" %");
+      var bar=document.getElementById("pf-charge-progress");bar.hidden=info.percent===null;if(info.percent!==null)bar.value=info.percent;
+      document.getElementById("charge-end-row").classList.remove("hidden");
+      document.getElementById("charge-end-time").textContent=info.at?calendarTime(info.at,s.generatedAt):"Noch nicht bekannt";
+      document.getElementById("charge-end-note").textContent=info.at?"Voraussichtlich":"";
     }
     function pfRenderHeight(s) {
       if(!pfReady)return;var m=s&&s.mower||{},value=Number(state.heightChoice),old=m.cuttingHeightMm,save=document.getElementById("height-save");
@@ -143,15 +183,18 @@
       // The icon belongs to the selected message, not to a simultaneous device state.
       // A transient error may have replaced the message after the last status response.
       pfDecorate(document.getElementById("overall"),document.getElementById("overall-title").textContent===overview.title?overview.icon:"TriangleAlert");
-      pfRenderHeight(s);pfRenderMoment(s);pfRenderHistory(s);
+      [["mower-connection","Smartphone"],["battery","Battery"],["progress","Grid2x2"],["cutting-height-current","MoveVertical"],["mower-error","TriangleAlert"]].forEach(function(row){pfDecorate(document.getElementById(row[0]).previousElementSibling,row[1])});
+      pfDecorate(document.getElementById("winter-training-switch"),"Snowflake");
+      pfRenderHeight(s);pfRenderMoment(s);pfRenderCharging(s);pfRenderHistory(s);
     }
     pfMountDesign();
     var pfRenderBase=render;render=function(s){pfRenderBase(s);pfUpdate(s)};
-    var pfCoordinationBase=renderCoordination;renderCoordination=function(s){pfCoordinationBase(s);pfRenderMoment(s);if(pfReady)document.getElementById("pf-blade-hours").textContent=duration(s.statistics&&s.statistics.bladeUsageSeconds)};
+    var pfCoordinationBase=renderCoordination;renderCoordination=function(s){pfCoordinationBase(s);pfRenderMoment(s);pfRenderCharging(s);if(pfReady)document.getElementById("pf-blade-hours").textContent=duration(s.statistics&&s.statistics.bladeUsageSeconds)};
     var pfHeightBase=renderHeightChoice;renderHeightChoice=function(){pfHeightBase();pfRenderHeight(state.status)};
     var pfLoadBase=load;load=function(){return pfLoadBase().then(function(s){if(!s&&state.status)pfUpdate(state.status);return s})};
     var pfActionBase=openAction;openAction=function(){var result=pfActionBase.apply(this,arguments);pfConfirmationIcons();return result};
     var pfManualBase=manualControlPrepare;manualControlPrepare=function(){var result=pfManualBase.apply(this,arguments);pfConfirmationIcons();return result};
+    var pfResetPlanBase=resetPlanDialog;resetPlanDialog=function(){pfResetPlanBase();pfDecorate(document.getElementById("plan-history-toggle"),"History")};
     var pfZonesBase=buildPlanZones;buildPlanZones=function(zones){pfZonesBase(zones);pfPlanIcons()};
     var pfPlanBase=renderIrrigationSchedule;renderIrrigationSchedule=function(){pfPlanBase.apply(this,arguments);["plan-skip","plan-pause-open","plan-custom-open","plan-resume","plan-pause"].forEach(function(id){var b=document.getElementById(id);b.classList.toggle("hidden",b.disabled)});pfDecorate(document.getElementById("plan-history-toggle"),"History")};
     var pfWaterStatsBase=renderIrrigationStatistics;renderIrrigationStatistics=function(stats){pfWaterStatsBase(stats);document.querySelectorAll("#water-stat-zones li").forEach(function(li){pfDecorate(li,"Droplets")})};

@@ -56,24 +56,23 @@
 body.pflege-design{background:#f3f6fa;color:#172c42;font-family:Arial,Helvetica,sans-serif}
 .pflege-design [hidden]{display:none!important}
 .pflege-design .shell{width:100%;max-width:620px;margin:0 auto;padding:12px 16px 28px}
-.pflege-design .head{display:none}
+.pflege-design .head{display:flex;align-items:center;justify-content:center;gap:12px;padding:10px 0 16px;margin:0}
+.pflege-design .head .logo{width:42px;height:52px;object-fit:contain;margin:0}
+.pflege-design .head h1{font-size:23px;margin:0}.pflege-design .head .gold{display:none}
 .pflege-design .pf-meta{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
 .pflege-design .pf-meta .updated{margin:0;text-align:left;font-size:12px;color:#526477}
-.pflege-design .pf-meta #refresh{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:0;box-shadow:none;background:transparent;color:#285ca0;font-size:12px;padding:10px 0;width:112px;flex:0 0 112px;min-height:44px;white-space:nowrap;margin:0}
-.pflege-design .pf-meta #refresh-spinner{width:14px;height:14px;border-width:2px;margin:0;flex:none}
-.pflege-design .pf-meta #refresh-spinner.hidden{display:inline-block!important;visibility:hidden;animation:none}
+.pflege-design .pf-meta #refresh{border:0;box-shadow:none;background:transparent;color:#285ca0;font-size:12px;padding:10px 0;width:auto;min-height:44px;white-space:nowrap;margin:0}
 .pflege-design .pf-page{display:flex;flex-direction:column;gap:16px}
 .pflege-design .pf-page-title{display:flex;align-items:center;gap:12px;font-size:23px;margin:8px 0 0}
 .pflege-design .card{border:1px solid #dce4ed;box-shadow:none;border-radius:18px;padding:18px;margin:0}
-.pflege-design #overall{display:grid;grid-template-columns:27px minmax(0,1fr);column-gap:9px;padding:20px;border-radius:18px;box-shadow:none;margin-bottom:16px;border-left:0}
-.pflege-design #overall>.eyebrow,.pflege-design #overall-title{grid-column:2}.pflege-design #overall-text,.pflege-design #protection-note,.pflege-design #pf-charge{grid-column:1/-1}
+.pflege-design #overall{padding:20px;border-radius:18px;box-shadow:none;margin-bottom:16px;border-left:0}
 .pflege-design #overall .big{font-size:24px;line-height:1.25}.pflege-design #overall .muted{font-size:15px;line-height:1.5}
 .pflege-design #overall.warn{background:#fff5df;color:#87570a}.pflege-design #overall.good{background:#e7f4ec;color:#1c624d}
 .pflege-design #overall.bad{background:#fff0ef;color:#ad282a}
 .pflege-design #dashboard:not([data-pf-page=home])[data-pf-urgent=false] #overall{display:none}
 .pflege-design .pf-symbol{display:inline-flex;align-items:center;justify-content:center;width:43px;height:43px;border-radius:13px;background:#285ca0;color:#fff;flex:0 0 auto;vertical-align:middle}
 .pflege-design .pf-symbol svg{width:23px;height:23px}
-.pflege-design #overall>.pf-symbol{width:27px;height:27px;background:transparent;color:inherit;grid-column:1;grid-row:2;margin:0;align-self:start}
+.pflege-design #overall>.pf-symbol{width:27px;height:27px;background:transparent;color:inherit;float:left;margin:0 8px 6px 0}
 .pflege-design #coordination-card{background:#285ca0;border:0;color:white;text-align:center;padding:24px 16px}
 .pflege-design #coordination-card>.eyebrow,.pflege-design #coordination-card>h2{display:none}
 .pflege-design #coordination-card .time-grid{display:block}.pflege-design #coordination-card .time-box{background:transparent;border:0;padding:0;color:inherit;box-shadow:none}
@@ -81,12 +80,9 @@ body.pflege-design{background:#f3f6fa;color:#172c42;font-family:Arial,Helvetica,
 .pflege-design #mower-next-start{font-size:clamp(36px,9vw,54px);font-weight:700;letter-spacing:-1.5px;line-height:1.15;color:white;margin:15px 0 10px;display:block}
 .pflege-design #mower-next-start.pf-unknown-time{font-size:28px;letter-spacing:-.5px}
 .pflege-design #next-start-note{color:#e3edfc;font-size:13px}
-.pflege-design .pf-charge{margin-top:16px;display:grid;gap:10px}
-.pflege-design #pf-charge-caption{font-size:23px;line-height:1.3}
-.pflege-design #pf-charge-progress{display:block;width:100%;height:10px;border:0;border-radius:9px;overflow:hidden;background:#dce4ed;accent-color:#285ca0}
-.pflege-design #pf-charge-progress::-webkit-progress-bar{background:#dce4ed;border-radius:9px}.pflege-design #pf-charge-progress::-webkit-progress-value{background:#285ca0;border-radius:9px}
-.pflege-design .pf-charge .time-box{padding:0;background:transparent;border:0;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px}
-.pflege-design .pf-charge .time-label,.pflege-design .pf-charge .time-value,.pflege-design .pf-charge .time-note{font-size:14px;color:inherit;line-height:1.4;margin:0}
+.pflege-design .pf-charge:has(>.hidden){display:none}
+.pflege-design .pf-charge .time-box{padding:18px;border:1px solid #dce4ed;border-radius:18px;background:#fff}
+.pflege-design .pf-charge .time-value{font-size:22px}.pflege-design .pf-charge .time-note{font-size:13px}
 .pflege-design .pf-home-actions,.pflege-design .pf-home-links,.pflege-design .pf-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .pflege-design .pf-home-actions>.btn{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:13px;min-height:126px;border-radius:18px;border:1px solid #dce4ed;font-size:16px;background:#fff;color:#285ca0;margin:0;padding:20px 10px;box-shadow:none;min-width:0;white-space:normal}
 .pflege-design .pf-home-actions>#manual-start,.pflege-design .pf-home-actions>#mow-start{background:#285ca0;border-color:#285ca0;color:#fff}
@@ -95,8 +91,6 @@ body.pflege-design{background:#f3f6fa;color:#172c42;font-family:Arial,Helvetica,
 .pflege-design .pf-home-actions .pf-symbol{background:transparent;color:inherit;width:40px;height:40px;border-radius:0}
 .pflege-design .pf-home-actions .pf-symbol svg{width:34px;height:34px}
 .pflege-design .pf-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;min-width:0;min-height:126px;width:100%;padding:18px 10px;background:#fff;color:#172c42;border:1px solid #dce4ed;border-radius:18px;font:inherit;font-size:15px;line-height:1.4;text-align:center;cursor:pointer;box-shadow:none;white-space:normal;margin:0}
-.pflege-design .pf-tile{font-weight:700}.pflege-design .pf-label{min-width:0;text-align:inherit;overflow-wrap:anywhere}
-.pflege-design .pf-tile>.pf-label,.pflege-design .pf-home-actions .pf-label{width:100%;text-align:center}
 .pflege-design .pf-tile strong{display:block;font-size:inherit}.pflege-design .pf-tile small{display:block;font-size:13px;color:#526477;font-weight:400;margin-top:5px}
 .pflege-design a.pf-tile{text-decoration:none}
 .pflege-design .pf-categories{display:grid;gap:12px}.pflege-design .pf-category{flex-direction:row;justify-content:flex-start;text-align:left;min-height:100px;padding:20px 16px;gap:16px}
@@ -128,23 +122,6 @@ body.pflege-design{background:#f3f6fa;color:#172c42;font-family:Arial,Helvetica,
 .pflege-design dialog .btn{display:flex;align-items:center;justify-content:center;gap:9px;min-height:60px;border-radius:16px;font-size:16px;box-shadow:none;white-space:normal}
 .pflege-design dialog .btn:not(.secondary):not(.stop):not(.danger):not(.goldbtn){background:#285ca0;color:#fff}
 .pflege-design .btn>.pf-symbol{background:transparent;color:inherit}
-.pflege-design .pf-tile.btn>.pf-symbol{background:#285ca0;color:#fff;width:43px;height:43px;border-radius:13px}
-.pflege-design .dialog-actions{grid-template-columns:repeat(2,minmax(0,1fr))}
-.pflege-design .dialog-actions .btn{min-width:0;width:100%;padding:14px 10px;text-align:center}
-.pflege-design .dialog-actions .btn>.pf-symbol{width:24px;height:24px;flex:none}
-.pflege-design .pf-category>.pf-label{text-align:left}
-.pflege-design .pf-inline-panel .dialog-body{padding:0}
-.pflege-design .pf-inline-panel .stats-grid{margin-top:0}
-.pflege-design .pf-inline-panel .plan-step-head h3{display:flex;align-items:center;gap:10px}
-.pflege-design .pf-inline-panel .plan-step-head h3>.pf-symbol{width:32px;height:32px;border-radius:10px}
-.pflege-design .pf-inline-panel .plan-choice{display:grid;grid-template-columns:43px minmax(0,1fr);column-gap:13px;row-gap:4px;align-items:center;background:#fff;color:#172c42;border:1px solid #dce4ed;box-shadow:none;text-align:left}
-.pflege-design .pf-inline-panel .plan-choice>.pf-symbol{grid-column:1;grid-row:1/span 2;float:none;margin:0;background:#285ca0;color:#fff}
-.pflege-design .pf-inline-panel .plan-choice strong,.pflege-design .pf-inline-panel .plan-choice small{grid-column:2;color:inherit;margin:0}
-.pflege-design .pf-inline-panel .plan-choice small{font-weight:400;color:#526477}
-.pflege-design .facts>span:nth-child(odd){display:flex;align-items:center;gap:8px;min-width:0}
-.pflege-design .facts .pf-symbol{width:24px;height:24px;background:transparent;color:#285ca0}
-.pflege-design .facts .pf-symbol svg{width:20px;height:20px}
-@media(prefers-reduced-motion:reduce){.pflege-design #refresh-spinner{animation:none}}
 .pflege-design .plan-choice{min-height:94px;border-radius:16px;padding:18px;position:relative}
 .pflege-design .plan-choice>.pf-symbol{float:left;margin-right:13px}.pflege-design .plan-choice strong,.pflege-design .plan-choice small{overflow:hidden}
 .pflege-design .profile-row button,.pflege-design .plan-preset-pause{display:flex;align-items:center;justify-content:center;gap:8px;min-height:64px;white-space:normal}
@@ -155,9 +132,6 @@ body.pflege-design{background:#f3f6fa;color:#172c42;font-family:Arial,Helvetica,
 .pflege-design .stat>.pf-symbol{grid-row:1/span 4;align-self:center}.pflege-design .stat>*:not(.pf-symbol){grid-column:2;min-width:0}
 .pflege-design .stat .stat-label{font-size:13px;color:#526477}.pflege-design .stat .stat-value{font-size:24px;color:#172c42;line-height:1.3;overflow-wrap:anywhere}
 .pflege-design .zone-stat-list li{gap:8px}.pflege-design .zone-stat-list .pf-symbol{width:24px;height:24px;background:transparent;color:#285ca0}
-.pflege-design .stat:has(>#water-stat-zones)>.pf-symbol{grid-row:1;align-self:start}
-.pflege-design #water-stat-zones{grid-column:1/-1;min-width:0;margin:0}
-.pflege-design #water-stat-zones li{grid-template-columns:24px minmax(0,1fr) auto;align-items:center}
 .pflege-design .zone-head{gap:9px}.pflege-design .zone-head>span:not(.pf-symbol){flex:1}.pflege-design .zone-head .pf-symbol{width:32px;height:32px;border-radius:10px}
 .pflege-design .zone-controls{gap:12px}.pflege-design .zone-controls select{min-height:56px}.pflege-design .zone-start{display:flex;align-items:center;justify-content:center;gap:8px;min-height:60px;border-radius:14px;box-shadow:none}
 .pflege-design .pf-command-history{display:grid;gap:12px}.pflege-design .pf-command-history .pf-symbol{margin-right:12px}
@@ -449,8 +423,8 @@ body.pflege-design{background:#f3f6fa;color:#172c42;font-family:Arial,Helvetica,
       if(drying)return message("Rasen trocknet","Der Mäher wartet nach der Bewässerung.","warn","Leaf");
       if(has("DRYING_OR_CONFIRMATION"))return message("Mäher wartet noch","Bitte kurz warten. Der nächste Start wird automatisch aktualisiert.","warn");
       if(isSearching(m))return message("Mäher sucht seinen Standort","Bitte kurz warten. Bleibt die Meldung, am Mäher nachsehen.","warn");
-      if(m.activity==="CHARGING"&&mowerTelemetryFresh(s))return message("Mäher lädt","Du musst nichts tun.","good","BatteryCharging");
       if(code==="MOWER_BATTERY_CHARGING")return message("Akku noch nicht bereit","Ein Start ist noch nicht möglich. Bitte später aktualisieren.","warn","BatteryCharging");
+      if(m.activity==="CHARGING")return message("Mäher lädt","Du musst nichts tun.","good","BatteryCharging");
       if(m.activity==="GOING_HOME")return message("Mäher fährt zur Station","Bitte die Zufahrt freihalten.","good","House");
       if(m.activity==="MOWING"||m.activity==="LEAVING")return message("Mäher ist auf dem Platz","Der Mäher arbeitet automatisch.","good","Bot");
       if(m.activity==="PARKED_IN_CS"&&(a.continuousMowingOwned||a.parkedByAutomation)&&!blocks.length)return message("Automatik aktiv","Der Mäher wartet auf seinen nächsten Einsatz.","good","Repeat2");
@@ -547,7 +521,7 @@ body.pflege-design{background:#f3f6fa;color:#172c42;font-family:Arial,Helvetica,
       }).finally(function(){state.detailsPromise=null});
     }
     function pollStatus(){if(document.hidden||!session()||!stored(DEVICE_KEY))return;return load()}
-    function load(){if(state.loadPromise)return state.loadPromise;state.loading=true;var token=(session()||{}).token;document.getElementById("refresh").disabled=true;document.getElementById("refresh-spinner").classList.remove("hidden");document.getElementById("refresh").ariaBusy="true";text("refresh-label","Aktualisieren");state.loadPromise=api("/status?view=live").then(function(s){if(token!==(session()||{}).token)return null;state.liveReceivedAt=Date.now();if(Date.now()<state.detailsRetryAt)s=unavailableDisplayDetails(s);clearActionError();render(s);loadDetails(s);return s}).catch(function(e){state.detailsEpoch++;state.liveReceivedAt=0;if(token!==(session()||{}).token)return null;if(e.status===401){sessionStorage.removeItem(SESSION_KEY);show("login")}else{var box=document.getElementById("action-error");box.textContent=friendlyError(e,"status");box.classList.remove("hidden");if(state.status)state.status.controlsAvailable=false;document.getElementById("overall").className="notice warn";text("overall-title","Verbindung unterbrochen");text("overall-text","Bitte die Internetverbindung prüfen und aktualisieren. Bis dahin keine Geräte starten.");text("mower-connection","Nicht aktuell");text("mower-title","Nicht aktuell");text("water-title","Nicht aktuell");text("water-text","Bitte aktualisieren.");text("mower-next-start","Noch offen");document.getElementById("next-start-note").textContent="";text("charge-end-time","Noch offen");document.getElementById("charge-end-note").textContent="";document.getElementById("drying-end-row").classList.add("hidden");text("water-next-start","Noch offen");renderOccupancy({available:false});renderTrainingControl({});text("updated","Nicht aktuell – zuletzt geladene Angaben");document.querySelectorAll("[data-action],.zone-start,#height-save,#irrigation-stop,#plan-save-custom,#plan-pause,#plan-skip,#plan-resume").forEach(function(b){b.disabled=true});text("overall-title","Verbindung unterbrochen")}return null}).finally(function(){state.loading=false;state.loadPromise=null;document.getElementById("refresh").disabled=false;document.getElementById("refresh").ariaBusy="false";document.getElementById("refresh-spinner").classList.add("hidden");text("refresh-label","Aktualisieren")});return state.loadPromise}
+    function load(){if(state.loadPromise)return state.loadPromise;state.loading=true;var token=(session()||{}).token;document.getElementById("refresh").disabled=true;document.getElementById("refresh-spinner").classList.remove("hidden");text("refresh-label","Daten werden geladen");state.loadPromise=api("/status?view=live").then(function(s){if(token!==(session()||{}).token)return null;state.liveReceivedAt=Date.now();if(Date.now()<state.detailsRetryAt)s=unavailableDisplayDetails(s);clearActionError();render(s);loadDetails(s);return s}).catch(function(e){state.detailsEpoch++;state.liveReceivedAt=0;if(token!==(session()||{}).token)return null;if(e.status===401){sessionStorage.removeItem(SESSION_KEY);show("login")}else{var box=document.getElementById("action-error");box.textContent=friendlyError(e,"status");box.classList.remove("hidden");if(state.status)state.status.controlsAvailable=false;document.getElementById("overall").className="notice warn";text("overall-title","Verbindung unterbrochen");text("overall-text","Bitte die Internetverbindung prüfen und aktualisieren. Bis dahin keine Geräte starten.");text("mower-connection","Nicht aktuell");text("mower-title","Nicht aktuell");text("water-title","Nicht aktuell");text("water-text","Bitte aktualisieren.");text("mower-next-start","Noch offen");document.getElementById("next-start-note").textContent="";text("charge-end-time","Noch offen");document.getElementById("charge-end-note").textContent="";document.getElementById("drying-end-row").classList.add("hidden");text("water-next-start","Noch offen");renderOccupancy({available:false});renderTrainingControl({});text("updated","Nicht aktuell – zuletzt geladene Angaben");document.querySelectorAll("[data-action],.zone-start,#height-save,#irrigation-stop,#plan-save-custom,#plan-pause,#plan-skip,#plan-resume").forEach(function(b){b.disabled=true});text("overall-title","Verbindung unterbrochen")}return null}).finally(function(){state.loading=false;state.loadPromise=null;document.getElementById("refresh").disabled=false;document.getElementById("refresh-spinner").classList.add("hidden");text("refresh-label","Aktualisieren")});return state.loadPromise}
     function operatorActionPending(s,action){var c=s&&s.operatorCommands&&s.operatorCommands[action];return !!c&&["QUEUED","PENDING","RESERVED","SENT_UNCONFIRMED","CONFIRMING"].indexOf(String(c.status||"").toUpperCase())>=0}
     document.getElementById("activate-button").onclick=function(){var button=this,code=document.getElementById("activation-code").value.trim(),box=document.getElementById("activate-error");button.disabled=true;box.classList.add("hidden");api("/enroll",{method:"POST",body:{activationCode:code}}).then(function(d){localStorage.setItem(DEVICE_KEY,JSON.stringify(d));show("login")}).catch(function(e){box.textContent=friendlyError(e,"activation");box.classList.remove("hidden")}).finally(function(){button.disabled=false})};
     var pins=Array.from(document.querySelectorAll("#pin-boxes input"));function submitPin(){var dev=stored(DEVICE_KEY),pin=pins.map(function(p){return p.value}).join(""),box=document.getElementById("login-error"),progress=document.getElementById("login-progress");if(state.loginPending||pin.length!==4)return;state.loginPending=true;pins.forEach(function(p){p.disabled=true});progress.classList.remove("hidden");box.classList.add("hidden");if(!dev){state.loginPending=false;pins.forEach(function(p){p.disabled=false});progress.classList.add("hidden");show("activate");return}api("/login",{method:"POST",body:{pin:pin,deviceId:dev.deviceId,deviceToken:dev.deviceToken}}).then(function(d){sessionStorage.setItem(SESSION_KEY,JSON.stringify(d));pins.forEach(function(p){p.value=""});show("dashboard");load();clearInterval(state.timer);state.timer=setInterval(pollStatus,30000)}).catch(function(e){box.textContent=friendlyError(e,"login");box.classList.remove("hidden");pins.forEach(function(p){p.value=""});pins[0].focus()}).finally(function(){state.loginPending=false;pins.forEach(function(p){p.disabled=false});progress.classList.add("hidden")})}function fillPin(start,digits){digits.split("").slice(0,4-start).forEach(function(value,offset){pins[start+offset].value=value});var next=Math.min(start+digits.length,pins.length-1);pins[next].focus();submitPin()}pins.forEach(function(p,i){p.oninput=function(){var digits=p.value.replace(/\D/g,"");p.value="";if(digits)fillPin(i,digits)};p.onpaste=function(e){e.preventDefault();fillPin(i,(e.clipboardData||window.clipboardData).getData("text").replace(/\D/g,""))};p.onkeydown=function(e){if(e.key==="Backspace"&&!p.value&&pins[i-1])pins[i-1].focus()}});
@@ -629,7 +603,7 @@ SOFTWARE.
 
     */
     // Presentation only. Existing authenticated handlers and backend permits remain authoritative.
-    var pfIconNodes = {"Info":[["circle",{"cx":"12","cy":"12","r":"10"}],["path",{"d":"M12 16v-4"}],["path",{"d":"M12 8h.01"}]],"Bot":[["path",{"d":"M12 8V4H8"}],["rect",{"width":"16","height":"12","x":"4","y":"8","rx":"2"}],["path",{"d":"M2 14h2"}],["path",{"d":"M20 14h2"}],["path",{"d":"M15 13v2"}],["path",{"d":"M9 13v2"}]],"LayoutGrid":[["rect",{"width":"7","height":"7","x":"3","y":"3","rx":"1"}],["rect",{"width":"7","height":"7","x":"14","y":"3","rx":"1"}],["rect",{"width":"7","height":"7","x":"14","y":"14","rx":"1"}],["rect",{"width":"7","height":"7","x":"3","y":"14","rx":"1"}]],"ArrowLeft":[["path",{"d":"m12 19-7-7 7-7"}],["path",{"d":"M19 12H5"}]],"House":[["path",{"d":"M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"}],["path",{"d":"M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"}]],"Droplets":[["path",{"d":"M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.84-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z"}],["path",{"d":"M12.56 6.6A10.97 10.97 0 0 0 14 3.02c.5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a6.98 6.98 0 0 1-11.91 4.97"}]],"Play":[["path",{"d":"M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"}]],"Square":[["rect",{"width":"18","height":"18","x":"3","y":"3","rx":"2"}]],"MoveVertical":[["path",{"d":"M12 2v20"}],["path",{"d":"m8 18 4 4 4-4"}],["path",{"d":"m8 6 4-4 4 4"}]],"Scissors":[["circle",{"cx":"6","cy":"6","r":"3"}],["path",{"d":"M8.12 8.12 12 12"}],["path",{"d":"M20 4 8.12 15.88"}],["circle",{"cx":"6","cy":"18","r":"3"}],["path",{"d":"M14.8 14.8 20 20"}]],"Smartphone":[["rect",{"width":"14","height":"20","x":"5","y":"2","rx":"2","ry":"2"}],["path",{"d":"M12 18h.01"}]],"Building2":[["path",{"d":"M10 12h4"}],["path",{"d":"M10 8h4"}],["path",{"d":"M14 21v-3a2 2 0 0 0-4 0v3"}],["path",{"d":"M6 10H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-2"}],["path",{"d":"M6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16"}]],"CalendarDays":[["path",{"d":"M8 2v4"}],["path",{"d":"M16 2v4"}],["rect",{"width":"18","height":"18","x":"3","y":"4","rx":"2"}],["path",{"d":"M3 10h18"}],["path",{"d":"M8 14h.01"}],["path",{"d":"M12 14h.01"}],["path",{"d":"M16 14h.01"}],["path",{"d":"M8 18h.01"}],["path",{"d":"M12 18h.01"}],["path",{"d":"M16 18h.01"}]],"CalendarClock":[["path",{"d":"M16 14v2.2l1.6 1"}],["path",{"d":"M16 2v4"}],["path",{"d":"M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5"}],["path",{"d":"M3 10h5"}],["path",{"d":"M8 2v4"}],["circle",{"cx":"16","cy":"16","r":"6"}]],"CalendarX2":[["path",{"d":"M8 2v4"}],["path",{"d":"M16 2v4"}],["path",{"d":"M21 13V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8"}],["path",{"d":"M3 10h18"}],["path",{"d":"m17 22 5-5"}],["path",{"d":"m17 17 5 5"}]],"CalendarCheck":[["path",{"d":"M8 2v4"}],["path",{"d":"M16 2v4"}],["rect",{"width":"18","height":"18","x":"3","y":"4","rx":"2"}],["path",{"d":"M3 10h18"}],["path",{"d":"m9 16 2 2 4-4"}]],"Snowflake":[["path",{"d":"m10 20-1.25-2.5L6 18"}],["path",{"d":"M10 4 8.75 6.5 6 6"}],["path",{"d":"m14 20 1.25-2.5L18 18"}],["path",{"d":"m14 4 1.25 2.5L18 6"}],["path",{"d":"m17 21-3-6h-4"}],["path",{"d":"m17 3-3 6 1.5 3"}],["path",{"d":"M2 12h6.5L10 9"}],["path",{"d":"m20 10-1.5 2 1.5 2"}],["path",{"d":"M22 12h-6.5L14 15"}],["path",{"d":"m4 10 1.5 2L4 14"}],["path",{"d":"m7 21 3-6-1.5-3"}],["path",{"d":"m7 3 3 6h4"}]],"History":[["path",{"d":"M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"}],["path",{"d":"M3 3v5h5"}],["path",{"d":"M12 7v5l4 2"}]],"ChartNoAxesColumn":[["path",{"d":"M5 21v-6"}],["path",{"d":"M12 21V3"}],["path",{"d":"M19 21V9"}]],"Grid2x2":[["path",{"d":"M12 3v18"}],["path",{"d":"M3 12h18"}],["rect",{"x":"3","y":"3","width":"18","height":"18","rx":"2"}]],"Timer":[["line",{"x1":"10","x2":"14","y1":"2","y2":"2"}],["line",{"x1":"12","x2":"15","y1":"14","y2":"11"}],["circle",{"cx":"12","cy":"14","r":"8"}]],"Clock":[["circle",{"cx":"12","cy":"12","r":"10"}],["path",{"d":"M12 6v6l4 2"}]],"Route":[["circle",{"cx":"6","cy":"19","r":"3"}],["path",{"d":"M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"}],["circle",{"cx":"18","cy":"5","r":"3"}]],"CircleCheck":[["circle",{"cx":"12","cy":"12","r":"10"}],["path",{"d":"m9 12 2 2 4-4"}]],"Repeat2":[["path",{"d":"m2 9 3-3 3 3"}],["path",{"d":"M13 18H7a2 2 0 0 1-2-2V6"}],["path",{"d":"m22 15-3 3-3-3"}],["path",{"d":"M11 6h6a2 2 0 0 1 2 2v10"}]],"Pause":[["rect",{"x":"14","y":"3","width":"5","height":"18","rx":"1"}],["rect",{"x":"5","y":"3","width":"5","height":"18","rx":"1"}]],"Save":[["path",{"d":"M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"}],["path",{"d":"M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"}],["path",{"d":"M7 3v4a1 1 0 0 0 1 1h7"}]],"Minus":[["path",{"d":"M5 12h14"}]],"Plus":[["path",{"d":"M5 12h14"}],["path",{"d":"M12 5v14"}]],"X":[["path",{"d":"M18 6 6 18"}],["path",{"d":"m6 6 12 12"}]],"SlidersHorizontal":[["path",{"d":"M10 5H3"}],["path",{"d":"M12 19H3"}],["path",{"d":"M14 3v4"}],["path",{"d":"M16 17v4"}],["path",{"d":"M21 12h-9"}],["path",{"d":"M21 19h-5"}],["path",{"d":"M21 5h-7"}],["path",{"d":"M8 10v4"}],["path",{"d":"M8 12H3"}]],"KeyRound":[["path",{"d":"M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"}],["circle",{"cx":"16.5","cy":"7.5","r":".5","fill":"currentColor"}]],"TriangleAlert":[["path",{"d":"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"}],["path",{"d":"M12 9v4"}],["path",{"d":"M12 17h.01"}]],"BatteryCharging":[["path",{"d":"m11 7-3 5h4l-3 5"}],["path",{"d":"M14.856 6H16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.935"}],["path",{"d":"M22 14v-4"}],["path",{"d":"M5.14 18H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h2.936"}]],"Ellipsis":[["circle",{"cx":"12","cy":"12","r":"1"}],["circle",{"cx":"19","cy":"12","r":"1"}],["circle",{"cx":"5","cy":"12","r":"1"}]],"Leaf":[["path",{"d":"M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"}],["path",{"d":"M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"}]],"Battery":[["rect",{"x":"2","y":"6","width":"16","height":"12","rx":"2"}],["path",{"d":"M22 10v4"}]]};
+    var pfIconNodes = {"Info":[["circle",{"cx":"12","cy":"12","r":"10"}],["path",{"d":"M12 16v-4"}],["path",{"d":"M12 8h.01"}]],"Bot":[["path",{"d":"M12 8V4H8"}],["rect",{"width":"16","height":"12","x":"4","y":"8","rx":"2"}],["path",{"d":"M2 14h2"}],["path",{"d":"M20 14h2"}],["path",{"d":"M15 13v2"}],["path",{"d":"M9 13v2"}]],"LayoutGrid":[["rect",{"width":"7","height":"7","x":"3","y":"3","rx":"1"}],["rect",{"width":"7","height":"7","x":"14","y":"3","rx":"1"}],["rect",{"width":"7","height":"7","x":"14","y":"14","rx":"1"}],["rect",{"width":"7","height":"7","x":"3","y":"14","rx":"1"}]],"ArrowLeft":[["path",{"d":"m12 19-7-7 7-7"}],["path",{"d":"M19 12H5"}]],"House":[["path",{"d":"M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"}],["path",{"d":"M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"}]],"Droplets":[["path",{"d":"M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.84-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z"}],["path",{"d":"M12.56 6.6A10.97 10.97 0 0 0 14 3.02c.5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a6.98 6.98 0 0 1-11.91 4.97"}]],"Play":[["path",{"d":"M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"}]],"Square":[["rect",{"width":"18","height":"18","x":"3","y":"3","rx":"2"}]],"MoveVertical":[["path",{"d":"M12 2v20"}],["path",{"d":"m8 18 4 4 4-4"}],["path",{"d":"m8 6 4-4 4 4"}]],"Scissors":[["circle",{"cx":"6","cy":"6","r":"3"}],["path",{"d":"M8.12 8.12 12 12"}],["path",{"d":"M20 4 8.12 15.88"}],["circle",{"cx":"6","cy":"18","r":"3"}],["path",{"d":"M14.8 14.8 20 20"}]],"Smartphone":[["rect",{"width":"14","height":"20","x":"5","y":"2","rx":"2","ry":"2"}],["path",{"d":"M12 18h.01"}]],"Building2":[["path",{"d":"M10 12h4"}],["path",{"d":"M10 8h4"}],["path",{"d":"M14 21v-3a2 2 0 0 0-4 0v3"}],["path",{"d":"M6 10H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-2"}],["path",{"d":"M6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16"}]],"CalendarDays":[["path",{"d":"M8 2v4"}],["path",{"d":"M16 2v4"}],["rect",{"width":"18","height":"18","x":"3","y":"4","rx":"2"}],["path",{"d":"M3 10h18"}],["path",{"d":"M8 14h.01"}],["path",{"d":"M12 14h.01"}],["path",{"d":"M16 14h.01"}],["path",{"d":"M8 18h.01"}],["path",{"d":"M12 18h.01"}],["path",{"d":"M16 18h.01"}]],"CalendarClock":[["path",{"d":"M16 14v2.2l1.6 1"}],["path",{"d":"M16 2v4"}],["path",{"d":"M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5"}],["path",{"d":"M3 10h5"}],["path",{"d":"M8 2v4"}],["circle",{"cx":"16","cy":"16","r":"6"}]],"CalendarX2":[["path",{"d":"M8 2v4"}],["path",{"d":"M16 2v4"}],["path",{"d":"M21 13V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8"}],["path",{"d":"M3 10h18"}],["path",{"d":"m17 22 5-5"}],["path",{"d":"m17 17 5 5"}]],"CalendarCheck":[["path",{"d":"M8 2v4"}],["path",{"d":"M16 2v4"}],["rect",{"width":"18","height":"18","x":"3","y":"4","rx":"2"}],["path",{"d":"M3 10h18"}],["path",{"d":"m9 16 2 2 4-4"}]],"Snowflake":[["path",{"d":"m10 20-1.25-2.5L6 18"}],["path",{"d":"M10 4 8.75 6.5 6 6"}],["path",{"d":"m14 20 1.25-2.5L18 18"}],["path",{"d":"m14 4 1.25 2.5L18 6"}],["path",{"d":"m17 21-3-6h-4"}],["path",{"d":"m17 3-3 6 1.5 3"}],["path",{"d":"M2 12h6.5L10 9"}],["path",{"d":"m20 10-1.5 2 1.5 2"}],["path",{"d":"M22 12h-6.5L14 15"}],["path",{"d":"m4 10 1.5 2L4 14"}],["path",{"d":"m7 21 3-6-1.5-3"}],["path",{"d":"m7 3 3 6h4"}]],"History":[["path",{"d":"M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"}],["path",{"d":"M3 3v5h5"}],["path",{"d":"M12 7v5l4 2"}]],"ChartNoAxesColumn":[["path",{"d":"M5 21v-6"}],["path",{"d":"M12 21V3"}],["path",{"d":"M19 21V9"}]],"Grid2x2":[["path",{"d":"M12 3v18"}],["path",{"d":"M3 12h18"}],["rect",{"x":"3","y":"3","width":"18","height":"18","rx":"2"}]],"Timer":[["line",{"x1":"10","x2":"14","y1":"2","y2":"2"}],["line",{"x1":"12","x2":"15","y1":"14","y2":"11"}],["circle",{"cx":"12","cy":"14","r":"8"}]],"Clock":[["circle",{"cx":"12","cy":"12","r":"10"}],["path",{"d":"M12 6v6l4 2"}]],"Route":[["circle",{"cx":"6","cy":"19","r":"3"}],["path",{"d":"M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"}],["circle",{"cx":"18","cy":"5","r":"3"}]],"CircleCheck":[["circle",{"cx":"12","cy":"12","r":"10"}],["path",{"d":"m9 12 2 2 4-4"}]],"Repeat2":[["path",{"d":"m2 9 3-3 3 3"}],["path",{"d":"M13 18H7a2 2 0 0 1-2-2V6"}],["path",{"d":"m22 15-3 3-3-3"}],["path",{"d":"M11 6h6a2 2 0 0 1 2 2v10"}]],"Pause":[["rect",{"x":"14","y":"3","width":"5","height":"18","rx":"1"}],["rect",{"x":"5","y":"3","width":"5","height":"18","rx":"1"}]],"Save":[["path",{"d":"M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"}],["path",{"d":"M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"}],["path",{"d":"M7 3v4a1 1 0 0 0 1 1h7"}]],"Minus":[["path",{"d":"M5 12h14"}]],"Plus":[["path",{"d":"M5 12h14"}],["path",{"d":"M12 5v14"}]],"X":[["path",{"d":"M18 6 6 18"}],["path",{"d":"m6 6 12 12"}]],"SlidersHorizontal":[["path",{"d":"M10 5H3"}],["path",{"d":"M12 19H3"}],["path",{"d":"M14 3v4"}],["path",{"d":"M16 17v4"}],["path",{"d":"M21 12h-9"}],["path",{"d":"M21 19h-5"}],["path",{"d":"M21 5h-7"}],["path",{"d":"M8 10v4"}],["path",{"d":"M8 12H3"}]],"KeyRound":[["path",{"d":"M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"}],["circle",{"cx":"16.5","cy":"7.5","r":".5","fill":"currentColor"}]],"TriangleAlert":[["path",{"d":"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"}],["path",{"d":"M12 9v4"}],["path",{"d":"M12 17h.01"}]],"BatteryCharging":[["path",{"d":"m11 7-3 5h4l-3 5"}],["path",{"d":"M14.856 6H16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.935"}],["path",{"d":"M22 14v-4"}],["path",{"d":"M5.14 18H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h2.936"}]],"Ellipsis":[["circle",{"cx":"12","cy":"12","r":"1"}],["circle",{"cx":"19","cy":"12","r":"1"}],["circle",{"cx":"5","cy":"12","r":"1"}]],"Leaf":[["path",{"d":"M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"}],["path",{"d":"M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"}]]};
     var pfView = "home", pfHistory = [], pfPages = {}, pfReady = false;
     function pfIcon(name) {
       var wrap=document.createElement("span"),svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
@@ -640,15 +614,14 @@ SOFTWARE.
     }
     function pfButton(label,icon,handler,description) {
       var button=document.createElement("button"),copy=document.createElement("span"),title=document.createElement("strong");
-      button.type="button";button.className="pf-tile";copy.className="pf-label";button.appendChild(pfIcon(icon));title.textContent=label;copy.appendChild(title);
+      button.type="button";button.className="pf-tile";button.appendChild(pfIcon(icon));title.textContent=label;copy.appendChild(title);
       if(description){var note=document.createElement("small");note.textContent=description;copy.appendChild(note);button.classList.add("pf-category")}
       button.appendChild(copy);button.onclick=handler;return button;
     }
     function pfDecorate(element,icon,label) {
       if(!element)return;if(label!==undefined)element.textContent=label;
-      var current=element.querySelector(":scope > .pf-symbol");if(current&&current.dataset.pfIcon!==icon){current.replaceWith(pfIcon(icon));current=element.querySelector(":scope > .pf-symbol")}
+      var current=element.querySelector(":scope > .pf-symbol");if(current&&current.dataset.pfIcon!==icon){current.replaceWith(pfIcon(icon));return}
       if(!current){var old=element.querySelector(":scope > svg");if(old)old.remove();element.prepend(pfIcon(icon))}
-      if(element.tagName==="BUTTON")Array.from(element.childNodes).filter(function(n){return n.nodeType===3&&n.textContent.trim()}).forEach(function(n){var copy=document.createElement("span");copy.className="pf-label";n.replaceWith(copy);copy.appendChild(n)});
     }
     function pfMove(id,parent){var el=document.getElementById(id);if(el)parent.appendChild(el);return el}
     function pfCreatePage(key,title,icon) {
@@ -674,32 +647,14 @@ SOFTWARE.
       // Appack's documented nav:// scheme keeps navigation and user identity in the app.
       var link=document.createElement("a"),text=document.createElement("strong");link.className="pf-tile";link.href="nav://ssv53_TextImage_1761902353516";link.dataset.pfCalendar="true";link.appendChild(pfIcon(icon));text.textContent=label;link.appendChild(text);parent.appendChild(link);return link;
     }
-    function pfInformationPage(id,key,icon) {
-      var old=document.getElementById(id),panel=document.createElement("section"),page=pfCreatePage(key),heading=old.querySelector("h2");
-      panel.id=id;panel.className="pf-inline-panel";while(old.firstChild)panel.appendChild(old.firstChild);old.replaceWith(panel);
-      heading.className="pf-page-title";pfDecorate(heading,icon);page.appendChild(heading);panel.querySelector(".stats-head").remove();page.appendChild(panel);
-      // Keep the original action handlers; opening information now navigates.
-      // close() before a confirmation keeps its originating page underneath.
-      panel.showModal=function(){pfGo(key)};panel.close=function(){};
-      Object.defineProperty(panel,"open",{get:function(){return pfView===key&&!page.hidden}});
-      return panel;
-    }
-    function pfBack() {
-      if(pfView==="water-plan"&&document.getElementById("plan-home").classList.contains("hidden")){showPlanView("home");return}
-      pfGo(pfHistory.pop()||"home",true);
-    }
     function pfMountDesign() {
       var dashboard=document.getElementById("dashboard");document.body.classList.add("pflege-design");
-      var header=document.querySelector(".shell > .head");if(header)header.remove();
       var meta=document.createElement("div");meta.className="pf-meta";pfMove("updated",meta);pfMove("refresh",meta);dashboard.prepend(meta);
-      var back=pfButton("Zurück","ArrowLeft",pfBack);back.id="pf-back";back.className="pf-back";back.hidden=true;dashboard.insertBefore(back,document.getElementById("overall"));
+      var back=pfButton("Zurück","ArrowLeft",function(){pfGo(pfHistory.pop()||"home",true)});back.id="pf-back";back.className="pf-back";back.hidden=true;dashboard.insertBefore(back,document.getElementById("overall"));
       var safety=document.createElement("div");safety.id="pf-safety-actions";safety.className="pf-safety-actions";pfMove("irrigation-stop",safety);dashboard.insertBefore(safety,document.getElementById("overall").nextSibling);
       var pages=document.createElement("div");pages.id="pf-pages";dashboard.appendChild(pages);
       pfCreatePage("home");pfCreatePage("more","Sonstiges","LayoutGrid");pfCreatePage("mower","Mähroboter","Bot");pfCreatePage("controls","Mäher bedienen","Bot");pfCreatePage("height","Schnitthöhe","MoveVertical");pfCreatePage("blades","Klingen","Scissors");pfCreatePage("husqvarna","Am Mäher oder über Husqvarna","Smartphone");pfCreatePage("water","Bewässerung","Droplets");pfCreatePage("zones","Einzelne Zonen","Grid2x2");pfCreatePage("grounds","Platz & Training","CalendarDays");pfCreatePage("today","Platzbelegung","CalendarDays");pfCreatePage("training","Trainingsplan","Snowflake");pfCreatePage("clubhouse","Vereinsheim","Building2");pfCreatePage("history","Letzte Mäheraktionen","History");
-      pfMove("coordination-card",pfPages.home);var charge=document.createElement("div");charge.id="pf-charge";charge.className="pf-charge";charge.hidden=true;
-      var chargeCaption=document.createElement("strong");chargeCaption.id="pf-charge-caption";charge.appendChild(chargeCaption);
-      var chargeProgress=document.createElement("progress");chargeProgress.id="pf-charge-progress";chargeProgress.max=100;chargeProgress.setAttribute("aria-label","Akkustand");charge.appendChild(chargeProgress);
-      pfMove("charge-end-row",charge);document.getElementById("overall").appendChild(charge);
+      pfMove("coordination-card",pfPages.home);var charge=document.createElement("div");charge.className="pf-charge";pfMove("charge-end-row",charge);pfPages.home.appendChild(charge);
       var mowerCard=document.getElementById("mower-title").closest("article"),waterCard=document.getElementById("water-title").closest("article"),occupancyCard=document.getElementById("occupancy-title").closest("article"),clubhouseCard=document.getElementById("clubhouse-events").closest("article");
       pfPages.controls.appendChild(mowerCard);pfPages.water.appendChild(waterCard);pfPages.today.appendChild(occupancyCard);pfPages.clubhouse.appendChild(clubhouseCard);pfMove("training-control-card",pfPages.training);
       var actions=document.createElement("div");actions.id="pf-mower-actions";actions.className="pf-home-actions";["manual-start","manual-park","manual-resume","mow-start","mow-park"].forEach(function(id){pfMove(id,actions)});pfPages.home.appendChild(actions);
@@ -715,10 +670,6 @@ SOFTWARE.
       pfCalendarLink(groundsGrid,"Training verschieben","CalendarClock");pfCalendarLink(groundsGrid,"Termine & Sperren","CalendarDays");pfCalendarLink(pfPages.today,"Vollständigen Kalender öffnen","CalendarDays");
       var history=document.createElement("div");history.id="pf-command-history";history.className="pf-command-history";pfPages.history.appendChild(history);
       var footer=document.createElement("nav");footer.className="pf-nav";footer.setAttribute("aria-label","Platzpflegebereiche");[["home","Übersicht","House"],["today","Heute","CalendarDays"],["more","Sonstiges","Ellipsis"]].forEach(function(item){var b=pfButton(item[1],item[2],function(){pfHistory=[];pfGo(item[0],true)});b.dataset.pfNav=item[0];footer.appendChild(b)});dashboard.appendChild(footer);
-      statsDialog=pfInformationPage("stats-dialog","mower-stats","ChartNoAxesColumn");
-      planDialog=pfInformationPage("water-plan-dialog","water-plan","CalendarClock");
-      pfInformationPage("water-stats-dialog","water-stats","ChartNoAxesColumn");
-      pfInformationPage("water-attention-dialog","water-attention","TriangleAlert");
       pfMove("action-error",safety);pfStyleStatic();pfGo("home",true);pfReady=true;
     }
     function pfStyleStatic() {
@@ -734,9 +685,6 @@ SOFTWARE.
       document.querySelectorAll(".plan-preset-pause").forEach(function(b){pfDecorate(b,"CalendarDays")});
       document.querySelectorAll('input[name="manual-water"]').forEach(function(input){input.addEventListener("change",pfManualChoiceVisibility)});
       var waterNote=pfPages.water.querySelector(".training-note");if(waterNote)waterNote.textContent="Die Zeitgrenzen 03:30–08:00 Uhr gelten für die Automatik. Manuell ist Bewässerung auch zu anderen Zeiten möglich.";
-      document.querySelectorAll(".pf-inline-panel .plan-back").forEach(function(b){b.hidden=true});
-      pfDecorate(document.querySelector("#plan-pause-step h3"),"Pause");pfDecorate(document.querySelector("#plan-custom h3"),"SlidersHorizontal");
-      var toggle=document.getElementById("plan-history-toggle"),toggleBase=toggle.onclick;toggle.onclick=function(){toggleBase.apply(this,arguments);pfDecorate(this,"History")};
     }
     function pfVisibility(s) {
       var m=s.mower||{},manual=manualControlView(s),fresh=mowerTelemetryFresh(s),moving=fresh&&["MOWING","LEAVING","GOING_HOME"].indexOf(m.activity)>=0,busy=operatorActionPending(s,"MANUAL_CONTROL")||!!(state.inFlight&&state.inFlight.MANUAL_CONTROL),parked=manual.status==="MANUAL_PARKED"||manual.status==="PARKING",resumeMeaningful=manual.enabled&&manual.status!=="AUTOMATIC"&&manual.status!=="UNKNOWN";
@@ -753,20 +701,6 @@ SOFTWARE.
       document.querySelector("#coordination-card .time-label").textContent=moment.label;
       el.classList.toggle("pf-unknown-time",!moment.at);el.textContent=moment.at?new Date(moment.at).toLocaleTimeString("de-DE",{timeZone:EVENT_TIME_ZONE,hour:"2-digit",minute:"2-digit",hourCycle:"h23"})+" Uhr":moment.text;
       document.getElementById("next-start-note").textContent=moment.at?(localDay(moment.at)!==localDay(now)?calendarTime(moment.at,now)+" · ":"")+moment.note:moment.note;
-      document.getElementById("coordination-card").hidden=pfChargingInfo(s).visible&&!moment.at&&moment.text==="Noch offen";
-    }
-    function pfChargingInfo(s) {
-      var m=s.mower||{},value=m.batteryPercent,percent=typeof value==="number"&&Number.isFinite(value)&&value>=0&&value<=100?Math.round(value):null;
-      return {visible:m.activity==="CHARGING"&&m.connected===true&&mowerTelemetryFresh(s)&&s.controlsAvailable!==false&&!hasActiveMowerError(m),percent:percent,at:chargingEnd(s)};
-    }
-    function pfRenderCharging(s) {
-      if(!pfReady)return;var info=pfChargingInfo(s),wrap=document.getElementById("pf-charge"),title=document.getElementById("overall-title").textContent;
-      wrap.hidden=!info.visible;if(!info.visible)return;
-      document.getElementById("pf-charge-caption").textContent=(title==="Mäher lädt"?"":"Mäher lädt · ")+"Akku "+(info.percent===null?"unbekannt":info.percent+" %");
-      var bar=document.getElementById("pf-charge-progress");bar.hidden=info.percent===null;if(info.percent!==null)bar.value=info.percent;
-      document.getElementById("charge-end-row").classList.remove("hidden");
-      document.getElementById("charge-end-time").textContent=info.at?calendarTime(info.at,s.generatedAt):"Noch nicht bekannt";
-      document.getElementById("charge-end-note").textContent=info.at?"Voraussichtlich":"";
     }
     function pfRenderHeight(s) {
       if(!pfReady)return;var m=s&&s.mower||{},value=Number(state.heightChoice),old=m.cuttingHeightMm,save=document.getElementById("height-save");
@@ -813,18 +747,15 @@ SOFTWARE.
       // The icon belongs to the selected message, not to a simultaneous device state.
       // A transient error may have replaced the message after the last status response.
       pfDecorate(document.getElementById("overall"),document.getElementById("overall-title").textContent===overview.title?overview.icon:"TriangleAlert");
-      [["mower-connection","Smartphone"],["battery","Battery"],["progress","Grid2x2"],["cutting-height-current","MoveVertical"],["mower-error","TriangleAlert"]].forEach(function(row){pfDecorate(document.getElementById(row[0]).previousElementSibling,row[1])});
-      pfDecorate(document.getElementById("winter-training-switch"),"Snowflake");
-      pfRenderHeight(s);pfRenderMoment(s);pfRenderCharging(s);pfRenderHistory(s);
+      pfRenderHeight(s);pfRenderMoment(s);pfRenderHistory(s);
     }
     pfMountDesign();
     var pfRenderBase=render;render=function(s){pfRenderBase(s);pfUpdate(s)};
-    var pfCoordinationBase=renderCoordination;renderCoordination=function(s){pfCoordinationBase(s);pfRenderMoment(s);pfRenderCharging(s);if(pfReady)document.getElementById("pf-blade-hours").textContent=duration(s.statistics&&s.statistics.bladeUsageSeconds)};
+    var pfCoordinationBase=renderCoordination;renderCoordination=function(s){pfCoordinationBase(s);pfRenderMoment(s);if(pfReady)document.getElementById("pf-blade-hours").textContent=duration(s.statistics&&s.statistics.bladeUsageSeconds)};
     var pfHeightBase=renderHeightChoice;renderHeightChoice=function(){pfHeightBase();pfRenderHeight(state.status)};
     var pfLoadBase=load;load=function(){return pfLoadBase().then(function(s){if(!s&&state.status)pfUpdate(state.status);return s})};
     var pfActionBase=openAction;openAction=function(){var result=pfActionBase.apply(this,arguments);pfConfirmationIcons();return result};
     var pfManualBase=manualControlPrepare;manualControlPrepare=function(){var result=pfManualBase.apply(this,arguments);pfConfirmationIcons();return result};
-    var pfResetPlanBase=resetPlanDialog;resetPlanDialog=function(){pfResetPlanBase();pfDecorate(document.getElementById("plan-history-toggle"),"History")};
     var pfZonesBase=buildPlanZones;buildPlanZones=function(zones){pfZonesBase(zones);pfPlanIcons()};
     var pfPlanBase=renderIrrigationSchedule;renderIrrigationSchedule=function(){pfPlanBase.apply(this,arguments);["plan-skip","plan-pause-open","plan-custom-open","plan-resume","plan-pause"].forEach(function(id){var b=document.getElementById(id);b.classList.toggle("hidden",b.disabled)});pfDecorate(document.getElementById("plan-history-toggle"),"History")};
     var pfWaterStatsBase=renderIrrigationStatistics;renderIrrigationStatistics=function(stats){pfWaterStatsBase(stats);document.querySelectorAll("#water-stat-zones li").forEach(function(li){pfDecorate(li,"Droplets")})};

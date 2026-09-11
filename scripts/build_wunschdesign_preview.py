@@ -1,12 +1,13 @@
 """Offline fixtures of the shipping template, never a device simulation endpoint."""
 from copy import deepcopy
 import json
+import os
 from pathlib import Path
 from scripts.build_audit_preview import build
 from scripts.build_manual_control_preview import fixture
 
 ROOT = Path(__file__).resolve().parents[1]
-OUT = ROOT / "docs/ui-2026-09-11/wunschdesign"
+OUT = ROOT / os.environ.get("SSV53_UI_OUTPUT", "docs/ui-2026-09-11/wunschdesign")
 
 
 def fixtures():
@@ -27,6 +28,13 @@ def fixtures():
         base["actionCapabilities"][name]={"available":True}
     base["mower"].update(cuttingHeightMinimumMm=20,cuttingHeightMaximumMm=60,cuttingHeightMm=27,statusTimestamp=1789114500000)
     output={"charging":base}
+    charging_unknown=deepcopy(base)
+    charging_unknown["mower"]["batteryPercent"]=29
+    charging_unknown["overall"]={"code":"MOWER_BATTERY_CHARGING"}
+    charging_unknown["automation"]["irrigationPhase"]=None
+    charging_unknown["coordination"].update(dryUntil=None,releaseNotBefore=None,chargingEndEstimate=None,blockers=[{"code":"CHARGING"}])
+    charging_unknown["manualControl"]["confirmations"]["dryingRequired"]=False
+    output["charging-unknown"]=charging_unknown
     parked=deepcopy(base);parked["manualControl"].update(status="MANUAL_PARKED",message="Die Automatik wartet auf deine Freigabe.");parked["mower"].update(activity="PARKED_IN_CS",batteryPercent=100);output["parked"]=parked
     moving=deepcopy(base);moving["mower"].update(activity="MOWING",mode="MAIN");moving["coordination"].update(blockers=[],dryUntil=None,releaseNotBefore=None);moving["manualControl"]["confirmations"].update(dryingRequired=False);output["mowing"]=moving
     stale=deepcopy(base);stale["mower"].update(telemetryFresh=False,statusAgeSeconds=500);stale["coordination"]["blockers"]=[{"code":"MOWER_TELEMETRY"}];stale["manualControl"]["canStart"]=False;output["stale"]=stale
