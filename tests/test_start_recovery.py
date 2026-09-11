@@ -109,12 +109,41 @@ def test_get_inspection_is_read_only_bounded_and_exposes_no_operator_identity():
     assert client.calls[0][1] == "P1D"
     assert "2026-09-10T20:00:00.004203Z" in client.calls[0][0]
     assert "2026-09-11T20:00:00.004203Z" in client.calls[0][0]
+    assert "todatetime(p.details.automation_state.mower_start_pending_since_utc) == datetime(2026-09-10T20:00:00.004203Z)" in client.calls[0][0]
     serialized = json.dumps(payload)
     assert OPERATOR_ID not in serialized
     assert "SET_CUTTING_HEIGHT" not in serialized
     assert payload["pendingFingerprint"]
     assert payload["proofToken"]
     assert payload["delta"]["automationParkSource"]["to"] == "training"
+
+
+def test_kusto_normalized_seven_digit_utc_values_match_original_pending():
+    # Shape returned by the live Application Insights query on 11 September.
+    row = proof_row(
+        timestamp="2026-09-10T20:00:03.6201097Z",
+        pending_since_utc="2026-09-10T20:00:00.0042030Z",
+        pending_deadline_utc="2026-09-11T01:49:00.0042030Z",
+    )
+    inspected = preview(rows=[row])
+    assert inspected.eligible is True
+    assert inspected.proof.pending_since_utc == PENDING
+    assert inspected.proof.pending_deadline_utc == DEADLINE
+
+
+def test_corrupt_terminal_journal_is_not_a_confirmed_empty_queue():
+    state = recoverable_state(device_send_journal_json='[{"status":"CONFIRMED"}]')
+    inspected = preview(store=InMemoryStateStore(state))
+    assert inspected.eligible is False
+    assert "DEVICE_SEND_OUTCOME_UNCONFIRMED" in inspected.reasons
+
+
+def test_incomplete_ended_manual_session_is_not_a_release():
+    raw = json.dumps({"version": 1, "session_id": "old", "epoch": 1,
+                      "kind": "START", "status": "ENDED", "ended_at_utc": TRACE_AT})
+    # The canonical state boundary rejects this before any recovery inspection.
+    with pytest.raises(ValueError):
+        recoverable_state(manual_session_json=raw)
 
 
 def test_apply_changes_only_latch_and_original_ownership_fields():

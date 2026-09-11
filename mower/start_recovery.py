@@ -13,6 +13,8 @@ from dataclasses import dataclass, replace
 from datetime import datetime, timedelta, timezone
 from typing import Any, Mapping, Sequence
 
+from mower.device_send_guard import DeviceSendBlocked, unresolved_device_sends
+from mower.manual_session import ManualSessionError, load_manual_session
 from mower.state import AutomationState
 from mower.state_store import StateConflictError
 
@@ -180,7 +182,7 @@ traces
 | where timestamp between (datetime({start_text}) .. datetime({end_text}))
 | where message startswith "SSV53_CONTROL_CYCLE "
 | extend p=parse_json(replace_string(message, "SSV53_CONTROL_CYCLE ", ""))
-| where tostring(p.details.automation_state.mower_start_pending_since_utc) == "{pending_since_utc}"
+| where todatetime(p.details.automation_state.mower_start_pending_since_utc) == datetime({start_text})
 | project timestamp,
     trace_id=itemId,
     decision_code=tostring(p.decision_code),
@@ -285,58 +287,24 @@ def _proof_from_rows(
 
 
 def _manual_status(state: AutomationState) -> tuple[str, bool]:
-    raw = state.manual_session_json
-    if raw is None:
+    if state.manual_session_json is None:
         return "ABSENT", True
     try:
-        if not isinstance(raw, str) or len(raw.encode("utf-8")) > 16_384:
-            raise ValueError
-        session = json.loads(raw)
-        if (
-            not isinstance(session, dict)
-            or session.get("version") != 1
-            or not isinstance(session.get("session_id"), str)
-            or not session["session_id"]
-            or type(session.get("epoch")) is not int
-            or session["epoch"] < 1
-            or session.get("kind") not in {"START", "PARK"}
-            or session.get("status") != "ENDED"
-            or _utc(session.get("ended_at_utc")) is None
-        ):
-            return str(session.get("status") or "INVALID"), False
-    except (TypeError, ValueError, json.JSONDecodeError):
+        session = load_manual_session(state)
+    except (ManualSessionError, TypeError, ValueError):
         return "INVALID", False
-    return "ENDED", True
+    if session is None:
+        return "ABSENT", True
+    status = str(session.get("status") or "INVALID")
+    return status, status == "ENDED"
 
 
 def _unresolved_count(state: AutomationState) -> tuple[int | None, bool]:
-    raw = state.device_send_journal_json
-    if raw in (None, ""):
-        return 0, True
     try:
-        if not isinstance(raw, str) or len(raw.encode("utf-8")) > 16_384:
-            raise ValueError
-        entries = json.loads(raw)
-        if not isinstance(entries, list) or len(entries) > 64:
-            raise ValueError
-        statuses = []
-        for entry in entries:
-            if not isinstance(entry, dict):
-                raise ValueError
-            status = entry.get("status")
-            if status not in {
-                "RESERVED", "DISPATCHING", "SENT_UNCONFIRMED", "UNKNOWN",
-                "CONFIRMED", "REJECTED",
-            }:
-                raise ValueError
-            statuses.append(status)
-    except (TypeError, ValueError, json.JSONDecodeError):
+        pending = unresolved_device_sends(state)
+    except (DeviceSendBlocked, TypeError, ValueError):
         return None, False
-    unresolved = sum(
-        status in {"RESERVED", "DISPATCHING", "SENT_UNCONFIRMED", "UNKNOWN"}
-        for status in statuses
-    )
-    return unresolved, unresolved == 0
+    return len(pending), not pending
 
 
 def _eligibility_reasons(

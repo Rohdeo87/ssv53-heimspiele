@@ -1,0 +1,9 @@
+{
+  "read_only": true,
+  "rows": 580,
+  "trace_id": "3bdc5d4a-ad52-11f1-aa9f-7ced8d24030b",
+  "proof_found": true,
+  "observed_pending_timestamp": "2026-09-10T20:00:00.0042030Z",
+  "normalized_pending_timestamp": "2026-09-10T20:00:00.004203+00:00",
+  "source_manifest": "8b17b7d232de8a32593c0c2aee55b3cd8527d29338c2be9626199ef72fac3d77"
+}

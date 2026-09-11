@@ -1,0 +1,21 @@
+{
+  "at_utc": "2026-09-11T05:39:23.599781+00:00",
+  "read_only": true,
+  "preview": {
+    "delta": null,
+    "dryRun": true,
+    "eligible": false,
+    "journal": {
+      "unresolvedDeviceSendCount": 0
+    },
+    "manualSessionStatus": "ENDED",
+    "operatorRequestStatus": "EXPIRED",
+    "pendingFingerprint": "50977390d55b10262e8cb4ebb457e628e803129f048aa88fd062d59c36e6d95d",
+    "proof": null,
+    "proofToken": null,
+    "reasons": [
+      "START_PRE_SEND_PROOF_MISSING"
+    ],
+    "stateRevision": 44251
+  }
+}
