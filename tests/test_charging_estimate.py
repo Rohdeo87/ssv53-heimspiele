@@ -267,6 +267,8 @@ def test_actual_live_status_uses_live_battery_with_one_cached_query_and_preserve
         assert regressed["coordination"]["chargingEndEstimate"] is None
         assert "_chargingEvidence" not in first["statistics"]
         assert first["coordination"]["explanationOnly"] is True
+        assert first["coordination"]["chargingDisplayEstimate"]["displayOnly"] is True
+        assert regressed["coordination"]["chargingDisplayEstimate"] is None
         assert cycle.details["hydrawise"] == before["hydrawise"]
         assert cycle.details["current_plan"] == before["current_plan"]
         assert store.load().revision == 0

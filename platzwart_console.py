@@ -48,7 +48,7 @@ from mower.irrigation_schedule import (
     load_object as load_irrigation_schedule_object,
     validate_schedule_request,
 )
-from daily_safety_report import dashboard_irrigation_statistics, dashboard_statistics, estimate_charging_end
+from daily_safety_report import dashboard_irrigation_statistics, dashboard_statistics, estimate_charging_end, estimate_charging_display_end
 from mower.statistics_cache import (
     peek_dashboard_statistics,
     get_dashboard_statistics,
@@ -799,7 +799,7 @@ def _protection_payload(settings: RuntimeSettings) -> dict[str, bool]:
     }
 
 
-def _coordination_payload(details, state, current_plan, environment, now_utc, data_quality, *, charging_end_estimate=None):
+def _coordination_payload(details, state, current_plan, environment, now_utc, data_quality, *, charging_end_estimate=None, charging_display_estimate=None):
     """Read-only explanation of simultaneous conditions; never a start permit."""
     now = now_utc.astimezone(timezone.utc)
     mower = dict(details.get("mower") or {})
@@ -858,6 +858,7 @@ def _coordination_payload(details, state, current_plan, environment, now_utc, da
         "dryingReason": state.hydrawise_clear_origin,
         "telemetryConfirmed": release.get("telemetry_confirmed"),
         "chargingEndEstimate": charging_end_estimate,
+        "chargingDisplayEstimate": charging_display_estimate,
         "dataAgeSeconds": {"mower": mower_age, "irrigation": age(safety.get("observed_at_utc")),
                            "controller": controller_age, "safetyBundle": age(inputs.get("published_at_utc"))},
         "importObservedAt": None,
@@ -1560,9 +1561,10 @@ def live_status(environment: Mapping[str, str], now_utc: datetime, *,
     try:
         # Recalculate against this request's fresh live battery. The five-minute
         # cache contains historical evidence only, never a cached charging permit.
-        charging_end_estimate = estimate_charging_end(
-            statistics.pop("_chargingEvidence", None), dict(details.get("mower") or {}), now_utc,
-        )
+        charging_evidence = statistics.pop("_chargingEvidence", None)
+        charging_mower = dict(details.get("mower") or {})
+        charging_end_estimate = estimate_charging_end(charging_evidence, charging_mower, now_utc)
+        charging_display_estimate = estimate_charging_display_end(charging_evidence, charging_mower, now_utc)
         completed_cycles = statistics.get("estimatedAreaCycles7d", statistics.get("completedAreaCycles7d"))
         statistics["mownAreaEquivalentsEstimated"] = True
         current_progress = statistics.get("currentAreaProgress")
@@ -1581,6 +1583,7 @@ def live_status(environment: Mapping[str, str], now_utc: datetime, *,
                       "bladeUsageSeconds": device_statistics.get("cutting_blade_usage_seconds"),
                       "totalRunningSeconds": device_statistics.get("total_running_seconds")}
         charging_end_estimate = None
+        charging_display_estimate = None
     irrigation_statistics = (_dashboard_irrigation_statistics(environment, now_utc)
                              if include_details else _peek_display_cache(
                                  _IRRIGATION_STATISTICS_CACHE, _IRRIGATION_STATISTICS_CACHE_LOCK, now_utc))
@@ -1677,7 +1680,8 @@ def live_status(environment: Mapping[str, str], now_utc: datetime, *,
         "automation": _state_payload(state),
         "trainingControl": training_control.public_payload(),
         "coordination": _coordination_payload(details, state, current_plan, environment, now_utc, data_quality,
-                                              charging_end_estimate=charging_end_estimate),
+                                              charging_end_estimate=charging_end_estimate,
+                                              charging_display_estimate=charging_display_estimate),
         "statistics": statistics,
         "irrigationStatistics": irrigation_statistics,
         "irrigationSchedule": _irrigation_schedule_payload(

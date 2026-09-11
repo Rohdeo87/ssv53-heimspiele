@@ -12,7 +12,7 @@ const assert=require('node:assert/strict');
    const context=await browser.newContext({viewport:{width,height:844},locale:'de-DE',timezoneId:'Europe/Berlin'});
    const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
    await page.route('**/*',r=>r.request().url().startsWith('file:')?r.continue():r.abort());
-   for(const scenario of ['charging','charging-unknown','parked','mowing','stale','watering','unconfirmed']){
+   for(const scenario of ['charging','charging-unknown','charging-display','parked','mowing','stale','watering','unconfirmed']){
     await page.goto(pathToFileURL(path.join(out,'appack-preview.html')).href+'#'+scenario);
     await page.reload();
     await page.locator('#pf-page-home').waitFor({state:'visible'});
@@ -21,6 +21,16 @@ const assert=require('node:assert/strict');
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'Overflow: '+scenario+' '+width);
     assert.equal(await page.locator('.shell > .head').count(),0);
     if(scenario==='stale')assert.equal(await page.locator('#pf-charge').isVisible(),false);
+    if(scenario==='mowing'){
+     assert.match(await page.locator('#pf-mowing-progress-caption').innerText(),/Fläche gemäht 19 %/);
+     assert.equal(await page.locator('#pf-mowing-progress-bar').getAttribute('value'),'19');
+     assert.equal(await page.locator('#pf-mowing-progress').evaluate(e=>getComputedStyle(e).gridColumn),'1 / -1');
+    }else assert.equal(await page.locator('#pf-mowing-progress').isVisible(),false);
+    if(scenario==='charging-display'){
+     assert.match(await page.locator('#charge-end-time').innerText(),/10:22 Uhr/);
+     assert.equal(await page.locator('#charge-end-note').innerText(),'Voraussichtlich');
+     assert.equal(await page.locator('#coordination-card').isVisible(),false);
+    }
     if(scenario==='charging-unknown'){
      assert.equal(await page.locator('#overall-title').innerText(),'Mäher lädt');
      assert.equal(await page.locator('#pf-charge-caption').innerText(),'Akku 29 %');
