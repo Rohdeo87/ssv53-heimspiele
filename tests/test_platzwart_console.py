@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import unittest
 from datetime import timedelta
@@ -15,6 +16,7 @@ from platzwart_console import (
     _mower_display_label,
     _mower_error_active,
     _mower_error_message,
+    _irrigation_intent_payload,
     _STATISTICS_CACHE,
     _restart_battery_percent,
     _protection_payload,
@@ -48,6 +50,73 @@ FULL_DEVICE_CONTROL_ENV = {
 
 
 class PlatzwartAuthenticationTests(unittest.TestCase):
+    def test_status_irrigation_intent_requires_complete_matching_provenance(self) -> None:
+        manual_plan = zones()
+        for zone in manual_plan:
+            zone["operator_manual"] = True
+        canonical = json.dumps(
+            manual_plan, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+        )
+        verified = AutomationState(
+            irrigation_phase="RUNNING",
+            irrigation_plan_id=hashlib.sha256(canonical.encode("utf-8")).hexdigest(),
+            irrigation_plan_json=canonical,
+        )
+        self.assertEqual(
+            _irrigation_intent_payload(verified, ENV, state_available=True),
+            {
+                "source": "MANUAL_OPERATOR",
+                "verified": True,
+                "controllerManaged": True,
+                "automaticWindowApplies": False,
+            },
+        )
+
+        automatic_plan = zones()
+        automatic_canonical = json.dumps(
+            automatic_plan, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+        )
+        automatic = AutomationState(
+            irrigation_phase="RUNNING",
+            irrigation_plan_id=hashlib.sha256(automatic_canonical.encode("utf-8")).hexdigest(),
+            irrigation_plan_json=automatic_canonical,
+        )
+        self.assertEqual(
+            _irrigation_intent_payload(automatic, ENV, state_available=True),
+            {
+                "source": "AUTOMATIC",
+                "verified": True,
+                "controllerManaged": True,
+                "automaticWindowApplies": True,
+            },
+        )
+
+        mixed = [dict(zone) for zone in manual_plan]
+        mixed[0].pop("operator_manual")
+        mixed_canonical = json.dumps(
+            mixed, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+        )
+        mixed_state = AutomationState(
+            irrigation_phase="RUNNING",
+            irrigation_plan_id=hashlib.sha256(mixed_canonical.encode("utf-8")).hexdigest(),
+            irrigation_plan_json=mixed_canonical,
+        )
+        wrong_hash = AutomationState(
+            irrigation_phase="RUNNING",
+            irrigation_plan_id="wrong-plan-id",
+            irrigation_plan_json=canonical,
+        )
+        for state in (
+            mixed_state,
+            wrong_hash,
+            AutomationState(irrigation_phase="RUNNING"),
+        ):
+            with self.subTest(state=state.irrigation_plan_json):
+                intent = _irrigation_intent_payload(state, ENV, state_available=True)
+                self.assertEqual(intent["source"], "UNKNOWN")
+                self.assertFalse(intent["verified"])
+                self.assertIsNone(intent["automaticWindowApplies"])
+
     def test_dashboard_preserves_verified_drying_reason_and_time(self) -> None:
         for reason in ("IRRIGATION_END", "DATA_GAP", "POSSIBLE_IRRIGATION_DURING_GAP"):
             with self.subTest(reason=reason):
@@ -279,6 +348,35 @@ class PlatzwartAuthenticationTests(unittest.TestCase):
         self.assertEqual(payload["statistics"]["mownAreaEquivalents7d"], 3.4)
         self.assertNotIn("totalCuttingSeconds", payload["statistics"])
         self.assertNotIn("chargingCycles", payload["statistics"])
+
+    def test_live_status_projects_verified_manual_irrigation_intent(self) -> None:
+        manual_plan = zones()
+        for zone in manual_plan:
+            zone["operator_manual"] = True
+        canonical = json.dumps(
+            manual_plan, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+        )
+        store = InMemoryStateStore(AutomationState(
+            irrigation_phase="RUNNING",
+            irrigation_plan_id=hashlib.sha256(canonical.encode("utf-8")).hexdigest(),
+            irrigation_plan_json=canonical,
+        ))
+        live_cycle = result(
+            activity="PARKED_IN_CS", active_ids=[RELAYS[0]], clear=False,
+        )
+        with patch("platzwart_console.run_read_only_cycle", return_value=live_cycle), patch(
+            "platzwart_console.AzureTableStateStore.from_environment", return_value=store,
+        ), patch("platzwart_console._clubhouse_events", return_value={}), patch(
+            "platzwart_console._dashboard_statistics", return_value={}
+        ), patch("platzwart_console._dashboard_irrigation_statistics", return_value={}):
+            payload = live_status(FULL_DEVICE_CONTROL_ENV, NOW)
+
+        self.assertEqual(payload["irrigation"]["intent"], {
+            "source": "MANUAL_OPERATOR",
+            "verified": True,
+            "controllerManaged": True,
+            "automaticWindowApplies": False,
+        })
 
     def test_live_status_exposes_freshness_and_only_arms_fully_enabled_device_controls(self) -> None:
         live_cycle = result(activity="PARKED_IN_CS", battery=100)
@@ -689,20 +787,18 @@ class PlatzwartSafetyIntegrationTests(unittest.TestCase):
                 state_factory.assert_not_called()
                 audit_factory.assert_not_called()
 
-    def test_manual_irrigation_outside_window_never_queues_request(self) -> None:
+    def test_manual_irrigation_at_any_hour_queues_request(self) -> None:
         for action, moment, extra in (
             ("START_IRRIGATION", NOW.replace(hour=1, minute=29), {}),
-            ("START_IRRIGATION", NOW.replace(hour=6), {}),
+            ("START_IRRIGATION", NOW.replace(hour=12), {}),
             ("START_IRRIGATION_ZONE", NOW.replace(hour=5, minute=40), {"zone": 3, "run_seconds": 1200}),
         ):
             with self.subTest(action=action, moment=moment):
                 store = InMemoryStateStore()
-                with patch("platzwart_console.AzureTableStateStore.from_environment", return_value=store), patch("platzwart_console.RuntimeSettings.from_mapping", return_value=settings()), patch("platzwart_console.ConsoleTableStore.from_environment") as audit, patch("platzwart_console.run_read_only_cycle") as read:
-                    with self.assertRaises(PlatzwartError) as error:
-                        request_action(action, "outside-window", action, ENV, moment, **extra)
-                self.assertIn(error.exception.code, {"IRRIGATION_OPERATING_WINDOW", "IRRIGATION_WINDOW_CANNOT_FIT"})
-                self.assertIsNone(store.load().operator_request_id)
-                audit.assert_not_called()
+                with patch("platzwart_console.AzureTableStateStore.from_environment", return_value=store), patch("platzwart_console.RuntimeSettings.from_mapping", return_value=settings()), patch("platzwart_console.ConsoleTableStore.from_environment"), patch("platzwart_console.run_read_only_cycle") as read:
+                    accepted = request_action(action, f"any-hour-{action}", action, ENV, moment, **extra)
+                self.assertEqual(accepted["status"], "PENDING")
+                self.assertEqual(store.load().operator_request_action, action)
                 read.assert_not_called()
 
     def test_manual_zone_request_keeps_duration_and_remains_pending(self) -> None:

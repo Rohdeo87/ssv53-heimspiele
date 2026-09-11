@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from copy import deepcopy
 from dataclasses import replace
@@ -78,6 +79,34 @@ def test_before_0330_waits_without_starting_or_releasing_native_suppression():
     assert stored.load().irrigation_suspended_relay_ids_json == json.dumps(RELAYS)
 
 
+def test_manual_all_zone_run_starts_before_0330_with_safety_interlocks_intact():
+    now = NOW - timedelta(hours=1)  # 03:00 Europe/Berlin
+    plan = _plan(NOW + timedelta(minutes=30))
+    for zone in plan:
+        zone["operator_manual"] = True
+    canonical = json.dumps(plan, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    state = replace(
+        irrigation_state(phase="READY"),
+        park_command_sent_utc=(now - timedelta(minutes=10)).isoformat(),
+        park_confirmed_utc=(now - timedelta(minutes=5)).isoformat(),
+        irrigation_suspension_completed_utc=(now - timedelta(minutes=1)).isoformat(),
+        irrigation_suspension_until_utc=(now + timedelta(hours=5)).isoformat(),
+        irrigation_plan_id=hashlib.sha256(canonical.encode("utf-8")).hexdigest(),
+        irrigation_plan_json=canonical,
+    )
+    calls: list[tuple] = []
+
+    output, stored = _run_ready(
+        state, _cycle_for(plan, now=now), now=now, zone_calls=calls,
+    )
+
+    assert output.decision_code == "IRRIGATION_ZONE_START_SENT"
+    assert len(calls) == 1
+    assert stored.load().irrigation_phase == "START_RESERVED"
+    assert output.details["irrigation_operating_window"]["intent"] == "MANUAL_OPERATOR"
+    assert output.details["irrigation_operating_window"]["automatic_window_applies"] is False
+
+
 def test_remaining_whole_run_that_cannot_finish_by_0800_never_posts():
     now = datetime(2026, 8, 13, 4, 30, tzinfo=UTC)  # 06:30 Europe/Berlin
     plan = _plan(now + timedelta(minutes=1))
@@ -94,6 +123,38 @@ def test_remaining_whole_run_that_cannot_finish_by_0800_never_posts():
     assert output.decision_code == "IRRIGATION_WINDOW_CANNOT_FIT"
     assert calls == []
     assert stored.load().irrigation_phase == "READY"
+
+
+def test_manual_single_zone_run_starts_after_0800_with_requested_runtime():
+    now = datetime(2026, 8, 13, 8, 30, tzinfo=UTC)  # 10:30 Europe/Berlin
+    plan = _plan(now + timedelta(minutes=30))
+    for zone in plan:
+        zone["operator_manual"] = True
+        zone["operator_single_zone"] = True
+        zone["selected"] = zone["zone"] == 3
+    plan[2]["run_seconds"] = 25 * 60
+    plan[2]["scheduled_end_utc"] = (
+        datetime.fromisoformat(plan[2]["scheduled_start_utc"]) + timedelta(minutes=25)
+    ).isoformat()
+    canonical = json.dumps(plan, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    state = replace(
+        irrigation_state(phase="READY"),
+        park_command_sent_utc=(now - timedelta(minutes=10)).isoformat(),
+        park_confirmed_utc=(now - timedelta(minutes=5)).isoformat(),
+        irrigation_suspension_completed_utc=(now - timedelta(minutes=1)).isoformat(),
+        irrigation_suspension_until_utc=(now + timedelta(hours=5)).isoformat(),
+        irrigation_plan_id=hashlib.sha256(canonical.encode("utf-8")).hexdigest(),
+        irrigation_plan_json=canonical,
+    )
+    calls: list[tuple] = []
+
+    output, stored = _run_ready(
+        state, _cycle_for(plan, now=now), now=now, zone_calls=calls,
+    )
+
+    assert output.decision_code == "IRRIGATION_ZONE_START_SENT"
+    assert [(args[1], args[2]) for args in calls] == [(RELAYS[2], 25 * 60)]
+    assert stored.load().irrigation_current_relay_id == RELAYS[2]
 
 
 def test_native_pause_is_preserved_in_projected_window():
@@ -251,6 +312,86 @@ def test_actual_active_water_outside_window_is_diagnostic_hold_without_stop():
     assert output.details["irrigation_operating_window"]["automatic_stop_sent"] is False
     assert stops == []
     assert store.load().irrigation_phase == "FAILED"
+
+
+def test_active_manual_multi_zone_water_after_0800_remains_owned():
+    now = datetime(2026, 8, 13, 8, 30, tzinfo=UTC)  # 10:30 Europe/Berlin
+    plan = _plan(now + timedelta(minutes=30))
+    for zone in plan:
+        zone["operator_manual"] = True
+    canonical = json.dumps(plan, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    cycle = _cycle_for(plan, now=now)
+    cycle.details["hydrawise"]["safety"].update(
+        clear_now=False, active_zone_count=1, active_relay_ids=[RELAYS[0]],
+    )
+    state = replace(
+        irrigation_state(phase="RUNNING", current=RELAYS[0]),
+        irrigation_plan_id=hashlib.sha256(canonical.encode("utf-8")).hexdigest(),
+        irrigation_plan_json=canonical,
+        irrigation_zone_start_reserved_utc=(now - timedelta(minutes=6)).isoformat(),
+        irrigation_zone_started_utc=(now - timedelta(minutes=5)).isoformat(),
+        irrigation_suspension_until_utc=(now + timedelta(hours=5)).isoformat(),
+    )
+    store = InMemoryStateStore(state)
+
+    output, stored = _run_ready(
+        state, cycle, now=now, zone_calls=[], store=store,
+    )
+
+    assert output.decision_code == "IRRIGATION_ZONE_RUNNING"
+    assert stored.load().irrigation_phase == "RUNNING"
+
+
+def test_native_water_after_completed_manual_run_is_not_exempted():
+    now = datetime(2026, 8, 13, 8, 30, tzinfo=UTC)
+    plan = _plan(now + timedelta(minutes=30))
+    for zone in plan:
+        zone["operator_manual"] = True
+    canonical = json.dumps(plan, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    cycle = _cycle_for(plan, now=now)
+    cycle.details["hydrawise"]["safety"].update(
+        clear_now=False, active_zone_count=1, active_relay_ids=[RELAYS[0]],
+    )
+    state = replace(
+        irrigation_state(phase="COMPLETE_HOLD"),
+        irrigation_plan_id=hashlib.sha256(canonical.encode("utf-8")).hexdigest(),
+        irrigation_plan_json=canonical,
+        irrigation_current_relay_id=None,
+    )
+
+    output, stored = _run_ready(
+        state, cycle, now=now, zone_calls=[],
+    )
+
+    assert output.decision_code == "IRRIGATION_ACTIVE_OUTSIDE_OPERATING_WINDOW"
+    assert stored.load().irrigation_phase == "FAILED"
+
+
+def test_unrelated_active_relay_during_manual_run_is_not_exempted():
+    now = datetime(2026, 8, 13, 8, 30, tzinfo=UTC)
+    plan = _plan(now + timedelta(minutes=30))
+    for zone in plan:
+        zone["operator_manual"] = True
+    canonical = json.dumps(plan, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    cycle = _cycle_for(plan, now=now)
+    cycle.details["hydrawise"]["safety"].update(
+        clear_now=False, active_zone_count=1, active_relay_ids=[RELAYS[1]],
+    )
+    state = replace(
+        irrigation_state(phase="RUNNING", current=RELAYS[0]),
+        irrigation_plan_id=hashlib.sha256(canonical.encode("utf-8")).hexdigest(),
+        irrigation_plan_json=canonical,
+        irrigation_zone_start_reserved_utc=(now - timedelta(minutes=6)).isoformat(),
+        irrigation_zone_started_utc=(now - timedelta(minutes=5)).isoformat(),
+        irrigation_suspension_until_utc=(now + timedelta(hours=5)).isoformat(),
+    )
+
+    output, stored = _run_ready(
+        state, cycle, now=now, zone_calls=[],
+    )
+
+    assert output.decision_code == "IRRIGATION_ACTIVE_OUTSIDE_OPERATING_WINDOW"
+    assert stored.load().irrigation_phase == "FAILED"
 
 
 def test_next_day_ready_plan_is_expired_before_any_water_restart():

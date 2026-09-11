@@ -48,7 +48,6 @@ from mower.irrigation_schedule import (
     load_object as load_irrigation_schedule_object,
     validate_schedule_request,
 )
-from mower.irrigation_operating_window import validate_fresh_start
 from daily_safety_report import dashboard_irrigation_statistics, dashboard_statistics, estimate_charging_end
 from mower.statistics_cache import (
     peek_dashboard_statistics,
@@ -92,6 +91,72 @@ _IRRIGATION_STATISTICS_CACHE_LOCK = threading.Lock()
 _IRRIGATION_STATISTICS_CACHE: dict[str, Any] = {"expires": None, "available": False}
 _MATCH_DISPLAY_CACHE_LOCK = threading.Lock()
 _MATCH_DISPLAY_CACHE: dict[str, Any] = {"path": None, "mtime_ns": None, "matches": {}}
+_CONTROLLER_IRRIGATION_PHASES = frozenset(
+    {"PLANNED", "SUSPENDING", "READY", "START_RESERVED", "RUNNING", "STOPPING"}
+)
+
+
+def _irrigation_intent_payload(
+    state: AutomationState,
+    environment: Mapping[str, str],
+    *,
+    state_available: bool,
+) -> dict[str, Any]:
+    """Project verified controller provenance for display, never authorization."""
+
+    phase = str(state.irrigation_phase or "").strip().upper()
+    active = phase in _CONTROLLER_IRRIGATION_PHASES
+    unknown = {
+        "source": "UNKNOWN" if active or not state_available else None,
+        "verified": False,
+        "controllerManaged": active and state_available,
+        "automaticWindowApplies": None,
+    }
+    if not state_available or not active:
+        return unknown
+    try:
+        plan = json.loads(state.irrigation_plan_json or "")
+        expected_count = int(
+            str(environment.get("HYDRAWISE_EXPECTED_ZONE_COUNT", "7")).strip()
+        )
+        expected_relays = {
+            int(value.strip())
+            for value in str(environment.get("HYDRAWISE_EXPECTED_RELAY_IDS", "")).split(",")
+            if value.strip()
+        }
+        relay_ids = [
+            zone.get("relay_id")
+            for zone in plan
+            if isinstance(zone, dict)
+        ]
+        canonical = json.dumps(
+            plan, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+        )
+        plan_verified = (
+            isinstance(plan, list)
+            and len(plan) == expected_count
+            and len(relay_ids) == expected_count
+            and all(type(relay_id) is int and relay_id > 0 for relay_id in relay_ids)
+            and len(set(relay_ids)) == expected_count
+            and set(relay_ids) == expected_relays
+            and bool(state.irrigation_plan_id)
+            and hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+            == state.irrigation_plan_id
+        )
+    except (AttributeError, TypeError, ValueError, json.JSONDecodeError):
+        return unknown
+    if not plan_verified:
+        return unknown
+    manual_flags = [zone.get("operator_manual") is True for zone in plan]
+    if any(manual_flags) and not all(manual_flags):
+        return unknown
+    manual = all(manual_flags)
+    return {
+        "source": "MANUAL_OPERATOR" if manual else "AUTOMATIC",
+        "verified": True,
+        "controllerManaged": True,
+        "automaticWindowApplies": not manual,
+    }
 
 
 def _dashboard_statistics(environment: Mapping[str, str], now_utc: datetime) -> dict[str, Any]:
@@ -1597,6 +1662,9 @@ def live_status(environment: Mapping[str, str], now_utc: datetime, *,
         "irrigation": {
             "status": hydrawise.get("status"), "safety": safety,
             "zones": zones, "releaseConfirmation": hydrawise.get("release_confirmation"),
+            "intent": _irrigation_intent_payload(
+                state, environment, state_available=state_available,
+            ),
         },
         "occupancy": {
             "available": data_quality["code"] not in {"CONFIG_STALE", "PLAN_UNAVAILABLE"},
@@ -1665,6 +1733,12 @@ def unavailable_live_status(now_utc: datetime) -> dict[str, Any]:
             "safety": {"available": False, "fresh": False, "clear_now": False},
             "zones": [],
             "releaseConfirmation": None,
+            "intent": {
+                "source": "UNKNOWN",
+                "verified": False,
+                "controllerManaged": False,
+                "automaticWindowApplies": None,
+            },
         },
         "occupancy": {
             "available": False,
@@ -1929,28 +2003,6 @@ def request_action(
             "Ein Beregnungsablauf oder Sicherheitsnachlauf ist bereits aktiv.",
             409,
         )
-    if normalized in {"START_IRRIGATION", "START_IRRIGATION_ZONE"}:
-        # This is request admission, not permission to start a valve. The
-        # controller re-reads all seven zones and checks the entire remaining
-        # sequence, including pauses, immediately before every actual START.
-        # Avoid an extra vendor poll merely to queue a manual request.
-        try:
-            confirmation_minutes = int(environment.get("IRRIGATION_ZONE_END_CONFIRMATION_MINUTES", "2"))
-        except (TypeError, ValueError):
-            confirmation_minutes = 2
-        confirmation_minutes = max(1, min(10, confirmation_minutes))
-        window = validate_fresh_start(
-            now_utc,
-            duration_seconds=run_seconds if normalized == "START_IRRIGATION_ZONE" else 60,
-            validation_margin_seconds=confirmation_minutes * 60,
-        )
-        if window.code != "OK":
-            code = "IRRIGATION_OPERATING_WINDOW" if window.code == "TOO_EARLY" else "IRRIGATION_WINDOW_CANNOT_FIT"
-            raise PlatzwartError(
-                code,
-                "Bewässerung ist ab 03:30 möglich. Alle Zonen müssen bis 08:00 fertig sein. Bitte einen passenden Start wählen.",
-                409,
-            )
     if normalized in SCHEDULE_ACTIONS and original.irrigation_phase is not None:
         raise PlatzwartError(
             "IRRIGATION_SEQUENCE_ACTIVE",

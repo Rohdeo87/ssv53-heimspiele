@@ -34,5 +34,8 @@ jobs:
       - name: Appack-Anzeigen und Bedienregeln prüfen
         run: node --test tests/test_appack*.js
 
+      - name: Platzpflege-Design und CMS-Kopierfassung abgleichen
+        run: python scripts/sync_platzpflege_design.py --check
+
       - name: Python-Dateien kompilieren
         run: python -m compileall -q .
