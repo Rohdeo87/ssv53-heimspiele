@@ -1,0 +1,53 @@
+{
+  "source_commit": "872254f06a69ef18742dfedbdff23b91786657d1",
+  "template_id": "6a86ab6c4b3c829dd60de9b7",
+  "before_sha256_lf": "3bbb6f41276b3954909250e19d981eee115c69e243c5903bb26765fda68b143c",
+  "candidate_sha256_lf": "79395caf9dd98b6ec910d15a49cc01fbf30c6cc310f9e6c70cc25c20a05b554d",
+  "node_tests_passed": 160,
+  "browser_combinations_passed": 21,
+  "azure_deployment": false,
+  "device_test_commands": false,
+  "published": true,
+  "cms_last_modified_berlin": "2026-09-11 13:30",
+  "verified_at_utc": "2026-09-11T11:36:39.408Z",
+  "merge_commit": "053fd09964b9c39192a7a82216474e6b5c0d6f07",
+  "pull_request": "https://github.com/Rohdeo87/ssv53-heimspiele/pull/73",
+  "cms_readback_matches": true,
+  "cms_readback_sha256_lf": "79395caf9dd98b6ec910d15a49cc01fbf30c6cc310f9e6c70cc25c20a05b554d",
+  "delivery": {
+    "bodyClass": "pflege-design",
+    "css_matches": true,
+    "js_matches": true,
+    "extra_header": false,
+    "information_panels": [
+      {
+        "id": "stats-dialog",
+        "tag": "SECTION"
+      },
+      {
+        "id": "water-plan-dialog",
+        "tag": "SECTION"
+      },
+      {
+        "id": "water-stats-dialog",
+        "tag": "SECTION"
+      },
+      {
+        "id": "water-attention-dialog",
+        "tag": "SECTION"
+      }
+    ],
+    "native_dialogs": [
+      "confirm-dialog",
+      "stop-dialog"
+    ],
+    "css_chars": 14998,
+    "js_chars": 38149
+  },
+  "delivery_console_errors": [],
+  "native_device_session_tested": false,
+  "ci_runs": [
+    "https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/34594179746",
+    "https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/34594179791"
+  ]
+}
