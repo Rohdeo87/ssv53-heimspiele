@@ -44,11 +44,25 @@
       // Appack's documented nav:// scheme keeps navigation and user identity in the app.
       var link=document.createElement("a"),text=document.createElement("strong");link.className="pf-tile";link.href="nav://ssv53_TextImage_1761902353516";link.dataset.pfCalendar="true";link.appendChild(pfIcon(icon));text.textContent=label;link.appendChild(text);parent.appendChild(link);return link;
     }
+    function pfInformationPage(id,key,icon) {
+      var old=document.getElementById(id),panel=document.createElement("section"),page=pfCreatePage(key),heading=old.querySelector("h2");
+      panel.id=id;panel.className="pf-inline-panel";while(old.firstChild)panel.appendChild(old.firstChild);old.replaceWith(panel);
+      heading.className="pf-page-title";pfDecorate(heading,icon);page.appendChild(heading);panel.querySelector(".stats-head").remove();page.appendChild(panel);
+      // Keep the original action handlers; opening information now navigates.
+      // close() before a confirmation keeps its originating page underneath.
+      panel.showModal=function(){pfGo(key)};panel.close=function(){};
+      Object.defineProperty(panel,"open",{get:function(){return pfView===key&&!page.hidden}});
+      return panel;
+    }
+    function pfBack() {
+      if(pfView==="water-plan"&&document.getElementById("plan-home").classList.contains("hidden")){showPlanView("home");return}
+      pfGo(pfHistory.pop()||"home",true);
+    }
     function pfMountDesign() {
       var dashboard=document.getElementById("dashboard");document.body.classList.add("pflege-design");
       var header=document.querySelector(".shell > .head");if(header)header.remove();
       var meta=document.createElement("div");meta.className="pf-meta";pfMove("updated",meta);pfMove("refresh",meta);dashboard.prepend(meta);
-      var back=pfButton("Zurück","ArrowLeft",function(){pfGo(pfHistory.pop()||"home",true)});back.id="pf-back";back.className="pf-back";back.hidden=true;dashboard.insertBefore(back,document.getElementById("overall"));
+      var back=pfButton("Zurück","ArrowLeft",pfBack);back.id="pf-back";back.className="pf-back";back.hidden=true;dashboard.insertBefore(back,document.getElementById("overall"));
       var safety=document.createElement("div");safety.id="pf-safety-actions";safety.className="pf-safety-actions";pfMove("irrigation-stop",safety);dashboard.insertBefore(safety,document.getElementById("overall").nextSibling);
       var pages=document.createElement("div");pages.id="pf-pages";dashboard.appendChild(pages);
       pfCreatePage("home");pfCreatePage("more","Sonstiges","LayoutGrid");pfCreatePage("mower","Mähroboter","Bot");pfCreatePage("controls","Mäher bedienen","Bot");pfCreatePage("height","Schnitthöhe","MoveVertical");pfCreatePage("blades","Klingen","Scissors");pfCreatePage("husqvarna","Am Mäher oder über Husqvarna","Smartphone");pfCreatePage("water","Bewässerung","Droplets");pfCreatePage("zones","Einzelne Zonen","Grid2x2");pfCreatePage("grounds","Platz & Training","CalendarDays");pfCreatePage("today","Platzbelegung","CalendarDays");pfCreatePage("training","Trainingsplan","Snowflake");pfCreatePage("clubhouse","Vereinsheim","Building2");pfCreatePage("history","Letzte Mäheraktionen","History");
@@ -71,6 +85,10 @@
       pfCalendarLink(groundsGrid,"Training verschieben","CalendarClock");pfCalendarLink(groundsGrid,"Termine & Sperren","CalendarDays");pfCalendarLink(pfPages.today,"Vollständigen Kalender öffnen","CalendarDays");
       var history=document.createElement("div");history.id="pf-command-history";history.className="pf-command-history";pfPages.history.appendChild(history);
       var footer=document.createElement("nav");footer.className="pf-nav";footer.setAttribute("aria-label","Platzpflegebereiche");[["home","Übersicht","House"],["today","Heute","CalendarDays"],["more","Sonstiges","Ellipsis"]].forEach(function(item){var b=pfButton(item[1],item[2],function(){pfHistory=[];pfGo(item[0],true)});b.dataset.pfNav=item[0];footer.appendChild(b)});dashboard.appendChild(footer);
+      statsDialog=pfInformationPage("stats-dialog","mower-stats","ChartNoAxesColumn");
+      planDialog=pfInformationPage("water-plan-dialog","water-plan","CalendarClock");
+      pfInformationPage("water-stats-dialog","water-stats","ChartNoAxesColumn");
+      pfInformationPage("water-attention-dialog","water-attention","TriangleAlert");
       pfMove("action-error",safety);pfStyleStatic();pfGo("home",true);pfReady=true;
     }
     function pfStyleStatic() {
@@ -86,6 +104,9 @@
       document.querySelectorAll(".plan-preset-pause").forEach(function(b){pfDecorate(b,"CalendarDays")});
       document.querySelectorAll('input[name="manual-water"]').forEach(function(input){input.addEventListener("change",pfManualChoiceVisibility)});
       var waterNote=pfPages.water.querySelector(".training-note");if(waterNote)waterNote.textContent="Die Zeitgrenzen 03:30–08:00 Uhr gelten für die Automatik. Manuell ist Bewässerung auch zu anderen Zeiten möglich.";
+      document.querySelectorAll(".pf-inline-panel .plan-back").forEach(function(b){b.hidden=true});
+      pfDecorate(document.querySelector("#plan-pause-step h3"),"Pause");pfDecorate(document.querySelector("#plan-custom h3"),"SlidersHorizontal");
+      var toggle=document.getElementById("plan-history-toggle"),toggleBase=toggle.onclick;toggle.onclick=function(){toggleBase.apply(this,arguments);pfDecorate(this,"History")};
     }
     function pfVisibility(s) {
       var m=s.mower||{},manual=manualControlView(s),fresh=mowerTelemetryFresh(s),moving=fresh&&["MOWING","LEAVING","GOING_HOME"].indexOf(m.activity)>=0,busy=operatorActionPending(s,"MANUAL_CONTROL")||!!(state.inFlight&&state.inFlight.MANUAL_CONTROL),parked=manual.status==="MANUAL_PARKED"||manual.status==="PARKING",resumeMeaningful=manual.enabled&&manual.status!=="AUTOMATIC"&&manual.status!=="UNKNOWN";
@@ -162,6 +183,8 @@
       // The icon belongs to the selected message, not to a simultaneous device state.
       // A transient error may have replaced the message after the last status response.
       pfDecorate(document.getElementById("overall"),document.getElementById("overall-title").textContent===overview.title?overview.icon:"TriangleAlert");
+      [["mower-connection","Smartphone"],["battery","Battery"],["progress","Grid2x2"],["cutting-height-current","MoveVertical"],["mower-error","TriangleAlert"]].forEach(function(row){pfDecorate(document.getElementById(row[0]).previousElementSibling,row[1])});
+      pfDecorate(document.getElementById("winter-training-switch"),"Snowflake");
       pfRenderHeight(s);pfRenderMoment(s);pfRenderCharging(s);pfRenderHistory(s);
     }
     pfMountDesign();
@@ -171,6 +194,7 @@
     var pfLoadBase=load;load=function(){return pfLoadBase().then(function(s){if(!s&&state.status)pfUpdate(state.status);return s})};
     var pfActionBase=openAction;openAction=function(){var result=pfActionBase.apply(this,arguments);pfConfirmationIcons();return result};
     var pfManualBase=manualControlPrepare;manualControlPrepare=function(){var result=pfManualBase.apply(this,arguments);pfConfirmationIcons();return result};
+    var pfResetPlanBase=resetPlanDialog;resetPlanDialog=function(){pfResetPlanBase();pfDecorate(document.getElementById("plan-history-toggle"),"History")};
     var pfZonesBase=buildPlanZones;buildPlanZones=function(zones){pfZonesBase(zones);pfPlanIcons()};
     var pfPlanBase=renderIrrigationSchedule;renderIrrigationSchedule=function(){pfPlanBase.apply(this,arguments);["plan-skip","plan-pause-open","plan-custom-open","plan-resume","plan-pause"].forEach(function(id){var b=document.getElementById(id);b.classList.toggle("hidden",b.disabled)});pfDecorate(document.getElementById("plan-history-toggle"),"History")};
     var pfWaterStatsBase=renderIrrigationStatistics;renderIrrigationStatistics=function(stats){pfWaterStatsBase(stats);document.querySelectorAll("#water-stat-zones li").forEach(function(li){pfDecorate(li,"Droplets")})};

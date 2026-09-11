@@ -79,6 +79,17 @@ body.pflege-design{background:#f3f6fa;color:#172c42;font-family:Arial,Helvetica,
 .pflege-design .dialog-actions .btn{min-width:0;width:100%;padding:14px 10px;text-align:center}
 .pflege-design .dialog-actions .btn>.pf-symbol{width:24px;height:24px;flex:none}
 .pflege-design .pf-category>.pf-label{text-align:left}
+.pflege-design .pf-inline-panel .dialog-body{padding:0}
+.pflege-design .pf-inline-panel .stats-grid{margin-top:0}
+.pflege-design .pf-inline-panel .plan-step-head h3{display:flex;align-items:center;gap:10px}
+.pflege-design .pf-inline-panel .plan-step-head h3>.pf-symbol{width:32px;height:32px;border-radius:10px}
+.pflege-design .pf-inline-panel .plan-choice{display:grid;grid-template-columns:43px minmax(0,1fr);column-gap:13px;row-gap:4px;align-items:center;background:#fff;color:#172c42;border:1px solid #dce4ed;box-shadow:none;text-align:left}
+.pflege-design .pf-inline-panel .plan-choice>.pf-symbol{grid-column:1;grid-row:1/span 2;float:none;margin:0;background:#285ca0;color:#fff}
+.pflege-design .pf-inline-panel .plan-choice strong,.pflege-design .pf-inline-panel .plan-choice small{grid-column:2;color:inherit;margin:0}
+.pflege-design .pf-inline-panel .plan-choice small{font-weight:400;color:#526477}
+.pflege-design .facts>span:nth-child(odd){display:flex;align-items:center;gap:8px;min-width:0}
+.pflege-design .facts .pf-symbol{width:24px;height:24px;background:transparent;color:#285ca0}
+.pflege-design .facts .pf-symbol svg{width:20px;height:20px}
 @media(prefers-reduced-motion:reduce){.pflege-design #refresh-spinner{animation:none}}
 .pflege-design .plan-choice{min-height:94px;border-radius:16px;padding:18px;position:relative}
 .pflege-design .plan-choice>.pf-symbol{float:left;margin-right:13px}.pflege-design .plan-choice strong,.pflege-design .plan-choice small{overflow:hidden}
