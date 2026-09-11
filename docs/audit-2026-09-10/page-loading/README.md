@@ -1,7 +1,8 @@
 # Platzpflege: Wartezeit beim Öffnen verkürzen
 
-Stand: Entwicklung und isolierte Prüfung am 10.09.2026. Veröffentlichung und
-Installation werden unten erst nach deren tatsächlicher Prüfung ergänzt.
+Stand: Entwicklung und isolierte Prüfung am 10.09.2026; Installation und
+CMS-Veröffentlichung am 11.09.2026 nachgewiesen. Native App-Ladezeiten sind noch
+nicht live gemessen.
 
 Die bisherige Statusantwort wartet neben dem aktuellen Geräte- und Belegungsstand
 auch auf zwei Wochenstatistiken und Vereinsheimtermine. Beim Ablauf der fünfminütigen
@@ -120,3 +121,42 @@ Die tatsächliche Geräteausführung ist kein Abnahmekriterium der Anzeigeoptimi
 Offen bleibt die unabhängige Beobachtung im nativen Appgerät nach Veröffentlichung.
 Der hier angemeldete CMS-Browser zeigt in der Vorschau die Geräteaktivierung;
 eine zusätzliche Gerätesitzung wird zur Messung nicht angelegt.
+
+## Tatsächlich veröffentlicht
+
+- Quellcommit: `6c3f0901d579b4992a380a4a761dbc9c925ee047`;
+  [PR #66](https://github.com/Rohdeo87/ssv53-heimspiele/pull/66) ist mit
+  `5da2975b965c783bf9494e06fb50adabdcb94990` zusammengeführt. Exakter Kopf,
+  unveränderter Zielbranch und Mergefähigkeit wurden vorher geprüft.
+- [Codeprüfung](https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/34529058843)
+  und [Paketprüfung](https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/34529058830)
+  waren für diesen Kopf erfolgreich. Lokal: **1.374 Python-Tests und 479 Untertests**,
+  **152 Appack-Tests**, vier Browserfälle.
+- Paket-SHA256: `041ae5ec2c8fa5633248a3bcb74300fd95e02d99aa17f40115d44f8f4d433582`.
+  Das [Paketprotokoll](package-comparison.json) bestätigt exakt drei geänderte
+  Programmdateien plus Paketmanifest. Die anderen 65 Quellfiles behalten die
+  bisherigen Bytes; ihre Git-Version ist gegenüber dem zuvor installierten
+  Quellstand identisch. Windows-Zeilenenden im Export wurden dabei berücksichtigt;
+  keine beiläufige Kalender- oder Steuerungsänderung wurde mit ausgeliefert.
+- Azure ZIP-Deployment `86de611a-7ed5-4c6f-a68a-169e7f3ed9c8` meldete Erfolg.
+  Der anschließende [Installationsnachweis](installation-after.json) prüft
+  **alle 69 installierten Dateien** gegen das lokale geprüfte ZIP: vollständige
+  Übereinstimmung, Host `Running`, 15 Funktionen, Schutzschalter unverändert.
+  Installiertes Manifest:
+  `66e3626f7dd633ccf6b005e7826a19af73afae1c2f1b695b86843682c151b916`.
+- [CMS-Nachweis](cms-publication.json): `Platzpflege.tpl` am **11.09.2026 um
+  06:52:48 Uhr Berlin** gespeichert; nach Reload um **06:54:22 Uhr** vollständig
+  aus dem Editor zurückgelesen. SHA256 nach LF-Normalisierung:
+  `724b2bd60ca8b2979ef523ed1292caeb10f1256ad0bbf46bbbdb216f6bc9ce47`.
+  Die Kalendervorlage wurde nicht geändert.
+- [Betriebsnachkontrolle](controller-after.json): Controllerzyklen nach der
+  Installation mit dem neuen Manifest nachgewiesen. Der vorher bereits bestehende
+  unbestätigte Mäherstart blieb bestehen; es wurde keine Freigabe zurückgesetzt.
+  Die letzte Beobachtung meldete den Mäher in der Station und einen laufenden
+  Bewässerungskreis. Das ist Hersteller-/Controllertelemetrie, keine Vor-Ort-Abnahme.
+- Die [erste Messabfrage nach Installation](after-performance.json), abgerufen
+  unmittelbar vor der CMS-Veröffentlichung, enthält **keine Statusaufrufe in den
+  vorangegangenen 30 Minuten**. Es gibt daher noch keine belastbare Live-Messreihe
+  der neuen Ladezeit. Der isolierte Browservergleich bleibt ausdrücklich eine
+  Simulation. Zum Laden der veröffentlichten Fassung die Platzpflegeseite in der
+  App schließen und neu öffnen.

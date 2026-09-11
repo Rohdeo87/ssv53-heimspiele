@@ -1,0 +1,18 @@
+{
+  "retrieved_at_utc": "2026-09-11T04:53:54.537579+00:00",
+  "read_only": true,
+  "count": 15,
+  "first_at": "2026-09-11T04:39:02.4002563Z",
+  "last_at": "2026-09-11T04:53:02.4263968Z",
+  "manifest_counts": {
+    "66e3626f7dd633ccf6b005e7826a19af73afae1c2f1b695b86843682c151b916": 15
+  },
+  "decision_counts": {
+    "MOWER_START_OUTCOME_UNCONFIRMED": 15
+  },
+  "command_sent_count": 1,
+  "last_reported_mower_activity": "PARKED_IN_CS",
+  "last_reported_active_water_zones": 1,
+  "last_water_fresh": true,
+  "device_execution_tested": false
+}

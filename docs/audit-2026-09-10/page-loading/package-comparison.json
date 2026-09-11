@@ -1,0 +1,12 @@
+{
+  "source_commit": "6c3f0901d579b4992a380a4a761dbc9c925ee047",
+  "line_endings": "Changed files LF; unchanged files preserve previous verified bytes and Git versions",
+  "changed_files": [
+    "function_app.py",
+    "mower/statistics_cache.py",
+    "platzwart_console.py",
+    "package-manifest.json"
+  ],
+  "same_file_names": true,
+  "package_sha256": "041ae5ec2c8fa5633248a3bcb74300fd95e02d99aa17f40115d44f8f4d433582"
+}
