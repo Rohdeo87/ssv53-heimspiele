@@ -1,0 +1,40 @@
+{
+  "at_utc": "2026-09-11T06:23:48.076006+00:00",
+  "preview_sha256": "5e153244136c2a9bec072fc05fee8e4e488f76c198d995e2e0cb4d533245728d",
+  "status_code": 200,
+  "result": {
+    "applied": true,
+    "delta": {
+      "automationParkSource": {
+        "from": "start_outcome_unknown",
+        "to": "training"
+      },
+      "automationRestartAllowed": {
+        "from": false,
+        "to": true
+      },
+      "mowerStartPendingDeadlineUtc": {
+        "from": "2026-09-11T01:49:00.004203+00:00",
+        "to": null
+      },
+      "mowerStartPendingSessionEpoch": {
+        "from": null,
+        "to": null
+      },
+      "mowerStartPendingSessionId": {
+        "from": null,
+        "to": null
+      },
+      "mowerStartPendingSinceUtc": {
+        "from": "2026-09-10T20:00:00.004203+00:00",
+        "to": null
+      }
+    },
+    "proof": {
+      "manifestSha256": "8b17b7d232de8a32593c0c2aee55b3cd8527d29338c2be9626199ef72fac3d77",
+      "traceId": "3bdc5d4a-ad52-11f1-aa9f-7ced8d24030b"
+    },
+    "stateRevision": 44299
+  },
+  "device_commands_requested": false
+}

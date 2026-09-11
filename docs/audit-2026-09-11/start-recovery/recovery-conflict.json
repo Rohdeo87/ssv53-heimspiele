@@ -1,0 +1,10 @@
+{
+  "at_utc": "2026-09-11T06:09:12.475756+00:00",
+  "preview_sha256": "764eb61194457ce803c75928ffdf9f4cd3f1fbf4caf2a1d15cbcf6bc7097b0a9",
+  "status_code": 409,
+  "result": {
+    "code": "START_RECOVERY_STATE_CHANGED",
+    "error": "Zustand oder Beweis haben sich geändert; bitte erneut prüfen."
+  },
+  "device_commands_requested": false
+}

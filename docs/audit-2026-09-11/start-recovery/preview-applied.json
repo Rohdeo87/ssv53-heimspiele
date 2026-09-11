@@ -1,0 +1,49 @@
+{
+  "at_utc": "2026-09-11T06:23:26.807665+00:00",
+  "read_only": true,
+  "preview": {
+    "delta": {
+      "automationParkSource": {
+        "from": "start_outcome_unknown",
+        "to": "training"
+      },
+      "automationRestartAllowed": {
+        "from": false,
+        "to": true
+      },
+      "mowerStartPendingDeadlineUtc": {
+        "from": "2026-09-11T01:49:00.004203+00:00",
+        "to": null
+      },
+      "mowerStartPendingSessionEpoch": {
+        "from": null,
+        "to": null
+      },
+      "mowerStartPendingSessionId": {
+        "from": null,
+        "to": null
+      },
+      "mowerStartPendingSinceUtc": {
+        "from": "2026-09-10T20:00:00.004203+00:00",
+        "to": null
+      }
+    },
+    "dryRun": true,
+    "eligible": true,
+    "journal": {
+      "unresolvedDeviceSendCount": 0
+    },
+    "manualSessionStatus": "ENDED",
+    "operatorRequestStatus": "EXPIRED",
+    "pendingFingerprint": "6c138326c3abae64813ccf961cfd88ffc225f229d48f96f919fa9b698e017405",
+    "proof": {
+      "manifestSha256": "8b17b7d232de8a32593c0c2aee55b3cd8527d29338c2be9626199ef72fac3d77",
+      "reasonCode": "MOWER_STATUS_STALE",
+      "traceId": "3bdc5d4a-ad52-11f1-aa9f-7ced8d24030b",
+      "traceTimestampUtc": "2026-09-10T20:00:03.620109+00:00"
+    },
+    "proofToken": "0d7cdb1d00a1b8172d4f8ae681031f8727f04a5773047ee64a7896a499dea0fb",
+    "reasons": [],
+    "stateRevision": 44298
+  }
+}
