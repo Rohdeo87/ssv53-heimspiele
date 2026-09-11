@@ -433,6 +433,38 @@ test("Statuspolling wartet tatsächlich auf die passende neue Bestätigung", asy
  assert.equal(reads,3);assert.equal(answer.operatorCommands.SET_CUTTING_HEIGHT.requestId,"new");
 });
 
+test("Bestätigter manueller Wasserlauf hat keine Morgen-Zeitsperre, auch bei geparktem Mäher", () => {
+  const s=snapshot();s.automation.irrigationPhase="RUNNING";s.irrigation.safety.active_zone_count=1;
+  s.irrigation.intent={source:"MANUAL_OPERATOR",verified:true,controllerManaged:true,automaticWindowApplies:false};
+  s.manualControl={enabled:true,status:"MANUAL_PARKED"};s.mower.mode="HOME";
+  for(const at of ["2026-09-09T00:00:00Z","2026-09-09T06:00:00Z","2026-09-09T21:00:00Z"]){
+    s.generatedAt=at;
+    assert.equal(view.dashboardMessage(s).title,"Bewässerung läuft");
+    assert.doesNotMatch(view.dashboardMessage(s).text,/03:30|08:00/);
+    s.coordination.blockers=[{code:"MOWER_TELEMETRY"}];
+    assert.equal(view.dashboardMessage(s).title,"Bewässerung läuft");
+    s.coordination.blockers=[];
+  }
+  s.mower.activity="MOWING";
+  assert.match(view.dashboardMessage(s).text,/Mäher parken/);
+  assert.equal(view.dashboardMessage(s).tone,"bad");
+});
+
+test("Fehlende oder unbestätigte Herkunft nimmt fremdes Wasser nicht von der Zeitwarnung aus", () => {
+  const s=snapshot();s.automation.irrigationPhase="RUNNING";s.irrigation.safety.active_zone_count=1;
+  const verified={source:"MANUAL_OPERATOR",verified:true,controllerManaged:true,automaticWindowApplies:false};
+  for(const intent of [null,{...verified,source:"AUTOMATIC"},{...verified,verified:false},{...verified,controllerManaged:false},{...verified,automaticWindowApplies:true}]){
+    s.irrigation.intent=intent;
+    assert.equal(view.manualIrrigationRun(s),false);
+    assert.equal(view.dashboardMessage(s).title,"Bewässerung bitte beenden");
+  }
+  s.irrigation.intent=verified;
+  for(const phase of ["COMPLETE_HOLD","FAILED","PLANNED",null]){
+    s.automation.irrigationPhase=phase;
+    assert.equal(view.manualIrrigationRun(s),false);
+  }
+});
+
 test("Unklare Bewässerungslücke behauptet keine sichere Trockenzeit", () => {
  const s=snapshot();s.mower.activity="PARKED_IN_CS";s.automation.irrigationPhase=null;s.coordination.blockers=[];s.coordination.dryUntil="2026-09-09T16:25:00Z";s.coordination.dryingReason="POSSIBLE_IRRIGATION_DURING_GAP";s.generatedAt="2026-09-09T14:30:00Z";
  const message=view.dashboardMessage(s);assert.equal(message.title,"Rasenpause zur Sicherheit");assert.equal(message.text,"Letzte Bewässerung unklar. Bitte den Platz prüfen.");

@@ -423,6 +423,62 @@ def _plan_from_state(state: AutomationState) -> list[dict[str, Any]]:
     return [dict(item) for item in parsed]
 
 
+def _operator_manual_irrigation(
+    plan: list[dict[str, Any]],
+    *,
+    plan_id: str | None,
+    expected_relay_ids: frozenset[int],
+) -> bool:
+    """Verify the persisted identity of an explicit operator plan."""
+
+    if not plan or not plan_id or not all(
+        zone.get("operator_manual") is True for zone in plan
+    ):
+        return False
+    try:
+        relay_ids = [zone.get("relay_id") for zone in plan]
+        canonical = json.dumps(
+            plan, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+        )
+        return (
+            len(relay_ids) == len(expected_relay_ids)
+            and all(type(relay_id) is int and relay_id > 0 for relay_id in relay_ids)
+            and len(set(relay_ids)) == len(expected_relay_ids)
+            and set(relay_ids) == set(expected_relay_ids)
+            and hashlib.sha256(canonical.encode("utf-8")).hexdigest() == plan_id
+        )
+    except (AttributeError, TypeError, ValueError):
+        return False
+
+
+def _operator_manual_water_is_owned(
+    state: AutomationState,
+    *,
+    plan: list[dict[str, Any]],
+    active_relay_ids: set[int],
+    expected_relay_ids: frozenset[int],
+) -> bool:
+    """Prove that observed water is the relay currently owned by a manual run."""
+
+    current_relay = state.irrigation_current_relay_id
+    if (
+        state.irrigation_phase not in {"START_RESERVED", "RUNNING", "STOPPING"}
+        or type(current_relay) is not int
+        or active_relay_ids != {current_relay}
+        or not _operator_manual_irrigation(
+            plan,
+            plan_id=state.irrigation_plan_id,
+            expected_relay_ids=expected_relay_ids,
+        )
+    ):
+        return False
+    return any(
+        zone.get("relay_id") == current_relay
+        and zone.get("selected", True) is not False
+        for zone in plan
+    )
+
+
 def _schedule_override(state: AutomationState) -> dict[str, Any] | None:
     return load_irrigation_schedule_object(
         state.irrigation_schedule_override_json,
@@ -1273,11 +1329,12 @@ def _irrigation_operating_window(
     completed_relay_ids: set[int],
     now_utc: datetime,
     end_confirmation_minutes: int,
+    automatic: bool = True,
 ) -> OperatingWindowResult:
-    """Check the unchanged remaining manual sequence against 03:30--08:00.
+    """Validate a remaining sequence and, for automatic runs, its time window.
 
-    The first manually dispatched zone would start at ``now``. Before the
-    local earliest bound, project from 03:30 so callers can wait without
+    The first centrally dispatched zone would start at ``now``. Before the
+    local earliest bound, project from 03:30 so automatic callers can wait without
     shortening a zone or allowing the suppressed native plan to resume.
     Persisted absolute starts provide every native pause; confirmation waits
     are carried by ``_projected_irrigation_end`` as existing control time.
@@ -1325,6 +1382,26 @@ def _irrigation_operating_window(
     if any(start is None for start in starts):
         return OperatingWindowResult("INVALID", reason="missing persisted zone start")
     assert all(start is not None for start in starts)
+    for index in range(1, len(starts)):
+        if starts[index] < starts[index - 1] + timedelta(seconds=durations[index - 1]):
+            return OperatingWindowResult("INVALID", reason="persisted zones overlap")
+    try:
+        normalized_now = now_utc.astimezone(timezone.utc)
+    except (TypeError, ValueError, AttributeError, OverflowError):
+        return OperatingWindowResult("INVALID", reason="invalid operating window time")
+    if not automatic:
+        try:
+            projected_end = _projected_irrigation_end(
+                plan=ordered,
+                completed_relay_ids=set(),
+                current_relay_id=None,
+                current_started_utc=None,
+                now_utc=normalized_now,
+                end_confirmation_minutes=end_confirmation_minutes,
+            )
+        except (KeyError, TypeError, ValueError, AttributeError):
+            return OperatingWindowResult("INVALID", reason="invalid projected zone sequence")
+        return OperatingWindowResult("OK", projected_end_utc=projected_end)
     try:
         bounds = operating_bounds(now_utc)
     except (TypeError, ValueError, AttributeError, OverflowError):
@@ -1332,10 +1409,6 @@ def _irrigation_operating_window(
     if bounds is None:
         return OperatingWindowResult("INVALID", reason="operating timezone unavailable")
     earliest, deadline = bounds
-    try:
-        normalized_now = now_utc.astimezone(timezone.utc)
-    except (TypeError, ValueError, AttributeError, OverflowError):
-        return OperatingWindowResult("INVALID", reason="invalid operating window time")
     effective_start = max(normalized_now, earliest)
     first_planned = starts[0]
     try:
@@ -4464,9 +4537,19 @@ def run_full_failsafe_cycle(
     # mandatory local operating window.
     operating_bounds_now = operating_bounds(now)
     actual_active_ids = _active_relay_ids(details)
+    try:
+        active_operator_manual_plan = _operator_manual_water_is_owned(
+            state,
+            plan=_plan_from_state(state),
+            active_relay_ids=actual_active_ids,
+            expected_relay_ids=expected_relay_ids,
+        )
+    except RuntimeError:
+        active_operator_manual_plan = False
     if (
         operating_bounds_now is not None
         and actual_active_ids
+        and not active_operator_manual_plan
         and hydra_safety.get("available") is True
         and hydra_safety.get("fresh") is True
         and not (operating_bounds_now[0] <= now < operating_bounds_now[1])
@@ -5039,6 +5122,11 @@ def run_full_failsafe_cycle(
             coordination_plan or all(
                 zone.get("operator_schedule_override") is True for zone in zones
             )
+        )
+        operator_manual_plan = _operator_manual_irrigation(
+            zones,
+            plan_id=state.irrigation_plan_id,
+            expected_relay_ids=expected_relay_ids,
         )
         execution_zone_count = len(execution_zones)
         active_ids = _active_relay_ids(details)
@@ -6219,9 +6307,14 @@ def run_full_failsafe_cycle(
                 completed_relay_ids=set(completed),
                 now_utc=now,
                 end_confirmation_minutes=end_confirmation_minutes,
+                automatic=not operator_manual_plan,
             )
             details["irrigation_operating_window"] = {
                 "code": operating_window.code,
+                "intent": (
+                    "MANUAL_OPERATOR" if operator_manual_plan else "AUTOMATIC"
+                ),
+                "automatic_window_applies": not operator_manual_plan,
                 "earliest_start_utc": (
                     operating_window.earliest_start_utc.isoformat()
                     if operating_window.earliest_start_utc else None
@@ -6329,6 +6422,7 @@ def run_full_failsafe_cycle(
                 completed_relay_ids=set(completed),
                 now_utc=dispatch_now,
                 end_confirmation_minutes=end_confirmation_minutes,
+                automatic=not operator_manual_plan,
             )
             dispatch_code: str | None = None
             dispatch_reason: str | None = None

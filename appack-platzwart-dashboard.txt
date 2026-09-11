@@ -51,6 +51,99 @@
     .time-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.time-box{border-radius:13px;background:#f4f8fd;padding:14px;min-width:0}.time-box:first-child{grid-column:1/-1;border-left:4px solid var(--blue)}.time-label,.time-value,.time-note{display:block}.time-label{font-size:15px;color:var(--muted)}.time-value{font-size:23px;line-height:1.25;margin-top:5px;font-weight:800;overflow-wrap:anywhere}.time-note{font-size:14px;color:var(--muted);margin-top:3px}.zone-details{margin-top:15px;border-top:1px solid var(--line);padding-top:12px}.height-panel summary{cursor:pointer;font-weight:700;color:var(--blue)}.zone-details summary{cursor:pointer;font-weight:700;color:var(--blue);padding:8px 0}.facts{grid-template-columns:minmax(0,1fr) minmax(0,1.4fr)}.facts span{min-width:0;overflow-wrap:anywhere}.card-head>div:first-child{min-width:0}html.ssv-large-text .time-grid{grid-template-columns:minmax(0,1fr)}@media(max-width:430px){.time-value{font-size:21px}.time-box{padding:12px}.time-grid{grid-template-columns:minmax(0,1fr)}}
     .attention-btn{width:30px;height:30px;flex:0 0 30px;margin:11px 1px;border:1px solid #e5a3a3;background:#fff7f7;color:var(--red);border-radius:50%;box-shadow:none}.attention-btn svg{width:16px;height:16px;stroke-width:2.4}.attention-list{list-style:none;margin:14px 0 0;padding:0}.attention-list li{padding:12px 0;border-top:1px solid var(--line)}.attention-list strong,.attention-list span{display:block}.attention-list span{margin-top:3px;color:var(--muted);font-size:15px}.attention-summary{padding:12px 13px;border-left:4px solid var(--red);border-radius:11px;background:#fff7f7;font-weight:700}
     .training-toggle-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px}.training-toggle-row h2{margin:0;font-size:21px}.training-switch{display:flex;align-items:center;gap:9px;min-height:52px;flex:0 0 auto;padding:8px 10px;border:2px solid var(--line);border-radius:14px;background:#fff;color:var(--ink);font-weight:700}.training-switch-track{display:block;position:relative;width:42px;height:26px;border-radius:16px;background:#8792a3}.training-switch-track:after{content:"";position:absolute;left:3px;top:3px;width:20px;height:20px;background:#fff;border-radius:50%}.training-switch[aria-checked="true"] .training-switch-track{background:var(--blue)}.training-switch[aria-checked="true"] .training-switch-track:after{left:19px}.training-switch:disabled{opacity:.55}.training-switch:focus-visible{outline:3px solid var(--blue);outline-offset:3px}.training-note{font-size:16px;margin:12px 0 0}.training-pending{font-weight:700;color:var(--blue)}
+/* PF_DESIGN_CSS_START */
+/* Approved SSV53 design: rounded controls, club blue, progressive disclosure. */
+body.pflege-design{background:#f3f6fa;color:#172c42;font-family:Arial,Helvetica,sans-serif}
+.pflege-design [hidden]{display:none!important}
+.pflege-design .shell{width:100%;max-width:620px;margin:0 auto;padding:12px 16px 28px}
+.pflege-design .head{display:flex;align-items:center;justify-content:center;gap:12px;padding:10px 0 16px;margin:0}
+.pflege-design .head .logo{width:42px;height:52px;object-fit:contain;margin:0}
+.pflege-design .head h1{font-size:23px;margin:0}.pflege-design .head .gold{display:none}
+.pflege-design .pf-meta{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.pflege-design .pf-meta .updated{margin:0;text-align:left;font-size:12px;color:#526477}
+.pflege-design .pf-meta #refresh{border:0;box-shadow:none;background:transparent;color:#285ca0;font-size:12px;padding:10px 0;width:auto;min-height:44px;white-space:nowrap;margin:0}
+.pflege-design .pf-page{display:flex;flex-direction:column;gap:16px}
+.pflege-design .pf-page-title{display:flex;align-items:center;gap:12px;font-size:23px;margin:8px 0 0}
+.pflege-design .card{border:1px solid #dce4ed;box-shadow:none;border-radius:18px;padding:18px;margin:0}
+.pflege-design #overall{padding:20px;border-radius:18px;box-shadow:none;margin-bottom:16px;border-left:0}
+.pflege-design #overall .big{font-size:24px;line-height:1.25}.pflege-design #overall .muted{font-size:15px;line-height:1.5}
+.pflege-design #overall.warn{background:#fff5df;color:#87570a}.pflege-design #overall.good{background:#e7f4ec;color:#1c624d}
+.pflege-design #overall.bad{background:#fff0ef;color:#ad282a}
+.pflege-design #dashboard:not([data-pf-page=home])[data-pf-urgent=false] #overall{display:none}
+.pflege-design .pf-symbol{display:inline-flex;align-items:center;justify-content:center;width:43px;height:43px;border-radius:13px;background:#285ca0;color:#fff;flex:0 0 auto;vertical-align:middle}
+.pflege-design .pf-symbol svg{width:23px;height:23px}
+.pflege-design #overall>.pf-symbol{width:27px;height:27px;background:transparent;color:inherit;float:left;margin:0 8px 6px 0}
+.pflege-design #coordination-card{background:#285ca0;border:0;color:white;text-align:center;padding:24px 16px}
+.pflege-design #coordination-card>.eyebrow,.pflege-design #coordination-card>h2{display:none}
+.pflege-design #coordination-card .time-grid{display:block}.pflege-design #coordination-card .time-box{background:transparent;border:0;padding:0;color:inherit;box-shadow:none}
+.pflege-design #coordination-card .time-label{color:#fff;font-size:16px}
+.pflege-design #mower-next-start{font-size:clamp(36px,9vw,54px);font-weight:700;letter-spacing:-1.5px;line-height:1.15;color:white;margin:15px 0 10px;display:block}
+.pflege-design #mower-next-start.pf-unknown-time{font-size:28px;letter-spacing:-.5px}
+.pflege-design #next-start-note{color:#e3edfc;font-size:13px}
+.pflege-design .pf-charge:has(>.hidden){display:none}
+.pflege-design .pf-charge .time-box{padding:18px;border:1px solid #dce4ed;border-radius:18px;background:#fff}
+.pflege-design .pf-charge .time-value{font-size:22px}.pflege-design .pf-charge .time-note{font-size:13px}
+.pflege-design .pf-home-actions,.pflege-design .pf-home-links,.pflege-design .pf-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.pflege-design .pf-home-actions>.btn{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:13px;min-height:126px;border-radius:18px;border:1px solid #dce4ed;font-size:16px;background:#fff;color:#285ca0;margin:0;padding:20px 10px;box-shadow:none;min-width:0;white-space:normal}
+.pflege-design .pf-home-actions>#manual-start,.pflege-design .pf-home-actions>#mow-start{background:#285ca0;border-color:#285ca0;color:#fff}
+.pflege-design .pf-home-actions>#manual-resume{grid-column:auto}
+.pflege-design .pf-home-actions.pf-single-action>.btn{grid-column:1/-1}
+.pflege-design .pf-home-actions .pf-symbol{background:transparent;color:inherit;width:40px;height:40px;border-radius:0}
+.pflege-design .pf-home-actions .pf-symbol svg{width:34px;height:34px}
+.pflege-design .pf-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;min-width:0;min-height:126px;width:100%;padding:18px 10px;background:#fff;color:#172c42;border:1px solid #dce4ed;border-radius:18px;font:inherit;font-size:15px;line-height:1.4;text-align:center;cursor:pointer;box-shadow:none;white-space:normal;margin:0}
+.pflege-design .pf-tile strong{display:block;font-size:inherit}.pflege-design .pf-tile small{display:block;font-size:13px;color:#526477;font-weight:400;margin-top:5px}
+.pflege-design a.pf-tile{text-decoration:none}
+.pflege-design .pf-categories{display:grid;gap:12px}.pflege-design .pf-category{flex-direction:row;justify-content:flex-start;text-align:left;min-height:100px;padding:20px 16px;gap:16px}
+.pflege-design .pf-category strong{font-size:18px}.pflege-design .pf-home-links .pf-tile{min-height:92px;font-size:14px;gap:8px}
+.pflege-design .pf-home-links .pf-symbol{background:transparent;color:#285ca0;width:30px;height:30px}.pflege-design .pf-home-links svg{width:26px;height:26px}
+.pflege-design .pf-back{display:flex;align-items:center;gap:10px;width:100%;min-height:56px;border:1px solid #dce4ed;background:#fff;color:#285ca0;border-radius:14px;padding:14px;font:inherit;font-weight:700;margin-bottom:16px;cursor:pointer}
+.pflege-design .pf-back .pf-symbol,.pflege-design .plan-back .pf-symbol{background:transparent;color:inherit;width:24px;height:24px}
+.pflege-design .pf-nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;padding:8px;margin-top:20px;border-top:1px solid #dce4ed;background:#fff;border-radius:0 0 18px 18px}
+.pflege-design .pf-nav .pf-tile{min-height:62px;border:0;background:transparent;gap:4px;padding:8px 4px;font-size:12px;border-radius:12px}
+.pflege-design .pf-nav .pf-symbol{background:transparent;color:inherit;width:24px;height:24px}.pflege-design .pf-nav .pf-current{background:#eaf2fc;color:#285ca0}
+.pflege-design .pf-safety-actions>.btn:not(.hidden){display:flex;align-items:center;justify-content:center;gap:12px;min-height:64px;background:#fff0ef;color:#ad282a;border:1px solid #ad282a;border-radius:16px;box-shadow:none;margin:0 0 16px}
+.pflege-design .pf-safety-actions .pf-symbol{background:transparent;color:inherit}
+.pflege-design #height-panel,.pflege-design #pf-page-zones>.zone-details,.pflege-design #pf-page-husqvarna>details{border:0;padding:0;margin:0}
+.pflege-design #height-panel>summary,.pflege-design #pf-page-zones>.zone-details>summary,.pflege-design #pf-page-husqvarna>details>summary{display:none}
+.pflege-design #height-panel>.height-note{display:none}
+.pflege-design .pf-height-current{text-align:center;font-size:15px;color:#526477;margin:0 0 20px}
+.pflege-design .pf-height-label{text-align:center;font-weight:700;font-size:17px;color:#285ca0;margin-bottom:0}
+.pflege-design .height-control{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:0}
+.pflege-design .height-value{grid-row:1;grid-column:1/-1;text-align:center;border:2px solid #285ca0;background:#eaf2fc;border-radius:18px;padding:24px 12px;font-size:60px;color:#285ca0;font-weight:700;line-height:1.1}
+.pflege-design .height-step{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:84px;width:100%;border-radius:16px;font-size:14px;background:white;color:#285ca0;border:1px solid #dce4ed}
+.pflege-design .height-step .pf-symbol{background:transparent;color:inherit;width:29px;height:29px}
+.pflege-design .pf-height-delta{text-align:center;font-size:14px;color:#285ca0;margin:15px 0}
+.pflege-design #height-save,.pflege-design #blade-reset{display:flex;align-items:center;justify-content:center;gap:10px;background:#285ca0;color:#fff;border:0;border-radius:16px;min-height:64px;box-shadow:none}
+.pflege-design .pf-blade-value{display:flex;flex-direction:column;gap:10px;text-align:center;padding:24px;border:1px solid #dce4ed;border-radius:18px;background:#fff}.pflege-design .pf-blade-value strong{font-size:34px}
+.pflege-design #manual-control .dialog-actions:empty{display:none}
+.pflege-design .pf-page .card-head h2{font-size:20px}.pflege-design .pf-page .facts{font-size:15px}
+.pflege-design dialog{width:min(560px,calc(100% - 24px));max-width:none;border-radius:20px;padding:0}
+.pflege-design dialog h2{display:flex;align-items:center;gap:10px;font-size:22px;line-height:1.3}
+.pflege-design dialog .btn{display:flex;align-items:center;justify-content:center;gap:9px;min-height:60px;border-radius:16px;font-size:16px;box-shadow:none;white-space:normal}
+.pflege-design dialog .btn:not(.secondary):not(.stop):not(.danger):not(.goldbtn){background:#285ca0;color:#fff}
+.pflege-design .btn>.pf-symbol{background:transparent;color:inherit}
+.pflege-design .plan-choice{min-height:94px;border-radius:16px;padding:18px;position:relative}
+.pflege-design .plan-choice>.pf-symbol{float:left;margin-right:13px}.pflege-design .plan-choice strong,.pflege-design .plan-choice small{overflow:hidden}
+.pflege-design .profile-row button,.pflege-design .plan-preset-pause{display:flex;align-items:center;justify-content:center;gap:8px;min-height:64px;white-space:normal}
+.pflege-design .profile-row .pf-symbol{width:24px;height:24px;background:transparent;color:inherit}
+.pflege-design .plan-back{display:flex;align-items:center;gap:8px;width:auto;min-height:52px;font-size:14px;border-radius:12px;padding:12px}
+.pflege-design .plan-datetime-group .pf-symbol{width:24px;height:24px;background:transparent;color:#285ca0}
+.pflege-design .stats-grid{display:flex;flex-direction:column;gap:12px}.pflege-design .stat{display:grid;grid-template-columns:43px minmax(0,1fr);gap:5px 13px;background:#fff;border:1px solid #dce4ed;border-radius:16px;padding:18px}
+.pflege-design .stat>.pf-symbol{grid-row:1/span 4;align-self:center}.pflege-design .stat>*:not(.pf-symbol){grid-column:2;min-width:0}
+.pflege-design .stat .stat-label{font-size:13px;color:#526477}.pflege-design .stat .stat-value{font-size:24px;color:#172c42;line-height:1.3;overflow-wrap:anywhere}
+.pflege-design .zone-stat-list li{gap:8px}.pflege-design .zone-stat-list .pf-symbol{width:24px;height:24px;background:transparent;color:#285ca0}
+.pflege-design .zone-head{gap:9px}.pflege-design .zone-head>span:not(.pf-symbol){flex:1}.pflege-design .zone-head .pf-symbol{width:32px;height:32px;border-radius:10px}
+.pflege-design .zone-controls{gap:12px}.pflege-design .zone-controls select{min-height:56px}.pflege-design .zone-start{display:flex;align-items:center;justify-content:center;gap:8px;min-height:60px;border-radius:14px;box-shadow:none}
+.pflege-design .pf-command-history{display:grid;gap:12px}.pflege-design .pf-command-history .pf-symbol{margin-right:12px}
+.pflege-design #manual-confirmations label{padding:18px 12px;border:1px solid #dce4ed;border-radius:14px;min-height:62px;align-items:center;cursor:pointer}
+.pflege-design #manual-water-choice{padding:12px}.pflege-design #manual-water-choice .pf-symbol{width:30px;height:30px;background:transparent;color:#285ca0}
+.pflege-design #manual-water-choice label:has(input:checked){background:#eaf2fc;border-color:#285ca0}
+.pflege-design .duration-stepper button{min-width:48px;min-height:48px}.pflege-design .duration-stepper .pf-symbol{width:24px;height:24px;background:transparent;color:inherit}
+.pflege-design #plan-history-toggle{display:flex;gap:12px;align-items:center;min-height:60px;text-align:left}
+.pflege-design #plan-history-toggle .pf-symbol{width:28px;height:28px;background:transparent;color:inherit}
+@media(max-width:360px){.pflege-design .shell{padding:10px 12px}.pflege-design .pf-home-actions>.btn{font-size:15px}.pflege-design .dialog-actions{grid-template-columns:1fr}.pflege-design .profile-row{flex-wrap:wrap}.pflege-design .plan-step-head{flex-wrap:wrap}.pflege-design .zone-controls{flex-direction:column}.pflege-design dialog h2{font-size:20px}}
+
+/* PF_DESIGN_CSS_END */
   </style>
 </head>
 <body>
@@ -280,7 +373,7 @@
       if(has("MOWER_TELEMETRY")){
         if(w.safety&&w.safety.available===true&&w.safety.fresh===true&&Number(w.safety.active_zone_count)>0){
           if(["MOWING","LEAVING"].indexOf(m.activity)>=0)return message("Bewässerung läuft","Bitte den Mäher parken und den Platz noch nicht betreten.","bad");
-          if(irrigationOutsideWindow(s))return message("Bewässerung bitte beenden","Die Bewässerung läuft außerhalb von 03:30 bis 08:00 Uhr. Bitte die Anlage vor Ort prüfen und beenden.","bad");
+          if(irrigationOutsideWindow(s)&&!manualIrrigationRun(s))return message("Bewässerung bitte beenden","Die Bewässerung läuft außerhalb von 03:30 bis 08:00 Uhr. Bitte die Anlage vor Ort prüfen und beenden.","bad");
           return message("Bewässerung läuft","Bitte den Platz noch nicht betreten.","warn");
         }
         var planned=nextStartInfo(s);
@@ -302,11 +395,12 @@
       if(s.irrigationSchedule&&s.irrigationSchedule.override&&s.irrigationSchedule.override.status==="REJECTED")return message("Bewässerungsplan bitte prüfen","Die Änderung wurde nicht bestätigt. Bitte Plan und Anlage prüfen, bevor du erneut etwas änderst.","bad");
       if(parkPending)return message("Parken angefragt – Bestätigung steht aus","Die Parkanfrage wird noch verarbeitet. Bitte auf die Rückmeldung warten.","warn");
        if(parkStatus==="UNKNOWN")return message("Parken nicht bestätigt","Die Parkanfrage ist unklar. Bitte den Mäher prüfen; es wird nicht automatisch erneut angefragt.","bad");
+      if(wet&&irrigationOutsideWindow(s)&&!manualIrrigationRun(s))return message("Bewässerung bitte beenden","Die Bewässerung läuft außerhalb von 03:30 bis 08:00 Uhr. Bitte die Anlage vor Ort prüfen und beenden.","bad");
+      if(wet)return message("Bewässerung läuft","Bitte den Platz noch nicht betreten.","warn");
        if(manualControl.status==="MANUAL_PARKED")return ["CHARGING","PARKED_IN_CS"].indexOf(m.activity)>=0&&m.mode==="HOME"&&mowerTelemetryFresh(s)?message("Mäher in Station geparkt","Die Automatik wartet auf deine Freigabe.","good"):message("Parken angefordert","Bitte warten, bis der Mäher die Station erreicht hat.","warn");
        if(manualControl.status==="PREPARED")return message("Manuelle Bedienung angefordert","Bitte auf die Rückmeldung des Mähers warten.","warn");
       if(a.pendingAction)return message("Anfrage gesendet",actionProgressText(a.pendingAction),"warn");
-      if(wet&&irrigationOutsideWindow(s))return message("Bewässerung bitte beenden","Die Bewässerung läuft außerhalb von 03:30 bis 08:00 Uhr. Bitte die Anlage vor Ort prüfen und beenden.","bad");
-      if(wet||a.irrigationPhase==="RUNNING")return message("Bewässerung läuft","Bitte den Platz noch nicht betreten.","warn");
+      if(a.irrigationPhase==="RUNNING")return message("Bewässerung läuft","Bitte den Platz noch nicht betreten.","warn");
       if(code==="IRRIGATION_ACTIVE_OUTSIDE_OPERATING_WINDOW")return message("Bewässerung bitte prüfen","Ein Lauf lag außerhalb von 03:30 bis 08:00 Uhr. Bitte die Anlage und den Bewässerungsplan prüfen.","bad");
       if(code==="IRRIGATION_WINDOW_CANNOT_FIT")return message("Bewässerung passt nicht mehr","Alle Zonen müssen bis 08:00 Uhr fertig sein. Bitte einen früheren Start im Bewässerungsplan wählen.","bad");
       if(code==="IRRIGATION_OPERATING_WINDOW")return message("Bewässerungszeit prüfen","Start frühestens 03:30 Uhr, alle Zonen fertig bis 08:00 Uhr. Bitte aktualisieren und den Bewässerungsplan prüfen.","warn");
@@ -387,6 +481,7 @@
       return at&&!isNaN(at.getTime())&&at>now?(irrigationOutsideWindow({generatedAt:at})?"Bitte Plan prüfen":calendarTime(at,now)):"Noch offen";
     }
     function irrigationOutsideWindow(s){var at=new Date(s.generatedAt||Date.now());if(isNaN(at.getTime()))return false;var clock=at.toLocaleTimeString("en-GB",{timeZone:EVENT_TIME_ZONE,hour:"2-digit",minute:"2-digit",hourCycle:"h23"});return clock<"03:30"||clock>="08:00"}
+    function manualIrrigationRun(s){var intent=s.irrigation&&s.irrigation.intent||{},phase=s.automation&&s.automation.irrigationPhase;return ["START_RESERVED","RUNNING","STOPPING"].indexOf(phase)>=0&&intent.source==="MANUAL_OPERATOR"&&intent.verified===true&&intent.controllerManaged===true&&intent.automaticWindowApplies===false}
     function waterTitle(s){var a=s.automation||{},safe=s.irrigation&&s.irrigation.safety||{};if(safe.available!==true||safe.fresh!==true)return"Rückmeldung fehlt";if(a.irrigationPhase==="FAILED")return"Bitte Anlage prüfen";if(Number(safe.active_zone_count||0)>0)return"Läuft";return phase(a.irrigationPhase)}
     function renderCoordination(s){var c=s.coordination||{},m=s.mower||{},info=nextStartInfo(s),charge=chargingEnd(s),dry=c.dryUntil?new Date(c.dryUntil):null,now=new Date(s.generatedAt||Date.now());text("mower-next-start",info.at?calendarTime(info.at,now):info.text);document.getElementById("next-start-note").textContent=info.at?(info.awaitingMowerReport?"Geplant · Neue Mähermeldung erforderlich.":"Voraussichtlich"):"";document.getElementById("charge-end-row").classList.toggle("hidden",m.activity!=="CHARGING");text("charge-end-time",charge?calendarTime(charge,now):"Noch offen");document.getElementById("charge-end-note").textContent=charge?"Voraussichtlich":"Die Zeit wird noch ermittelt.";var drying=s.controlsAvailable!==false&&dry&&!isNaN(dry.getTime())&&dry>now;document.getElementById("drying-end-row").classList.toggle("hidden",!drying);text("drying-end-label",c.dryingReason==="POSSIBLE_IRRIGATION_DURING_GAP"?"Rasenpause zur Sicherheit bis":c.dryingReason==="DATA_GAP"?"Kurze Prüfung bis":"Wartezeit nach Bewässerung bis");if(drying)text("drying-end-time",dryingTime(dry,now));text("water-next-start",nextWaterStart(s))}
     function renderClubhouse(home){home=home||{};var events=document.getElementById("clubhouse-events");events.innerHTML="";if(Array.isArray(home.events)&&home.events.length)home.events.forEach(function(event){addEvent(events,event)});else{var empty=document.createElement("li");empty.className="muted";empty.textContent=home.loading?"Belegungen werden geladen":home.available?"Keine bevorstehende Belegung":"Belegungen konnten nicht geladen werden. Bitte aktualisieren.";events.appendChild(empty)}}
@@ -460,6 +555,211 @@
     document.getElementById("manual-husqvarna-park").onclick=function(){manualControlPrepare("PARK","HUSQVARNA")};
     document.getElementById("confirm-go").onclick=function(){if(state.pendingAction==="MANUAL_CONTROL")return submitManualControl();return legacyConfirmAction.apply(this,arguments)};
     function loadOnResume(){if(document.hidden||!session()||!stored(DEVICE_KEY))return;load()}document.addEventListener("visibilitychange",loadOnResume);window.addEventListener("pageshow",loadOnResume);window.addEventListener("focus",loadOnResume);
+/* PF_DESIGN_JS_START */
+    /* Vendored Lucide icon subset (1.8.0).
+ISC License
+
+Copyright (c) 2026 Lucide Icons and Contributors
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+---
+
+The following Lucide icons are derived from the Feather project:
+
+airplay, alert-circle, alert-octagon, alert-triangle, aperture, arrow-down-circle, arrow-down-left, arrow-down-right, arrow-down, arrow-left-circle, arrow-left, arrow-right-circle, arrow-right, arrow-up-circle, arrow-up-left, arrow-up-right, arrow-up, at-sign, calendar, cast, check, chevron-down, chevron-left, chevron-right, chevron-up, chevrons-down, chevrons-left, chevrons-right, chevrons-up, circle, clipboard, clock, code, columns, command, compass, corner-down-left, corner-down-right, corner-left-down, corner-left-up, corner-right-down, corner-right-up, corner-up-left, corner-up-right, crosshair, database, divide-circle, divide-square, dollar-sign, download, external-link, feather, frown, hash, headphones, help-circle, info, italic, key, layout, life-buoy, link-2, link, loader, lock, log-in, log-out, maximize, meh, minimize, minimize-2, minus-circle, minus-square, minus, monitor, moon, more-horizontal, more-vertical, move, music, navigation-2, navigation, octagon, pause-circle, percent, plus-circle, plus-square, plus, power, radio, rss, search, server, share, shopping-bag, sidebar, smartphone, smile, square, table-2, tablet, target, terminal, trash-2, trash, triangle, tv, type, upload, x-circle, x-octagon, x-square, x, zoom-in, zoom-out
+
+The MIT License (MIT) (for the icons listed above)
+
+Copyright (c) 2013-present Cole Bemis
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+    */
+    // Presentation only. Existing authenticated handlers and backend permits remain authoritative.
+    var pfIconNodes = {"Info":[["circle",{"cx":"12","cy":"12","r":"10"}],["path",{"d":"M12 16v-4"}],["path",{"d":"M12 8h.01"}]],"Bot":[["path",{"d":"M12 8V4H8"}],["rect",{"width":"16","height":"12","x":"4","y":"8","rx":"2"}],["path",{"d":"M2 14h2"}],["path",{"d":"M20 14h2"}],["path",{"d":"M15 13v2"}],["path",{"d":"M9 13v2"}]],"LayoutGrid":[["rect",{"width":"7","height":"7","x":"3","y":"3","rx":"1"}],["rect",{"width":"7","height":"7","x":"14","y":"3","rx":"1"}],["rect",{"width":"7","height":"7","x":"14","y":"14","rx":"1"}],["rect",{"width":"7","height":"7","x":"3","y":"14","rx":"1"}]],"ArrowLeft":[["path",{"d":"m12 19-7-7 7-7"}],["path",{"d":"M19 12H5"}]],"House":[["path",{"d":"M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"}],["path",{"d":"M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"}]],"Droplets":[["path",{"d":"M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.84-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z"}],["path",{"d":"M12.56 6.6A10.97 10.97 0 0 0 14 3.02c.5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a6.98 6.98 0 0 1-11.91 4.97"}]],"Play":[["path",{"d":"M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"}]],"Square":[["rect",{"width":"18","height":"18","x":"3","y":"3","rx":"2"}]],"MoveVertical":[["path",{"d":"M12 2v20"}],["path",{"d":"m8 18 4 4 4-4"}],["path",{"d":"m8 6 4-4 4 4"}]],"Scissors":[["circle",{"cx":"6","cy":"6","r":"3"}],["path",{"d":"M8.12 8.12 12 12"}],["path",{"d":"M20 4 8.12 15.88"}],["circle",{"cx":"6","cy":"18","r":"3"}],["path",{"d":"M14.8 14.8 20 20"}]],"Smartphone":[["rect",{"width":"14","height":"20","x":"5","y":"2","rx":"2","ry":"2"}],["path",{"d":"M12 18h.01"}]],"Building2":[["path",{"d":"M10 12h4"}],["path",{"d":"M10 8h4"}],["path",{"d":"M14 21v-3a2 2 0 0 0-4 0v3"}],["path",{"d":"M6 10H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-2"}],["path",{"d":"M6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16"}]],"CalendarDays":[["path",{"d":"M8 2v4"}],["path",{"d":"M16 2v4"}],["rect",{"width":"18","height":"18","x":"3","y":"4","rx":"2"}],["path",{"d":"M3 10h18"}],["path",{"d":"M8 14h.01"}],["path",{"d":"M12 14h.01"}],["path",{"d":"M16 14h.01"}],["path",{"d":"M8 18h.01"}],["path",{"d":"M12 18h.01"}],["path",{"d":"M16 18h.01"}]],"CalendarClock":[["path",{"d":"M16 14v2.2l1.6 1"}],["path",{"d":"M16 2v4"}],["path",{"d":"M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5"}],["path",{"d":"M3 10h5"}],["path",{"d":"M8 2v4"}],["circle",{"cx":"16","cy":"16","r":"6"}]],"CalendarX2":[["path",{"d":"M8 2v4"}],["path",{"d":"M16 2v4"}],["path",{"d":"M21 13V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8"}],["path",{"d":"M3 10h18"}],["path",{"d":"m17 22 5-5"}],["path",{"d":"m17 17 5 5"}]],"CalendarCheck":[["path",{"d":"M8 2v4"}],["path",{"d":"M16 2v4"}],["rect",{"width":"18","height":"18","x":"3","y":"4","rx":"2"}],["path",{"d":"M3 10h18"}],["path",{"d":"m9 16 2 2 4-4"}]],"Snowflake":[["path",{"d":"m10 20-1.25-2.5L6 18"}],["path",{"d":"M10 4 8.75 6.5 6 6"}],["path",{"d":"m14 20 1.25-2.5L18 18"}],["path",{"d":"m14 4 1.25 2.5L18 6"}],["path",{"d":"m17 21-3-6h-4"}],["path",{"d":"m17 3-3 6 1.5 3"}],["path",{"d":"M2 12h6.5L10 9"}],["path",{"d":"m20 10-1.5 2 1.5 2"}],["path",{"d":"M22 12h-6.5L14 15"}],["path",{"d":"m4 10 1.5 2L4 14"}],["path",{"d":"m7 21 3-6-1.5-3"}],["path",{"d":"m7 3 3 6h4"}]],"History":[["path",{"d":"M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"}],["path",{"d":"M3 3v5h5"}],["path",{"d":"M12 7v5l4 2"}]],"ChartNoAxesColumn":[["path",{"d":"M5 21v-6"}],["path",{"d":"M12 21V3"}],["path",{"d":"M19 21V9"}]],"Grid2x2":[["path",{"d":"M12 3v18"}],["path",{"d":"M3 12h18"}],["rect",{"x":"3","y":"3","width":"18","height":"18","rx":"2"}]],"Timer":[["line",{"x1":"10","x2":"14","y1":"2","y2":"2"}],["line",{"x1":"12","x2":"15","y1":"14","y2":"11"}],["circle",{"cx":"12","cy":"14","r":"8"}]],"Clock":[["circle",{"cx":"12","cy":"12","r":"10"}],["path",{"d":"M12 6v6l4 2"}]],"Route":[["circle",{"cx":"6","cy":"19","r":"3"}],["path",{"d":"M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"}],["circle",{"cx":"18","cy":"5","r":"3"}]],"CircleCheck":[["circle",{"cx":"12","cy":"12","r":"10"}],["path",{"d":"m9 12 2 2 4-4"}]],"Repeat2":[["path",{"d":"m2 9 3-3 3 3"}],["path",{"d":"M13 18H7a2 2 0 0 1-2-2V6"}],["path",{"d":"m22 15-3 3-3-3"}],["path",{"d":"M11 6h6a2 2 0 0 1 2 2v10"}]],"Pause":[["rect",{"x":"14","y":"3","width":"5","height":"18","rx":"1"}],["rect",{"x":"5","y":"3","width":"5","height":"18","rx":"1"}]],"Save":[["path",{"d":"M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"}],["path",{"d":"M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"}],["path",{"d":"M7 3v4a1 1 0 0 0 1 1h7"}]],"Minus":[["path",{"d":"M5 12h14"}]],"Plus":[["path",{"d":"M5 12h14"}],["path",{"d":"M12 5v14"}]],"X":[["path",{"d":"M18 6 6 18"}],["path",{"d":"m6 6 12 12"}]],"SlidersHorizontal":[["path",{"d":"M10 5H3"}],["path",{"d":"M12 19H3"}],["path",{"d":"M14 3v4"}],["path",{"d":"M16 17v4"}],["path",{"d":"M21 12h-9"}],["path",{"d":"M21 19h-5"}],["path",{"d":"M21 5h-7"}],["path",{"d":"M8 10v4"}],["path",{"d":"M8 12H3"}]],"KeyRound":[["path",{"d":"M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"}],["circle",{"cx":"16.5","cy":"7.5","r":".5","fill":"currentColor"}]],"TriangleAlert":[["path",{"d":"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"}],["path",{"d":"M12 9v4"}],["path",{"d":"M12 17h.01"}]],"BatteryCharging":[["path",{"d":"m11 7-3 5h4l-3 5"}],["path",{"d":"M14.856 6H16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.935"}],["path",{"d":"M22 14v-4"}],["path",{"d":"M5.14 18H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h2.936"}]],"Ellipsis":[["circle",{"cx":"12","cy":"12","r":"1"}],["circle",{"cx":"19","cy":"12","r":"1"}],["circle",{"cx":"5","cy":"12","r":"1"}]]};
+    var pfView = "home", pfHistory = [], pfPages = {}, pfReady = false;
+    function pfIcon(name) {
+      var wrap=document.createElement("span"),svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
+      wrap.className="pf-symbol";wrap.dataset.pfIcon=name;wrap.setAttribute("aria-hidden","true");
+      svg.setAttribute("viewBox","0 0 24 24");svg.setAttribute("fill","none");svg.setAttribute("stroke","currentColor");svg.setAttribute("stroke-width","2");svg.setAttribute("stroke-linecap","round");svg.setAttribute("stroke-linejoin","round");
+      (pfIconNodes[name]||pfIconNodes.Info).forEach(function(part){var node=document.createElementNS(svg.namespaceURI,part[0]);Object.keys(part[1]).forEach(function(key){node.setAttribute(key,part[1][key])});svg.appendChild(node)});
+      wrap.appendChild(svg);return wrap;
+    }
+    function pfButton(label,icon,handler,description) {
+      var button=document.createElement("button"),copy=document.createElement("span"),title=document.createElement("strong");
+      button.type="button";button.className="pf-tile";button.appendChild(pfIcon(icon));title.textContent=label;copy.appendChild(title);
+      if(description){var note=document.createElement("small");note.textContent=description;copy.appendChild(note);button.classList.add("pf-category")}
+      button.appendChild(copy);button.onclick=handler;return button;
+    }
+    function pfDecorate(element,icon,label) {
+      if(!element)return;if(label!==undefined)element.textContent=label;
+      var current=element.querySelector(":scope > .pf-symbol");if(current&&current.dataset.pfIcon!==icon){current.replaceWith(pfIcon(icon));return}
+      if(!current){var old=element.querySelector(":scope > svg");if(old)old.remove();element.prepend(pfIcon(icon))}
+    }
+    function pfMove(id,parent){var el=document.getElementById(id);if(el)parent.appendChild(el);return el}
+    function pfCreatePage(key,title,icon) {
+      var page=document.createElement("section"),heading=document.createElement("h2"),label=document.createElement("span");
+      page.id="pf-page-"+key;page.className="pf-page";page.hidden=key!=="home";
+      if(title){heading.className="pf-page-title";heading.appendChild(pfIcon(icon));label.textContent=title;heading.appendChild(label);page.appendChild(heading)}
+      document.getElementById("pf-pages").appendChild(page);pfPages[key]=page;return page;
+    }
+    function pfGo(key,back) {
+      if(!pfPages[key])return;if(!back&&key!==pfView)pfHistory.push(pfView);pfView=key;
+      Object.keys(pfPages).forEach(function(name){pfPages[name].hidden=name!==key});
+      document.getElementById("dashboard").dataset.pfPage=key;
+      document.getElementById("pf-back").hidden=key==="home";
+      document.getElementById("pf-back").textContent="Zurück";pfDecorate(document.getElementById("pf-back"),"ArrowLeft");
+      var actions=document.getElementById("pf-mower-actions");(key==="controls"?pfPages.controls:pfPages.home).appendChild(actions);
+      if(key==="home")pfPages.home.insertBefore(actions,document.getElementById("pf-home-links"));
+      document.querySelectorAll("[data-pf-nav]").forEach(function(b){var active=b.dataset.pfNav===(key==="home"?"home":["today","training","grounds"].indexOf(key)>=0?"today":"more");b.classList.toggle("pf-current",active);if(active)b.setAttribute("aria-current","page");else b.removeAttribute("aria-current")});
+      if(pfReady){var focus=pfPages[key].querySelector("h2")||document.getElementById("pf-back");focus.setAttribute("tabindex","-1");focus.focus({preventScroll:true});document.getElementById("dashboard").scrollIntoView({block:"start",behavior:"auto"})}
+    }
+    function pfNavigationButton(parent,key,label,icon,description) {var b=pfButton(label,icon,function(){pfGo(key)},description);b.dataset.pfTarget=key;parent.appendChild(b);return b}
+    function pfCalendarLink(parent,label,icon) {
+      // Technical module name read from the authenticated CMS bookmark on 2026-09-11.
+      // Appack's documented nav:// scheme keeps navigation and user identity in the app.
+      var link=document.createElement("a"),text=document.createElement("strong");link.className="pf-tile";link.href="nav://ssv53_TextImage_1761902353516";link.dataset.pfCalendar="true";link.appendChild(pfIcon(icon));text.textContent=label;link.appendChild(text);parent.appendChild(link);return link;
+    }
+    function pfMountDesign() {
+      var dashboard=document.getElementById("dashboard");document.body.classList.add("pflege-design");
+      var meta=document.createElement("div");meta.className="pf-meta";pfMove("updated",meta);pfMove("refresh",meta);dashboard.prepend(meta);
+      var back=pfButton("Zurück","ArrowLeft",function(){pfGo(pfHistory.pop()||"home",true)});back.id="pf-back";back.className="pf-back";back.hidden=true;dashboard.insertBefore(back,document.getElementById("overall"));
+      var safety=document.createElement("div");safety.id="pf-safety-actions";safety.className="pf-safety-actions";pfMove("irrigation-stop",safety);dashboard.insertBefore(safety,document.getElementById("overall").nextSibling);
+      var pages=document.createElement("div");pages.id="pf-pages";dashboard.appendChild(pages);
+      pfCreatePage("home");pfCreatePage("more","Sonstiges","LayoutGrid");pfCreatePage("mower","Mähroboter","Bot");pfCreatePage("controls","Mäher bedienen","Bot");pfCreatePage("height","Schnitthöhe","MoveVertical");pfCreatePage("blades","Klingen","Scissors");pfCreatePage("husqvarna","Am Mäher oder über Husqvarna","Smartphone");pfCreatePage("water","Bewässerung","Droplets");pfCreatePage("zones","Einzelne Zonen","Grid2x2");pfCreatePage("grounds","Platz & Training","CalendarDays");pfCreatePage("today","Platzbelegung","CalendarDays");pfCreatePage("training","Trainingsplan","Snowflake");pfCreatePage("clubhouse","Vereinsheim","Building2");pfCreatePage("history","Letzte Mäheraktionen","History");
+      pfMove("coordination-card",pfPages.home);var charge=document.createElement("div");charge.className="pf-charge";pfMove("charge-end-row",charge);pfPages.home.appendChild(charge);
+      var mowerCard=document.getElementById("mower-title").closest("article"),waterCard=document.getElementById("water-title").closest("article"),occupancyCard=document.getElementById("occupancy-title").closest("article"),clubhouseCard=document.getElementById("clubhouse-events").closest("article");
+      pfPages.controls.appendChild(mowerCard);pfPages.water.appendChild(waterCard);pfPages.today.appendChild(occupancyCard);pfPages.clubhouse.appendChild(clubhouseCard);pfMove("training-control-card",pfPages.training);
+      var actions=document.createElement("div");actions.id="pf-mower-actions";actions.className="pf-home-actions";["manual-start","manual-park","manual-resume","mow-start","mow-park"].forEach(function(id){pfMove(id,actions)});pfPages.home.appendChild(actions);
+      var links=document.createElement("div");links.id="pf-home-links";links.className="pf-home-links";pfNavigationButton(links,"water","Bewässerung","Droplets");pfNavigationButton(links,"today","Platzbelegung","CalendarDays");pfPages.home.appendChild(links);
+      var height=pfMove("height-panel",pfPages.height);height.open=true;var current=document.createElement("p");current.id="pf-height-current";current.className="pf-height-current";height.prepend(current);var newHeight=document.createElement("p");newHeight.className="pf-height-label";newHeight.textContent="Neue Höhe";height.insertBefore(newHeight,height.querySelector(".height-control"));var delta=document.createElement("p");delta.id="pf-height-delta";delta.className="pf-height-delta";delta.setAttribute("aria-live","polite");height.querySelector(".height-control").after(delta);pfMove("height-status",pfPages.height);
+      var bladeValue=document.createElement("div");bladeValue.className="pf-blade-value";bladeValue.innerHTML='<span>Seit dem letzten Wechsel</span><strong id="pf-blade-hours">–</strong>';pfPages.blades.appendChild(bladeValue);pfMove("blade-reset",pfPages.blades);
+      var husqvarna=document.getElementById("manual-husqvarna").closest("details");husqvarna.open=true;pfPages.husqvarna.appendChild(husqvarna);
+      var waterGrid=document.createElement("div");waterGrid.className="pf-grid";pfPages.water.appendChild(waterGrid);pfMove("water-plan-open",waterGrid);pfNavigationButton(waterGrid,"zones","Einzelne Zonen","Grid2x2");pfMove("irrigation-start-all",waterGrid);pfMove("water-stats-open",waterGrid);
+      var zones=document.getElementById("zones").closest("details");zones.open=true;pfPages.zones.appendChild(zones);pfMove("drying-end-row",waterCard);
+      var menu=document.createElement("div");menu.className="pf-categories";pfPages.more.appendChild(menu);pfNavigationButton(menu,"mower","Mähroboter","Bot","Schnitthöhe, Klingen und Bedienung");pfNavigationButton(menu,"water","Bewässerung","Droplets","Zeitplan, Zonen und Laufzeiten");pfNavigationButton(menu,"grounds","Platz & Training","CalendarDays","Belegung und Trainingsplan");pfNavigationButton(menu,"clubhouse","Vereinsheim","Building2","Termine im Vereinsheim");
+      var mowerGrid=document.createElement("div");mowerGrid.className="pf-grid";pfPages.mower.appendChild(mowerGrid);pfNavigationButton(mowerGrid,"height","Schnitthöhe","MoveVertical");pfNavigationButton(mowerGrid,"blades","Klingen","Scissors");pfNavigationButton(mowerGrid,"controls","Bedienung","Play");pfMove("stats-open",mowerGrid);pfNavigationButton(mowerGrid,"history","Letzte Aktionen","History");pfNavigationButton(mowerGrid,"husqvarna","Husqvarna","Smartphone");
+      var groundsGrid=document.createElement("div");groundsGrid.className="pf-grid";pfPages.grounds.appendChild(groundsGrid);pfNavigationButton(groundsGrid,"today","Platzbelegung","CalendarDays");pfNavigationButton(groundsGrid,"training","Trainingsplan","Snowflake");
+      pfCalendarLink(groundsGrid,"Training verschieben","CalendarClock");pfCalendarLink(groundsGrid,"Termine & Sperren","CalendarDays");pfCalendarLink(pfPages.today,"Vollständigen Kalender öffnen","CalendarDays");
+      var history=document.createElement("div");history.id="pf-command-history";history.className="pf-command-history";pfPages.history.appendChild(history);
+      var footer=document.createElement("nav");footer.className="pf-nav";footer.setAttribute("aria-label","Platzpflegebereiche");[["home","Übersicht","House"],["today","Heute","CalendarDays"],["more","Sonstiges","Ellipsis"]].forEach(function(item){var b=pfButton(item[1],item[2],function(){pfHistory=[];pfGo(item[0],true)});b.dataset.pfNav=item[0];footer.appendChild(b)});dashboard.appendChild(footer);
+      pfMove("action-error",safety);pfStyleStatic();pfGo("home",true);pfReady=true;
+    }
+    function pfStyleStatic() {
+      var map={"stats-open":["ChartNoAxesColumn","Statistiken"],"water-plan-open":["CalendarClock","Zeitplan"],"water-stats-open":["ChartNoAxesColumn","Statistiken"],"irrigation-start-all":["Play","Alle Zonen starten"],"irrigation-stop":["Square","Bewässerung beenden"],"manual-husqvarna":["Play","Über Husqvarna starten"],"manual-husqvarna-park":["House","Über Husqvarna parken"],"blade-reset":["Scissors","Klingen gewechselt"],"height-minus":["Minus","1 mm niedriger"],"height-plus":["Plus","1 mm höher"],"plan-pause":["Pause","Bewässerung pausieren"],"plan-save-custom":["Save","Speichern"],"stop-now":["Square","Direkt beenden"],"stop-after-zone":["Droplets","Nach dieser Zone"],"confirm-cancel":["X","Abbrechen"],"stop-cancel":["X","Abbrechen"],"plan-skip":["CalendarX2"],"plan-pause-open":["Pause"],"plan-custom-open":["SlidersHorizontal"],"plan-resume":["Repeat2"],"plan-history-toggle":["History"],"activate-button":["KeyRound"]};
+      Object.keys(map).forEach(function(id){pfDecorate(document.getElementById(id),map[id][0],map[id][1])});
+      ["stats-open","water-plan-open","water-stats-open","irrigation-start-all"].forEach(function(id){var b=document.getElementById(id);b.classList.remove("icon-btn");b.classList.add("pf-tile")});
+      var statistics={"stat-area-equivalents":"Grid2x2","stat-mowing-7d":"Timer","stat-average":"Clock","stat-mowing-today":"Timer","stat-progress":"Grid2x2","stat-last-complete":"CalendarCheck","stat-blade":"Scissors","stat-return-average":"Route","water-stat-minutes":"Timer","water-stat-complete":"CircleCheck","water-stat-last":"Droplets","water-stat-duration":"Timer","water-stat-zones":"Droplets","water-stat-changes":"CalendarClock"};
+      Object.keys(statistics).forEach(function(id){pfDecorate(document.getElementById(id).closest(".stat"),statistics[id])});
+      document.querySelectorAll("dialog h2").forEach(function(h){pfDecorate(h,h.closest("#stats-dialog")?"ChartNoAxesColumn":h.closest("#water-stats-dialog,#water-plan-dialog,#water-attention-dialog,#stop-dialog")?"Droplets":"CircleCheck")});
+      document.querySelectorAll(".plan-back").forEach(function(b){pfDecorate(b,"ArrowLeft","Zurück")});
+      document.querySelectorAll(".plan-datetime-group label").forEach(function(label){pfDecorate(label,label.querySelector('input[type="date"]')?"CalendarDays":"Clock")});
+      document.querySelectorAll(".profile-row button").forEach(function(b){pfDecorate(b,"Droplets")});
+      document.querySelectorAll(".plan-preset-pause").forEach(function(b){pfDecorate(b,"CalendarDays")});
+      document.querySelectorAll('input[name="manual-water"]').forEach(function(input){input.addEventListener("change",pfManualChoiceVisibility)});
+      var waterNote=pfPages.water.querySelector(".training-note");if(waterNote)waterNote.textContent="Die Zeitgrenzen 03:30–08:00 Uhr gelten für die Automatik. Manuell ist Bewässerung auch zu anderen Zeiten möglich.";
+    }
+    function pfVisibility(s) {
+      var m=s.mower||{},manual=manualControlView(s),fresh=mowerTelemetryFresh(s),moving=fresh&&["MOWING","LEAVING","GOING_HOME"].indexOf(m.activity)>=0,busy=operatorActionPending(s,"MANUAL_CONTROL")||!!(state.inFlight&&state.inFlight.MANUAL_CONTROL),parked=manual.status==="MANUAL_PARKED"||manual.status==="PARKING",resumeMeaningful=manual.enabled&&manual.status!=="AUTOMATIC"&&manual.status!=="UNKNOWN";
+      return {manualStart:manual.enabled&&manual.canStart&&deviceControlsOpen(s)&&(!moving||manual.waterRequired)&&!busy,manualPark:manual.enabled&&manual.canPark&&!parked,manualResume:manual.enabled&&manual.canResume&&resumeMeaningful&&!busy,husqvarnaStart:manual.enabled&&manual.canStart&&deviceControlsOpen(s)&&(!moving||manual.waterRequired)&&!busy,husqvarnaPark:manual.enabled&&manual.canPark&&!parked,height:m.cuttingHeightSupported===true,parkLabel:fresh&&["CHARGING","PARKED_IN_CS"].indexOf(m.activity)>=0?"In Station lassen":"Mäher parken"};
+    }
+    function pfNextMoment(s) {
+      var m=s.mower||{},manual=manualControlView(s),info=nextStartInfo(s),now=new Date(s.generatedAt),o=s.occupancy||{};
+      if(manual.enabled&&["MANUAL_PARKED","PARKING"].indexOf(manual.status)>=0)return {label:"Nächster Mähstart",at:null,text:"Du entscheidest",note:"Erst nach deiner Freigabe."};
+      if(mowerTelemetryFresh(s)&&["MOWING","LEAVING"].indexOf(m.activity)>=0&&o.available!==false){var ends=(o.upcoming||[]).concat(o.next?[o.next]:[]).map(function(x){return new Date(x.start)}).filter(function(d){return !isNaN(d)&&d>now}).sort(function(a,b){return a-b});if(ends.length)return {label:"Spätestens in der Station",at:ends[0],text:"",note:"Vor der nächsten Platzbelegung."}}
+      return {label:"Nächster Mähstart",at:info.at,text:info.text,note:info.at?(info.awaitingMowerReport?"Geplant · Neue Mähermeldung erforderlich.":"Voraussichtlich"):""};
+    }
+    function pfRenderMoment(s) {
+      if(!pfReady)return;var moment=pfNextMoment(s),el=document.getElementById("mower-next-start"),now=new Date(s.generatedAt);
+      document.querySelector("#coordination-card .time-label").textContent=moment.label;
+      el.classList.toggle("pf-unknown-time",!moment.at);el.textContent=moment.at?new Date(moment.at).toLocaleTimeString("de-DE",{timeZone:EVENT_TIME_ZONE,hour:"2-digit",minute:"2-digit",hourCycle:"h23"})+" Uhr":moment.text;
+      document.getElementById("next-start-note").textContent=moment.at?(localDay(moment.at)!==localDay(now)?calendarTime(moment.at,now)+" · ":"")+moment.note:moment.note;
+    }
+    function pfRenderHeight(s) {
+      if(!pfReady)return;var m=s&&s.mower||{},value=Number(state.heightChoice),old=m.cuttingHeightMm,save=document.getElementById("height-save");
+      document.getElementById("pf-height-current").textContent=old==null?"Bisherige Höhe noch nicht bekannt":"Bisher am Mäher: "+old+" mm";
+      document.getElementById("pf-height-delta").textContent=old==null?"":value===Number(old)?"Gleiche Höhe wie bisher":Math.abs(value-Number(old))+" mm "+(value>old?"höher":"niedriger")+" als bisher";
+      pfDecorate(save,"Save",value+" mm speichern");save.classList.toggle("hidden",save.disabled);
+      ["height-minus","height-plus"].forEach(function(id){document.getElementById(id).classList.toggle("hidden",document.getElementById(id).disabled)});
+    }
+    function pfRenderHistory(s) {
+      var list=document.getElementById("pf-command-history");list.innerHTML="";var names={SET_CUTTING_HEIGHT:"Schnitthöhe ändern",START_MOWING:"Mäher starten",START_MOWING_OCCUPANCY_OVERRIDE:"Mäher starten",PARK_MOWER:"Mäher parken",RESET_BLADE_USAGE:"Klingenwechsel"};
+      Object.keys(s.operatorCommands||{}).filter(function(key){return names[key]}).forEach(function(key){var c=s.operatorCommands[key],entry=document.createElement("article"),title=document.createElement("strong"),status=document.createElement("p"),code=String(c.status||"");entry.className="card";title.textContent=names[key];entry.appendChild(pfIcon(key==="SET_CUTTING_HEIGHT"?"MoveVertical":key==="RESET_BLADE_USAGE"?"Scissors":key==="PARK_MOWER"?"House":"Play"));entry.appendChild(title);status.textContent=code==="CONFIRMED"?"Bestätigt":["REJECTED","EXPIRED","FAILED"].indexOf(code)>=0?"Nicht ausgeführt – bitte den aktuellen Stand prüfen.":"Noch nicht bestätigt";entry.appendChild(status);list.appendChild(entry)});
+      if(!list.children.length){var empty=document.createElement("p");empty.className="muted";empty.textContent="Keine weiteren Mäheraktionen vorhanden.";list.appendChild(empty)}
+    }
+    function pfConfirmationIcons() {
+      var action=state.pendingAction,operation=state.manualControlOperation,icon=action==="SET_CUTTING_HEIGHT"?"MoveVertical":action==="RESET_BLADE_USAGE"?"Scissors":action==="MANUAL_CONTROL"?(operation==="PARK"?"House":operation==="RESUME"?"Repeat2":"Play"):String(action).indexOf("IRRIGATION")>=0?"Droplets":"CircleCheck";
+      pfDecorate(document.getElementById("confirm-title"),icon);pfDecorate(document.getElementById("confirm-go"),"CircleCheck");
+      document.querySelectorAll('#manual-water-choice label').forEach(function(label){pfDecorate(label,label.querySelector('input').value==="MOWER"?"Bot":"Droplets")});
+      pfManualChoiceVisibility();
+    }
+    function pfManualChoiceVisibility() {
+      var context=state.manualControlDialog||{},choice=document.querySelector('input[name="manual-water"]:checked'),value=choice&&choice.value;
+      if(state.pendingAction!=="MANUAL_CONTROL")return;
+      if(value==="IRRIGATION")document.getElementById("manual-drying").checked=false;
+      document.getElementById("manual-drying-label").classList.toggle("hidden",!context.dryingRequired||(context.waterRequired&&value!=="MOWER"));
+    }
+    function pfPlanIcons() {
+      document.querySelectorAll("#plan-zones label").forEach(function(label){pfDecorate(label,"Droplets")});
+      document.querySelectorAll("#plan-zones .duration-stepper").forEach(function(stepper){var buttons=stepper.querySelectorAll("button");buttons.forEach(function(b,index){b.setAttribute("aria-label",index?"Eine Minute länger":"Eine Minute kürzer");pfDecorate(b,index?"Plus":"Minus","")})});
+    }
+    function pfUpdate(s) {
+      if(!pfReady||!s)return;var v=pfVisibility(s),manual=manualControlView(s),overview=dashboardMessage(s),safe=s.irrigation&&s.irrigation.safety||{};
+      [["manual-start",v.manualStart,"Play","Mäher starten"],["manual-park",v.manualPark,"House",v.parkLabel],["manual-resume",v.manualResume,"Repeat2","Automatik einschalten"],["manual-husqvarna",v.husqvarnaStart,"Play","Über Husqvarna starten"],["manual-husqvarna-park",v.husqvarnaPark,"House","Über Husqvarna parken"]].forEach(function(row){var b=document.getElementById(row[0]);b.classList.toggle("hidden",!row[1]);pfDecorate(b,row[2],row[3])});
+      ["mow-start","mow-park"].forEach(function(id){var b=document.getElementById(id);if(b.disabled)b.classList.add("hidden");pfDecorate(b,id==="mow-start"?"Play":"House")});
+      document.getElementById("pf-mower-actions").classList.toggle("pf-single-action",document.querySelectorAll('#pf-mower-actions>.btn:not(.hidden)').length===1);
+      document.querySelectorAll('[data-pf-target="height"]').forEach(function(b){b.hidden=!v.height});
+      document.querySelectorAll('[data-pf-target="husqvarna"]').forEach(function(b){b.hidden=!manual.enabled});
+      document.querySelectorAll(".zone-start").forEach(function(b){pfDecorate(b,"Play","Starten");b.classList.toggle("hidden",b.disabled)});
+      document.querySelectorAll(".zone-head").forEach(function(h){pfDecorate(h,"Droplets")});
+      document.querySelectorAll("#plan-zones label").forEach(function(h){pfDecorate(h,"Droplets")});
+      document.querySelectorAll("#water-stat-zones li").forEach(function(h){pfDecorate(h,"Droplets")});
+      var all=document.getElementById("irrigation-start-all");all.classList.toggle("hidden",all.classList.contains("hidden")||all.disabled);pfDecorate(all,"Play");
+      document.getElementById("dashboard").dataset.pfUrgent=String(overview.tone==="bad"||!mowerTelemetryFresh(s)||Number(safe.active_zone_count||0)>0||!!(s.automation&&s.automation.pendingAction));
+      document.getElementById("pf-blade-hours").textContent=duration(s.statistics&&s.statistics.bladeUsageSeconds);
+      pfDecorate(document.getElementById("overall"),Number(safe.active_zone_count||0)>0?"Droplets":overview.tone==="bad"?"TriangleAlert":s.mower&&s.mower.activity==="CHARGING"?"BatteryCharging":"Bot");
+      pfRenderHeight(s);pfRenderMoment(s);pfRenderHistory(s);
+    }
+    pfMountDesign();
+    var pfRenderBase=render;render=function(s){pfRenderBase(s);pfUpdate(s)};
+    var pfCoordinationBase=renderCoordination;renderCoordination=function(s){pfCoordinationBase(s);pfRenderMoment(s);if(pfReady)document.getElementById("pf-blade-hours").textContent=duration(s.statistics&&s.statistics.bladeUsageSeconds)};
+    var pfHeightBase=renderHeightChoice;renderHeightChoice=function(){pfHeightBase();pfRenderHeight(state.status)};
+    var pfLoadBase=load;load=function(){return pfLoadBase().then(function(s){if(!s&&state.status)pfUpdate(state.status);return s})};
+    var pfActionBase=openAction;openAction=function(){var result=pfActionBase.apply(this,arguments);pfConfirmationIcons();return result};
+    var pfManualBase=manualControlPrepare;manualControlPrepare=function(){var result=pfManualBase.apply(this,arguments);pfConfirmationIcons();return result};
+    var pfZonesBase=buildPlanZones;buildPlanZones=function(zones){pfZonesBase(zones);pfPlanIcons()};
+    var pfPlanBase=renderIrrigationSchedule;renderIrrigationSchedule=function(){pfPlanBase.apply(this,arguments);["plan-skip","plan-pause-open","plan-custom-open","plan-resume","plan-pause"].forEach(function(id){var b=document.getElementById(id);b.classList.toggle("hidden",b.disabled)});pfDecorate(document.getElementById("plan-history-toggle"),"History")};
+    var pfWaterStatsBase=renderIrrigationStatistics;renderIrrigationStatistics=function(stats){pfWaterStatsBase(stats);document.querySelectorAll("#water-stat-zones li").forEach(function(li){pfDecorate(li,"Droplets")})};
+    var pfAttentionBase=renderIrrigationAttention;renderIrrigationAttention=function(stats){pfAttentionBase(stats);pfDecorate(document.getElementById("water-attention-title"),"TriangleAlert");pfDecorate(document.getElementById("water-attention-open"),"TriangleAlert")};
+
+/* PF_DESIGN_JS_END */
     if(!isPlatzwart(profileJSON)){show("denied");return}if(!stored(DEVICE_KEY)){show("activate");return}if(!session()){show("login");return}show("dashboard");load();state.timer=setInterval(pollStatus,30000);
   });
 </script>
