@@ -1,0 +1,123 @@
+{
+  "queried_at_utc": "2026-09-11T12:49:08.232450+00:00",
+  "read_only": true,
+  "exit_shutdown_correlation": [
+    {
+      "exitTime": "2026-09-11T12:40:43.4387915Z",
+      "stopTime": "2026-09-11T12:40:43.6383638Z",
+      "cloud_RoleInstance": "0--01f3d7d6-5b99-4afb-b990-ff4660aa4273",
+      "outerMessage": "python exited with code 143 (0x8F)"
+    },
+    {
+      "exitTime": "2026-09-11T12:42:41.8586427Z",
+      "stopTime": "2026-09-11T12:42:41.8592119Z",
+      "cloud_RoleInstance": "0--f56daf6f-b685-44d0-84e1-190b3706deb8",
+      "outerMessage": "python exited with code 143 (0x8F)"
+    },
+    {
+      "exitTime": "2026-09-11T12:43:29.4478919Z",
+      "stopTime": "2026-09-11T12:43:29.5506822Z",
+      "cloud_RoleInstance": "0--c8350e3b-2701-47dc-80e4-c2094e6423f0",
+      "outerMessage": "python exited with code 143 (0x8F)"
+    },
+    {
+      "exitTime": "2026-09-11T12:43:36.4392067Z",
+      "stopTime": "2026-09-11T12:43:36.440055Z",
+      "cloud_RoleInstance": "0--d25725bf-920c-49a3-b922-bf2c183d6d08",
+      "outerMessage": "python exited with code 143 (0x8F)"
+    },
+    {
+      "exitTime": "2026-09-11T12:43:50.6686078Z",
+      "stopTime": "2026-09-11T12:43:50.7750416Z",
+      "cloud_RoleInstance": "0--7e22bb51-c67e-414f-ad71-c85645ef95f8",
+      "outerMessage": "python exited with code 143 (0x8F)"
+    },
+    {
+      "exitTime": "2026-09-11T12:43:51.0396245Z",
+      "stopTime": "2026-09-11T12:43:51.0402576Z",
+      "cloud_RoleInstance": "0--c17bd057-6aa6-41a7-982e-b5f29dc438a9",
+      "outerMessage": "python exited with code 143 (0x8F)"
+    },
+    {
+      "exitTime": "2026-09-11T12:43:55.064604Z",
+      "stopTime": "2026-09-11T12:43:55.1691037Z",
+      "cloud_RoleInstance": "0--6e64b88b-07e2-481d-8bd1-94e12afc5aa0",
+      "outerMessage": "python exited with code 143 (0x8F)"
+    },
+    {
+      "exitTime": "2026-09-11T12:43:56.2807712Z",
+      "stopTime": "2026-09-11T12:43:56.3832832Z",
+      "cloud_RoleInstance": "0--79fbcc3a-6d5b-4bdc-9e06-de215b86f776",
+      "outerMessage": "python exited with code 143 (0x8F)"
+    },
+    {
+      "exitTime": "2026-09-11T12:43:56.506396Z",
+      "stopTime": "2026-09-11T12:43:56.5071539Z",
+      "cloud_RoleInstance": "0--0cd5644e-24a6-4861-b55a-0a30650fc3a5",
+      "outerMessage": "python exited with code 143 (0x8F)"
+    },
+    {
+      "exitTime": "2026-09-11T12:43:58.5347478Z",
+      "stopTime": "2026-09-11T12:43:58.6380315Z",
+      "cloud_RoleInstance": "0--fe907464-3129-44fa-934a-7bca188fd693",
+      "outerMessage": "python exited with code 143 (0x8F)"
+    },
+    {
+      "exitTime": "2026-09-11T12:44:01.4300086Z",
+      "stopTime": "2026-09-11T12:44:01.4332991Z",
+      "cloud_RoleInstance": "0--a4a867d6-9f59-46ea-a343-bc7bab414686",
+      "outerMessage": "python exited with code 143 (0x8F)"
+    },
+    {
+      "exitTime": "2026-09-11T12:44:46.0950033Z",
+      "stopTime": "2026-09-11T12:44:46.0979052Z",
+      "cloud_RoleInstance": "0--bf98770d-a2a3-43a8-a99d-11b51828bd68",
+      "outerMessage": "python exited with code 143 (0x8F)"
+    },
+    {
+      "exitTime": "2026-09-11T12:46:55.3486453Z",
+      "stopTime": "2026-09-11T12:46:55.3527618Z",
+      "cloud_RoleInstance": "0--2336f212-2f36-4f3b-abc7-915c4b79e9b3",
+      "outerMessage": "python exited with code 143 (0x8F)"
+    },
+    {
+      "exitTime": "2026-09-11T12:48:37.0288574Z",
+      "stopTime": "2026-09-11T12:48:37.0297914Z",
+      "cloud_RoleInstance": "0--aed51cb1-b4f4-45ab-b608-6191b06026f3",
+      "outerMessage": "python exited with code 143 (0x8F)"
+    }
+  ],
+  "requests_since_release": [
+    {
+      "name": "ssv53_mower_timer",
+      "resultCode": "0",
+      "success": "True",
+      "total": 9
+    },
+    {
+      "name": "ssv53_occupancy_notification_timer",
+      "resultCode": "0",
+      "success": "True",
+      "total": 5
+    },
+    {
+      "name": "ssv53_platzwart_status",
+      "resultCode": "200",
+      "success": "True",
+      "total": 6
+    },
+    {
+      "name": "ssv53_platzwart_login",
+      "resultCode": "200",
+      "success": "True",
+      "total": 2
+    }
+  ],
+  "exceptions_since_release": [
+    {
+      "type": "System.Exception",
+      "outerMessage": "python exited with code 143 (0x8F)",
+      "total": 14
+    }
+  ]
+}
