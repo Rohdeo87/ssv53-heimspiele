@@ -1,7 +1,10 @@
 # Ladeende und Flächenfortschritt
 
-Entwicklungsstand 11.09.2026. Veröffentlichungsnachweis folgt nach tatsächlicher
-Installation. Keine Geräte-Testbefehle.
+Stand 11.09.2026: entwickelt, geprüft und mit PR 75 zusammengeführt.
+Appack-Oberfläche um 14:01 Uhr (Berlin) gespeichert. Die Azure-Installation
+wurde vor Ausführung durch automatische Freigabeprüfung blockiert und wartet
+auf konkrete Zustimmung. **Flächenanzeige veröffentlicht; neue Ladeprognose
+im Backend noch nicht installiert.** Keine Geräte-Testbefehle.
 
 ## Nachgewiesene Ursache
 
@@ -58,7 +61,27 @@ reproduziert. Fehlende geeignete Daten bleiben als unbekannt erkennbar.
   Ladeprognose unabhängig geprüft. Ein Hinweis auf ungültige numerische
   Eingaben wurde behoben und abgesichert. Die absichtlich strengere aktuelle
   Datenprüfung bleibt erhalten.
-- Python-Gesamtlauf und Installationsprüfung werden vor Veröffentlichung ergänzt.
+- [Python-Gesamtlauf](python-tests.txt): 1.451 Tests und 482 Subtests erfolgreich.
+  Erster Lauf hatte 170 Fixture-Fehler durch ein nicht beschreibbares Windows-
+  Tempverzeichnis. Mit eigenem Tempverzeichnis im Workspace vollständig bestanden.
+- CI des exakten Kopfes `6d0e8d1ed665f011a28594d418f2e4f283d7deda` erfolgreich:
+  [Code](https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/34596389265),
+  [Paket](https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/34596389129).
+  [PR 75](https://github.com/Rohdeo87/ssv53-heimspiele/pull/75), Merge
+  `2e964c799c1674e5f6b1d2e7097566857389d220`; relevante Quellen bytegleich zum geprüften Kopf.
+- [Exakter Paketnachweis](package-proof.json): 69 Git-Quelldateien und Manifest,
+  16 Funktionen, isolierter Import ohne Netzwerk erfolgreich. Paket
+  `dist/ladeprognose-fortschritt-release.zip`, SHA-256
+  `d2ce753a5a7552fdad5d3760cf804f9632ee017ddb2c9a705837e620803b771b`.
+- [Installation vorher](installation-before.json): Host Running, 16 Funktionen,
+  weiter bisheriges Manifest `99b6bd5aeaaba42d3b2f25831acdd86e80d64f5101bf9cfb9f66c27c790bcd27`.
+  [Betriebszustand vor geplanter Installation](controller-before.json): Mähen,
+  Fehlercode 0, keine aktive Bewässerung, keine aktuelle Platzsperre. Diese
+  Vorabprüfung vor einer später genehmigten Installation erneut aktualisieren.
+- [Appack-Nachweis](appack-publication.json): nach vollständigem Neuladen
+  kompletter Editorinhalt gleich zur geprüften Vorlage; CSS und JavaScript am
+  Render-Endpunkt ebenfalls gleich, Flächenanzeige im DOM vorhanden, keine
+  Konsolenfehler. Die native Handy-Sitzung wurde nicht geprüft.
 
 Die Bilder verwenden **synthetische Daten**:
 
