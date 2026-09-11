@@ -4,7 +4,7 @@ const path=require('node:path');
 const {pathToFileURL}=require('node:url');
 const assert=require('node:assert/strict');
 (async()=>{
- const out=path.resolve('docs/ui-2026-09-11/wunschdesign');
+ const out=path.resolve(process.env.SSV53_UI_OUTPUT||'docs/ui-2026-09-11/wunschdesign');
  const browser=await chromium.launch({channel:'msedge',headless:true});
  const records=[];
  try {
@@ -12,13 +12,45 @@ const assert=require('node:assert/strict');
    const context=await browser.newContext({viewport:{width,height:844},locale:'de-DE',timezoneId:'Europe/Berlin'});
    const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
    await page.route('**/*',r=>r.request().url().startsWith('file:')?r.continue():r.abort());
-   for(const scenario of ['charging','parked','mowing','stale','watering','unconfirmed']){
+   for(const scenario of ['charging','charging-unknown','parked','mowing','stale','watering','unconfirmed']){
     await page.goto(pathToFileURL(path.join(out,'appack-preview.html')).href+'#'+scenario);
     await page.reload();
     await page.locator('#pf-page-home').waitFor({state:'visible'});
     await page.waitForFunction(()=>!document.getElementById('overall-title').textContent.includes('geladen'));
     assert.equal(errors.length,0,errors.join('\n'));
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'Overflow: '+scenario+' '+width);
+    assert.equal(await page.locator('.shell > .head').count(),0);
+    if(scenario==='stale')assert.equal(await page.locator('#pf-charge').isVisible(),false);
+    if(scenario==='charging-unknown'){
+     assert.equal(await page.locator('#overall-title').innerText(),'Mäher lädt');
+     assert.equal(await page.locator('#pf-charge-caption').innerText(),'Akku 29 %');
+     assert.equal(await page.locator('#pf-charge-progress').getAttribute('value'),'29');
+     assert.equal(await page.locator('#coordination-card').isVisible(),false);
+     assert.equal(await page.locator('#charge-end-time').innerText(),'Noch nicht bekannt');
+     await page.evaluate(()=>{const original=window.fetch;window.fetch=(...args)=>new Promise(resolve=>{window.finishRefresh=()=>resolve(original(...args))})});
+     const before=await page.locator('#refresh').boundingBox();
+     await page.locator('#refresh').click();
+     assert.equal(await page.locator('#refresh-label').innerText(),'Aktualisieren');
+     assert.equal(await page.locator('#refresh').getAttribute('aria-busy'),'true');
+     assert.equal(await page.locator('#overall-title').innerText(),'Mäher lädt');
+     assert.equal(await page.locator('dialog[open]').count(),0);
+     const during=await page.locator('#refresh').boundingBox();assert.equal(before.width,during.width);
+     await page.screenshot({path:path.join(out,'refresh-'+width+'.png')});
+     await page.evaluate(()=>window.finishRefresh());await page.waitForFunction(()=>document.getElementById('refresh').getAttribute('aria-busy')==='false');
+     await page.locator('#manual-start').click();
+     assert.equal(await page.locator('#confirm-dialog').isVisible(),true);
+     for(const id of ['confirm-go','confirm-cancel']){
+      assert.equal(await page.locator('#'+id+' > .pf-label').count(),1);
+      const centered=await page.locator('#'+id).evaluate(b=>{const r=b.getBoundingClientRect();return Array.from(b.children).every(e=>{const x=e.getBoundingClientRect();return x.left>=r.left&&x.right<=r.right})});assert.equal(centered,true);
+     }
+     await page.screenshot({path:path.join(out,'confirmation-'+width+'.png')});
+     await page.locator('#confirm-cancel').click();
+     await page.locator('#pf-home-links [data-pf-target="water"]').click();
+     const styles=await page.locator('#pf-page-water .pf-grid > .pf-tile').evaluateAll(nodes=>nodes.map(b=>{const s=getComputedStyle(b),i=getComputedStyle(b.querySelector('.pf-symbol'));return {weight:s.fontWeight,align:s.textAlign,bg:i.backgroundColor,color:i.color,width:i.width,height:i.height}}));
+     assert.equal(styles.length,4);for(const style of styles)assert.deepEqual(style,styles[0]);
+     await page.screenshot({path:path.join(out,'water-menu-'+width+'.png'),fullPage:true});
+     await page.locator('[data-pf-nav="home"]').click();
+    }
     if(['stale','unconfirmed','mowing'].includes(scenario))assert.equal(await page.locator('#manual-start').isVisible(),false);
     if(scenario==='parked')assert.equal(await page.locator('#manual-park').isVisible(),false);
     if(scenario==='charging'){
