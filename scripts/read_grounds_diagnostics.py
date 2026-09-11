@@ -58,6 +58,8 @@ def main():
             "water": {k: (water.get("safety") or {}).get(k) for k in (
                 "available", "fresh", "clear_now", "active_zone_count", "observed_at_utc")},
             "release": water.get("release_confirmation"),
+            "start_action": {k: (details.get("start_action") or {}).get(k) for k in (
+                "type", "outcome", "reason_code", "requested_deadline_utc", "failsafe_refresh")},
             "automation": details.get("automation_state"),
             "manual": {k: manual.get(k) for k in ("enabled", "kind", "status", "permission_code")},
             "plan": compact_plan(details.get("current_plan")),

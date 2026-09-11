@@ -42,6 +42,7 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--package", type=Path)
     parser.add_argument("--compare-settings", type=Path)
+    parser.add_argument("--expected-function-count", type=int, default=15)
     args = parser.parse_args()
     settings = {item["name"]: item.get("value") for item in
                 az("functionapp", "config", "appsettings", "list", "-g", GROUP, "-n", APP)
@@ -88,8 +89,8 @@ def main():
             report["installed_files"] = list(pool.map(verify, sorted(expected)))
         report["all_package_files_match"] = True
         report["package_sha256"] = hashlib.sha256(args.package.read_bytes()).hexdigest()
-        if host.get("state") != "Running" or len(functions) != 15:
-            raise RuntimeError("Expected a running host with 15 functions")
+        if host.get("state") != "Running" or len(functions) != args.expected_function_count:
+            raise RuntimeError("Running host or expected function count differs")
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(json.dumps({"output": str(args.output), "host_state": report["host_state"],

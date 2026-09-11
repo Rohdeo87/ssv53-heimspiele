@@ -148,6 +148,28 @@ def test_resume_never_erases_unconfirmed_device_outcome():
     assert store.load().mower_start_pending_since_utc == NOW.isoformat()
 
 
+def test_unknown_start_is_also_disabled_in_display_with_fresh_telemetry():
+    state = AutomationState(mower_start_pending_since_utc=NOW.isoformat())
+    public = manual_context(state, details(), ENV, NOW)[0]
+    assert public["canStart"] is False
+    assert public["canPark"] is True
+    assert "letzte Start ist ungeklärt" in public["message"]
+
+
+def test_stale_report_explains_disabled_start_and_fresh_report_restores_it():
+    data = details()
+    data["mower"]["status_timestamp_ms"] = int((NOW - timedelta(minutes=11)).timestamp() * 1000)
+    state = AutomationState()
+    public = manual_context(state, data, ENV, NOW)[0]
+    assert public["canStart"] is False
+    assert public["canPark"] is True
+    assert "neue Mähermeldung abwarten" in public["message"]
+    data["mower"]["status_timestamp_ms"] = int(NOW.timestamp() * 1000)
+    refreshed = manual_context(state, data, ENV, NOW)[0]
+    assert refreshed["canStart"] is True
+    assert "neue Mähermeldung abwarten" not in refreshed["message"]
+
+
 @pytest.mark.parametrize("field,value", [("available", False), ("fresh", False), ("relay_set_valid", False)])
 def test_unknown_water_never_admits_start(field, value):
     store = InMemoryStateStore(AutomationState()); data = details()

@@ -12,7 +12,7 @@ from zoneinfo import ZoneInfo
 
 import azure.functions as func
 
-from daily_safety_report import process_daily_report
+from daily_safety_report import ApplicationInsightsQueryClient, process_daily_report
 
 from mower.controller import run_control_cycle
 from mower.build_provenance import inspect_installed_package
@@ -32,6 +32,7 @@ from occupancy.training_control import (
     snapshot_from_state as training_control_from_state,
 )
 from mower.state_store import AzureTableStateStore, StateConflictError
+from mower.runtime import ControlMode, RuntimeSettings
 from occupancy.runtime_source import (
     OccupancyMatchSource,
     resolve_occupancy_match_source,
@@ -1113,6 +1114,142 @@ def _training_initialization_response(payload: dict, status_code: int) -> func.H
             "X-Content-Type-Options": "nosniff",
         },
     )
+
+
+@app.route(
+    route="mower/recover-unsent-start",
+    methods=["GET", "POST"],
+    auth_level=func.AuthLevel.ADMIN,
+)
+def ssv53_recover_unsent_start(req: func.HttpRequest) -> func.HttpResponse:
+    """Inspect or CAS-recover a trace-proven unsent legacy START latch."""
+
+    try:
+        method = req.method.upper()
+        body = None
+        if method == "POST":
+            body = req.get_json()
+            required = {
+                "confirmation",
+                "expectedStateRevision",
+                "pendingFingerprint",
+                "proofToken",
+            }
+            if not isinstance(body, dict) or set(body) != required:
+                raise ValueError("START_RECOVERY_SCHEMA_INVALID")
+        elif method != "GET":
+            raise ValueError("START_RECOVERY_METHOD_INVALID")
+        settings = RuntimeSettings.from_mapping(os.environ)
+    except (ValueError, TypeError, KeyError):
+        return _training_initialization_response(
+            {
+                "code": "START_RECOVERY_REQUEST_INVALID",
+                "error": "Die Recovery-Anfrage ist ungültig.",
+            },
+            400,
+        )
+
+    if not (
+        settings.control_mode is ControlMode.FULL_FAILSAFE
+        and settings.enable_live_reads
+        and settings.full_failsafe_write_gate_enabled
+        and settings.enable_manual_sessions
+    ):
+        return _training_initialization_response(
+            {
+                "code": "START_RECOVERY_RUNTIME_LOCKED",
+                "error": "Die Recovery ist nur im vollständig bestätigten Fail-safe-Betrieb verfügbar.",
+            },
+            409,
+        )
+
+    # Only the FULL_FAILSAFE artifact contains the recovery implementation.
+    # Lower-capability packages keep importing this shared entrypoint without
+    # receiving dormant automatic-restart mutation code.
+    from mower.start_recovery import (
+        RECOVERY_CONFIRMATION,
+        StartRecoveryChanged,
+        StartRecoveryUnavailable,
+        inspect_unsent_start_recovery,
+        recover_unsent_start,
+    )
+
+    try:
+        if body is not None and body["confirmation"] != RECOVERY_CONFIRMATION:
+            raise ValueError("START_RECOVERY_CONFIRMATION_INVALID")
+        store = AzureTableStateStore.from_environment(os.environ)
+        query_client = ApplicationInsightsQueryClient.from_environment(os.environ)
+        if method == "GET":
+            inspection = inspect_unsent_start_recovery(
+                store=store,
+                query_client=query_client,
+            )
+            return _training_initialization_response(inspection.public_payload(), 200)
+
+        assert body is not None
+        recovered = recover_unsent_start(
+            store=store,
+            query_client=query_client,
+            expected_revision=body["expectedStateRevision"],
+            pending_fingerprint=body["pendingFingerprint"],
+            proof_token=body["proofToken"],
+            confirmation=body["confirmation"],
+        )
+        LOGGER.warning(
+            "SSV53_START_RECOVERY_APPLIED old_revision=%s new_revision=%s "
+            "delta=%s proof_trace_id=%s manifest=%s",
+            recovered.previous.revision,
+            recovered.current.revision,
+            json.dumps(recovered.delta, sort_keys=True, separators=(",", ":")),
+            recovered.proof.trace_id,
+            recovered.proof.manifest_sha256,
+        )
+        return _training_initialization_response(
+            {
+                "applied": True,
+                "stateRevision": recovered.current.revision,
+                "proof": {
+                    "traceId": recovered.proof.trace_id,
+                    "manifestSha256": recovered.proof.manifest_sha256,
+                },
+                "delta": recovered.delta,
+            },
+            200,
+        )
+    except (ValueError, TypeError, KeyError):
+        return _training_initialization_response(
+            {
+                "code": "START_RECOVERY_REQUEST_INVALID",
+                "error": "Die Recovery-Anfrage ist ungültig.",
+            },
+            400,
+        )
+    except StartRecoveryChanged as exc:
+        return _training_initialization_response(
+            {
+                "code": str(exc),
+                "error": "Zustand oder Beweis haben sich geändert; bitte erneut prüfen.",
+            },
+            409,
+        )
+    except StartRecoveryUnavailable:
+        LOGGER.exception("SSV53_START_RECOVERY_EVIDENCE_UNAVAILABLE")
+        return _training_initialization_response(
+            {
+                "code": "START_RECOVERY_UNAVAILABLE",
+                "error": "Zustand oder unabhängiger Trace-Beweis ist nicht verfügbar.",
+            },
+            503,
+        )
+    except Exception:
+        LOGGER.exception("SSV53_START_RECOVERY_ERROR")
+        return _training_initialization_response(
+            {
+                "code": "START_RECOVERY_UNAVAILABLE",
+                "error": "Die Recovery konnte nicht sicher ausgeführt werden.",
+            },
+            503,
+        )
 
 
 @app.route(

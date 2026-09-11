@@ -949,7 +949,7 @@ def test_admin_initialization_route_binding_and_function_count():
     import function_app
 
     functions = function_app.app.get_functions()
-    assert len(functions) == 15
+    assert len(functions) == 16
     route = next(
         item
         for item in functions
@@ -963,6 +963,22 @@ def test_admin_initialization_route_binding_and_function_count():
     assert trigger["route"] == "training-control/initialize"
     assert trigger["authLevel"] is func.AuthLevel.ADMIN
     assert {str(method.value) for method in trigger["methods"]} == {"GET", "POST"}
+    recovery = next(
+        item
+        for item in functions
+        if item.get_function_name() == "ssv53_recover_unsent_start"
+    )
+    recovery_trigger = next(
+        binding.get_dict_repr()
+        for binding in recovery.get_bindings()
+        if binding.get_dict_repr().get("type") == "httpTrigger"
+    )
+    assert recovery_trigger["route"] == "mower/recover-unsent-start"
+    assert recovery_trigger["authLevel"] is func.AuthLevel.ADMIN
+    assert {str(method.value) for method in recovery_trigger["methods"]} == {
+        "GET",
+        "POST",
+    }
 
 
 def test_admin_initialization_gate_defaults_off(monkeypatch):

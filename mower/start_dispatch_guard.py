@@ -1,16 +1,16 @@
 """Last-moment, fail-closed fence for an already reserved mower START.
 
 The controller has already made the scheduling decision and persisted a START
-reservation before this guard runs.  The guard intentionally does not make a
-new release decision: it only proves that the same reservation, its source
-observations and its bounded window still exist immediately before HTTP is
-sent.  A rejection leaves the reservation in place because no device outcome
-can be inferred from a previous or concurrent request.
+reservation before this guard runs. The guard proves that the same reservation,
+its source observations and its bounded window still exist immediately before
+HTTP is sent. Its caller may release that exact reservation only when the
+rejection's private provenance proves that transport did not start.
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import replace
 from datetime import datetime, timezone
 from typing import Any, Mapping
 
@@ -24,9 +24,19 @@ Clock = Callable[[], datetime]
 class StartDispatchBlocked(RuntimeError):
     """The request has not reached the mower action endpoint."""
 
-    def __init__(self, code: str) -> None:
+    def __init__(self, code: str, *, _guard_provenance: object | None = None) -> None:
         super().__init__(code)
         self.code = code
+        self._guard_provenance = _guard_provenance
+
+    def belongs_to(self, provenance: object) -> bool:
+        """Prove that this rejection came from one private dispatch fence."""
+
+        return self._guard_provenance is provenance
+
+
+class StartReservationReleaseError(RuntimeError):
+    """The exact pre-send reservation could not be released with CAS."""
 
 
 def _utc(value: datetime) -> datetime:
@@ -100,6 +110,43 @@ def _same_reservation(current: Any, reserved: Any) -> bool:
     )
 
 
+def release_start_reservation(
+    *,
+    store: Any,
+    reserved: Any,
+    prior: Any,
+) -> Any:
+    """Release only ``reserved`` and restore the command fields it replaced.
+
+    A load/equality check followed by the store's revision CAS prevents this
+    cleanup from clearing a concurrent write or an ambiguous/older START.
+    Unrelated state, including an acknowledged continuous interval, remains
+    exactly as it was in the reservation.
+    """
+
+    try:
+        current = store.load()
+    except Exception as exc:
+        raise StartReservationReleaseError("START_RESERVATION_RELEASE_UNAVAILABLE") from exc
+    if current != reserved:
+        raise StartReservationReleaseError("START_RESERVATION_RELEASE_CHANGED")
+    released = replace(
+        current,
+        revision=current.revision + 1,
+        last_command_fingerprint=prior.last_command_fingerprint,
+        last_command_utc=prior.last_command_utc,
+        mower_start_pending_since_utc=prior.mower_start_pending_since_utc,
+        mower_start_pending_deadline_utc=prior.mower_start_pending_deadline_utc,
+        mower_start_pending_session_id=prior.mower_start_pending_session_id,
+        mower_start_pending_session_epoch=prior.mower_start_pending_session_epoch,
+    )
+    try:
+        store.save(released, expected_revision=current.revision)
+    except Exception as exc:
+        raise StartReservationReleaseError("START_RESERVATION_RELEASE_CAS_FAILED") from exc
+    return released
+
+
 def prepare_start_dispatch(
     *,
     clock: Clock,
@@ -114,6 +161,7 @@ def prepare_start_dispatch(
     hydrawise_status_max_age_seconds: int,
     manual_session_id: str | None = None,
     manual_session_epoch: int | None = None,
+    _guard_provenance: object | None = None,
 ) -> int:
     """Return the still safe whole-minute duration or block before POST.
 
@@ -122,74 +170,79 @@ def prepare_start_dispatch(
     the action HTTP request.  The latter decides the encoded duration.
     """
 
-    deadline = min(
-        _utc(safe_command_deadline_utc),
-        _utc(command_end_utc),
-    )
     try:
-        current = store.load()
-    except Exception as exc:
-        raise StartDispatchBlocked("START_RESERVATION_UNAVAILABLE") from exc
-    # The remote state read can itself block. Take the final clock sample only
-    # after it returns so neither duration nor telemetry freshness uses the
-    # pre-read instant.
-    try:
-        now = _utc(clock())
-    except StartDispatchBlocked:
-        raise
-    except Exception as exc:
-        raise StartDispatchBlocked("COMMAND_CLOCK_INVALID") from exc
-    remaining_minutes = int((deadline - now).total_seconds() // 60)
-    if remaining_minutes < 1:
-        raise StartDispatchBlocked("START_WINDOW_EXPIRED")
-    if not _same_reservation(current, reserved):
-        raise StartDispatchBlocked("START_RESERVATION_CHANGED")
-    try:
-        if unresolved_device_sends(current):
-            # A prior Park, valve, suspend, or native-resume call can still
-            # reach a device after a lost response. No mower START may pass
-            # that ambiguity; protective Park/Stop dispatches have their own
-            # guarded paths and are intentionally not handled here.
-            raise StartDispatchBlocked("PREVIOUS_DEVICE_OUTCOME_UNCONFIRMED")
-    except DeviceSendBlocked as exc:
-        raise StartDispatchBlocked(exc.code) from exc
-    if (manual_session_id is None) != (manual_session_epoch is None):
-        raise StartDispatchBlocked("MANUAL_SESSION_FENCE_INVALID")
-    if manual_session_id is not None:
-        if (
-            current.mower_start_pending_session_id != manual_session_id
-            or current.mower_start_pending_session_epoch != manual_session_epoch
-            or reserved.mower_start_pending_session_id != manual_session_id
-            or reserved.mower_start_pending_session_epoch != manual_session_epoch
-            or current.operator_request_session_id != manual_session_id
-            or current.operator_request_session_epoch != manual_session_epoch
-        ):
-            raise StartDispatchBlocked("MANUAL_SESSION_FENCE_CHANGED")
+        deadline = min(
+            _utc(safe_command_deadline_utc),
+            _utc(command_end_utc),
+        )
         try:
-            permission = start_dispatch_permission(
-                load_manual_session(current), session_id=manual_session_id,
-                epoch=manual_session_epoch, mower_id=str(mower.get("mower_id") or ""), now_utc=now,
-            )
+            current = store.load()
         except Exception as exc:
-            raise StartDispatchBlocked("MANUAL_SESSION_INVALID") from exc
-        if permission.get("allowed") is not True:
-            raise StartDispatchBlocked(str(permission.get("code") or "MANUAL_SESSION_INVALID"))
-    if current.maintenance_mode:
-        raise StartDispatchBlocked("MAINTENANCE_MODE")
-    if (
-        current.operator_request_status == "PENDING"
-        and str(current.operator_request_action or "").strip().upper()
-        in {"PARK_MOWER", "STOP_MOWER", "STOP_IRRIGATION_NOW", "STOP_IRRIGATION_AFTER_ZONE"}
-    ):
-        raise StartDispatchBlocked("MANUAL_STOP_PENDING")
-    if not _mower_observation_fresh(
-        mower, now_utc=now, max_age_seconds=mower_status_max_age_seconds
-    ):
-        raise StartDispatchBlocked("MOWER_STATUS_STALE")
-    if not _hydrawise_observation_fresh(
-        hydrawise_safety,
-        now_utc=now,
-        max_age_seconds=hydrawise_status_max_age_seconds,
-    ):
-        raise StartDispatchBlocked("HYDRAWISE_STATUS_STALE")
-    return min(int(requested_duration_minutes), remaining_minutes)
+            raise StartDispatchBlocked("START_RESERVATION_UNAVAILABLE") from exc
+        # The remote state read can itself block. Take the final clock sample only
+        # after it returns so neither duration nor telemetry freshness uses the
+        # pre-read instant.
+        try:
+            now = _utc(clock())
+        except StartDispatchBlocked:
+            raise
+        except Exception as exc:
+            raise StartDispatchBlocked("COMMAND_CLOCK_INVALID") from exc
+        remaining_minutes = int((deadline - now).total_seconds() // 60)
+        if remaining_minutes < 1:
+            raise StartDispatchBlocked("START_WINDOW_EXPIRED")
+        if not _same_reservation(current, reserved):
+            raise StartDispatchBlocked("START_RESERVATION_CHANGED")
+        try:
+            if unresolved_device_sends(current):
+                # A prior Park, valve, suspend, or native-resume call can still
+                # reach a device after a lost response. No mower START may pass
+                # that ambiguity; protective Park/Stop dispatches have their own
+                # guarded paths and are intentionally not handled here.
+                raise StartDispatchBlocked("PREVIOUS_DEVICE_OUTCOME_UNCONFIRMED")
+        except DeviceSendBlocked as exc:
+            raise StartDispatchBlocked(exc.code) from exc
+        if (manual_session_id is None) != (manual_session_epoch is None):
+            raise StartDispatchBlocked("MANUAL_SESSION_FENCE_INVALID")
+        if manual_session_id is not None:
+            if (
+                current.mower_start_pending_session_id != manual_session_id
+                or current.mower_start_pending_session_epoch != manual_session_epoch
+                or reserved.mower_start_pending_session_id != manual_session_id
+                or reserved.mower_start_pending_session_epoch != manual_session_epoch
+                or current.operator_request_session_id != manual_session_id
+                or current.operator_request_session_epoch != manual_session_epoch
+            ):
+                raise StartDispatchBlocked("MANUAL_SESSION_FENCE_CHANGED")
+            try:
+                permission = start_dispatch_permission(
+                    load_manual_session(current), session_id=manual_session_id,
+                    epoch=manual_session_epoch, mower_id=str(mower.get("mower_id") or ""), now_utc=now,
+                )
+            except Exception as exc:
+                raise StartDispatchBlocked("MANUAL_SESSION_INVALID") from exc
+            if permission.get("allowed") is not True:
+                raise StartDispatchBlocked(str(permission.get("code") or "MANUAL_SESSION_INVALID"))
+        if current.maintenance_mode:
+            raise StartDispatchBlocked("MAINTENANCE_MODE")
+        if (
+            current.operator_request_status == "PENDING"
+            and str(current.operator_request_action or "").strip().upper()
+            in {"PARK_MOWER", "STOP_MOWER", "STOP_IRRIGATION_NOW", "STOP_IRRIGATION_AFTER_ZONE"}
+        ):
+            raise StartDispatchBlocked("MANUAL_STOP_PENDING")
+        if not _mower_observation_fresh(
+            mower, now_utc=now, max_age_seconds=mower_status_max_age_seconds
+        ):
+            raise StartDispatchBlocked("MOWER_STATUS_STALE")
+        if not _hydrawise_observation_fresh(
+            hydrawise_safety,
+            now_utc=now,
+            max_age_seconds=hydrawise_status_max_age_seconds,
+        ):
+            raise StartDispatchBlocked("HYDRAWISE_STATUS_STALE")
+        return min(int(requested_duration_minutes), remaining_minutes)
+    except StartDispatchBlocked as exc:
+        if _guard_provenance is not None and exc._guard_provenance is None:
+            exc._guard_provenance = _guard_provenance
+        raise

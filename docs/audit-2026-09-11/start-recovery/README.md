@@ -1,0 +1,118 @@
+# Ausgefallener Nachtstart und gesperrter App-Start
+
+## Nachgewiesener Fehler
+
+Am 10.09.2026 sollte die Automatik nach der Belegung um 22 Uhr wieder starten.
+Die Produktionsspuren zeigen folgende Folge (Zeiten Europe/Berlin):
+
+| Zeit | Nachweis | Bedeutung |
+|---|---|---|
+| 22:00:03 | `MOWER_START_SEND_BLOCKED`, `command_sent=false`, `PRE_SEND_BLOCKED`, `MOWER_STATUS_STALE` | Der Start wurde vor dem Geräteaufruf abgewiesen. Die letzte Gerätemeldung war von 21:52:56 und 428 Sekunden alt. |
+| 22:01:03 | `MOWER_START_OUTCOME_UNCONFIRMED` | Eine reservierte Anfrage wurde fälschlich wie ein möglicherweise gesendeter Befehl behandelt. |
+| 22:09:08 | Meldung von 22:08:26, nur 42 Sekunden alt; weiterhin derselbe Sperrgrund | Neue Telemetrie konnte die künstliche Dauersperre nicht auflösen. |
+| 11.09., 04:30 | Erste erfasste aktive Bewässerungszone | Ab jetzt besteht zusätzlich ein tatsächlicher Wasserkonflikt. |
+| 06:55 | Nutzerfoto: „Mäherstart nicht bestätigt“, Start und Automatik ausgegraut | Die App zeigt die persistierte Sperre. Der Akku war voll; fehlende Ladung war nicht die Ursache. |
+
+Die 718 exportierten Minutenbeobachtungen umfassen den Übergang vor und nach
+dem Deployment zur schnelleren Seitenanzeige. Der Nachtstartfehler trat bereits
+**vor** diesem Deployment auf. Die zuvor installierten 69 Paketdateien wurden am
+11.09. erneut byteweise gegen das veröffentlichte Paket geprüft; die Schutzflags
+sind unverändert. Nachweise: `incident.json`, `installation-before.json`.
+
+Der Controller speicherte vor dem letzten Versandcheck `mower_start_pending_*`.
+Der Versandcheck lehnte alte Telemetrie korrekt ab, ließ aber diese Reservierung
+stehen. Der nächste Zyklus interpretierte sie als ungewissen Geräteauftrag.
+Diese Schutzsperre ist für verlorene Antworten erforderlich; bei nachweislich
+nicht erfolgtem Versand war ihre Anwendung falsch.
+
+Das Paket zur ursprünglichen Spur ist ebenfalls vorhanden:
+`trainer-dashboard-full-failsafe.zip`, Manifest
+`8b17b7d232de8a32593c0c2aee55b3cd8527d29338c2be9626199ef72fac3d77`.
+Die Steuerungsdatei und der letzte Versandcheck sind in diesem Paket und im
+danach installierten Ladezeitpaket bytegleich. Die Reparaturfreigabe im Code gilt
+ausschließlich für diesen überprüften historischen Startzeitpunkt samt Endzeit,
+Quellmanifest und Ablehnungsgrund. Das ist eine einmalige Datenkorrektur zusätzlich
+zur allgemeinen Ursachenbehebung; neue unbekannte Vorfälle werden nicht automatisch
+mit freigegeben.
+
+## Korrektur
+
+1. Bereits veraltete Mäherdaten werden vor einer Startreservierung abgefangen.
+2. Lehnt ausschließlich der eigene letzte Versandcheck ab, kann der Controller
+   seine unveränderte Reservierung mit einem atomaren Versionsvergleich aufheben.
+   Die vorherige Befehlskennung und ein schon bestätigtes Mähintervall bleiben
+   erhalten. Danach beginnt im nächsten Zyklus eine vollständige neue Prüfung.
+3. Verlorene Antworten, Prozessabbruch, widersprüchliche parallele Änderungen und
+   nicht zuordenbare Ausnahmen behalten ihre Sperre. Ein Zeitablauf oder ein
+   geparkter Mäher ist ausdrücklich kein Beweis für einen leeren Geräteauftrag.
+4. Die App liefert auch bei frischer Telemetrie kein Startrecht, solange wirklich
+   ein Start ungeklärt ist. Bei alten Daten erklärt die Bedienung in einfacher
+   Sprache, dass eine neue Mähermeldung benötigt wird. Parken bleibt erreichbar.
+5. Die schon vorhandene falsche Reservierung benötigt eine getrennte, eng
+   begrenzte Reparatur anhand der ursprünglichen serverseitigen Ablaufspur.
+   Ein allgemeines „Sperre ignorieren“ wird nicht eingeführt.
+
+Manuelles Starten benötigt weiterhin aktuelle Gerätemeldungen und die jeweils
+erforderlichen Bestätigungen für Training/Spiel, Trockenzeit und Bewässerung.
+Ein vorgemerkter Start aus alten Gerätezuständen wird mit diesem Fehlerfix nicht
+eingeführt. Ein Tippen auf „Aktualisieren“ kann keine neue Gerätemeldung erzwingen.
+
+## Risiken und Absicherung
+
+| Risiko | Absicherung | verbleibende Grenze |
+|---|---|---|
+| Verlorene Antwort wird für „nicht gesendet“ gehalten | Herkunftsnachweis nur aus dem eigenen Check vor HTTP; Transportausnahmen bleiben ungewiss | Prozessabbruch zwischen Reservierung und Auflösung kann weiterhin manuelle Klärung erfordern. |
+| Anderer Controller oder manueller Stopp wird überschrieben | Exakter Zustandsvergleich und atomare Revision/ETag-Prüfung; keine Auflösung bei Konflikt | Bei Konflikt bleibt die Sperre konservativ bestehen. |
+| Historische Reparatur löscht eine echte Startsperre | Server liest Originalspur selbst; bekannte Quellversion, passender Startzeitpunkt/Endzeitpunkt und unveränderte Bedienung sind Pflicht | Fehlender Nachweis bedeutet Abweisung. |
+| Automatik startet während Wasser oder Trockenzeit | Reparatur sendet keinen Gerätebefehl und ändert keine Wasser-, Belegungs- oder Trockenzeitdaten | Die anschließende Automatik muss alle aktuellen Bedingungen erneut prüfen. |
+| Administrativer Reparaturzugang wird missbraucht | Ausschließlich Azure-Administratorauthentifizierung, Vorschau und exakter Versionsvergleich | Administratorschlüssel bleiben besonders schützenswert; keine Weitergabe an die App. |
+| Veraltete Telemetrie blockiert kurzzeitig | Nächster Zyklus kann mit neuer Meldung erneut prüfen | Die Grenze von drei Minuten wird nicht verlängert. |
+
+Ein Gewinn an produktiven Mähminuten wird noch nicht behauptet. Belegt ist der
+verhinderte Wiederanlauf trotz neuer Meldung um 22:09 Uhr. Ladebedarf, Fahrzeit,
+spätere Bewässerung und andere Sperren begrenzen die nutzbare Zeit weiterhin.
+
+## Prüfung und Einführung
+
+- Isolierte Tests senden standardmäßig keine Gerätebefehle.
+- Abgedeckt: alte Daten, neue Daten im Folgezyklus, OAuth-Verzögerung, verlorene
+  Antwort, Parallelprozess, manueller Parkauftrag, fehlgeschlagene Auflösung,
+  über Neustart erhaltene Reservierung und unverändertes früheres Mähintervall.
+- Die historische Reparatur wird zusätzlich gegen unpassende Version/Spur,
+  einen echten Versand, geänderte Bedienung, Wiederholung und CAS-Konflikte geprüft.
+- Vor Veröffentlichung: vollständige relevante Regressionen, unabhängige Prüfung,
+  identischer PR-Kopf mit erfolgreichen CI-Prüfungen und Paketvergleich.
+- Nach Veröffentlichung: installierte Dateien und Schutzflags prüfen, zunächst
+  Reparaturvorschau, dann ausschließlich die belegte Reservierung korrigieren.
+- Anschließend mehrere Controllerzyklen prüfen: falsche Sperre verschwunden,
+  tatsächliche Wasser-/Trocken-/Belegungssperren erhalten, keine unbestätigte
+  Wiederholung eines Starts.
+
+Bei unpassender Reparaturvorschau oder geändertem Zustand erfolgt kein Eingriff.
+Rückfallpaket ist `page-loading-full-failsafe.zip`, SHA256
+`041ae5ec2c8fa5633248a3bcb74300fd95e02d99aa17f40115d44f8f4d433582`.
+Ein Coderückfall darf bereits gesendete Geräteaktionen und nachträgliche manuelle
+Eingriffe nicht durch Rückschreiben eines alten Zustands überschreiben. Vor einem
+Rückfall sind deshalb aktueller Geräteauftrag, Bewässerung und Bedienung abzugleichen.
+
+Der direkte Tabellenzugriff des lokal angemeldeten Azure-Benutzers ist nicht
+berechtigt. Es wurden weder Rollen erteilt noch Speicherschutzregeln geändert.
+Die administrative Reparatur verwendet die bestehende Backendidentität und einen
+eng begrenzten, geschützten Anwendungspfad.
+
+## Ausführungsnachweis
+
+Entwicklung und vollständige Tests sind durchgeführt: **1.408 Python-Tests und
+479 Teilprüfungen**, außerdem **152 Appack-Tests**, jeweils erfolgreich.
+Die ersten drei Integrationsfehler im Testlauf sind behoben: Die Reparatur wird
+nur vom FULL_FAILSAFE-Paket mitgeliefert und erst nach Prüfung der Betriebsfreigabe
+geladen; die strikten Paketprüfungen der niedrigeren Freigabestufen bleiben bestehen.
+Die Prüfung der Azure-Funktionsnamen erfolgt einmal, ohne die Testregistrierung
+doppelt aufzubauen. Die neue Route ist ausschließlich für den Administratorschlüssel
+freigegeben. Eine unabhängige Luna-Prüfung und die zusätzliche Hauptprüfung fanden
+keine weitere konkrete Abweichung in der Startkorrektur. Die Reparatur selbst wurde
+zusätzlich auf Sperren, Quellenprüfung und Befehlsfreiheit geprüft.
+
+Veröffentlichung,
+Zustandskorrektur und anschließende Beobachtung werden nach tatsächlicher Ausführung
+hier ergänzt. Ein angenommener Startbefehl ist noch kein bestätigtes Mähen.
