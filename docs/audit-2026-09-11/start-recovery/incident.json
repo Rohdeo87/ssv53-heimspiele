@@ -1,0 +1,411 @@
+{
+  "retrieved_at_utc": "2026-09-11T05:05:09.958583+00:00",
+  "read_only": true,
+  "total_observations": 718,
+  "selected_observations": [
+    {
+      "at": "2026-09-10T20:00:03.6201097Z",
+      "mode": "FULL_FAILSAFE",
+      "decision": "MOWER_START_SEND_BLOCKED",
+      "command_sent": false,
+      "manifest": "8b17b7d232de8a32593c0c2aee55b3cd8527d29338c2be9626199ef72fac3d77",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789069976048,
+        "error_code": 0
+      },
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T20:00:01+00:00"
+      },
+      "release": {
+        "allowed": true,
+        "clear_since_utc": "2026-09-10T13:55:00.000709+00:00",
+        "confirmation_observed_until_utc": "2026-09-10T20:00:01+00:00",
+        "confirmed_for_seconds": 21900,
+        "dry_until_utc": "2026-09-10T16:25:00.000709+00:00",
+        "drying_since_utc": "2026-09-10T13:55:00.000709+00:00",
+        "persistent_state_available": true,
+        "physical_clear_now": true,
+        "reason": "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt.",
+        "release_at_utc": "2026-09-10T16:25:00.000709+00:00",
+        "required_clear_minutes": 150,
+        "telemetry_confirmed": true,
+        "telemetry_required_minutes": 2
+      },
+      "start_action": {
+        "type": "StartInWorkArea",
+        "outcome": "PRE_SEND_BLOCKED",
+        "reason_code": "MOWER_STATUS_STALE",
+        "requested_deadline_utc": "2026-09-11T01:49:00.004203+00:00",
+        "failsafe_refresh": false
+      },
+      "automation": {
+        "automation_park_source": "training",
+        "automation_restart_allowed": true,
+        "continuous_mowing_owned": false,
+        "error": null,
+        "hydrawise_clear_origin": "POSSIBLE_IRRIGATION_DURING_GAP",
+        "hydrawise_clear_since_utc": "2026-09-10T13:55:00.000709+00:00",
+        "hydrawise_drying_since_utc": "2026-09-10T13:55:00.000709+00:00",
+        "irrigation_cancelled_without_run_utc": null,
+        "irrigation_change_candidate_since_utc": null,
+        "irrigation_completed_relay_ids": [],
+        "irrigation_completed_utc": null,
+        "irrigation_current_relay_id": null,
+        "irrigation_failed_reason": null,
+        "irrigation_phase": null,
+        "irrigation_plan_id": null,
+        "irrigation_schedule_override_kind": null,
+        "irrigation_schedule_override_status": null,
+        "irrigation_suspended_relay_ids": [],
+        "irrigation_suspension_completed_utc": null,
+        "irrigation_suspension_revalidation_last_seen_utc": null,
+        "irrigation_suspension_revalidation_observations": 0,
+        "irrigation_suspension_until_utc": null,
+        "maintenance_mode": false,
+        "mower_start_pending_deadline_utc": "2026-09-11T01:49:00.004203+00:00",
+        "mower_start_pending_since_utc": "2026-09-10T20:00:00.004203+00:00",
+        "operator_request_action": "SET_CUTTING_HEIGHT",
+        "operator_request_id": "e8a4378f-1f28-4f47-b531-3494c768d91c",
+        "operator_request_status": "EXPIRED",
+        "park_command_sent_utc": "2026-09-10T16:56:00.317513+00:00",
+        "park_confirmed_observations": 184,
+        "park_confirmed_utc": "2026-09-10T16:57:00.006614+00:00",
+        "parked_by_automation": true,
+        "persisted": true,
+        "revision": 43626
+      },
+      "manual": {
+        "enabled": true,
+        "kind": "START",
+        "status": "ENDED",
+        "permission_code": "MANUAL_SESSION_INACTIVE"
+      },
+      "plan": {
+        "blocked_now": null,
+        "parking_block": null,
+        "next_block": {
+          "start": "2026-09-11T04:00:00+02:00",
+          "end": "2026-09-11T07:10:00+02:00",
+          "source": "irrigation",
+          "title": "Beregnung 1 Rechts Tor Ei; Beregnung 2 An den Traine; Beregnung 3 Links + Recht; Beregnung 4 An der Zuscha; Beregnung 5 Links vom Tor; Beregnung Mitte hinten 1; Beregnung Mitte vorne 2",
+          "resource_id": null
+        }
+      }
+    },
+    {
+      "at": "2026-09-10T20:01:03.0284248Z",
+      "mode": "FULL_FAILSAFE",
+      "decision": "MOWER_START_OUTCOME_UNCONFIRMED",
+      "command_sent": false,
+      "manifest": "8b17b7d232de8a32593c0c2aee55b3cd8527d29338c2be9626199ef72fac3d77",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789069976048,
+        "error_code": 0
+      },
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T20:01:01+00:00"
+      },
+      "release": {
+        "allowed": true,
+        "clear_since_utc": "2026-09-10T13:55:00.000709+00:00",
+        "confirmation_observed_until_utc": "2026-09-10T20:01:01+00:00",
+        "confirmed_for_seconds": 21960,
+        "dry_until_utc": "2026-09-10T16:25:00.000709+00:00",
+        "drying_since_utc": "2026-09-10T13:55:00.000709+00:00",
+        "persistent_state_available": true,
+        "physical_clear_now": true,
+        "reason": "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt.",
+        "release_at_utc": "2026-09-10T16:25:00.000709+00:00",
+        "required_clear_minutes": 150,
+        "telemetry_confirmed": true,
+        "telemetry_required_minutes": 2
+      },
+      "start_action": {
+        "type": null,
+        "outcome": null,
+        "reason_code": null,
+        "requested_deadline_utc": null,
+        "failsafe_refresh": null
+      },
+      "automation": {
+        "automation_park_source": "training",
+        "automation_restart_allowed": true,
+        "continuous_mowing_owned": false,
+        "error": null,
+        "hydrawise_clear_origin": "POSSIBLE_IRRIGATION_DURING_GAP",
+        "hydrawise_clear_since_utc": "2026-09-10T13:55:00.000709+00:00",
+        "hydrawise_drying_since_utc": "2026-09-10T13:55:00.000709+00:00",
+        "irrigation_cancelled_without_run_utc": null,
+        "irrigation_change_candidate_since_utc": null,
+        "irrigation_completed_relay_ids": [],
+        "irrigation_completed_utc": null,
+        "irrigation_current_relay_id": null,
+        "irrigation_failed_reason": null,
+        "irrigation_phase": null,
+        "irrigation_plan_id": null,
+        "irrigation_schedule_override_kind": null,
+        "irrigation_schedule_override_status": null,
+        "irrigation_suspended_relay_ids": [],
+        "irrigation_suspension_completed_utc": null,
+        "irrigation_suspension_revalidation_last_seen_utc": null,
+        "irrigation_suspension_revalidation_observations": 0,
+        "irrigation_suspension_until_utc": null,
+        "maintenance_mode": false,
+        "mower_start_pending_deadline_utc": "2026-09-11T01:49:00.004203+00:00",
+        "mower_start_pending_since_utc": "2026-09-10T20:00:00.004203+00:00",
+        "operator_request_action": "SET_CUTTING_HEIGHT",
+        "operator_request_id": "e8a4378f-1f28-4f47-b531-3494c768d91c",
+        "operator_request_status": "EXPIRED",
+        "park_command_sent_utc": "2026-09-10T16:56:00.317513+00:00",
+        "park_confirmed_observations": 185,
+        "park_confirmed_utc": "2026-09-10T16:57:00.006614+00:00",
+        "parked_by_automation": true,
+        "persisted": true,
+        "revision": 43627
+      },
+      "manual": {
+        "enabled": true,
+        "kind": "START",
+        "status": "ENDED",
+        "permission_code": "MANUAL_SESSION_INACTIVE"
+      },
+      "plan": {
+        "blocked_now": null,
+        "parking_block": null,
+        "next_block": {
+          "start": "2026-09-11T04:00:00+02:00",
+          "end": "2026-09-11T07:10:00+02:00",
+          "source": "irrigation",
+          "title": "Beregnung 1 Rechts Tor Ei; Beregnung 2 An den Traine; Beregnung 3 Links + Recht; Beregnung 4 An der Zuscha; Beregnung 5 Links vom Tor; Beregnung Mitte hinten 1; Beregnung Mitte vorne 2",
+          "resource_id": null
+        }
+      }
+    },
+    {
+      "at": "2026-09-10T20:09:08.3394117Z",
+      "mode": "FULL_FAILSAFE",
+      "decision": "MOWER_START_OUTCOME_UNCONFIRMED",
+      "command_sent": true,
+      "manifest": "8b17b7d232de8a32593c0c2aee55b3cd8527d29338c2be9626199ef72fac3d77",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789070906046,
+        "error_code": 0
+      },
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-10T20:09:01+00:00"
+      },
+      "release": {
+        "allowed": true,
+        "clear_since_utc": "2026-09-10T13:55:00.000709+00:00",
+        "confirmation_observed_until_utc": "2026-09-10T20:09:01+00:00",
+        "confirmed_for_seconds": 22440,
+        "dry_until_utc": "2026-09-10T16:25:00.000709+00:00",
+        "drying_since_utc": "2026-09-10T13:55:00.000709+00:00",
+        "persistent_state_available": true,
+        "physical_clear_now": true,
+        "reason": "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt.",
+        "release_at_utc": "2026-09-10T16:25:00.000709+00:00",
+        "required_clear_minutes": 150,
+        "telemetry_confirmed": true,
+        "telemetry_required_minutes": 2
+      },
+      "start_action": {
+        "type": null,
+        "outcome": null,
+        "reason_code": null,
+        "requested_deadline_utc": null,
+        "failsafe_refresh": null
+      },
+      "automation": {
+        "automation_park_source": "start_outcome_unknown",
+        "automation_restart_allowed": false,
+        "continuous_mowing_owned": false,
+        "error": null,
+        "hydrawise_clear_origin": "POSSIBLE_IRRIGATION_DURING_GAP",
+        "hydrawise_clear_since_utc": "2026-09-10T13:55:00.000709+00:00",
+        "hydrawise_drying_since_utc": "2026-09-10T13:55:00.000709+00:00",
+        "irrigation_cancelled_without_run_utc": null,
+        "irrigation_change_candidate_since_utc": null,
+        "irrigation_completed_relay_ids": [],
+        "irrigation_completed_utc": null,
+        "irrigation_current_relay_id": null,
+        "irrigation_failed_reason": null,
+        "irrigation_phase": null,
+        "irrigation_plan_id": null,
+        "irrigation_schedule_override_kind": null,
+        "irrigation_schedule_override_status": null,
+        "irrigation_suspended_relay_ids": [],
+        "irrigation_suspension_completed_utc": null,
+        "irrigation_suspension_revalidation_last_seen_utc": null,
+        "irrigation_suspension_revalidation_observations": 0,
+        "irrigation_suspension_until_utc": null,
+        "maintenance_mode": false,
+        "mower_start_pending_deadline_utc": "2026-09-11T01:49:00.004203+00:00",
+        "mower_start_pending_since_utc": "2026-09-10T20:00:00.004203+00:00",
+        "operator_request_action": "SET_CUTTING_HEIGHT",
+        "operator_request_id": "e8a4378f-1f28-4f47-b531-3494c768d91c",
+        "operator_request_status": "EXPIRED",
+        "park_command_sent_utc": "2026-09-10T20:09:00.004425+00:00",
+        "park_confirmed_observations": 0,
+        "park_confirmed_utc": null,
+        "parked_by_automation": true,
+        "persisted": true,
+        "revision": 43639
+      },
+      "manual": {
+        "enabled": true,
+        "kind": "START",
+        "status": "ENDED",
+        "permission_code": "MANUAL_SESSION_INACTIVE"
+      },
+      "plan": {
+        "blocked_now": null,
+        "parking_block": null,
+        "next_block": {
+          "start": "2026-09-11T04:00:00+02:00",
+          "end": "2026-09-11T07:10:00+02:00",
+          "source": "irrigation",
+          "title": "Beregnung 1 Rechts Tor Ei; Beregnung 2 An den Traine; Beregnung 3 Links + Recht; Beregnung 4 An der Zuscha; Beregnung 5 Links vom Tor; Beregnung Mitte hinten 1; Beregnung Mitte vorne 2",
+          "resource_id": null
+        }
+      }
+    },
+    {
+      "at": "2026-09-11T02:30:03.0315537Z",
+      "mode": "FULL_FAILSAFE",
+      "decision": "MOWER_START_OUTCOME_UNCONFIRMED",
+      "command_sent": false,
+      "manifest": "66e3626f7dd633ccf6b005e7826a19af73afae1c2f1b695b86843682c151b916",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789093588367,
+        "error_code": 0
+      },
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": false,
+        "active_zone_count": 1,
+        "observed_at_utc": "2026-09-11T02:30:01+00:00"
+      },
+      "release": {
+        "allowed": false,
+        "clear_since_utc": null,
+        "confirmation_observed_until_utc": "2026-09-11T02:30:01+00:00",
+        "confirmed_for_seconds": 0,
+        "dry_until_utc": "2026-09-10T16:25:00.000709+00:00",
+        "drying_since_utc": "2026-09-10T13:55:00.000709+00:00",
+        "persistent_state_available": true,
+        "physical_clear_now": false,
+        "reason": "Mindestens eine Hydrawise-Zone läuft aktuell.",
+        "release_at_utc": null,
+        "required_clear_minutes": 150,
+        "telemetry_confirmed": false,
+        "telemetry_required_minutes": 2
+      },
+      "start_action": {
+        "type": null,
+        "outcome": null,
+        "reason_code": null,
+        "requested_deadline_utc": null,
+        "failsafe_refresh": null
+      },
+      "automation": {
+        "automation_park_source": "start_outcome_unknown",
+        "automation_restart_allowed": false,
+        "continuous_mowing_owned": false,
+        "error": null,
+        "hydrawise_clear_origin": "IRRIGATION_ACTIVE",
+        "hydrawise_clear_since_utc": null,
+        "hydrawise_drying_since_utc": "2026-09-10T13:55:00.000709+00:00",
+        "irrigation_cancelled_without_run_utc": null,
+        "irrigation_change_candidate_since_utc": null,
+        "irrigation_completed_relay_ids": [],
+        "irrigation_completed_utc": null,
+        "irrigation_current_relay_id": null,
+        "irrigation_failed_reason": null,
+        "irrigation_phase": null,
+        "irrigation_plan_id": null,
+        "irrigation_schedule_override_kind": null,
+        "irrigation_schedule_override_status": null,
+        "irrigation_suspended_relay_ids": [],
+        "irrigation_suspension_completed_utc": null,
+        "irrigation_suspension_revalidation_last_seen_utc": null,
+        "irrigation_suspension_revalidation_observations": 0,
+        "irrigation_suspension_until_utc": null,
+        "maintenance_mode": false,
+        "mower_start_pending_deadline_utc": "2026-09-11T01:49:00.004203+00:00",
+        "mower_start_pending_since_utc": "2026-09-10T20:00:00.004203+00:00",
+        "operator_request_action": "SET_CUTTING_HEIGHT",
+        "operator_request_id": "e8a4378f-1f28-4f47-b531-3494c768d91c",
+        "operator_request_status": "EXPIRED",
+        "park_command_sent_utc": "2026-09-11T02:27:00.004563+00:00",
+        "park_confirmed_observations": 3,
+        "park_confirmed_utc": "2026-09-11T02:28:00.000955+00:00",
+        "parked_by_automation": true,
+        "persisted": true,
+        "revision": 44050
+      },
+      "manual": {
+        "enabled": true,
+        "kind": "START",
+        "status": "ENDED",
+        "permission_code": "MANUAL_SESSION_INACTIVE"
+      },
+      "plan": {
+        "blocked_now": {
+          "start": "2026-09-11T04:00:01+02:00",
+          "end": "2026-09-11T07:10:00+02:00",
+          "source": "irrigation",
+          "title": "Beregnung 1 Rechts Tor Ei; Beregnung 2 An den Traine; Beregnung 3 Links + Recht; Beregnung 4 An der Zuscha; Beregnung 5 Links vom Tor; Beregnung Mitte hinten 1; Beregnung Mitte vorne 2",
+          "resource_id": null
+        },
+        "parking_block": {
+          "start": "2026-09-11T04:00:01+02:00",
+          "end": "2026-09-11T07:10:00+02:00",
+          "source": "irrigation",
+          "title": "Beregnung 1 Rechts Tor Ei; Beregnung 2 An den Traine; Beregnung 3 Links + Recht; Beregnung 4 An der Zuscha; Beregnung 5 Links vom Tor; Beregnung Mitte hinten 1; Beregnung Mitte vorne 2",
+          "resource_id": null
+        },
+        "next_block": {
+          "start": "2026-09-11T16:30:00+02:00",
+          "end": "2026-09-11T19:00:00+02:00",
+          "source": "training",
+          "title": "Training C",
+          "resource_id": null
+        }
+      }
+    }
+  ]
+}

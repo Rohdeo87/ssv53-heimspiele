@@ -52,6 +52,7 @@ REQUIRED_FILES = (
     "mower/manual_control_api.py",
     "mower/manual_water_conflict.py",
     "mower/start_dispatch_guard.py",
+    "mower/start_recovery.py",
     "mower/full_mower.py",
     "mower/husqvarna.py",
     "mower/husqvarna_actions.py",

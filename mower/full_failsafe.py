@@ -34,7 +34,12 @@ from mower.husqvarna_cutting_height_actions import set_work_area_cutting_height
 from mower.husqvarna_statistics_actions import reset_cutting_blade_usage_time
 from mower.husqvarna_start_actions import start_in_work_area
 from mower.full_height_control import reconcile_full_height_sends, run_full_height_control
-from mower.start_dispatch_guard import StartDispatchBlocked, prepare_start_dispatch
+from mower.start_dispatch_guard import (
+    StartDispatchBlocked,
+    StartReservationReleaseError,
+    prepare_start_dispatch,
+    release_start_reservation,
+)
 from mower.manual_session import (
     ManualSessionError,
     block_key as manual_block_key,
@@ -7629,6 +7634,25 @@ def run_full_failsafe_cycle(
             command_sent=True,
         )
 
+    if mower.get("connected") is not True or not mower_status_fresh:
+        details["start_action"] = {
+            "type": "StartInWorkArea",
+            "outcome": "PRE_SEND_BLOCKED",
+            "reason_code": "MOWER_STATUS_STALE",
+            "requested_deadline_utc": safe_command_deadline.isoformat(),
+            "failsafe_refresh": failsafe_refresh,
+        }
+        return _persist_result(
+            store=store,
+            original=original,
+            state=state,
+            result=result,
+            details=details,
+            settings=settings,
+            decision_code="MOWER_START_SEND_BLOCKED",
+            message="Der Mäherstart wurde wegen veralteter Gerätetelemetrie nicht reserviert.",
+        )
+
     intent = CommandIntent(
         action="START",
         target=mower_id,
@@ -7722,6 +7746,8 @@ def run_full_failsafe_cycle(
                               command_sent=False, error=type(exc).__name__),
         )
 
+    dispatch_guard_provenance = object()
+
     def before_start_dispatch() -> int:
         return prepare_start_dispatch(
             clock=command_clock,
@@ -7740,6 +7766,7 @@ def run_full_failsafe_cycle(
             manual_session_epoch=(
                 int(manual_session["epoch"]) if manual_start_active else None
             ),
+            _guard_provenance=dispatch_guard_provenance,
         )
 
     try:
@@ -7756,18 +7783,48 @@ def run_full_failsafe_cycle(
             response = start_sender(
                 client_id, client_secret, mower_id, work_area_id, guarded_duration
             )
-    except StartDispatchBlocked as exc:
-        details["start_action"] = {
-            "type": "StartInWorkArea", "outcome": "PRE_SEND_BLOCKED",
-            "reason_code": exc.code, "requested_deadline_utc": command_end.isoformat(),
-            "failsafe_refresh": failsafe_refresh,
-        }
-        return replace(
-            result, decision_code="MOWER_START_SEND_BLOCKED", command_sent=False,
-            message="Der Mäherstart wurde vor dem HTTP-Versand verworfen; der Schutz-Latch bleibt bis zum Abgleich bestehen.",
-            details=_decorate(details, state=reserved, settings=settings, persisted=True, command_sent=False),
-        )
     except Exception as exc:
+        if (
+            isinstance(exc, StartDispatchBlocked)
+            and exc.belongs_to(dispatch_guard_provenance)
+        ):
+            blocked_state = reserved
+            release_error = None
+            try:
+                blocked_state = release_start_reservation(
+                    store=store,
+                    reserved=reserved,
+                    prior=state,
+                )
+            except StartReservationReleaseError as release_exc:
+                release_error = str(release_exc)
+                try:
+                    blocked_state = store.load()
+                except Exception:
+                    pass
+            details["start_action"] = {
+                "type": "StartInWorkArea", "outcome": "PRE_SEND_BLOCKED",
+                "reason_code": exc.code, "requested_deadline_utc": command_end.isoformat(),
+                "failsafe_refresh": failsafe_refresh,
+                "reservation_released": release_error is None,
+            }
+            if release_error is not None:
+                details["start_action"]["reservation_release_error"] = release_error
+            return replace(
+                result, decision_code="MOWER_START_SEND_BLOCKED", command_sent=False,
+                message=(
+                    "Der Mäherstart wurde vor dem HTTP-Versand verworfen; "
+                    + (
+                        "die eigene Reservierung wurde sicher freigegeben."
+                        if release_error is None
+                        else "der Schutz-Latch bleibt wegen einer konkurrierenden oder fehlgeschlagenen CAS-Freigabe bestehen."
+                    )
+                ),
+                details=_decorate(
+                    details, state=blocked_state, settings=settings,
+                    persisted=True, command_sent=False,
+                ),
+            )
         unknown_state = reserved
         if manual_start_active and manual_session is not None:
             unknown_session = with_session_status(

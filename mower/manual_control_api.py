@@ -102,6 +102,7 @@ def manual_context(state, details: Mapping[str, Any], environment, now_utc):
     except (KeyError, TypeError):
         fault_free = False
     can_start = (enabled and exact and _fresh(mower, now) and not forbidden and not state.maintenance_mode
+                 and state.mower_start_pending_since_utc is None
                  and fault_free
                  and str(mower.get("state") or "").upper() not in {"STOPPED", "OFF", "ERROR", "FATAL_ERROR"}
                  and water_known and (not conflict.get("required") or conflict.get("known") is True))
@@ -128,6 +129,12 @@ def manual_context(state, details: Mapping[str, Any], environment, now_utc):
             status, title, message = "MANUAL_MOWING", "Manuell gestartet", "Gilt bis zur nächsten Ladefahrt."
         else:
             status, title, message = "PREPARED", "Manueller Start angefordert", "Bitte auf die Bestätigung des Mähers warten."
+    if enabled and state.mower_start_pending_since_utc is not None:
+        message = "Der letzte Start ist ungeklärt. Bitte den Mäher vor Ort prüfen."
+        if exact and mower.get("connected") is True:
+            message += " Parken bleibt möglich."
+    elif enabled and exact and mower.get("connected") is True and not _fresh(mower, now):
+        message += " Für einen Start bitte eine neue Mähermeldung abwarten. Parken bleibt möglich."
     active_start = bool(current_session and current_session["kind"] == "START" and current_session["status"] == "ACTIVE")
     occupancy_override = bool(active_start and not forbidden and keys and keys.issubset(set(current_session["confirmed_block_keys"])))
     drying_override = bool(active_start and drying and current_session.get("confirmed_dry_until_utc") == dry_until.isoformat()

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from copy import deepcopy
 from dataclasses import replace
 from datetime import timedelta
 
@@ -11,7 +12,7 @@ from mower.husqvarna_start_actions import start_in_work_area
 from mower.manual_session import dump_manual_session, new_session
 from mower.start_dispatch_guard import StartDispatchBlocked, prepare_start_dispatch
 from mower.state import AutomationState
-from mower.state_store import InMemoryStateStore
+from mower.state_store import InMemoryStateStore, StateConflictError
 from tests.test_full_failsafe import ENV, NOW, observed_cycle, result, settings
 
 
@@ -68,10 +69,24 @@ def _startable_state() -> AutomationState:
     )
 
 
-def _run_start(store, *, clock, start_sender=start_in_work_area, window_end=None):
-    cycle = result(activity="PARKED_IN_CS", battery=100, window_end=window_end)
+def _run_start(
+    store,
+    *,
+    clock,
+    start_sender=start_in_work_area,
+    window_end=None,
+    cycle=None,
+    now_utc=NOW,
+    mower_observed_at=None,
+):
+    cycle = deepcopy(
+        cycle or result(activity="PARKED_IN_CS", battery=100, window_end=window_end)
+    )
+    cycle.details["mower"]["status_timestamp_ms"] = int(
+        (mower_observed_at or now_utc).timestamp() * 1000
+    )
     return run_full_failsafe_cycle(
-        now_utc=NOW, settings=settings(), environment=ENV, past_due=False, source="test",
+        now_utc=now_utc, settings=settings(), environment=ENV, past_due=False, source="test",
         read_only_runner=lambda **kwargs: observed_cycle(cycle, kwargs["now_utc"]),
         state_store_factory=lambda _environment: store,
         park_sender=lambda *_: pytest.fail("unexpected PARK"),
@@ -100,8 +115,24 @@ def test_auth_delay_past_deadline_does_not_post(monkeypatch):
     assert output.decision_code == "MOWER_START_SEND_BLOCKED"
     assert output.command_sent is False
     assert output.details["start_action"]["reason_code"] == "START_WINDOW_EXPIRED"
+    assert output.details["start_action"]["reservation_released"] is True
     assert posts == []
-    assert store.load().mower_start_pending_since_utc == NOW.isoformat()
+    assert store.load().mower_start_pending_since_utc is None
+
+    now[0] = NOW
+    monkeypatch.setattr(
+        "mower.husqvarna_start_actions.get_access_token",
+        lambda *_args, **_kwargs: "token",
+    )
+    monkeypatch.setattr(
+        "mower.husqvarna_start_actions.urlopen",
+        lambda request, **_kwargs: posts.append(request) or _Response(),
+    )
+    retry = _run_start(store, clock=lambda: now[0])
+
+    assert retry.decision_code == "CONTINUOUS_MOWING_START_SENT"
+    assert retry.command_sent is True
+    assert len(posts) == 1
 
 
 def test_slow_final_state_read_cannot_extend_the_start_window():
@@ -139,8 +170,11 @@ def test_manual_stop_written_during_auth_fences_post(monkeypatch):
     assert output.decision_code == "MOWER_START_SEND_BLOCKED"
     assert output.command_sent is False
     assert output.details["start_action"]["reason_code"] == "START_RESERVATION_CHANGED"
+    assert output.details["start_action"]["reservation_released"] is False
     assert posts == []
-    assert store.load().operator_request_action == "PARK_MOWER"
+    current = store.load()
+    assert current.operator_request_action == "PARK_MOWER"
+    assert current.mower_start_pending_since_utc == NOW.isoformat()
 
 
 def test_post_token_guard_reduces_encoded_duration(monkeypatch):
@@ -189,6 +223,154 @@ def test_lost_response_keeps_pending_latch_after_legacy_wrapper_check():
     assert output.decision_code == "MOWER_START_OUTCOME_UNCONFIRMED"
     assert output.command_sent is True
     assert store.load().mower_start_pending_since_utc == NOW.isoformat()
+
+
+def test_stale_mower_preflight_does_not_reserve_and_fresh_cycle_can_retry():
+    prior_time = (NOW - timedelta(hours=2)).isoformat()
+    store = InMemoryStateStore(
+        replace(
+            _startable_state(),
+            last_command_fingerprint="acknowledged-park",
+            last_command_utc=prior_time,
+        )
+    )
+    calls = []
+
+    stale = _run_start(
+        store,
+        clock=lambda: NOW,
+        start_sender=lambda *_args: calls.append("stale") or {"accepted": True},
+        mower_observed_at=NOW - timedelta(seconds=181),
+    )
+
+    assert stale.decision_code == "MOWER_START_SEND_BLOCKED"
+    assert stale.command_sent is False
+    assert stale.details["start_action"]["reason_code"] == "MOWER_STATUS_STALE"
+    assert calls == []
+    after_stale = store.load()
+    assert after_stale.mower_start_pending_since_utc is None
+    assert after_stale.last_command_fingerprint == "acknowledged-park"
+    assert after_stale.last_command_utc == prior_time
+
+    retry_at = NOW + timedelta(minutes=1)
+    fresh = _run_start(
+        store,
+        now_utc=retry_at,
+        clock=lambda: retry_at,
+        start_sender=lambda *_args: calls.append("fresh") or {"accepted": True},
+    )
+
+    assert fresh.decision_code == "CONTINUOUS_MOWING_START_SENT"
+    assert calls == ["fresh"]
+    assert store.load().mower_start_pending_since_utc is None
+
+
+def test_custom_sender_typed_block_is_ambiguous_and_keeps_reservation():
+    store = InMemoryStateStore(_startable_state())
+
+    def custom_sender(*_args):
+        raise StartDispatchBlocked("MOWER_STATUS_STALE")
+
+    output = _run_start(store, clock=lambda: NOW, start_sender=custom_sender)
+
+    assert output.decision_code == "MOWER_START_OUTCOME_UNCONFIRMED"
+    assert output.command_sent is True
+    assert output.details["start_action"]["error_type"] == "StartDispatchBlocked"
+    assert store.load().mower_start_pending_since_utc == NOW.isoformat()
+
+
+def test_production_transport_exception_after_final_guard_keeps_reservation(monkeypatch):
+    store = InMemoryStateStore(_startable_state())
+    monkeypatch.setattr(
+        "mower.husqvarna_start_actions.get_access_token",
+        lambda *_args, **_kwargs: "token",
+    )
+    monkeypatch.setattr(
+        "mower.husqvarna_start_actions.urlopen",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            TimeoutError("request outcome unknown")
+        ),
+    )
+
+    output = _run_start(store, clock=lambda: NOW)
+
+    assert output.decision_code == "MOWER_START_OUTCOME_UNCONFIRMED"
+    assert output.command_sent is True
+    assert store.load().mower_start_pending_since_utc == NOW.isoformat()
+
+
+def test_release_cas_failure_keeps_reservation_latched(monkeypatch):
+    class CleanupConflictStore(InMemoryStateStore):
+        saves = 0
+
+        def save(self, state, *, expected_revision):
+            self.saves += 1
+            if self.saves == 2:
+                raise StateConflictError("cleanup raced")
+            return super().save(state, expected_revision=expected_revision)
+
+    store = CleanupConflictStore(_startable_state())
+    now = [NOW]
+
+    def token(*_args, **_kwargs):
+        now[0] = NOW + timedelta(minutes=31)
+        return "token"
+
+    monkeypatch.setattr("mower.husqvarna_start_actions.get_access_token", token)
+
+    output = _run_start(
+        store,
+        clock=lambda: now[0],
+        window_end=NOW + timedelta(minutes=40),
+    )
+
+    assert output.decision_code == "MOWER_START_SEND_BLOCKED"
+    assert output.command_sent is False
+    assert output.details["start_action"]["reservation_released"] is False
+    assert (
+        output.details["start_action"]["reservation_release_error"]
+        == "START_RESERVATION_RELEASE_CAS_FAILED"
+    )
+    assert store.load().mower_start_pending_since_utc == NOW.isoformat()
+
+
+def test_post_oauth_rejection_releases_reservation_and_preserves_refresh_interval(monkeypatch):
+    prior_end = (NOW + timedelta(hours=12)).isoformat()
+    prior_command_time = (NOW - timedelta(minutes=10)).isoformat()
+    store = InMemoryStateStore(
+        AutomationState(
+            continuous_mowing_owned=True,
+            continuous_mowing_work_area_id=849199,
+            continuous_mowing_window_end_utc=prior_end,
+            last_command_fingerprint="acknowledged-start",
+            last_command_utc=prior_command_time,
+            last_start_command_utc=prior_command_time,
+            hydrawise_clear_since_utc=(NOW - timedelta(minutes=120)).isoformat(),
+            last_hydrawise_success_utc=(NOW - timedelta(minutes=1)).isoformat(),
+        )
+    )
+    now = [NOW]
+    cycle = result(activity="MOWING", battery=100, window_end=NOW + timedelta(hours=2))
+
+    def token(*_args, **_kwargs):
+        now[0] = NOW + timedelta(minutes=3, seconds=1)
+        return "token"
+
+    monkeypatch.setattr("mower.husqvarna_start_actions.get_access_token", token)
+
+    output = _run_start(store, clock=lambda: now[0], cycle=cycle)
+
+    assert output.decision_code == "MOWER_START_SEND_BLOCKED"
+    assert output.command_sent is False
+    assert output.details["start_action"]["reason_code"] == "MOWER_STATUS_STALE"
+    assert output.details["start_action"]["reservation_released"] is True
+    current = store.load()
+    assert current.mower_start_pending_since_utc is None
+    assert current.last_command_fingerprint == "acknowledged-start"
+    assert current.last_command_utc == prior_command_time
+    assert current.last_start_command_utc == prior_command_time
+    assert current.continuous_mowing_owned is True
+    assert current.continuous_mowing_window_end_utc == prior_end
 
 
 def test_guard_rejects_invalid_clock_before_any_sender():
