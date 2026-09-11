@@ -66,7 +66,7 @@ body.pflege-design{background:#f3f6fa;color:#172c42;font-family:Arial,Helvetica,
 .pflege-design .pf-page-title{display:flex;align-items:center;gap:12px;font-size:23px;margin:8px 0 0}
 .pflege-design .card{border:1px solid #dce4ed;box-shadow:none;border-radius:18px;padding:18px;margin:0}
 .pflege-design #overall{display:grid;grid-template-columns:27px minmax(0,1fr);column-gap:9px;padding:20px;border-radius:18px;box-shadow:none;margin-bottom:16px;border-left:0}
-.pflege-design #overall>.eyebrow,.pflege-design #overall-title{grid-column:2}.pflege-design #overall-text,.pflege-design #protection-note,.pflege-design #pf-charge{grid-column:1/-1}
+.pflege-design #overall>.eyebrow,.pflege-design #overall-title{grid-column:2}.pflege-design #overall-text,.pflege-design #protection-note,.pflege-design #pf-charge,.pflege-design #pf-mowing-progress{grid-column:1/-1}
 .pflege-design #overall .big{font-size:24px;line-height:1.25}.pflege-design #overall .muted{font-size:15px;line-height:1.5}
 .pflege-design #overall.warn{background:#fff5df;color:#87570a}.pflege-design #overall.good{background:#e7f4ec;color:#1c624d}
 .pflege-design #overall.bad{background:#fff0ef;color:#ad282a}
@@ -85,6 +85,9 @@ body.pflege-design{background:#f3f6fa;color:#172c42;font-family:Arial,Helvetica,
 .pflege-design #pf-charge-caption{font-size:23px;line-height:1.3}
 .pflege-design #pf-charge-progress{display:block;width:100%;height:10px;border:0;border-radius:9px;overflow:hidden;background:#dce4ed;accent-color:#285ca0}
 .pflege-design #pf-charge-progress::-webkit-progress-bar{background:#dce4ed;border-radius:9px}.pflege-design #pf-charge-progress::-webkit-progress-value{background:#285ca0;border-radius:9px}
+.pflege-design #pf-mowing-progress-bar{display:block;width:100%;height:10px;border:0;border-radius:9px;overflow:hidden;background:#dce4ed;accent-color:#285ca0}
+.pflege-design #pf-mowing-progress-bar::-webkit-progress-bar{background:#dce4ed;border-radius:9px}.pflege-design #pf-mowing-progress-bar::-webkit-progress-value{background:#285ca0;border-radius:9px}
+.pflege-design #pf-mowing-progress-caption{display:flex;align-items:center;gap:8px;font-size:23px;line-height:1.3}.pflege-design #pf-mowing-progress-caption .pf-symbol{width:27px;height:27px;background:transparent;color:inherit;border-radius:0}.pflege-design #pf-mowing-progress-caption .pf-symbol svg{width:23px;height:23px}
 .pflege-design .pf-charge .time-box{padding:0;background:transparent;border:0;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px}
 .pflege-design .pf-charge .time-label,.pflege-design .pf-charge .time-value,.pflege-design .pf-charge .time-note{font-size:14px;color:inherit;line-height:1.4;margin:0}
 .pflege-design .pf-home-actions,.pflege-design .pf-home-links,.pflege-design .pf-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
@@ -325,8 +328,8 @@ body.pflege-design{background:#f3f6fa;color:#172c42;font-family:Arial,Helvetica,
     function renderScheduleChangeNotice(s){if(!irrigationScheduleChangePending(s))return;var message=dashboardMessage(s);if(message.title!=="Bewässerungsplan wird geändert")return;document.getElementById("overall").className="notice warn";text("overall-title",message.title);text("overall-text",message.text)}
     function simpleStatus(s){var m=s.mower||{},a=s.automation||{};if(a.irrigationPhase)return"Bitte das Ende der Bewässerung und die anschließende Wartezeit abwarten.";var actions=effectiveMowerActions(s);return actions.showStart?"Zum Fortsetzen „"+actions.startLabel+"“ wählen.":"Bitte am Mäher nachsehen. Die Pause bleibt bestehen."}
 
-    function chargingEnd(s) {
-      var m=s.mower||{},c=s.coordination||{},estimate=c.chargingEndEstimate,now=new Date(s.generatedAt||Date.now());
+    function chargingEnd(s,displayOnly) {
+      var m=s.mower||{},c=s.coordination||{},estimate=displayOnly?(c.chargingDisplayEstimate||c.chargingEndEstimate):c.chargingEndEstimate,now=new Date(s.generatedAt||Date.now());
       if(m.activity!=="CHARGING"||m.connected!==true||hasActiveMowerError(m)||s.controlsAvailable===false||!estimate||estimate.estimated!==true||typeof estimate.at!=="string"||isNaN(now.getTime()))return null;
       if((c.blockers||[]).some(function(b){return["MOWER_TELEMETRY","CONTROLLER_STALE","DATA_QUALITY"].indexOf(b.code)>=0}))return null;
       var at=new Date(estimate.at);if(isNaN(at.getTime())||at<=now||at-now>24*60*60*1000)return null;
@@ -700,6 +703,10 @@ SOFTWARE.
       var chargeCaption=document.createElement("strong");chargeCaption.id="pf-charge-caption";charge.appendChild(chargeCaption);
       var chargeProgress=document.createElement("progress");chargeProgress.id="pf-charge-progress";chargeProgress.max=100;chargeProgress.setAttribute("aria-label","Akkustand");charge.appendChild(chargeProgress);
       pfMove("charge-end-row",charge);document.getElementById("overall").appendChild(charge);
+      var mowing=document.createElement("div");mowing.id="pf-mowing-progress";mowing.className="pf-charge";mowing.hidden=true;
+      var mowingCaption=document.createElement("strong");mowingCaption.id="pf-mowing-progress-caption";mowing.appendChild(mowingCaption);
+      var mowingBar=document.createElement("progress");mowingBar.id="pf-mowing-progress-bar";mowingBar.max=100;mowingBar.setAttribute("aria-label","Fläche gemäht");mowing.appendChild(mowingBar);
+      document.getElementById("overall").appendChild(mowing);
       var mowerCard=document.getElementById("mower-title").closest("article"),waterCard=document.getElementById("water-title").closest("article"),occupancyCard=document.getElementById("occupancy-title").closest("article"),clubhouseCard=document.getElementById("clubhouse-events").closest("article");
       pfPages.controls.appendChild(mowerCard);pfPages.water.appendChild(waterCard);pfPages.today.appendChild(occupancyCard);pfPages.clubhouse.appendChild(clubhouseCard);pfMove("training-control-card",pfPages.training);
       var actions=document.createElement("div");actions.id="pf-mower-actions";actions.className="pf-home-actions";["manual-start","manual-park","manual-resume","mow-start","mow-park"].forEach(function(id){pfMove(id,actions)});pfPages.home.appendChild(actions);
@@ -757,7 +764,11 @@ SOFTWARE.
     }
     function pfChargingInfo(s) {
       var m=s.mower||{},value=m.batteryPercent,percent=typeof value==="number"&&Number.isFinite(value)&&value>=0&&value<=100?Math.round(value):null;
-      return {visible:m.activity==="CHARGING"&&m.connected===true&&mowerTelemetryFresh(s)&&s.controlsAvailable!==false&&!hasActiveMowerError(m),percent:percent,at:chargingEnd(s)};
+      return {visible:m.activity==="CHARGING"&&m.connected===true&&mowerTelemetryFresh(s)&&s.controlsAvailable!==false&&!hasActiveMowerError(m),percent:percent,at:chargingEnd(s,true)};
+    }
+    function pfMowingInfo(s) {
+      var m=s&&s.mower||{},value=m.workAreaProgress,percent=typeof value==="number"&&Number.isFinite(value)&&value>=0&&value<=100?Math.round(value):null;
+      return {visible:m.activity==="MOWING"&&m.connected===true&&mowerTelemetryFresh(s)&&!hasActiveMowerError(m),percent:percent};
     }
     function pfRenderCharging(s) {
       if(!pfReady)return;var info=pfChargingInfo(s),wrap=document.getElementById("pf-charge"),title=document.getElementById("overall-title").textContent;
@@ -767,6 +778,12 @@ SOFTWARE.
       document.getElementById("charge-end-row").classList.remove("hidden");
       document.getElementById("charge-end-time").textContent=info.at?calendarTime(info.at,s.generatedAt):"Noch nicht bekannt";
       document.getElementById("charge-end-note").textContent=info.at?"Voraussichtlich":"";
+    }
+    function pfRenderMowingProgress(s) {
+      if(!pfReady)return;var info=pfMowingInfo(s),wrap=document.getElementById("pf-mowing-progress");
+      wrap.hidden=!info.visible;if(!info.visible)return;
+      pfDecorate(document.getElementById("pf-mowing-progress-caption"),"Grid2x2","Fläche gemäht "+(info.percent===null?"unbekannt":info.percent+" %"));
+      var bar=document.getElementById("pf-mowing-progress-bar");bar.hidden=info.percent===null;if(info.percent!==null)bar.value=info.percent;
     }
     function pfRenderHeight(s) {
       if(!pfReady)return;var m=s&&s.mower||{},value=Number(state.heightChoice),old=m.cuttingHeightMm,save=document.getElementById("height-save");
@@ -815,11 +832,11 @@ SOFTWARE.
       pfDecorate(document.getElementById("overall"),document.getElementById("overall-title").textContent===overview.title?overview.icon:"TriangleAlert");
       [["mower-connection","Smartphone"],["battery","Battery"],["progress","Grid2x2"],["cutting-height-current","MoveVertical"],["mower-error","TriangleAlert"]].forEach(function(row){pfDecorate(document.getElementById(row[0]).previousElementSibling,row[1])});
       pfDecorate(document.getElementById("winter-training-switch"),"Snowflake");
-      pfRenderHeight(s);pfRenderMoment(s);pfRenderCharging(s);pfRenderHistory(s);
+      pfRenderHeight(s);pfRenderMoment(s);pfRenderCharging(s);pfRenderMowingProgress(s);pfRenderHistory(s);
     }
     pfMountDesign();
     var pfRenderBase=render;render=function(s){pfRenderBase(s);pfUpdate(s)};
-    var pfCoordinationBase=renderCoordination;renderCoordination=function(s){pfCoordinationBase(s);pfRenderMoment(s);pfRenderCharging(s);if(pfReady)document.getElementById("pf-blade-hours").textContent=duration(s.statistics&&s.statistics.bladeUsageSeconds)};
+    var pfCoordinationBase=renderCoordination;renderCoordination=function(s){pfCoordinationBase(s);pfRenderMoment(s);pfRenderCharging(s);pfRenderMowingProgress(s);if(pfReady)document.getElementById("pf-blade-hours").textContent=duration(s.statistics&&s.statistics.bladeUsageSeconds)};
     var pfHeightBase=renderHeightChoice;renderHeightChoice=function(){pfHeightBase();pfRenderHeight(state.status)};
     var pfLoadBase=load;load=function(){return pfLoadBase().then(function(s){if(!s&&state.status)pfUpdate(state.status);return s})};
     var pfActionBase=openAction;openAction=function(){var result=pfActionBase.apply(this,arguments);pfConfirmationIcons();return result};

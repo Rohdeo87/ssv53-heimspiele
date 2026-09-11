@@ -35,8 +35,12 @@ def fixtures():
     charging_unknown["coordination"].update(dryUntil=None,releaseNotBefore=None,chargingEndEstimate=None,blockers=[{"code":"CHARGING"}])
     charging_unknown["manualControl"]["confirmations"]["dryingRequired"]=False
     output["charging-unknown"]=charging_unknown
+    charge_display=deepcopy(charging_unknown)
+    charge_display["mower"]["batteryPercent"]=94
+    charge_display["coordination"]["chargingDisplayEstimate"]={"at":"2026-09-11T08:22:00Z","estimated":True,"displayOnly":True}
+    output["charging-display"]=charge_display
     parked=deepcopy(base);parked["manualControl"].update(status="MANUAL_PARKED",message="Die Automatik wartet auf deine Freigabe.");parked["mower"].update(activity="PARKED_IN_CS",batteryPercent=100);output["parked"]=parked
-    moving=deepcopy(base);moving["mower"].update(activity="MOWING",mode="MAIN");moving["coordination"].update(blockers=[],dryUntil=None,releaseNotBefore=None);moving["manualControl"]["confirmations"].update(dryingRequired=False);output["mowing"]=moving
+    moving=deepcopy(base);moving["mower"].update(activity="MOWING",mode="MAIN",workAreaProgress=19);moving["coordination"].update(blockers=[],dryUntil=None,releaseNotBefore=None);moving["manualControl"]["confirmations"].update(dryingRequired=False);output["mowing"]=moving
     stale=deepcopy(base);stale["mower"].update(telemetryFresh=False,statusAgeSeconds=500);stale["coordination"]["blockers"]=[{"code":"MOWER_TELEMETRY"}];stale["manualControl"]["canStart"]=False;output["stale"]=stale
     wet=deepcopy(parked);wet["automation"].update(irrigationPhase="RUNNING");wet["irrigation"]["intent"]={"source":"MANUAL_OPERATOR","verified":True,"controllerManaged":True,"automaticWindowApplies":False};wet["irrigation"]["safety"].update(active_zone_count=1,clear_now=False);wet["irrigation"]["zones"][0]["running"]=True;wet["manualControl"]["confirmations"].update(waterChoiceRequired=True);output["watering"]=wet
     failed=deepcopy(stale);failed["automation"]["mowerStartOutcomeUnconfirmed"]=True;output["unconfirmed"]=failed

@@ -1,5 +1,7 @@
 const assert=require('node:assert/strict');
 const test=require('node:test');
+const fs=require('node:fs');
+const path=require('node:path');
 const {sourceOf,viewModel,snapshot}=require('./helpers/platzwart_template');
 const views=viewModel();
 const manual=new Function(sourceOf('manualControlView')+';return manualControlView')();
@@ -11,6 +13,34 @@ function status(){
   s.manualControl={enabled:true,status:'AUTOMATIC',canStart:true,canPark:true,canResume:true};
   return s;
 }
+
+test('Ladeuhrzeit nutzt separate Anzeigeprognose ohne eine Startzusage daraus zu machen',()=>{
+  const s=status();s.coordination.chargingEndEstimate=null;
+  const at=new Date(new Date(s.generatedAt).getTime()+7*60000).toISOString();
+  s.coordination.chargingDisplayEstimate={at,estimated:true,displayOnly:true};
+  assert.equal(presentation('pfChargingInfo')(s).at.toISOString(),at);
+  assert.equal(views.chargingEnd(s),null);
+});
+
+function designPresentation(name){
+  const source=fs.readFileSync(path.join(__dirname,'../ui/platzpflege/design.js'),'utf8');
+  const start=source.indexOf('    function '+name+'('),end=source.indexOf('\n    function ',start+1);
+  if(start<0||end<0)throw new Error('Missing design function: '+name);
+  return new Function('mowerTelemetryFresh','hasActiveMowerError',source.slice(start,end)+';return '+name)(s=>s.mower&&s.mower.telemetryFresh===true,m=>m&&m.errorActive===true);
+}
+
+test('Mähfortschritt erscheint nur bei frischer verbundener MOWING-Meldung',()=>{
+  const info=designPresentation('pfMowingInfo'),s=status();s.mower.activity='MOWING';s.mower.workAreaProgress=19;
+  assert.deepEqual(info(s),{visible:true,percent:19});
+  s.mower.connected=false;assert.equal(info(s).visible,false);
+  s.mower.connected=true;s.mower.telemetryFresh=false;assert.equal(info(s).visible,false);
+  s.mower.telemetryFresh=true;s.mower.activity='PARKED_IN_CS';assert.equal(info(s).visible,false);
+});
+
+test('Mähfortschritt übernimmt keine ungültigen oder alten Werte',()=>{
+  const info=designPresentation('pfMowingInfo'),s=status();s.mower.activity='MOWING';
+  for(const value of [null,undefined,-1,101,NaN,'19']){s.mower.workAreaProgress=value;assert.equal(info(s).percent,null);}
+});
 
 test('Aktuelles Laden mit 29 Prozent bleibt trotz allgemeiner Akkusperre sichtbar',()=>{
   const s=status();s.overall.code='MOWER_BATTERY_CHARGING';s.mower.batteryPercent=29;

@@ -70,6 +70,10 @@
       var chargeCaption=document.createElement("strong");chargeCaption.id="pf-charge-caption";charge.appendChild(chargeCaption);
       var chargeProgress=document.createElement("progress");chargeProgress.id="pf-charge-progress";chargeProgress.max=100;chargeProgress.setAttribute("aria-label","Akkustand");charge.appendChild(chargeProgress);
       pfMove("charge-end-row",charge);document.getElementById("overall").appendChild(charge);
+      var mowing=document.createElement("div");mowing.id="pf-mowing-progress";mowing.className="pf-charge";mowing.hidden=true;
+      var mowingCaption=document.createElement("strong");mowingCaption.id="pf-mowing-progress-caption";mowing.appendChild(mowingCaption);
+      var mowingBar=document.createElement("progress");mowingBar.id="pf-mowing-progress-bar";mowingBar.max=100;mowingBar.setAttribute("aria-label","Fläche gemäht");mowing.appendChild(mowingBar);
+      document.getElementById("overall").appendChild(mowing);
       var mowerCard=document.getElementById("mower-title").closest("article"),waterCard=document.getElementById("water-title").closest("article"),occupancyCard=document.getElementById("occupancy-title").closest("article"),clubhouseCard=document.getElementById("clubhouse-events").closest("article");
       pfPages.controls.appendChild(mowerCard);pfPages.water.appendChild(waterCard);pfPages.today.appendChild(occupancyCard);pfPages.clubhouse.appendChild(clubhouseCard);pfMove("training-control-card",pfPages.training);
       var actions=document.createElement("div");actions.id="pf-mower-actions";actions.className="pf-home-actions";["manual-start","manual-park","manual-resume","mow-start","mow-park"].forEach(function(id){pfMove(id,actions)});pfPages.home.appendChild(actions);
@@ -127,7 +131,11 @@
     }
     function pfChargingInfo(s) {
       var m=s.mower||{},value=m.batteryPercent,percent=typeof value==="number"&&Number.isFinite(value)&&value>=0&&value<=100?Math.round(value):null;
-      return {visible:m.activity==="CHARGING"&&m.connected===true&&mowerTelemetryFresh(s)&&s.controlsAvailable!==false&&!hasActiveMowerError(m),percent:percent,at:chargingEnd(s)};
+      return {visible:m.activity==="CHARGING"&&m.connected===true&&mowerTelemetryFresh(s)&&s.controlsAvailable!==false&&!hasActiveMowerError(m),percent:percent,at:chargingEnd(s,true)};
+    }
+    function pfMowingInfo(s) {
+      var m=s&&s.mower||{},value=m.workAreaProgress,percent=typeof value==="number"&&Number.isFinite(value)&&value>=0&&value<=100?Math.round(value):null;
+      return {visible:m.activity==="MOWING"&&m.connected===true&&mowerTelemetryFresh(s)&&!hasActiveMowerError(m),percent:percent};
     }
     function pfRenderCharging(s) {
       if(!pfReady)return;var info=pfChargingInfo(s),wrap=document.getElementById("pf-charge"),title=document.getElementById("overall-title").textContent;
@@ -137,6 +145,12 @@
       document.getElementById("charge-end-row").classList.remove("hidden");
       document.getElementById("charge-end-time").textContent=info.at?calendarTime(info.at,s.generatedAt):"Noch nicht bekannt";
       document.getElementById("charge-end-note").textContent=info.at?"Voraussichtlich":"";
+    }
+    function pfRenderMowingProgress(s) {
+      if(!pfReady)return;var info=pfMowingInfo(s),wrap=document.getElementById("pf-mowing-progress");
+      wrap.hidden=!info.visible;if(!info.visible)return;
+      pfDecorate(document.getElementById("pf-mowing-progress-caption"),"Grid2x2","Fläche gemäht "+(info.percent===null?"unbekannt":info.percent+" %"));
+      var bar=document.getElementById("pf-mowing-progress-bar");bar.hidden=info.percent===null;if(info.percent!==null)bar.value=info.percent;
     }
     function pfRenderHeight(s) {
       if(!pfReady)return;var m=s&&s.mower||{},value=Number(state.heightChoice),old=m.cuttingHeightMm,save=document.getElementById("height-save");
@@ -185,11 +199,11 @@
       pfDecorate(document.getElementById("overall"),document.getElementById("overall-title").textContent===overview.title?overview.icon:"TriangleAlert");
       [["mower-connection","Smartphone"],["battery","Battery"],["progress","Grid2x2"],["cutting-height-current","MoveVertical"],["mower-error","TriangleAlert"]].forEach(function(row){pfDecorate(document.getElementById(row[0]).previousElementSibling,row[1])});
       pfDecorate(document.getElementById("winter-training-switch"),"Snowflake");
-      pfRenderHeight(s);pfRenderMoment(s);pfRenderCharging(s);pfRenderHistory(s);
+      pfRenderHeight(s);pfRenderMoment(s);pfRenderCharging(s);pfRenderMowingProgress(s);pfRenderHistory(s);
     }
     pfMountDesign();
     var pfRenderBase=render;render=function(s){pfRenderBase(s);pfUpdate(s)};
-    var pfCoordinationBase=renderCoordination;renderCoordination=function(s){pfCoordinationBase(s);pfRenderMoment(s);pfRenderCharging(s);if(pfReady)document.getElementById("pf-blade-hours").textContent=duration(s.statistics&&s.statistics.bladeUsageSeconds)};
+    var pfCoordinationBase=renderCoordination;renderCoordination=function(s){pfCoordinationBase(s);pfRenderMoment(s);pfRenderCharging(s);pfRenderMowingProgress(s);if(pfReady)document.getElementById("pf-blade-hours").textContent=duration(s.statistics&&s.statistics.bladeUsageSeconds)};
     var pfHeightBase=renderHeightChoice;renderHeightChoice=function(){pfHeightBase();pfRenderHeight(state.status)};
     var pfLoadBase=load;load=function(){return pfLoadBase().then(function(s){if(!s&&state.status)pfUpdate(state.status);return s})};
     var pfActionBase=openAction;openAction=function(){var result=pfActionBase.apply(this,arguments);pfConfirmationIcons();return result};

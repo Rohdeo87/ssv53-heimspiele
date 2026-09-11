@@ -41,6 +41,7 @@ class MowerSnapshot:
     status_timestamp_ms: int | None = None
     global_cutting_height_percent: int | None = None
     statistics: dict[str, int | None] | None = None
+    remaining_charging_seconds: int | None = None
 
     def to_dict(self) -> dict[str, Any]:
         value = asdict(self)
@@ -327,4 +328,11 @@ def parse_snapshot(item: dict[str, Any]) -> MowerSnapshot:
             settings_data.get("cuttingHeight")
         ),
         statistics=_parse_statistics(attributes.get("statistics")),
+        remaining_charging_seconds=_parse_charging_seconds(battery_data.get("remainingChargingTime")),
     )
+
+
+def _parse_charging_seconds(value: Any) -> int | None:
+    # Optional manufacturer estimate, seconds; 0 can mean unsupported.
+    # Never coerce booleans, strings or fractional values into a time.
+    return value if type(value) is int and 0 <= value <= 21600 else None

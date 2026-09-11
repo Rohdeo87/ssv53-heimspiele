@@ -1,0 +1,47 @@
+{
+  "read_only": true,
+  "replayed_production_observations": true,
+  "source_rows": 9732,
+  "cases": [
+    {
+      "at": "2026-09-11T11:38:05+00:00",
+      "battery": 94,
+      "strict_before": null,
+      "display_after": {
+        "at": "2026-09-11T11:45:00+00:00",
+        "estimated": true,
+        "source": "OBSERVED_CHARGING_DISPLAY",
+        "currentBatteryPercent": 94,
+        "sampleCount": 2,
+        "daysCovered": 2,
+        "anchorAt": "2026-09-11T10:52:02.452572+00:00",
+        "latestCompletionAt": "2026-09-09T23:52:02.302249+00:00",
+        "precisionMinutes": 5,
+        "displayOnly": true
+      },
+      "valid_completed": 4,
+      "ongoing_valid": true,
+      "display_ongoing_valid": true
+    },
+    {
+      "at": "2026-09-11T11:41:05+00:00",
+      "battery": 99,
+      "strict_before": null,
+      "display_after": {
+        "at": "2026-09-11T11:45:00+00:00",
+        "estimated": true,
+        "source": "OBSERVED_CHARGING_DISPLAY",
+        "currentBatteryPercent": 99,
+        "sampleCount": 2,
+        "daysCovered": 2,
+        "anchorAt": "2026-09-11T10:52:02.452572+00:00",
+        "latestCompletionAt": "2026-09-09T23:52:02.302249+00:00",
+        "precisionMinutes": 5,
+        "displayOnly": true
+      },
+      "valid_completed": 4,
+      "ongoing_valid": false,
+      "display_ongoing_valid": true
+    }
+  ]
+}

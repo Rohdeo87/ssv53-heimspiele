@@ -100,6 +100,7 @@ class CycleObservation:
     # Missing fields never become synthetic healthy/zero-battery observations.
     charging_telemetry_valid: bool = False
     mower_id: str = ""
+    charging_display_telemetry_valid: bool = False
 
 
 @dataclass(frozen=True)
@@ -212,7 +213,7 @@ def _charging_integer(value: Any, maximum: int) -> int | None:
     return None
 
 
-def _valid_charging_telemetry(row: Mapping[str, Any], observed_at: datetime) -> bool:
+def _valid_charging_telemetry(row: Mapping[str, Any], observed_at: datetime, *, max_age_seconds: int = 180) -> bool:
     battery = _charging_integer(row.get("charging_battery_raw", row.get("battery_percent")), 100)
     error = _charging_integer(row.get("charging_error_raw", row.get("error_code")), 999999)
     stamp = _charging_integer(row.get("mower_status_timestamp_ms"), 253402300799000)
@@ -226,7 +227,7 @@ def _valid_charging_telemetry(row: Mapping[str, Any], observed_at: datetime) -> 
         return False
     try:
         age = (observed_at - datetime.fromtimestamp(stamp / 1000, timezone.utc)).total_seconds()
-        return -30 <= age <= 180
+        return -30 <= age <= max_age_seconds
     except (ValueError, OverflowError, OSError):
         return False
 
@@ -241,6 +242,7 @@ def charging_evidence(observations: Sequence[CycleObservation], now_utc: datetim
     completed: list[dict[str, Any]] = []
     current: list[CycleObservation] = []
     invalid = False
+    display_invalid = False
     previous: CycleObservation | None = None
     sections = 0
 
@@ -260,10 +262,14 @@ def charging_evidence(observations: Sequence[CycleObservation], now_utc: datetim
             if not current:
                 sections += 1
                 invalid = previous is None or previous.activity == "CHARGING" or not adjacent(previous, item)
+                display_invalid = invalid
             elif not adjacent(current[-1], item) or item.battery_percent < current[-1].battery_percent:
                 invalid = True
+                display_invalid = True
             if not item.charging_telemetry_valid or (current and item.mower_id != current[0].mower_id):
                 invalid = True
+            if not item.charging_display_telemetry_valid or (current and item.mower_id != current[0].mower_id):
+                display_invalid = True
             current.append(item)
         elif current:
             finish_valid = (
@@ -280,11 +286,13 @@ def charging_evidence(observations: Sequence[CycleObservation], now_utc: datetim
                     completed.append({"mowerId": current[0].mower_id, "samples": samples(points)})
             current = []
             invalid = False
+            display_invalid = False
         previous = item
     return {
         "generatedAt": now_utc.isoformat(),
         "completed": completed,
         "ongoing": {"mowerId": current[0].mower_id, "samples": samples(current)} if current and not invalid else None,
+        "displayOngoing": {"mowerId": current[0].mower_id, "samples": samples(current)} if current and not display_invalid else None,
         "sectionsObserved": sections,
         "validCompletedSections": len(completed),
     }
@@ -292,6 +300,12 @@ def charging_evidence(observations: Sequence[CycleObservation], now_utc: datetim
 
 def estimate_charging_end(
     evidence: Mapping[str, Any] | None, mower: Mapping[str, Any], now_utc: datetime,
+) -> dict[str, Any] | None:
+    return _estimate_charging_end(evidence, mower, now_utc, minimum_sections=3)
+
+
+def _estimate_charging_end(
+    evidence: Mapping[str, Any] | None, mower: Mapping[str, Any], now_utc: datetime, *, minimum_sections: int,
 ) -> dict[str, Any] | None:
     """A fixed, empirical charging-end estimate; never a controller permission.
 
@@ -373,7 +387,7 @@ def estimate_charging_end(
         # With this immutable anchor, removing an old comparison can only
         # shorten the maximum remaining duration or make coverage insufficient.
         # It cannot revive an expired estimate at a later battery observation.
-        if len(matches) < 3 or len(days) < 2:
+        if len(matches) < minimum_sections or len(days) < 2:
             return None
         durations = [(history[-1][0] - at).total_seconds() for history, at in matches]
         if min(durations) <= 0 or max(durations) > min(durations) * 1.75 or max(durations) - min(durations) > 1200:
@@ -398,6 +412,44 @@ def estimate_charging_end(
         }
     except (TypeError, ValueError, KeyError, OverflowError, DailyReportError):
         return None
+
+
+def estimate_charging_display_end(
+    evidence: Mapping[str, Any] | None, mower: Mapping[str, Any], now_utc: datetime,
+) -> dict[str, Any] | None:
+    """Optional UI clock only. Never supplied to the irrigation optimizer.
+
+    Prefer manufacturer seconds, anchored to its report (not each refresh).
+    Fallback: two complete comparable charges on distinct days and the original
+    charge anchor. A briefly delayed past report (<=300s) is acceptable only in
+    this display path; current data and completed reference sections stay strict.
+    """
+    if (mower.get("activity") != "CHARGING" or mower.get("connected") is not True
+            or not _valid_charging_telemetry({
+                "battery_percent": mower.get("battery_percent"), "error_code": mower.get("error_code"),
+                "mower_state": mower.get("state"), "mower_connected": mower.get("connected"),
+                "mower_status_timestamp_ms": mower.get("status_timestamp_ms"),
+            }, now_utc)):
+        return None
+    seconds = mower.get("remaining_charging_seconds")
+    battery = _charging_integer(mower.get("battery_percent"), 100)
+    stamp = _charging_integer(mower.get("status_timestamp_ms"), 253402300799000)
+    if type(seconds) is int and 0 < seconds <= 21600 and battery is not None and battery < 100 and stamp is not None:
+        try:
+            at = datetime.fromtimestamp(stamp / 1000, timezone.utc) + timedelta(seconds=seconds)
+            if at > now_utc:
+                at = datetime.fromtimestamp(math.ceil(at.timestamp() / 60) * 60, timezone.utc)
+                return {"at": at.isoformat(), "estimated": True, "displayOnly": True,
+                        "source": "HUSQVARNA_REMAINING_CHARGING_TIME", "precisionMinutes": 1}
+        except (ValueError, OverflowError, OSError):
+            pass
+    if not isinstance(evidence, Mapping):
+        return None
+    display_evidence = {**evidence, "ongoing": evidence.get("displayOngoing", evidence.get("ongoing"))}
+    estimate = _estimate_charging_end(display_evidence, mower, now_utc, minimum_sections=2)
+    if estimate:
+        estimate.update(source="OBSERVED_CHARGING_DISPLAY", displayOnly=True)
+    return estimate
 
 
 def report_recipient(values: Mapping[str, str]) -> str:
@@ -651,6 +703,7 @@ def parse_cycle_rows(rows: Sequence[Mapping[str, Any]]) -> list[CycleObservation
             error_code=_as_int(row.get("error_code")),
             battery_percent=_as_int(row.get("battery_percent")),
             charging_telemetry_valid=_valid_charging_telemetry(row, timestamp),
+            charging_display_telemetry_valid=_valid_charging_telemetry(row, timestamp, max_age_seconds=300),
             mower_id=str(row.get("mower_id") or ""),
             decision_code=str(row.get("decision_code") or ""),
             command_sent=_as_bool(row.get("command_sent")),
