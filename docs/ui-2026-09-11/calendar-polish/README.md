@@ -54,12 +54,19 @@ und die unveränderte Kalenderbibliothek sind lokale Prüfarbeitsdateien.
 
 ## Veröffentlichung
 
-**Vorbereitet, noch nicht veröffentlicht.** Die Appack-Sitzung war abgelaufen und
-eine erneute Anmeldung wurde angefordert. Ziel ist ausschließlich
-`Belegungsplan_selfmade_2_optimiert.tpl`, ID `6a6242dfccdd23e7a9553567`.
-Keine Azure-Installation oder Gerätebefehle erforderlich.
+**Veröffentlicht am 11.09.2026.** Nach der ausdrücklich angeforderten Anmeldung
+mit den hinterlegten Zugangsdaten wurde ausschließlich
+`Belegungsplan_selfmade_2_optimiert.tpl`, ID `6a6242dfccdd23e7a9553567`, geändert.
+Der gesamte Editorinhalt wurde zuvor mit dem nachgewiesenen Ausgangsstand
+abgeglichen (SHA256 `d7576b4234bbbff51df56b87daea907849ce7d5479a02d57fd4dd9dcdbeeaefd`).
+Nach dem Einfügen entsprach er vollständig der getesteten neuen Vorlage.
 
-Nach Anmeldung: aktuellen Editor gegen den belegten Ausgangsstand prüfen,
-`appack-platzbelegungsplan-azure.txt` übernehmen, speichern und mit
-`python scripts/verify_calendar_polish_publication.py` die Auslieferung prüfen.
-Vorlage aus dem Ausgangscommit `72ed7e6` ermöglicht einen Rückfall der Anzeige.
+Die öffentliche Auslieferung wurde um 22:14 Uhr Berliner Zeit bestätigt:
+HTTP 200, CSS und JavaScript gleich zur neuen Quelle; zusätzlich ist die
+Saisonwahl nachweislich schon im ausgelieferten HTML verborgen.
+Siehe [publication.json](publication.json). Quelländerung: Commit `0123032`.
+Keine Azure-Installation, Gerätebefehle oder Änderungen echter Belegungen.
+
+Erneute Prüfung: `python scripts/verify_calendar_polish_publication.py`.
+Die Vorlage aus dem Ausgangscommit `72ed7e6` ermöglicht einen Rückfall der Anzeige.
+Die Darstellung nach erneutem Öffnen in der Handy-App bleibt vom Nutzer zu prüfen.

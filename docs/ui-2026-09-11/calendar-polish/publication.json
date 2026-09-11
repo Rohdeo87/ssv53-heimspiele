@@ -1,0 +1,15 @@
+{
+  "at_utc": "2026-09-11T20:14:24.979636+00:00",
+  "template_id": "6a6242dfccdd23e7a9553567",
+  "url": "https://appack.de/rest-api/drender/6a6242dfccdd23e7a9553567",
+  "http_status": 200,
+  "phase": "published",
+  "matches": {
+    "css": true,
+    "javascript": true,
+    "initial_season_visibility": true
+  },
+  "profile_and_workbook_normalized": true,
+  "source_sha256_lf": "615720572b1647f465b1b17660bc5163fff907852ce858967951314002adba5d",
+  "device_commands_sent": false
+}

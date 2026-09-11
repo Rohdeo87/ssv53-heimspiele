@@ -28,6 +28,8 @@ def blocks(html):
 
 local_blocks, served_blocks = blocks(expected), blocks(actual)
 matches = dict(zip(('css', 'javascript'), (a == b for a, b in zip(local_blocks, served_blocks))))
+season_pattern = r'<div\b[^>]*class="[^"]*\bssv-control-group--season\b[^"]*"[^>]*\bhidden\b'
+matches['initial_season_visibility'] = bool(re.search(season_pattern, expected)) == bool(re.search(season_pattern, actual))
 proof = {'at_utc': datetime.now(timezone.utc).isoformat(), 'template_id': '6a6242dfccdd23e7a9553567', 'url': url, 'http_status': status, 'phase': 'before' if args.before else 'published', 'matches': matches, 'profile_and_workbook_normalized': True, 'source_sha256_lf': hashlib.sha256(expected.replace('\r\n', '\n').encode()).hexdigest(), 'device_commands_sent': False}
 out = root / 'docs/ui-2026-09-11/calendar-polish'
 out.mkdir(parents=True, exist_ok=True)
