@@ -807,6 +807,8 @@ def _coordination_payload(details, state, current_plan, environment, now_utc, da
     safety = dict(water.get("safety") or {})
     release = dict(water.get("release_confirmation") or {})
     inputs = dict(details.get("input_files") or {})
+    projected_automation = dict(details.get("automation_state") or {})
+    drying_reason = projected_automation.get("clear_origin") or state.hydrawise_clear_origin
     blockers = []
 
     def age(value, *, milliseconds=False):
@@ -855,7 +857,7 @@ def _coordination_payload(details, state, current_plan, environment, now_utc, da
         "explanationOnly": True, "primaryBlocker": blockers[0] if blockers else None,
         "blockers": blockers, "dryingMinutes": int(environment.get("POST_IRRIGATION_DRYING_MINUTES", "150")),
         "dryUntil": release.get("dry_until_utc"), "releaseNotBefore": release.get("release_at_utc"),
-        "dryingReason": state.hydrawise_clear_origin,
+        "dryingReason": drying_reason,
         "telemetryConfirmed": release.get("telemetry_confirmed"),
         "chargingEndEstimate": charging_end_estimate,
         "chargingDisplayEstimate": charging_display_estimate,

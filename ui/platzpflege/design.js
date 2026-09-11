@@ -196,10 +196,10 @@
       return {manualStart:manual.enabled&&manual.canStart&&deviceControlsOpen(s)&&(!moving||manual.waterRequired)&&!busy,manualPark:manual.enabled&&manual.canPark&&!parked,manualResume:manual.enabled&&manual.canResume&&resumeMeaningful&&!busy,husqvarnaStart:manual.enabled&&manual.canStart&&deviceControlsOpen(s)&&(!moving||manual.waterRequired)&&!busy,husqvarnaPark:manual.enabled&&manual.canPark&&!parked,height:m.cuttingHeightSupported===true,parkLabel:fresh&&["CHARGING","PARKED_IN_CS"].indexOf(m.activity)>=0?"In Station lassen":"Mäher parken"};
     }
     function pfNextMoment(s) {
-      var m=s.mower||{},manual=manualControlView(s),info=nextStartInfo(s),now=new Date(s.generatedAt),o=s.occupancy||{};
+      var m=s.mower||{},manual=manualControlView(s),info=nextStartInfo(s,true),now=new Date(s.generatedAt),o=s.occupancy||{};
       if(manual.enabled&&["MANUAL_PARKED","PARKING"].indexOf(manual.status)>=0)return {label:"Nächster Mähstart",at:null,text:"Du entscheidest",note:"Erst nach deiner Freigabe."};
       if(mowerTelemetryFresh(s)&&["MOWING","LEAVING"].indexOf(m.activity)>=0&&o.available!==false){var ends=(o.upcoming||[]).concat(o.next?[o.next]:[]).map(function(x){return new Date(x.start)}).filter(function(d){return !isNaN(d)&&d>now}).sort(function(a,b){return a-b});if(ends.length)return {label:"Spätestens in der Station",at:ends[0],text:"",note:"Vor der nächsten Platzbelegung."}}
-      return {label:"Nächster Mähstart",at:info.at,text:info.text,note:info.at?(info.awaitingMowerReport?"Geplant · Neue Mähermeldung erforderlich.":"Voraussichtlich"):""};
+      return {label:info.earliestOnly?"Frühester Mähstart":"Nächster Mähstart",at:info.at,text:info.text,note:info.at?(info.earliestOnly?"Nach der Platzsperre. Akku muss bereit sein.":info.awaitingMowerReport?"Geplant · Neue Mähermeldung erforderlich.":"Voraussichtlich"):""};
     }
     function pfRenderMoment(s) {
       if(!pfReady)return;var moment=pfNextMoment(s),el=document.getElementById("mower-next-start"),now=new Date(s.generatedAt);

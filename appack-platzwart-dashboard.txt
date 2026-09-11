@@ -350,29 +350,49 @@ body.pflege-design{background:#f3f6fa;color:#172c42;font-family:Arial,Helvetica,
       var report=new Date(stamp),start=new Date(o.current.start),end=new Date(o.current.end),age=now-report,source=String(o.current.source||"").split("+");
       return typeof m.statusAgeSeconds==="number"&&Number.isFinite(m.statusAgeSeconds)&&m.statusAgeSeconds>180&&m.statusAgeSeconds<=1200&&!isNaN(report.getTime())&&Math.abs(age-m.statusAgeSeconds*1000)<=1000&&age>180000&&age<=1200000&&!isNaN(start.getTime())&&!isNaN(end.getTime())&&start<=now&&end>now&&source.length>0&&source.every(function(part){return["training","match"].indexOf(part)>=0});
     }
-    function nextStartInfo(s) {
+    function displayOccupancyBlock(s) {
+      var o=s.occupancy||{},m=s.mower||{},a=s.automation||{},now=Date.parse(s.generatedAt),next=o.next;
+      if(o.current||o.parking)return o.current||o.parking;
+      if(!next||o.available===false||!mowerTelemetryFresh(s)||!["GOING_HOME","PARKED_IN_CS","CHARGING"].includes(m.activity)||!a.continuousMowingOwned&&!a.parkedByAutomation)return null;
+      var start=Date.parse(next.start),end=Date.parse(next.end);
+      // Presentation only: show an imminent occupancy when the planner offers no useful window before it.
+      if(!Number.isFinite(now)||!Number.isFinite(start)||!Number.isFinite(end)||start<=now||end<=start||start-now>30*60000)return null;
+      var windows=Array.isArray(o.safeWindows)?o.safeWindows:[];
+      if(!windows.length)return null;
+      var usableBefore=windows.some(function(w){var from=Math.max(now,Date.parse(w.start)),until=Math.min(start,Date.parse(w.command_deadline)),minutes=Number(w.minimum_mowing_minutes);return Number.isFinite(from)&&Number.isFinite(until)&&Number.isFinite(minutes)&&minutes>0&&until-from>=minutes*60000});
+      return usableBefore?null:next;
+    }
+    function nextStartInfo(s,displayOnly) {
       var m=s.mower||{},a=s.automation||{},c=s.coordination,o=s.occupancy||{},code=s.overall&&s.overall.code,protection=s.protection||{},startCommand=s.operatorCommands&&(s.operatorCommands.START_MOWING||s.operatorCommands.START_MOWING_OCCUPANCY_OVERRIDE),startStatus=String(startCommand&&startCommand.status||"").toUpperCase(),startPending=["QUEUED","PENDING","RESERVED","SENT_UNCONFIRMED","CONFIRMING"].indexOf(startStatus)>=0;
       var open={at:null,text:"Noch offen"};
+      var hold=displayOccupancyBlock(s),water=s.irrigation&&s.irrigation.safety||{},manual=s.manualControl||{};
+      var forecast=displayOnly===true&&hold&&Date.parse(hold.end)>Date.parse(s.generatedAt)&&protection.automaticStartEnabled===true&&manual.enabled===true&&manual.status==="AUTOMATIC"&&o.available===true&&water.available===true&&water.fresh===true&&water.clear_now===true&&water.active_zone_count===0&&c&&c.telemetryConfirmed===true&&c.dryingReason!=="POSSIBLE_IRRIGATION_DURING_GAP";
+      var awaitingBattery=false,awaitingDock=false;
       if(mowerTelemetryFresh(s)&&!hasActiveMowerError(m)&&["MOWING","LEAVING"].indexOf(m.activity)>=0)return {at:null,text:m.activity==="MOWING"?"Mäher läuft bereits":"Fährt zum Platz"};
       if(protection.automaticStartEnabled===false){if(a.pendingAction==="START_MOWING"||a.mowerStartOutcomeUnconfirmed||startPending)return {at:null,text:"Mäherstart angefragt"};return {at:null,text:"Start nur manuell"}}
       if(coordinationExecutionBlocked(s))return open;
       var waitingForReport=parkedReportPending(s);
       if(!deviceControlsOpen(s)||!mowerTelemetryFresh(s)&&!waitingForReport||m.connected!==true||hasActiveMowerError(m)||!c||isSearching(m))return open;
-      if(a.mowerStartOutcomeUnconfirmed||a.pendingAction||irrigationScheduleChangePending(s))return open;
+      if(a.mowerStartOutcomeUnconfirmed||a.pendingAction||startPending||irrigationScheduleChangePending(s))return open;
       var blocks=Array.isArray(c.blockers)?c.blockers:[];
       if(blocks.some(function(b){return b.code==="MANUAL_STOP"})||isMowerPaused(m)||["STOPPED","OFF"].indexOf(m.state)>=0||code==="OPERATOR_PARK_HOLD"||code==="EXTERNAL_OVERRIDE"&&!a.continuousMowingOwned)return {at:null,text:"Automatik pausiert"};
       if(blocks.some(function(b){return["CHARGING","OCCUPANCY","DRYING_OR_CONFIRMATION"].indexOf(b.code)<0&&!(waitingForReport&&b.code==="MOWER_TELEMETRY")}))return open;
       if(["MOWING","LEAVING"].indexOf(m.activity)>=0)return {at:null,text:m.activity==="MOWING"?"Bereits im Einsatz":"Fährt zum Platz"};
       if(a.irrigationPhase&&a.irrigationPhase!=="COMPLETE_HOLD")return open;
-      if(["PARKED_IN_CS","CHARGING"].indexOf(m.activity)<0)return open;
+      if(["PARKED_IN_CS","CHARGING"].indexOf(m.activity)<0){if(!forecast||m.activity!=="GOING_HOME")return open;awaitingDock=true}
       if(!a.continuousMowingOwned&&!a.parkedByAutomation||code==="MANUAL_OR_ERROR_HOLD")return open;
-      if(m.activity==="PARKED_IN_CS"&&(code==="MOWER_BATTERY_CHARGING"||m.batteryPercent==null||m.restartBatteryPercent==null||!Number.isFinite(Number(m.batteryPercent))||!Number.isFinite(Number(m.restartBatteryPercent))||Number(m.restartBatteryPercent)<=0||Number(m.restartBatteryPercent)>100||Number(m.batteryPercent)<Number(m.restartBatteryPercent)))return open;
+      if(m.activity==="PARKED_IN_CS"&&(typeof m.batteryPercent!=="number"||!Number.isFinite(m.batteryPercent)||m.batteryPercent<0||m.batteryPercent>100))return open;
+      if(m.activity==="PARKED_IN_CS"&&(code==="MOWER_BATTERY_CHARGING"||m.batteryPercent==null||m.restartBatteryPercent==null||!Number.isFinite(Number(m.batteryPercent))||!Number.isFinite(Number(m.restartBatteryPercent))||Number(m.restartBatteryPercent)<=0||Number(m.restartBatteryPercent)>100||Number(m.batteryPercent)<Number(m.restartBatteryPercent))){
+        if(!forecast||typeof m.batteryPercent!=="number"||!Number.isFinite(m.batteryPercent)||m.batteryPercent<0||m.batteryPercent>100||typeof m.restartBatteryPercent!=="number"||!Number.isFinite(m.restartBatteryPercent)||m.restartBatteryPercent<=0||m.restartBatteryPercent>100)return open;
+        awaitingBattery=true;
+      }
       var now=new Date(s.generatedAt||Date.now()),earliest=now;
       if(isNaN(now.getTime()))return open;
       var needsRelease=a.irrigationPhase==="COMPLETE_HOLD"||blocks.some(function(b){return b.code==="DRYING_OR_CONFIRMATION"});
       if(needsRelease&&!c.releaseNotBefore)return open;
       if(c.releaseNotBefore){var release=new Date(c.releaseNotBefore);if(isNaN(release.getTime()))return open;if(release>earliest)earliest=release;}
-      if(m.activity==="CHARGING"){var charge=chargingEnd(s);if(!charge)return open;if(charge>earliest)earliest=charge;}
+      if(m.activity==="CHARGING"){var charge=chargingEnd(s);if(!charge){if(!forecast)return open;awaitingBattery=true}else if(charge>earliest)earliest=charge;}
+      if(forecast&&new Date(hold.end)>earliest)earliest=new Date(hold.end);
       if(o.current){var occupiedUntil=new Date(o.current.end);if(isNaN(occupiedUntil.getTime()))return open;if(occupiedUntil>earliest)earliest=occupiedUntil;}
       if(o.parking){var parkingUntil=new Date(o.parking.end);if(isNaN(parkingUntil.getTime()))return open;if(parkingUntil>earliest)earliest=parkingUntil;}
       var windows=Array.isArray(o.safeWindows)?o.safeWindows.slice():[];
@@ -383,7 +403,7 @@ body.pflege-design{background:#f3f6fa;color:#172c42;font-family:Arial,Helvetica,
         var candidate=new Date(Math.ceil(Math.max(earliest.getTime(),start.getTime())/300000)*300000);
         if(deadline-candidate<minimum*60000)continue;
         if(waitingForReport&&candidate<=now)return open;
-        return {at:candidate.toISOString(),text:null,awaitingMowerReport:waitingForReport};
+        return {at:candidate.toISOString(),text:null,awaitingMowerReport:waitingForReport,earliestOnly:!!(awaitingBattery||awaitingDock)};
       }
       return open;
     }
@@ -445,14 +465,18 @@ body.pflege-design{background:#f3f6fa;color:#172c42;font-family:Arial,Helvetica,
       if(has("MANUAL_STOP")||code==="OPERATOR_PARK_HOLD"||isMowerPaused(m)||["STOPPED","OFF"].indexOf(m.state)>=0)return message("Mäher pausiert",simpleStatus(s),"warn","Pause");
       if(irrigationScheduleChangePending(s))return message("Bewässerungsplan wird geändert","Bitte warten, bis die Änderung bestätigt ist.","warn","CalendarClock");
       if(a.irrigationPhase&&a.irrigationPhase!=="COMPLETE_HOLD"||has("IRRIGATION_ACTIVE_OR_DUE"))return message("Bewässerung wird vorbereitet","Bitte warten, bis der Mäher in der Station ist.","warn","Droplets");
-      if(o.current)return message("Platz ist belegt","Der Mäher wartet bis zum Ende der Platzsperre.","warn","CalendarDays");
-      if(o.parking)return message("Platz wird bald belegt","Der Mäher wartet bis zum Ende der Platzsperre.","warn","CalendarDays");
+      var occupancyHold=displayOccupancyBlock(s);
+      if(m.activity==="GOING_HOME"&&mowerTelemetryFresh(s)&&o.current)return message("Platz ist belegt","Der Mäher fährt noch zur Station. Bitte den Platz erst danach nutzen.","warn","CalendarDays");
+      if(m.activity==="GOING_HOME"&&mowerTelemetryFresh(s))return message("Mäher fährt zur Station",occupancyHold?"Platzsperre bis: "+calendarTime(occupancyHold.end,s.generatedAt)+".":"Bitte die Zufahrt freihalten.","good","House");
+      if(o.current)return message("Platz ist belegt","Platzsperre bis: "+calendarTime(o.current.end,s.generatedAt)+".","warn","CalendarDays");
+      if(occupancyHold)return message("Platz wird bald belegt","Platzsperre bis: "+calendarTime(occupancyHold.end,s.generatedAt)+".","warn","CalendarDays");
       if(drying&&c.dryingReason==="POSSIBLE_IRRIGATION_DURING_GAP")return message("Rasenpause zur Sicherheit","Letzte Bewässerung unklar. Bitte den Platz prüfen.","warn","Leaf");
       if(drying&&c.dryingReason==="DATA_GAP")return message("Kurze Prüfung bis "+dryingTime(c.dryUntil,s.generatedAt),"Die Bewässerungsdaten sind noch nicht vollständig bestätigt. Bitte den Platz prüfen.","warn");
       if(drying)return message("Rasen trocknet","Der Mäher wartet nach der Bewässerung.","warn","Leaf");
       if(has("DRYING_OR_CONFIRMATION"))return message("Mäher wartet noch","Bitte kurz warten. Der nächste Start wird automatisch aktualisiert.","warn");
       if(isSearching(m))return message("Mäher sucht seinen Standort","Bitte kurz warten. Bleibt die Meldung, am Mäher nachsehen.","warn");
       if(m.activity==="CHARGING"&&mowerTelemetryFresh(s))return message("Mäher lädt","Du musst nichts tun.","good","BatteryCharging");
+      if(m.activity==="PARKED_IN_CS"&&mowerTelemetryFresh(s)&&typeof m.batteryPercent==="number"&&m.batteryPercent>=0&&m.batteryPercent<=100&&typeof m.restartBatteryPercent==="number"&&m.restartBatteryPercent>0&&m.restartBatteryPercent<=100&&m.batteryPercent<m.restartBatteryPercent)return message("Mäher in der Station","Akku "+m.batteryPercent+" %. Der Mäher wartet auf ausreichend Ladung.","good","House");
       if(code==="MOWER_BATTERY_CHARGING")return message("Akku noch nicht bereit","Ein Start ist noch nicht möglich. Bitte später aktualisieren.","warn","BatteryCharging");
       if(m.activity==="GOING_HOME")return message("Mäher fährt zur Station","Bitte die Zufahrt freihalten.","good","House");
       if(m.activity==="MOWING"||m.activity==="LEAVING")return message("Mäher ist auf dem Platz","Der Mäher arbeitet automatisch.","good","Bot");
@@ -829,10 +853,10 @@ SOFTWARE.
       return {manualStart:manual.enabled&&manual.canStart&&deviceControlsOpen(s)&&(!moving||manual.waterRequired)&&!busy,manualPark:manual.enabled&&manual.canPark&&!parked,manualResume:manual.enabled&&manual.canResume&&resumeMeaningful&&!busy,husqvarnaStart:manual.enabled&&manual.canStart&&deviceControlsOpen(s)&&(!moving||manual.waterRequired)&&!busy,husqvarnaPark:manual.enabled&&manual.canPark&&!parked,height:m.cuttingHeightSupported===true,parkLabel:fresh&&["CHARGING","PARKED_IN_CS"].indexOf(m.activity)>=0?"In Station lassen":"Mäher parken"};
     }
     function pfNextMoment(s) {
-      var m=s.mower||{},manual=manualControlView(s),info=nextStartInfo(s),now=new Date(s.generatedAt),o=s.occupancy||{};
+      var m=s.mower||{},manual=manualControlView(s),info=nextStartInfo(s,true),now=new Date(s.generatedAt),o=s.occupancy||{};
       if(manual.enabled&&["MANUAL_PARKED","PARKING"].indexOf(manual.status)>=0)return {label:"Nächster Mähstart",at:null,text:"Du entscheidest",note:"Erst nach deiner Freigabe."};
       if(mowerTelemetryFresh(s)&&["MOWING","LEAVING"].indexOf(m.activity)>=0&&o.available!==false){var ends=(o.upcoming||[]).concat(o.next?[o.next]:[]).map(function(x){return new Date(x.start)}).filter(function(d){return !isNaN(d)&&d>now}).sort(function(a,b){return a-b});if(ends.length)return {label:"Spätestens in der Station",at:ends[0],text:"",note:"Vor der nächsten Platzbelegung."}}
-      return {label:"Nächster Mähstart",at:info.at,text:info.text,note:info.at?(info.awaitingMowerReport?"Geplant · Neue Mähermeldung erforderlich.":"Voraussichtlich"):""};
+      return {label:info.earliestOnly?"Frühester Mähstart":"Nächster Mähstart",at:info.at,text:info.text,note:info.at?(info.earliestOnly?"Nach der Platzsperre. Akku muss bereit sein.":info.awaitingMowerReport?"Geplant · Neue Mähermeldung erforderlich.":"Voraussichtlich"):""};
     }
     function pfRenderMoment(s) {
       if(!pfReady)return;var moment=pfNextMoment(s),el=document.getElementById("mower-next-start"),now=new Date(s.generatedAt);

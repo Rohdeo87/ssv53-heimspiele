@@ -654,6 +654,7 @@ def run_read_only_cycle(
             projected_state = None
             original_state = None
             state_error = None
+            state_is_newer_than_request = False
             telemetry_minutes = int(environment.get(
                 "FULL_MOWER_HYDRAWISE_CLEAR_CONFIRMATION_MINUTES"
                 if settings.control_mode is ControlMode.FULL_MOWER
@@ -666,17 +667,32 @@ def run_read_only_cycle(
                     hydrawise_safety.available and hydrawise_safety.fresh
                     and hydrawise_safety.relay_set_valid
                 )
-                projected_state = original_state.record_cycle(
-                    started_utc=now_utc,
-                    success=True,
-                    decision_code=base_decision.code,
-                    hydrawise_success_utc=now_utc if trusted_hydrawise else None,
-                    hydrawise_observed_utc=_parse_utc(hydrawise_safety.observed_at_utc),
-                    hydrawise_clear=bool(trusted_hydrawise and hydrawise_safety.clear_now),
-                    hydrawise_active_count=(
-                        hydrawise_safety.active_zone_count if trusted_hydrawise else None
-                    ),
+                state_is_newer_than_request = any(
+                    timestamp is not None and timestamp > now_utc
+                    for timestamp in (
+                        _parse_utc(original_state.last_cycle_started_utc),
+                        _parse_utc(original_state.last_hydrawise_success_utc),
+                    )
                 )
+                if state_is_newer_than_request:
+                    # A concurrent controller cycle has already observed newer
+                    # source data.  Replaying this older read through
+                    # record_cycle would turn the negative gap into a false
+                    # physical hold.  Keep the persisted evidence visible, but
+                    # require a later consistent read before granting release.
+                    projected_state = original_state
+                else:
+                    projected_state = original_state.record_cycle(
+                        started_utc=now_utc,
+                        success=True,
+                        decision_code=base_decision.code,
+                        hydrawise_success_utc=now_utc if trusted_hydrawise else None,
+                        hydrawise_observed_utc=_parse_utc(hydrawise_safety.observed_at_utc),
+                        hydrawise_clear=bool(trusted_hydrawise and hydrawise_safety.clear_now),
+                        hydrawise_active_count=(
+                            hydrawise_safety.active_zone_count if trusted_hydrawise else None
+                        ),
+                    )
             except Exception as exc:
                 state_error = f"{type(exc).__name__}: {exc}"
             release_confirmation = evaluate_continuous_clear_confirmation(
@@ -692,7 +708,9 @@ def run_read_only_cycle(
                     if projected_state and projected_state.hydrawise_drying_since_utc
                     else telemetry_minutes
                 ),
-                persistent_state_available=projected_state is not None,
+                persistent_state_available=(
+                    projected_state is not None and not state_is_newer_than_request
+                ),
                 drying_since_utc=projected_state.hydrawise_drying_since_utc if projected_state else None,
                 telemetry_confirmation_minutes=telemetry_minutes,
             )
@@ -702,6 +720,9 @@ def run_read_only_cycle(
                 "hydrawise_drying_since_utc": projected_state.hydrawise_drying_since_utc if projected_state else None,
                 "read_only": True,
                 "projection_only": True,
+                "clear_origin": (
+                    projected_state.hydrawise_clear_origin if projected_state else None
+                ),
                 "persisted": False,
                 "error": state_error,
             }

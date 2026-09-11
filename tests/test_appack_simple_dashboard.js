@@ -281,7 +281,8 @@ test("Akkusperre verhindert eine Startuhrzeit auch bei geparktem Mäher", () => 
   const s=snapshot(); s.mower.activity="PARKED_IN_CS"; s.mower.batteryPercent=25; s.mower.restartBatteryPercent=90;
   s.overall.code="MOWER_BATTERY_CHARGING"; s.automation.irrigationPhase=null; s.coordination.blockers=[]; s.coordination.dryUntil=null;
   assert.equal(view.nextMowerStart(s),"Noch offen");
-  assert.equal(view.dashboardMessage(s).title,"Akku noch nicht bereit");
+  assert.equal(view.dashboardMessage(s).title,"Mäher in der Station");
+  assert.match(view.dashboardMessage(s).text,/Akku 25 %/);
   s.overall.code="WAITING";
   assert.equal(view.nextMowerStart(s),"Noch offen");
   s.mower.batteryPercent=100;
