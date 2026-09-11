@@ -12,6 +12,25 @@ function status(){
   return s;
 }
 
+test('Statusicon gehört zur Meldung, auch wenn der Mäher gleichzeitig lädt',()=>{
+  const s=status(),message=views.dashboardMessage;
+  assert.equal(s.mower.activity,'CHARGING');
+  assert.equal(message(s).title,'Rasen trocknet');
+  assert.equal(message(s).icon,'Leaf');
+  s.occupancy.current={start:s.generatedAt,end:'2026-09-09T14:00:00Z'};
+  assert.equal(message(s).title,'Platz ist belegt');
+  assert.equal(message(s).icon,'CalendarDays');
+  s.occupancy.current=null;s.coordination.dryUntil=null;s.coordination.blockers=[];
+  assert.equal(message(s).title,'Mäher lädt');
+  assert.equal(message(s).icon,'BatteryCharging');
+  s.generatedAt='2026-09-09T03:00:00Z';s.irrigation.safety.active_zone_count=1;
+  assert.equal(message(s).title,'Bewässerung läuft');
+  assert.equal(message(s).icon,'Droplets');
+  s.automation.mowerStartOutcomeUnconfirmed=true;
+  assert.equal(message(s).title,'Mäherstart nicht bestätigt');
+  assert.equal(message(s).icon,'TriangleAlert');
+});
+
 test('Design blendet unpassende Aktionen aus, ohne Parken mit Starts zu sperren',()=>{
   const visibility=presentation('pfVisibility'),s=status();
   assert.equal(visibility(s).manualStart,true);

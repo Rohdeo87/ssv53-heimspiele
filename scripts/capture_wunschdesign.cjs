@@ -21,7 +21,11 @@ const assert=require('node:assert/strict');
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'Overflow: '+scenario+' '+width);
     if(['stale','unconfirmed','mowing'].includes(scenario))assert.equal(await page.locator('#manual-start').isVisible(),false);
     if(scenario==='parked')assert.equal(await page.locator('#manual-park').isVisible(),false);
-    if(scenario==='charging')assert.equal(await page.locator('#manual-resume').isVisible(),false);
+    if(scenario==='charging'){
+     assert.equal(await page.locator('#manual-resume').isVisible(),false);
+     assert.equal(await page.locator('#overall-title').innerText(),'Rasen trocknet');
+     assert.equal(await page.locator('#overall > .pf-symbol').getAttribute('data-pf-icon'),'Leaf');
+    }
     await page.screenshot({path:path.join(out,scenario+'-'+width+'.png'),fullPage:true});
     if(scenario==='charging'){
      await page.locator('[data-pf-nav="more"]').click();
@@ -64,6 +68,11 @@ const assert=require('node:assert/strict');
      assert.equal(await page.locator('#pf-page-grounds [data-pf-calendar]').first().getAttribute('href'),'nav://ssv53_TextImage_1761902353516');
      await page.locator('#pf-page-grounds [data-pf-target="training"]').click();
      await page.screenshot({path:path.join(out,'training-'+width+'.png'),fullPage:true});
+     await page.locator('[data-pf-nav="home"]').click();
+     await page.evaluate(()=>{const s=window.pfFixtures.charging;s.coordination.dryUntil=null;s.coordination.releaseNotBefore=null;s.coordination.blockers=[];s.manualControl.confirmations.dryingRequired=false});
+     await page.locator('#refresh').click();
+     await page.waitForFunction(()=>document.getElementById('overall-title').textContent==='Mäher lädt');
+     assert.equal(await page.locator('#overall > .pf-symbol').getAttribute('data-pf-icon'),'BatteryCharging');
     }
     if(scenario==='watering'){
      assert.equal(await page.locator('#overall-title').innerText(),'Bewässerung läuft');

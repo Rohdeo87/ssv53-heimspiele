@@ -16,6 +16,12 @@ getrennt sichtbar. Eine Auswahl verändert noch nicht den gemeldeten Gerätewert
 Speichern erscheint erst bei einer möglichen Änderung; die Bestätigung nennt
 die gewählte Millimeterzahl. Die bestehende Anmeldung wird wiederverwendet.
 
+Korrektur nach Nutzerhinweis: Das Statusicon folgt derselben priorisierten
+Meldung wie die Überschrift. „Rasen trocknet“ zeigt ein Blatt, selbst wenn der
+Mäher gleichzeitig lädt. Batterie, Tropfen, Kalender und Warnzeichen gehören
+jeweils zu Lade-, Bewässerungs-, Belegungs- und Fehlermeldungen. Der Wechsel
+von Rasenpause zu Laden wurde zusätzlich ohne Neuladen der Seite geprüft.
+
 ## Tatsächliche Ansichten
 
 Die folgenden Aufnahmen stammen aus der geänderten Appack-Vorlage, mit
@@ -103,7 +109,7 @@ serverseitig abgesicherten Bestätigungsvertrag.
 | Bisher installierter Backendstand | Am 11.09.2026, 09:19 UTC: Host Running, 16 Functions; alle Paketdateien stimmen mit dem vorherigen ZIP überein. [Protokoll](installation-before.json) |
 | Entwicklung | Dashboard HTML/TXT, lokale Gestaltungsquellen, manueller Zeitvertrag im Backend, Tests und CI-Abgleich |
 | Python | **1.418 Tests, 482 Unterfälle bestanden**, Netzwerk in Tests gesperrt. [Protokoll](python-tests.txt) |
-| Appack-JavaScript | **157 Tests bestanden**, einschließlich Rechte, Parken, Ladezeiten, Anfragen und neue Sichtbarkeit. [Protokoll](node-tests.txt) |
+| Appack-JavaScript | **158 Tests bestanden**, einschließlich Rechte, Parken, Ladezeiten, Anfragen, Sichtbarkeit und zusammenpassender Statusicons. [Protokoll](node-tests.txt) |
 | Browser | **18 Kombinationen**: sechs Zustände × 320/390/768 Pixel; Navigation, Höhenwahl, Konfliktauswahl, Statistiken, Stoppen-Dialog, automatische Planung; keine JS-Fehler und kein horizontaler Überlauf. [Protokoll](browser-check.json) |
 | Unabhängige Reviews | Getrenntes Backend- und UI-Review. Zu breite Ausnahme für fremdes Wasser korrigiert und getestet; fehlender Kalenderzugang ergänzt |
 | Gebautes Artefakt | Neues FULL_FAILSAFE-Quellpaket, 70 Dateien; kein Deployment. [Manifest und Hash](package-manifest-build.json) |

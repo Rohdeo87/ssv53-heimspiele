@@ -140,7 +140,9 @@
       var all=document.getElementById("irrigation-start-all");all.classList.toggle("hidden",all.classList.contains("hidden")||all.disabled);pfDecorate(all,"Play");
       document.getElementById("dashboard").dataset.pfUrgent=String(overview.tone==="bad"||!mowerTelemetryFresh(s)||Number(safe.active_zone_count||0)>0||!!(s.automation&&s.automation.pendingAction));
       document.getElementById("pf-blade-hours").textContent=duration(s.statistics&&s.statistics.bladeUsageSeconds);
-      pfDecorate(document.getElementById("overall"),Number(safe.active_zone_count||0)>0?"Droplets":overview.tone==="bad"?"TriangleAlert":s.mower&&s.mower.activity==="CHARGING"?"BatteryCharging":"Bot");
+      // The icon belongs to the selected message, not to a simultaneous device state.
+      // A transient error may have replaced the message after the last status response.
+      pfDecorate(document.getElementById("overall"),document.getElementById("overall-title").textContent===overview.title?overview.icon:"TriangleAlert");
       pfRenderHeight(s);pfRenderMoment(s);pfRenderHistory(s);
     }
     pfMountDesign();
