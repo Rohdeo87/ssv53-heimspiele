@@ -1081,6 +1081,53 @@ def _record_zone_clear_observation(
     ), True
 
 
+def _own_prefix_suspension_compacted(
+    plan: list[dict[str, Any]], suspended: set[int],
+    live: dict[int, dict[str, Any]], observations: dict[int, dict[str, Any]],
+    *, safety: dict[str, Any], tolerance_seconds: int,
+) -> bool:
+    """Recognize only the observed native shift caused by suspending a prefix.
+
+    Hydrawise brings the remaining contiguous queue forward after we suspend
+    its first zones. Mixing those shifted starts with our retained first zones
+    creates overlaps. Preserve the original plan only when the whole shift is
+    explained by that exact prefix and no zone identity or duration changed.
+    """
+    if not 0 < len(suspended) < len(plan):
+        return False
+    if (safety.get("available") is not True or safety.get("fresh") is not True
+        or safety.get("active_zone_count") != 0 or safety.get("active_relay_ids") != []):
+        return False
+    try:
+        ordered = sorted(plan, key=lambda z: _parse_time(z["scheduled_start_utc"]))
+        ids = [int(z["relay_id"]) for z in ordered]
+        starts = [_parse_time(z["scheduled_start_utc"]) for z in ordered]
+        durations = [int(z["run_seconds"]) for z in ordered]
+        if set(ids[:len(suspended)]) != suspended or len(set(ids)) != len(ids):
+            return False
+        if any(start is None for start in starts) or any(d <= 0 for d in durations):
+            return False
+        if any(starts[i] != starts[i-1] + timedelta(seconds=durations[i-1]) for i in range(1,len(starts))):
+            return False
+        original_end = starts[-1] + timedelta(seconds=durations[-1])
+        removed = timedelta(seconds=sum(durations[:len(suspended)]))
+        for i, zone in enumerate(ordered):
+            observed = observations[ids[i]]
+            if (observed.get("valid") is not True or observed.get("running") is not False
+                or int(observed.get("zone") or 0) != int(zone["zone"])
+                or int(observed.get("run_seconds") or 0) != durations[i]):
+                return False
+            current_start = _parse_time(_as_dict(live.get(ids[i])).get("scheduled_start_utc"))
+            if ids[i] in suspended:
+                if current_start is not None and current_start <= original_end:
+                    return False
+            elif current_start is None or abs((current_start-(starts[i]-removed)).total_seconds()) > tolerance_seconds:
+                return False
+    except (KeyError, TypeError, ValueError, OverflowError):
+        return False
+    return True
+
+
 def _reconcile_prestart_plan(
     *,
     plan: list[dict[str, Any]],
@@ -1167,6 +1214,13 @@ def _reconcile_prestart_plan(
                 "Nur ein Teil der noch nicht suspendierten Zonen besitzt einen nachvollziehbaren nächsten Lauf.",
             )
 
+    if _own_prefix_suspension_compacted(
+        plan, suspended_relay_ids, live_by_relay, observations,
+        safety=_as_dict(_as_dict(details.get("hydrawise")).get("safety")),
+        tolerance_seconds=tolerance_seconds,
+    ):
+        return "UNCHANGED", plan, "Eigene Zonen-Suspendierung hat den Hydrawise-Restplan vorgezogen; der ursprüngliche Ablauf bleibt erhalten."
+
     reconciled: list[dict[str, Any]] = []
     for planned in plan:
         relay_id = int(planned["relay_id"])
@@ -1201,6 +1255,37 @@ def _reconcile_prestart_plan(
                 ).isoformat(),
             }
         )
+
+    # A duration-only edit may push later zones back. Preserve the original
+    # pauses and never pull a zone forward or save overlapping execution times.
+    duration_only = all(
+        _parse_time(old["scheduled_start_utc"]) == _parse_time(new["scheduled_start_utc"])
+        for old, new in zip(plan, reconciled, strict=True)
+    ) and any(int(old["run_seconds"]) != int(new["run_seconds"])
+              for old, new in zip(plan, reconciled, strict=True))
+    if duration_only:
+        originals = sorted(plan, key=lambda z: _parse_time(z["scheduled_start_utc"]))
+        by_id = {int(z["relay_id"]): z for z in reconciled}
+        previous_end = None
+        for index, old in enumerate(originals):
+            new = by_id[int(old["relay_id"])]
+            start = _parse_time(old["scheduled_start_utc"])
+            if index:
+                prior = originals[index-1]
+                gap = start - (_parse_time(prior["scheduled_start_utc"]) + timedelta(seconds=int(prior["run_seconds"])))
+                if gap < timedelta(0):
+                    return "INVALID", None, "Der bisherige Bewässerungsplan enthält überschneidende Zonen."
+                start = max(start, previous_end + gap)
+            previous_end = start + timedelta(seconds=int(new["run_seconds"]))
+            new.update(scheduled_start_utc=start.isoformat(), scheduled_end_utc=previous_end.isoformat())
+
+    ordered = sorted(reconciled, key=lambda zone: _parse_time(zone["scheduled_start_utc"]))
+    if any(
+        _parse_time(ordered[i]["scheduled_start_utc"])
+        < _parse_time(ordered[i-1]["scheduled_end_utc"])
+        for i in range(1, len(ordered))
+    ):
+        return "INVALID", None, "Die geänderten Bewässerungszeiten überschneiden sich; der gespeicherte Ablauf wird nicht ersetzt."
 
     changed = False
     for old, new in zip(plan, reconciled, strict=True):
@@ -1966,6 +2051,7 @@ def _clear_irrigation(state: AutomationState) -> AutomationState:
         irrigation_change_candidate_hash=None,
         irrigation_change_candidate_since_utc=None,
         irrigation_suspension_revalidation_last_seen_utc=None,
+        irrigation_suspension_revalidation_observed_utc=None,
         irrigation_suspension_revalidation_observations=0,
         irrigation_cancelled_without_run_utc=None,
     )
@@ -1997,6 +2083,7 @@ def _cancel_irrigation_without_run(
         irrigation_change_candidate_hash=None,
         irrigation_change_candidate_since_utc=None,
         irrigation_suspension_revalidation_last_seen_utc=None,
+        irrigation_suspension_revalidation_observed_utc=None,
         irrigation_suspension_revalidation_observations=0,
         irrigation_cancelled_without_run_utc=now_utc.isoformat(),
     )
@@ -3961,6 +4048,7 @@ def run_full_failsafe_cycle(
                         irrigation_zone_start_reserved_utc=None,
                         irrigation_zone_started_utc=None,
                         irrigation_suspension_revalidation_last_seen_utc=None,
+                        irrigation_suspension_revalidation_observed_utc=None,
                         irrigation_suspension_revalidation_observations=0,
                         irrigation_zone_clear_since_utc=None,
                         irrigation_completed_utc=None,
@@ -4396,6 +4484,7 @@ def run_full_failsafe_cycle(
                 irrigation_change_candidate_hash=None,
                 irrigation_change_candidate_since_utc=None,
                 irrigation_suspension_revalidation_last_seen_utc=None,
+                irrigation_suspension_revalidation_observed_utc=None,
                 irrigation_suspension_revalidation_observations=0,
                 irrigation_cancelled_without_run_utc=None,
             )
@@ -5308,6 +5397,7 @@ def run_full_failsafe_cycle(
                         irrigation_change_candidate_hash=None,
                         irrigation_change_candidate_since_utc=None,
                         irrigation_suspension_revalidation_last_seen_utc=None,
+                        irrigation_suspension_revalidation_observed_utc=None,
                         irrigation_suspension_revalidation_observations=0,
                     )
                     return _persist_result(
@@ -5401,6 +5491,7 @@ def run_full_failsafe_cycle(
                     now.isoformat() if len(set(suspended)) == expected_zones else None
                 ),
                 irrigation_suspension_revalidation_last_seen_utc=None,
+                irrigation_suspension_revalidation_observed_utc=None,
                 irrigation_suspension_revalidation_observations=0,
             )
             if settings.enable_manual_sessions:
@@ -5789,6 +5880,7 @@ def run_full_failsafe_cycle(
                     irrigation_change_candidate_hash=None,
                     irrigation_change_candidate_since_utc=None,
                     irrigation_suspension_revalidation_last_seen_utc=None,
+                    irrigation_suspension_revalidation_observed_utc=None,
                     irrigation_suspension_revalidation_observations=0,
                     irrigation_zone_clear_since_utc=(
                         None
@@ -5935,6 +6027,7 @@ def run_full_failsafe_cycle(
                             irrigation_change_candidate_hash=None,
                             irrigation_change_candidate_since_utc=None,
                             irrigation_suspension_revalidation_last_seen_utc=None,
+                            irrigation_suspension_revalidation_observed_utc=None,
                             irrigation_suspension_revalidation_observations=0,
                         )
                         return _persist_result(
@@ -6096,21 +6189,39 @@ def run_full_failsafe_cycle(
                                 state, intent_key, now,
                                 f"relay-{relay}-scheduled-after-suspension",
                             )
+                required_revalidation_observations = _env_int(
+                    environment, "IRRIGATION_SUSPENSION_REVALIDATION_CYCLES",
+                    2, minimum=2, maximum=10,
+                )
+                renewed_observed = _parse_time(
+                    state.irrigation_suspension_revalidation_observed_utc
+                )
+                # A confirmed renewal is independent of the original start
+                # time, but never independent of current complete zone proof.
+                # Keep it short-lived and bound to the completed renewal, not
+                # an older observation retained across a plan change.
+                renewed_suspension_proof_valid = (
+                    ordinary_live_suspension_proof_valid
+                    and suspension_completed is not None
+                    and timedelta(0) <= now - suspension_completed
+                    <= timedelta(minutes=plan_lease_minutes)
+                    and renewed_observed is not None
+                    and renewed_observed >= suspension_completed
+                    and renewed_observed == _parse_time(
+                        state.irrigation_suspension_revalidation_last_seen_utc
+                    )
+                    and int(state.irrigation_suspension_revalidation_observations or 0)
+                    >= required_revalidation_observations
+                )
                 suspension_proof_valid = (
                     ordinary_suspension_proof_valid
                     or schedule_override_suspension_proof_valid
+                    or renewed_suspension_proof_valid
                 )
                 if (
                     not suspension_proof_valid
                     and ordinary_live_suspension_proof_valid
                 ):
-                    required_revalidation_observations = _env_int(
-                        environment,
-                        "IRRIGATION_SUSPENSION_REVALIDATION_CYCLES",
-                        2,
-                        minimum=2,
-                        maximum=10,
-                    )
                     revalidation_gap_seconds = _env_int(
                         environment,
                         "IRRIGATION_SUSPENSION_REVALIDATION_MAX_GAP_SECONDS",
@@ -6156,9 +6267,11 @@ def run_full_failsafe_cycle(
                     renewed = replace(
                         observed_state,
                         revision=observed_state.revision + 1,
-                        irrigation_suspension_completed_utc=now.isoformat(),
-                        irrigation_suspension_revalidation_last_seen_utc=None,
-                        irrigation_suspension_revalidation_observations=0,
+                        # Use the confirmed source time, not later processing
+                        # time. Fetch latency must not invalidate this renewal.
+                        irrigation_suspension_completed_utc=(
+                            observed_state.irrigation_suspension_revalidation_observed_utc
+                        ),
                     )
                     details["irrigation_suspension_revalidation"]["renewed"] = True
                     return _persist_result(
