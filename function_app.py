@@ -17,6 +17,7 @@ from daily_safety_report import ApplicationInsightsQueryClient, process_daily_re
 from mower.controller import run_control_cycle
 from mower.build_provenance import inspect_installed_package
 from mower.irrigation_journal import record_irrigation_observation
+from mower.charging_forecast_store import record as record_charging_forecast
 from mower.irrigation_recovery import (
     IrrigationRecoveryError,
     reset_failed_irrigation,
@@ -121,6 +122,13 @@ def ssv53_mower_timer(
         record_irrigation_observation(result, os.environ)
     except Exception:
         LOGGER.exception("SSV53_IRRIGATION_JOURNAL_WRITE_ERROR")
+
+    try:
+        # Separate display calibration; failure never retries a device action.
+        payload["charging_calibration"] = record_charging_forecast(result, os.environ)
+    except Exception:
+        payload["charging_calibration"] = {"recorded": False, "reason": "JOURNAL_UNAVAILABLE"}
+        LOGGER.warning("SSV53_CHARGING_CALIBRATION_WRITE_ERROR")
 
     serialized = json.dumps(
         payload,

@@ -1,0 +1,11 @@
+{
+  "commit": "982d242f8a994f8ce53bf088ea04a722b94c6a1a",
+  "url": "https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/34707019926",
+  "workflow": "Azure-Function Quellpaket bauen",
+  "status": "completed",
+  "conclusion": "success",
+  "all_job_steps_succeeded": true,
+  "failed_previous_run": "https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/34706777005",
+  "previous_failure_fixed": "Missing charging modules in read-only compatibility package",
+  "proves_deployment": false
+}

@@ -1,0 +1,37 @@
+{
+  "offline_only": true,
+  "live_validation_seeded": false,
+  "telemetry_sha256": "4e8be5a3a570cf43e736824276c367fe35da27ef2bf04db8f9378bea495dbef4",
+  "rows": 9730,
+  "reference_sessions": 8,
+  "outcomes": 13,
+  "valid_completed": 8,
+  "predictions_scored": 3,
+  "quality_low_battery": {
+    "approved": false,
+    "sessions": 11,
+    "scoredSessions": 2,
+    "days": 2,
+    "spanDays": 0.73,
+    "withinFiveMinutesLower95": 0.06211525251916969,
+    "pairedImprovementLower95": 0.06211525251916969,
+    "ownMeanErrorSeconds": 91.65,
+    "vendorMeanErrorSeconds": 2457.05,
+    "vendorTrajectoryMeanErrorSeconds": 363.0,
+    "startingBatteryBucket": 0,
+    "modelVersion": 1
+  },
+  "largest_vendor_jump_minutes": 36.3,
+  "vendor_jump_example": {
+    "before": {
+      "timestamp": "2026-09-12T15:04:02.7538036Z",
+      "battery_percent": 9,
+      "remaining_charging_seconds": 600
+    },
+    "after": {
+      "timestamp": "2026-09-12T15:05:02.5850983Z",
+      "battery_percent": 14,
+      "remaining_charging_seconds": 2712
+    }
+  }
+}

@@ -1,0 +1,95 @@
+{
+  "at_utc": "2026-09-12T17:03:19.539574+00:00",
+  "read_only": true,
+  "manifest_sha256": "799fc6f2afb5c8f7e1770f9d99d15bdd66ffb4391400edcbdb8e4c32d017d619",
+  "template_sha256": "045d275f7749beda2701cf94e944e16a9daf61f7d52cc0c1b5272f5676d617ad",
+  "public_functions_match": [
+    "chargingEnd",
+    "renderCoordination",
+    "mergeDisplayDetails",
+    "pfChargingInfo"
+  ],
+  "settings_changed": false,
+  "automatic_takeover_still_enabled": true,
+  "charging_collector_enabled": true,
+  "rows": [
+    {
+      "timestamp": "2026-09-12T17:02:04.4798994Z",
+      "manifest": "799fc6f2afb5c8f7e1770f9d99d15bdd66ffb4391400edcbdb8e4c32d017d619",
+      "calibration": {
+        "active": false,
+        "outcomes": 0,
+        "ownDisplay": false,
+        "quality": {
+          "approved": false,
+          "days": 0,
+          "modelVersion": 1,
+          "ownMeanErrorSeconds": null,
+          "pairedImprovementLower95": 0,
+          "scoredSessions": 0,
+          "sessions": 0,
+          "spanDays": 0,
+          "startingBatteryBucket": 3,
+          "vendorMeanErrorSeconds": null,
+          "vendorTrajectoryMeanErrorSeconds": null,
+          "withinFiveMinutesLower95": 0
+        },
+        "recorded": true,
+        "shadowPredictionAt": null,
+        "trainingSessions": 0
+      },
+      "decision": "CONTINUOUS_MOWING_ACTIVE",
+      "command_sent": false
+    },
+    {
+      "timestamp": "2026-09-12T17:01:07.2874027Z",
+      "manifest": "799fc6f2afb5c8f7e1770f9d99d15bdd66ffb4391400edcbdb8e4c32d017d619",
+      "calibration": {
+        "active": false,
+        "outcomes": 0,
+        "ownDisplay": false,
+        "quality": {
+          "approved": false,
+          "days": 0,
+          "modelVersion": 1,
+          "ownMeanErrorSeconds": null,
+          "pairedImprovementLower95": 0,
+          "scoredSessions": 0,
+          "sessions": 0,
+          "spanDays": 0,
+          "startingBatteryBucket": 3,
+          "vendorMeanErrorSeconds": null,
+          "vendorTrajectoryMeanErrorSeconds": null,
+          "withinFiveMinutesLower95": 0
+        },
+        "recorded": true,
+        "shadowPredictionAt": null,
+        "trainingSessions": 0
+      },
+      "decision": "CONTINUOUS_MOWING_ACTIVE",
+      "command_sent": false
+    },
+    {
+      "timestamp": "2026-09-12T17:00:03.6103375Z",
+      "manifest": "d4577a8a110f2e05fae6b01e9fdfa27190be3ece4daff47a9cda9dddff122bc4",
+      "calibration": null,
+      "decision": "CONTINUOUS_MOWING_ACTIVE",
+      "command_sent": false
+    },
+    {
+      "timestamp": "2026-09-12T16:59:02.7544961Z",
+      "manifest": "d4577a8a110f2e05fae6b01e9fdfa27190be3ece4daff47a9cda9dddff122bc4",
+      "calibration": null,
+      "decision": "CONTINUOUS_MOWING_ACTIVE",
+      "command_sent": false
+    },
+    {
+      "timestamp": "2026-09-12T16:58:03.3540702Z",
+      "manifest": "d4577a8a110f2e05fae6b01e9fdfa27190be3ece4daff47a9cda9dddff122bc4",
+      "calibration": null,
+      "decision": "CONTINUOUS_MOWING_ACTIVE",
+      "command_sent": false
+    }
+  ],
+  "collector_live_verified": true
+}
