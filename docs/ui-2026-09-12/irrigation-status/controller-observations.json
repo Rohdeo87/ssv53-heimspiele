@@ -1,0 +1,76 @@
+{
+  "retrieved_at_utc": "2026-09-12T05:14:09.703538+00:00",
+  "read_only": true,
+  "observations": [
+    {
+      "at": "2026-09-12T04:55:02.6888113Z",
+      "decision": "IRRIGATION_WAIT_FOR_CONFIRMED_PARK",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789188368050,
+        "error_code": 0
+      },
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-12T04:55:01+00:00"
+      },
+      "automation": {
+        "irrigation_phase": "READY"
+      }
+    },
+    {
+      "at": "2026-09-12T04:56:02.5971603Z",
+      "decision": "IRRIGATION_WAIT_FOR_CONFIRMED_PARK",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789188368050,
+        "error_code": 0
+      },
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-12T04:56:01+00:00"
+      },
+      "automation": {
+        "irrigation_phase": "READY"
+      }
+    },
+    {
+      "at": "2026-09-12T04:57:02.4070477Z",
+      "decision": "IRRIGATION_WAIT_FOR_CONFIRMED_PARK",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789188368050,
+        "error_code": 0
+      },
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-12T04:57:00+00:00"
+      },
+      "automation": {
+        "irrigation_phase": "READY"
+      }
+    }
+  ],
+  "total_observations_reviewed": 58
+}

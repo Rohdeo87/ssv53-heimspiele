@@ -266,6 +266,7 @@
       if(!pfReady||!s)return;var v=pfVisibility(s),manual=manualControlView(s),overview=dashboardMessage(s),safe=s.irrigation&&s.irrigation.safety||{};
       [["manual-start",v.manualStart,"Play","Mäher starten"],["manual-park",v.manualPark,"House",v.parkLabel],["manual-resume",v.manualResume,"Repeat2","Automatik einschalten"],["manual-husqvarna",v.husqvarnaStart,"Play","Über Husqvarna starten"],["manual-husqvarna-park",v.husqvarnaPark,"House","Über Husqvarna parken"]].forEach(function(row){var b=document.getElementById(row[0]);b.classList.toggle("hidden",!row[1]);pfDecorate(b,row[2],row[3])});
       ["mow-start","mow-park"].forEach(function(id){var b=document.getElementById(id);if(b.disabled)b.classList.add("hidden");pfDecorate(b,id==="mow-start"?"Play":"House")});
+      pfDecorate(document.getElementById("irrigation-stop"),"Square",irrigationAwaitingStart(s)?"Bewässerung abbrechen":"Bewässerung beenden");
       document.getElementById("pf-mower-actions").classList.toggle("pf-single-action",document.querySelectorAll('#pf-mower-actions>.btn:not(.hidden)').length===1);
       document.querySelectorAll('[data-pf-target="height"]').forEach(function(b){b.hidden=!v.height});
       document.querySelectorAll('[data-pf-target="husqvarna"]').forEach(function(b){b.hidden=!manual.enabled});

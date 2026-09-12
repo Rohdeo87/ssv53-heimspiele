@@ -17,7 +17,7 @@ const viewFunctions = [
   "localDay", "calendarTime", "dryingTime", "intervalEnd", "isSearching", "hasActiveMowerError", "activity", "trainingControlView", "irrigationOutsideWindow", "manualIrrigationRun",
   "isMowerPaused", "irrigationScheduleChangePending", "coordinationExecutionBlocked", "deviceControlsOpen", "mowerTelemetryFresh", "deviceActionAllowed", "mowerActions", "effectiveMowerActions",
   "simpleStatus", "chargingEnd", "parkedReportPending", "displayOccupancyBlock", "nextStartInfo", "nextMowerStart", "actionProgressText", "irrigationActions", "protectionNotice",
-  "operatorActionPending", "actionRequestPending", "dashboardMessage", "heightStatusText", "friendlyError", "phase", "waterTitle", "simpleWater", "nextWaterStart",
+  "operatorActionPending", "actionRequestPending", "irrigationAwaitingStart", "dashboardMessage", "heightStatusText", "friendlyError", "phase", "waterTitle", "simpleWater", "nextWaterStart",
   "clubClockParts", "inputDateTime", "parsePlanDateTime", "planPauseEnd", "localDateTime", "planDate", "planStatusText"
 ];
 
