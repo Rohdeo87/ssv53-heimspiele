@@ -326,7 +326,23 @@ body.pflege-design{background:#f3f6fa;color:#172c42;font-family:Arial,Helvetica,
     function manualControlView(s){var m=s&&s.manualControl;if(!m||m.enabled!==true)return{enabled:false};var c=m.confirmations||{},epoch=Number(m.epoch);return{enabled:true,status:String(m.status||"UNKNOWN"),title:String(m.title||"Manuelle Bedienung"),message:String(m.message||""),until:m.until||null,canStart:m.canStart===true,canPark:m.canPark===true,canResume:m.canResume===true,source:m.source||null,occupancyRequired:c.occupancyRequired===true,dryingRequired:c.dryingRequired===true,dryUntil:c.dryUntil||null,waterRequired:c.waterChoiceRequired===true,waterChoice:m.waterChoice||null,sessionId:m.sessionId||null,epoch:Number.isInteger(epoch)&&epoch>=0?epoch:0,contextToken:typeof m.contextToken==="string"?m.contextToken:""}}
     function effectiveMowerActions(s){var actions=mowerActions(s);if(irrigationScheduleChangePending(s)||coordinationExecutionBlocked(s))actions.showStart=false;return actions}
     function renderScheduleChangeNotice(s){if(!irrigationScheduleChangePending(s))return;var message=dashboardMessage(s);if(message.title!=="Bewässerungsplan wird geändert")return;document.getElementById("overall").className="notice warn";text("overall-title",message.title);text("overall-text",message.text)}
-    function simpleStatus(s){var m=s.mower||{},a=s.automation||{};if(a.irrigationPhase)return"Bitte das Ende der Bewässerung und die anschließende Wartezeit abwarten.";var actions=effectiveMowerActions(s);return actions.showStart?"Zum Fortsetzen „"+actions.startLabel+"“ wählen.":"Bitte am Mäher nachsehen. Die Pause bleibt bestehen."}
+    function mowerStopNotice(s) {
+      var m=s.mower||{},st=String(m.state||"").toUpperCase();
+      if(["STOPPED","OFF"].indexOf(st)<0||["MOWING","LEAVING","GOING_HOME"].indexOf(m.activity)>=0)return null;
+      var fresh=mowerTelemetryFresh(s),off=st==="OFF",stamp=calendarTime(m.statusTimestamp,s.generatedAt);
+      return {title:fresh?(off?"Mäher ist ausgeschaltet":"Mäher ist gestoppt"):(off?"Zuletzt: Mäher ausgeschaltet":"Zuletzt: Mäher gestoppt"),text:(!fresh?"Letzte Meldung: "+stamp+". ":"")+"Bitte die Meldung direkt am Mäher prüfen. Die Automatik startet ihn nicht.",tone:"warn",icon:"Square"};
+    }
+    function simpleStatus(s) {
+      var stop=mowerStopNotice(s);if(stop)return stop.text;
+      var a=s.automation||{},c=s.coordination||{},safe=s.irrigation&&s.irrigation.safety||{},manual=s.manualControl||{},dry=Date.parse(c.dryUntil),now=Date.parse(s.generatedAt);
+      if(safe.available===true&&safe.fresh===true&&Number(safe.active_zone_count)>0)return"Die Bewässerung läuft. Bitte ihr Ende und die anschließende Wartezeit abwarten.";
+      if(["PLANNED","SUSPENDING","READY","START_RESERVED"].indexOf(a.irrigationPhase)>=0)return"Die Bewässerung wird vorbereitet. Bitte auf die nächste Meldung warten.";
+      if(["RUNNING","STOPPING"].indexOf(a.irrigationPhase)>=0)return"Bitte warten, bis das Ende der Bewässerung bestätigt ist.";
+      if(Number.isFinite(dry)&&Number.isFinite(now)&&dry>now)return"Der Rasen trocknet bis "+dryingTime(c.dryUntil,s.generatedAt)+". Bitte abwarten.";
+      if((c.blockers||[]).some(function(b){return b.code==="DRYING_OR_CONFIRMATION"}))return"Bitte aktualisieren. Die Bewässerungsdaten werden noch geprüft.";
+      if(manual.enabled===true)return manual.canStart===true&&deviceControlsOpen(s)?"Zum Fortsetzen „Mäher starten“ wählen.":"Bitte am Mäher nachsehen. Die Pause bleibt bestehen.";
+      var actions=effectiveMowerActions(s);return actions.showStart?"Zum Fortsetzen „"+actions.startLabel+"“ wählen.":"Bitte am Mäher nachsehen. Die Pause bleibt bestehen.";
+    }
 
     function chargingEnd(s,displayOnly) {
       var m=s.mower||{},c=s.coordination||{},estimate=displayOnly?(c.chargingDisplayEstimate||c.chargingEndEstimate):c.chargingEndEstimate,now=new Date(s.generatedAt||Date.now());
@@ -370,6 +386,7 @@ body.pflege-design{background:#f3f6fa;color:#172c42;font-family:Arial,Helvetica,
       var awaitingBattery=false,awaitingDock=false;
       if(mowerTelemetryFresh(s)&&!hasActiveMowerError(m)&&["MOWING","LEAVING"].indexOf(m.activity)>=0)return {at:null,text:m.activity==="MOWING"?"Mäher läuft bereits":"Fährt zum Platz"};
       if(protection.automaticStartEnabled===false){if(a.pendingAction==="START_MOWING"||a.mowerStartOutcomeUnconfirmed||startPending)return {at:null,text:"Mäherstart angefragt"};return {at:null,text:"Start nur manuell"}}
+      if(mowerStopNotice(s)&&m.connected===true&&!hasActiveMowerError(m)&&!a.mowerStartOutcomeUnconfirmed&&!a.pendingAction&&!startPending)return {at:null,text:"Stopp am Mäher klären"};
       if(coordinationExecutionBlocked(s))return open;
       var waitingForReport=parkedReportPending(s);
       if(!deviceControlsOpen(s)||!mowerTelemetryFresh(s)&&!waitingForReport||m.connected!==true||hasActiveMowerError(m)||!c||isSearching(m))return open;
@@ -420,17 +437,19 @@ body.pflege-design{background:#f3f6fa;color:#172c42;font-family:Arial,Helvetica,
       if(hasActiveMowerError(m)||has("MOWER_ERROR"))return message("Mäher braucht Hilfe",Number(m.errorCode)===93?"Standort nicht gefunden. Bitte am Mäher nachsehen.":"Bitte die Meldung am Mäher prüfen und die Störung beheben.","bad");
       if(has("CONTROLLER_STALE"))return message("Automatik antwortet nicht","Bitte den Mäher prüfen und die Anzeige aktualisieren.","bad");
       if(has("DATA_QUALITY"))return message("Platzbelegung bitte prüfen","Bitte den aktuellen Belegungsplan prüfen. Bis dahin nicht starten.","bad");
+      var stopNotice=mowerStopNotice(s);
       if(has("MOWER_TELEMETRY")){
         if(w.safety&&w.safety.available===true&&w.safety.fresh===true&&Number(w.safety.active_zone_count)>0){
           if(["MOWING","LEAVING"].indexOf(m.activity)>=0)return message("Bewässerung läuft","Bitte den Mäher parken und den Platz noch nicht betreten.","bad");
           if(irrigationOutsideWindow(s)&&!manualIrrigationRun(s))return message("Bewässerung bitte beenden","Die Bewässerung läuft außerhalb von 03:30 bis 08:00 Uhr. Bitte die Anlage vor Ort prüfen und beenden.","bad");
           return message("Bewässerung läuft","Bitte den Platz noch nicht betreten.","warn","Droplets");
         }
-        if(irrigationAwaitingStart(s))return message("Bewässerung wartet","Es fehlt eine aktuelle Meldung vom Mäher. Bitte prüfen, ob er in der Station ist.","warn","Droplets");
         if(["RUNNING","START_RESERVED","STOPPING"].indexOf(a.irrigationPhase)>=0){
           if(w.safety&&w.safety.available===true&&w.safety.fresh===true&&w.safety.clear_now===true&&Number(w.safety.active_zone_count)===0&&a.irrigationPhase==="RUNNING")return message("Bewässerung macht Pause","Zurzeit läuft keine Zone. Bitte den Platz noch nicht betreten.","warn","Droplets");
           return message("Bewässerung nicht bestätigt","Ob gerade bewässert wird, ist unklar. Bitte die Anlage vor Ort prüfen.","warn","Droplets");
         }
+        if(stopNotice&&(!s.manualControl||s.manualControl.status!=="UNKNOWN"))return stopNotice;
+        if(irrigationAwaitingStart(s))return message("Bewässerung wartet","Es fehlt eine aktuelle Meldung vom Mäher. Bitte prüfen, ob er in der Station ist.","warn","Droplets");
         var planned=nextStartInfo(s);
         if(planned.at&&planned.awaitingMowerReport)return message("Platz ist belegt","Belegt bis: "+calendarTime(o.current.end,s.generatedAt)+".","warn","CalendarDays");
         if(stationConfirmed(s)&&stationDisplaySafe(s))return message("Mäher ist in der Station",s.manualControl&&s.manualControl.canStart===true?"Du kannst den Mäher starten.":"Der Mäher wartet in der Station.","good","House");
@@ -453,6 +472,7 @@ body.pflege-design{background:#f3f6fa;color:#172c42;font-family:Arial,Helvetica,
        if(parkStatus==="UNKNOWN")return message("Parken nicht bestätigt","Die Parkanfrage ist unklar. Bitte den Mäher prüfen; es wird nicht automatisch erneut angefragt.","bad");
       if(wet&&irrigationOutsideWindow(s)&&!manualIrrigationRun(s))return message("Bewässerung bitte beenden","Die Bewässerung läuft außerhalb von 03:30 bis 08:00 Uhr. Bitte die Anlage vor Ort prüfen und beenden.","bad");
       if(wet)return message("Bewässerung läuft","Bitte den Platz noch nicht betreten.","warn","Droplets");
+      if(stopNotice)return stopNotice;
        if(manualControl.status==="MANUAL_PARKED")return ["CHARGING","PARKED_IN_CS"].indexOf(m.activity)>=0&&m.mode==="HOME"&&mowerTelemetryFresh(s)?message("Mäher in Station geparkt","Die Automatik wartet auf deine Freigabe.","good","House"):message("Parken angefordert","Bitte warten, bis der Mäher die Station erreicht hat.","warn","House");
        if(manualControl.status==="PREPARED")return message("Manuelle Bedienung angefordert","Bitte auf die Rückmeldung des Mähers warten.","warn");
       if(a.pendingAction)return message("Anfrage gesendet",actionProgressText(a.pendingAction),"warn");

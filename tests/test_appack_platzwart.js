@@ -104,10 +104,11 @@ test("Pausierter Mäher zeigt nur eine tatsächlich verfügbare Handlung", () =>
   const view = viewModel(), s = snapshot();
   s.mower = {state: "PAUSED", activity: "NOT_APPLICABLE", connected: true, telemetryFresh: true};
   s.automation = {parkedByAutomation: true}; s.coordination.blockers = [{code:"MANUAL_STOP"}];
+  s.coordination.dryUntil = null;
   assert.equal(view.dashboardMessage(s).title, "Mäher pausiert");
   assert.equal(view.simpleStatus(s), "Zum Fortsetzen „Mäher starten“ wählen.");
   s.automation.irrigationPhase = "READY";
-  assert.match(view.simpleStatus(s), /Bewässerung.*abwarten/);
+  assert.match(view.simpleStatus(s), /Bewässerung wird vorbereitet/);
   s.automation = {};
   assert.equal(view.simpleStatus(s), "Bitte am Mäher nachsehen. Die Pause bleibt bestehen.");
 });
