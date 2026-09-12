@@ -197,7 +197,7 @@
     }
     function pfNextMoment(s) {
       var m=s.mower||{},manual=manualControlView(s),info=nextStartInfo(s,true),now=new Date(s.generatedAt),o=s.occupancy||{};
-      if(mowerActionContext(s).stopped)return {label:"Nächster Mähstart",at:null,text:"",hidden:true,note:""};
+      if(mowerActionContext(s).stopped||mowerFaultNotice(m))return {label:"Nächster Mähstart",at:null,text:"",hidden:true,note:""};
       if(manual.enabled&&["MANUAL_PARKED","PARKING"].indexOf(manual.status)>=0)return {label:"Nächster Mähstart",at:null,text:"Du entscheidest",note:"Erst nach deiner Freigabe."};
       if(mowerTelemetryFresh(s)&&["MOWING","LEAVING"].indexOf(m.activity)>=0&&o.available!==false){
         var blocks=(o.upcoming||[]).concat(o.next?[o.next]:[]).filter(function(x){return x&&new Date(x.start)>now}).sort(function(a,b){return new Date(a.start)-new Date(b.start)});

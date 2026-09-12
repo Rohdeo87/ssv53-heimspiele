@@ -1,0 +1,23 @@
+{
+  "retrievedAt": "2026-09-12T12:19:14.599Z",
+  "url": "https://developer.husqvarnagroup.cloud/apis/Automower+Connect+API?tab=status%20description%20and%20error%20codes",
+  "rows": [
+    "9 Trapped",
+    "10 Upside down",
+    "14 Mower lifted",
+    "15 Lifted",
+    "16 Stuck in charging station",
+    "17 Charging station blocked",
+    "18 Collision sensor problem, rear",
+    "19 Collision sensor problem, front",
+    "20 Wheel motor blocked, right",
+    "21 Wheel motor blocked, left",
+    "24 Cutting system blocked",
+    "25 Cutting system blocked",
+    "29 Slope too steep",
+    "31 STOP button problem",
+    "33 Mower tilted",
+    "78 Slipped - Mower has Slipped.Situation not solved with moving pattern",
+    "93 No accurate position from satellites"
+  ]
+}

@@ -213,7 +213,7 @@ test("Mäheraktionen sind für Fahren, Laden, Sperren und manuelle Bedienung ein
   assert.ok(actionsFunction); assert.ok(stationConfirmedFunction);
   assert.ok(effectiveActionsFunction); assert.ok(coordinationBlockedFunction);
   const contextFunction = html.split("\n").find(line => line.includes("function mowerActionContext(s)"));
-  const rawActions = new Function(`${contextFunction}\n${searchingFunction}\n${pausedFunction}\n${schedulePendingFunction}\n${deviceGateFunction}\n${telemetryFunction}\n${stationConfirmedFunction}\n${actionAllowedFunction}\n${actionsFunction}\n${coordinationBlockedFunction}\n${effectiveActionsFunction}\nreturn effectiveMowerActions;`)();
+  const rawActions = new Function(`${html.split("\n").find(line=>line.startsWith("    function hasActiveMowerError("))}\n${html.split("\n").find(line=>line.startsWith("    function mowerFaultNotice("))}\n${contextFunction}\n${searchingFunction}\n${pausedFunction}\n${schedulePendingFunction}\n${deviceGateFunction}\n${telemetryFunction}\n${stationConfirmedFunction}\n${actionAllowedFunction}\n${actionsFunction}\n${coordinationBlockedFunction}\n${effectiveActionsFunction}\nreturn effectiveMowerActions;`)();
   const actions = (s) => rawActions({deviceControlsAvailable: true, ...s, mower: {connected: true, telemetryFresh: true, ...(s.mower || {})}, coordination: {blockers: [], ...(s.coordination || {})}});
   const safe = { available: true, fresh: true, clear_now: true };
 

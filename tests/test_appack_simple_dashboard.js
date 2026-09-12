@@ -226,7 +226,7 @@ test("Manueller Stopp bleibt als Pause sichtbar, auch mit berechenbarem Ladeende
 
 test("Fehler und Sicherheitskonflikte erhalten eine klare Handlung ohne Rohmeldungen", () => {
   const s = snapshot(); s.mower.state = "ERROR"; s.mower.errorCode = 93; s.mower.errorMessage = "EPOS raw API trace";
-  assert.deepEqual(view.dashboardMessage(s), {title: "Mäher braucht Hilfe", text: "Standort nicht gefunden. Bitte am Mäher nachsehen.", tone: "bad", icon: "TriangleAlert"});
+  assert.deepEqual(view.dashboardMessage(s), {title: "Keine genaue Satellitenposition", text: "Bitte den Satellitenempfang am Mäher prüfen.", tone: "bad", icon: "TriangleAlert"});
   s.automation.mowerStartOutcomeUnconfirmed = true;
   assert.match(view.dashboardMessage(s).text, /Nicht erneut starten/);
   assert.doesNotMatch(view.dashboardMessage(s).text, /EPOS|API|93/);

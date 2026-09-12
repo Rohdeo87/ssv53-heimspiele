@@ -1,0 +1,19 @@
+{
+  "at_utc": "2026-09-12T12:26:45.093946+00:00",
+  "read_only": true,
+  "url": "https://appack.de/rest-api/drender/6a86ab6c4b3c829dd60de9b7",
+  "http_status": 200,
+  "changed_functions_match": [
+    "mowerFaultNotice",
+    "mowerErrorNotice",
+    "dashboardMessage",
+    "manualMowerActions",
+    "mowerActions",
+    "pfNextMoment",
+    "pfWaterStartExplanation",
+    "render"
+  ],
+  "local_template_sha256_lf": "c4d50cda346fbfb10aa08543de57dbba066420cc3ebeb2b63b6d1c72bac7d35a",
+  "device_commands_sent": false,
+  "native_device_tested": false
+}
