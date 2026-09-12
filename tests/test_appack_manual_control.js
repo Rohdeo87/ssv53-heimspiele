@@ -152,7 +152,7 @@ test("the main message reports confirmed manual mowing without masking water or 
   s.coordination.dryUntil = null;
   s.irrigation.safety.active_zone_count = 0;
   s.manualControl = {enabled: true, status: "MANUAL_MOWING"};
-  assert.equal(view.dashboardMessage(s).title, "Manuell gestartet");
+  assert.equal(view.dashboardMessage(s).title, "Mäher mäht");
   assert.match(view.dashboardMessage(s).text, /nächsten Ladefahrt/);
   s.irrigation.safety.active_zone_count = 1;
   assert.equal(view.dashboardMessage(s).title, "Bewässerung läuft");
@@ -160,11 +160,11 @@ test("the main message reports confirmed manual mowing without masking water or 
   s.occupancy.current = {start: s.generatedAt, end: "2026-09-09T12:00:00Z"};
   assert.equal(view.dashboardMessage(s).title, "Mäher bitte stoppen");
   s.manualControl.occupancyOverrideActive = true;
-  assert.equal(view.dashboardMessage(s).title, "Manuell gestartet");
+  assert.equal(view.dashboardMessage(s).title, "Mäher mäht");
   s.coordination.dryUntil = "2026-09-09T14:00:00Z";
-  assert.notEqual(view.dashboardMessage(s).title, "Manuell gestartet");
+  assert.notEqual(view.dashboardMessage(s).title, "Mäher mäht");
   s.manualControl.dryingOverrideActive = true;
-  assert.equal(view.dashboardMessage(s).title, "Manuell gestartet");
+  assert.equal(view.dashboardMessage(s).title, "Mäher mäht");
   s.irrigation.safety.active_zone_count = 1;
   assert.equal(view.dashboardMessage(s).title, "Bewässerung läuft");
 });
