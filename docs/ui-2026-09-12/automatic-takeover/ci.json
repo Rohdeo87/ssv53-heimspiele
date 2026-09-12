@@ -1,0 +1,8 @@
+{
+  "source_commit": "0d98dbccd54b0e2ebda8211b182b6f7a26564640",
+  "url": "https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/34699371754",
+  "workflow": "Azure-Function Quellpaket bauen",
+  "status": "completed",
+  "conclusion": "success",
+  "proves_deployment": false
+}

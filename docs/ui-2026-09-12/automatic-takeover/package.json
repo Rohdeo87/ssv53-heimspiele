@@ -1,0 +1,27 @@
+{
+  "source_commit": "0d98dbccd54b0e2ebda8211b182b6f7a26564640",
+  "base_package_sha256": "c5bb19a88021b0276166038725ca95e24368df3d612e9ca6e6ba833ac9519d79",
+  "package_sha256": "4a0fd69a343429be1f60f7f82cb484d828f508b721d64ad94c81ee19f1fdd266",
+  "manifest_sha256": "d4577a8a110f2e05fae6b01e9fdfa27190be3ece4daff47a9cda9dddff122bc4",
+  "package_entries": 73,
+  "changed_files": [
+    "mower/automatic_takeover.py",
+    "mower/full_failsafe.py",
+    "mower/state.py",
+    "package-manifest.json"
+  ],
+  "changed_source_hashes": {
+    "mower/automatic_takeover.py": "6d1478b6074ad5af64420ab91b5c08759612f75518780843f845269fbc5dc7b7",
+    "mower/full_failsafe.py": "54e6d5096cd1a04ca1aced1210a2b9838d2f48f9a25893129322d5062d071520",
+    "mower/state.py": "dc02b846eb822ddc808f77ad4a00c25ed6c94547d88dfd2b566f51e00e2ddd41"
+  },
+  "unchanged_source_content_verified_against_commit": true,
+  "unchanged_package_bytes_preserved": true,
+  "offline_import": {
+    "functions": 16,
+    "manifest_files_verified": true,
+    "network_allowed": false
+  },
+  "deployed": false,
+  "device_commands_sent": false
+}

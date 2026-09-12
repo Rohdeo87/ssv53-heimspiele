@@ -1,0 +1,1680 @@
+{
+  "retrieved_at_utc": "2026-09-12T14:36:33.798401+00:00",
+  "read_only": true,
+  "query": "traces | where timestamp > ago(20m) and message startswith \"SSV53_CONTROL_CYCLE \" | extend p=parse_json(substring(message,20)) | project timestamp,p | order by timestamp desc | take 20",
+  "rows": [
+    {
+      "at": "2026-09-12T14:36:03.5688552Z",
+      "decision": "CONTINUOUS_MOWING_ACTIVE",
+      "command_sent": false,
+      "manifest": "d4577a8a110f2e05fae6b01e9fdfa27190be3ece4daff47a9cda9dddff122bc4",
+      "mower": {
+        "state": "IN_OPERATION",
+        "activity": "MOWING",
+        "mode": "MAIN_AREA",
+        "connected": true,
+        "error_code": 0,
+        "status_timestamp_ms": 1789223735425
+      },
+      "takeover": {
+        "adopted": false,
+        "eligible": false
+      },
+      "manual_session": {
+        "enabled": true,
+        "epoch": 2,
+        "kind": "START",
+        "permission_code": "MANUAL_SESSION_INACTIVE",
+        "session_id": "71da4492-c834-422d-97ea-bd70e926f68c",
+        "status": "ENDED"
+      },
+      "outage_guard": {
+        "command_deadline_utc": "2026-09-13T01:50:00.0000000Z",
+        "device_deadline_installed_by_automation": false,
+        "existing_command_end_utc": null,
+        "failsafe_refresh_required": false,
+        "irrigation_return_deadline_utc": "2026-09-13T01:50:00.0000000Z",
+        "planner_return_deadline_utc": "2026-09-13T01:50:00.0000000Z",
+        "planner_window_end_utc": "2026-09-13T02:00:00.0000000Z"
+      },
+      "automation": {
+        "continuous_mowing_owned": true,
+        "continuous_mowing_observed_takeover": true,
+        "continuous_mowing_takeover_deadline_utc": "2026-09-13T01:50:00.0000000Z",
+        "continuous_mowing_takeover_hold_utc": null,
+        "continuous_mowing_window_end_utc": null,
+        "parked_by_automation": false,
+        "automation_restart_allowed": true,
+        "irrigation_phase": null,
+        "operator_request_status": "COMPLETED"
+      },
+      "water": {
+        "active_relay_ids": [],
+        "active_zone_count": 0,
+        "age_seconds": 0,
+        "available": true,
+        "clear_now": true,
+        "expected_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "fresh": true,
+        "imminent_relay_ids": [],
+        "imminent_zone_count": 0,
+        "observed_at_utc": "2026-09-12T14:36:01.0000000Z",
+        "observed_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "reason": "Hydrawise meldet alle ausgewählten Zonen aktuell frei.",
+        "relay_set_valid": true,
+        "selected_zone_count": 7
+      },
+      "drying": {
+        "allowed": true,
+        "clear_since_utc": "2026-09-12T05:32:59.9976840Z",
+        "confirmation_observed_until_utc": "2026-09-12T14:36:01.0000000Z",
+        "confirmed_for_seconds": 32580,
+        "dry_until_utc": "2026-09-11T07:40:00.0023880Z",
+        "drying_since_utc": "2026-09-11T05:10:00.0023880Z",
+        "persistent_state_available": true,
+        "physical_clear_now": true,
+        "reason": "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt.",
+        "release_at_utc": "2026-09-12T05:34:59.9976840Z",
+        "required_clear_minutes": 150,
+        "telemetry_confirmed": true,
+        "telemetry_required_minutes": 2
+      }
+    },
+    {
+      "at": "2026-09-12T14:35:03.1224006Z",
+      "decision": "AUTOMATIC_MOWING_TAKEOVER",
+      "command_sent": false,
+      "manifest": "d4577a8a110f2e05fae6b01e9fdfa27190be3ece4daff47a9cda9dddff122bc4",
+      "mower": {
+        "state": "IN_OPERATION",
+        "activity": "MOWING",
+        "mode": "MAIN_AREA",
+        "connected": true,
+        "error_code": 0,
+        "status_timestamp_ms": 1789223675372
+      },
+      "takeover": {
+        "adopted": true,
+        "device_command_sent": false,
+        "eligible": true,
+        "planned_return_utc": "2026-09-13T01:50:00.0000000Z"
+      },
+      "manual_session": {
+        "enabled": true,
+        "epoch": 2,
+        "kind": "START",
+        "permission_code": "MANUAL_SESSION_INACTIVE",
+        "session_id": "71da4492-c834-422d-97ea-bd70e926f68c",
+        "status": "ENDED"
+      },
+      "outage_guard": {
+        "command_deadline_utc": "2026-09-13T01:50:00.0000000Z",
+        "device_deadline_installed_by_automation": false,
+        "existing_command_end_utc": null,
+        "failsafe_refresh_required": false,
+        "irrigation_return_deadline_utc": "2026-09-13T01:50:00.0000000Z",
+        "planner_return_deadline_utc": "2026-09-13T01:50:00.0000000Z",
+        "planner_window_end_utc": "2026-09-13T02:00:00.0000000Z"
+      },
+      "automation": {
+        "continuous_mowing_owned": true,
+        "continuous_mowing_observed_takeover": true,
+        "continuous_mowing_takeover_deadline_utc": "2026-09-13T01:50:00.0000000Z",
+        "continuous_mowing_takeover_hold_utc": null,
+        "continuous_mowing_window_end_utc": null,
+        "parked_by_automation": false,
+        "automation_restart_allowed": true,
+        "irrigation_phase": null,
+        "operator_request_status": "COMPLETED"
+      },
+      "water": {
+        "active_relay_ids": [],
+        "active_zone_count": 0,
+        "age_seconds": 0,
+        "available": true,
+        "clear_now": true,
+        "expected_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "fresh": true,
+        "imminent_relay_ids": [],
+        "imminent_zone_count": 0,
+        "observed_at_utc": "2026-09-12T14:35:01.0000000Z",
+        "observed_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "reason": "Hydrawise meldet alle ausgewählten Zonen aktuell frei.",
+        "relay_set_valid": true,
+        "selected_zone_count": 7
+      },
+      "drying": {
+        "allowed": true,
+        "clear_since_utc": "2026-09-12T05:32:59.9976840Z",
+        "confirmation_observed_until_utc": "2026-09-12T14:35:01.0000000Z",
+        "confirmed_for_seconds": 32520,
+        "dry_until_utc": "2026-09-11T07:40:00.0023880Z",
+        "drying_since_utc": "2026-09-11T05:10:00.0023880Z",
+        "persistent_state_available": true,
+        "physical_clear_now": true,
+        "reason": "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt.",
+        "release_at_utc": "2026-09-12T05:34:59.9976840Z",
+        "required_clear_minutes": 150,
+        "telemetry_confirmed": true,
+        "telemetry_required_minutes": 2
+      }
+    },
+    {
+      "at": "2026-09-12T14:34:03.6311631Z",
+      "decision": "MANUAL_OR_ERROR_HOLD",
+      "command_sent": false,
+      "manifest": "d4577a8a110f2e05fae6b01e9fdfa27190be3ece4daff47a9cda9dddff122bc4",
+      "mower": {
+        "state": "IN_OPERATION",
+        "activity": "MOWING",
+        "mode": "MAIN_AREA",
+        "connected": true,
+        "error_code": 0,
+        "status_timestamp_ms": 1789223630211
+      },
+      "takeover": {
+        "adopted": false,
+        "eligible": false
+      },
+      "manual_session": {
+        "enabled": true,
+        "epoch": 2,
+        "kind": "START",
+        "permission_code": "MANUAL_SESSION_INACTIVE",
+        "session_id": "71da4492-c834-422d-97ea-bd70e926f68c",
+        "status": "ENDED"
+      },
+      "outage_guard": null,
+      "automation": {
+        "continuous_mowing_owned": false,
+        "continuous_mowing_observed_takeover": false,
+        "continuous_mowing_takeover_deadline_utc": null,
+        "continuous_mowing_takeover_hold_utc": null,
+        "continuous_mowing_window_end_utc": null,
+        "parked_by_automation": true,
+        "automation_restart_allowed": true,
+        "irrigation_phase": null,
+        "operator_request_status": "COMPLETED"
+      },
+      "water": {
+        "active_relay_ids": [],
+        "active_zone_count": 0,
+        "age_seconds": 0,
+        "available": true,
+        "clear_now": true,
+        "expected_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "fresh": true,
+        "imminent_relay_ids": [],
+        "imminent_zone_count": 0,
+        "observed_at_utc": "2026-09-12T14:34:01.0000000Z",
+        "observed_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "reason": "Hydrawise meldet alle ausgewählten Zonen aktuell frei.",
+        "relay_set_valid": true,
+        "selected_zone_count": 7
+      },
+      "drying": {
+        "allowed": true,
+        "clear_since_utc": "2026-09-12T05:32:59.9976840Z",
+        "confirmation_observed_until_utc": "2026-09-12T14:34:01.0000000Z",
+        "confirmed_for_seconds": 32460,
+        "dry_until_utc": "2026-09-11T07:40:00.0023880Z",
+        "drying_since_utc": "2026-09-11T05:10:00.0023880Z",
+        "persistent_state_available": true,
+        "physical_clear_now": true,
+        "reason": "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt.",
+        "release_at_utc": "2026-09-12T05:34:59.9976840Z",
+        "required_clear_minutes": 150,
+        "telemetry_confirmed": true,
+        "telemetry_required_minutes": 2
+      }
+    },
+    {
+      "at": "2026-09-12T14:33:04.2447129Z",
+      "decision": "MANUAL_OR_ERROR_HOLD",
+      "command_sent": false,
+      "manifest": "d4577a8a110f2e05fae6b01e9fdfa27190be3ece4daff47a9cda9dddff122bc4",
+      "mower": {
+        "state": "IN_OPERATION",
+        "activity": "MOWING",
+        "mode": "MAIN_AREA",
+        "connected": true,
+        "error_code": 0,
+        "status_timestamp_ms": 1789223555422
+      },
+      "takeover": {
+        "adopted": false,
+        "eligible": false
+      },
+      "manual_session": {
+        "enabled": true,
+        "epoch": 2,
+        "kind": "START",
+        "permission_code": "MANUAL_SESSION_INACTIVE",
+        "session_id": "71da4492-c834-422d-97ea-bd70e926f68c",
+        "status": "ENDED"
+      },
+      "outage_guard": null,
+      "automation": {
+        "continuous_mowing_owned": false,
+        "continuous_mowing_observed_takeover": false,
+        "continuous_mowing_takeover_deadline_utc": null,
+        "continuous_mowing_takeover_hold_utc": null,
+        "continuous_mowing_window_end_utc": null,
+        "parked_by_automation": true,
+        "automation_restart_allowed": true,
+        "irrigation_phase": null,
+        "operator_request_status": "COMPLETED"
+      },
+      "water": {
+        "active_relay_ids": [],
+        "active_zone_count": 0,
+        "age_seconds": 0,
+        "available": true,
+        "clear_now": true,
+        "expected_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "fresh": true,
+        "imminent_relay_ids": [],
+        "imminent_zone_count": 0,
+        "observed_at_utc": "2026-09-12T14:33:01.0000000Z",
+        "observed_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "reason": "Hydrawise meldet alle ausgewählten Zonen aktuell frei.",
+        "relay_set_valid": true,
+        "selected_zone_count": 7
+      },
+      "drying": {
+        "allowed": true,
+        "clear_since_utc": "2026-09-12T05:32:59.9976840Z",
+        "confirmation_observed_until_utc": "2026-09-12T14:33:01.0000000Z",
+        "confirmed_for_seconds": 32400,
+        "dry_until_utc": "2026-09-11T07:40:00.0023880Z",
+        "drying_since_utc": "2026-09-11T05:10:00.0023880Z",
+        "persistent_state_available": true,
+        "physical_clear_now": true,
+        "reason": "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt.",
+        "release_at_utc": "2026-09-12T05:34:59.9976840Z",
+        "required_clear_minutes": 150,
+        "telemetry_confirmed": true,
+        "telemetry_required_minutes": 2
+      }
+    },
+    {
+      "at": "2026-09-12T14:32:05.8302026Z",
+      "decision": "MANUAL_OR_ERROR_HOLD",
+      "command_sent": false,
+      "manifest": "d4577a8a110f2e05fae6b01e9fdfa27190be3ece4daff47a9cda9dddff122bc4",
+      "mower": {
+        "state": "IN_OPERATION",
+        "activity": "MOWING",
+        "mode": "MAIN_AREA",
+        "connected": true,
+        "error_code": 0,
+        "status_timestamp_ms": 1789223495408
+      },
+      "takeover": {
+        "adopted": false,
+        "eligible": false
+      },
+      "manual_session": {
+        "enabled": true,
+        "epoch": 2,
+        "kind": "START",
+        "permission_code": "MANUAL_SESSION_INACTIVE",
+        "session_id": "71da4492-c834-422d-97ea-bd70e926f68c",
+        "status": "ENDED"
+      },
+      "outage_guard": null,
+      "automation": {
+        "continuous_mowing_owned": false,
+        "continuous_mowing_observed_takeover": false,
+        "continuous_mowing_takeover_deadline_utc": null,
+        "continuous_mowing_takeover_hold_utc": null,
+        "continuous_mowing_window_end_utc": null,
+        "parked_by_automation": true,
+        "automation_restart_allowed": true,
+        "irrigation_phase": null,
+        "operator_request_status": "COMPLETED"
+      },
+      "water": {
+        "active_relay_ids": [],
+        "active_zone_count": 0,
+        "age_seconds": -1,
+        "available": true,
+        "clear_now": true,
+        "expected_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "fresh": true,
+        "imminent_relay_ids": [],
+        "imminent_zone_count": 0,
+        "observed_at_utc": "2026-09-12T14:32:02.0000000Z",
+        "observed_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "reason": "Hydrawise meldet alle ausgewählten Zonen aktuell frei.",
+        "relay_set_valid": true,
+        "selected_zone_count": 7
+      },
+      "drying": {
+        "allowed": true,
+        "clear_since_utc": "2026-09-12T05:32:59.9976840Z",
+        "confirmation_observed_until_utc": "2026-09-12T14:32:02.0000000Z",
+        "confirmed_for_seconds": 32340,
+        "dry_until_utc": "2026-09-11T07:40:00.0023880Z",
+        "drying_since_utc": "2026-09-11T05:10:00.0023880Z",
+        "persistent_state_available": true,
+        "physical_clear_now": true,
+        "reason": "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt.",
+        "release_at_utc": "2026-09-12T05:34:59.9976840Z",
+        "required_clear_minutes": 150,
+        "telemetry_confirmed": true,
+        "telemetry_required_minutes": 2
+      }
+    },
+    {
+      "at": "2026-09-12T14:31:03.8380469Z",
+      "decision": "MANUAL_OR_ERROR_HOLD",
+      "command_sent": false,
+      "manifest": "88e418f5c967991d6f842ad732e26ab223ecfd6be24709140816e5cd77d26264",
+      "mower": {
+        "state": "IN_OPERATION",
+        "activity": "MOWING",
+        "mode": "MAIN_AREA",
+        "connected": true,
+        "error_code": 0,
+        "status_timestamp_ms": 1789223457418
+      },
+      "takeover": null,
+      "manual_session": {
+        "enabled": true,
+        "epoch": 2,
+        "kind": "START",
+        "permission_code": "MANUAL_SESSION_INACTIVE",
+        "session_id": "71da4492-c834-422d-97ea-bd70e926f68c",
+        "status": "ENDED"
+      },
+      "outage_guard": null,
+      "automation": {
+        "continuous_mowing_owned": false,
+        "continuous_mowing_observed_takeover": null,
+        "continuous_mowing_takeover_deadline_utc": null,
+        "continuous_mowing_takeover_hold_utc": null,
+        "continuous_mowing_window_end_utc": null,
+        "parked_by_automation": true,
+        "automation_restart_allowed": true,
+        "irrigation_phase": null,
+        "operator_request_status": "COMPLETED"
+      },
+      "water": {
+        "active_relay_ids": [],
+        "active_zone_count": 0,
+        "age_seconds": 0,
+        "available": true,
+        "clear_now": true,
+        "expected_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "fresh": true,
+        "imminent_relay_ids": [],
+        "imminent_zone_count": 0,
+        "observed_at_utc": "2026-09-12T14:31:00.0000000Z",
+        "observed_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "reason": "Hydrawise meldet alle ausgewählten Zonen aktuell frei.",
+        "relay_set_valid": true,
+        "selected_zone_count": 7
+      },
+      "drying": {
+        "allowed": true,
+        "clear_since_utc": "2026-09-12T05:32:59.9976840Z",
+        "confirmation_observed_until_utc": "2026-09-12T14:31:00.0000000Z",
+        "confirmed_for_seconds": 32280,
+        "dry_until_utc": "2026-09-11T07:40:00.0023880Z",
+        "drying_since_utc": "2026-09-11T05:10:00.0023880Z",
+        "persistent_state_available": true,
+        "physical_clear_now": true,
+        "reason": "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt.",
+        "release_at_utc": "2026-09-12T05:34:59.9976840Z",
+        "required_clear_minutes": 150,
+        "telemetry_confirmed": true,
+        "telemetry_required_minutes": 2
+      }
+    },
+    {
+      "at": "2026-09-12T14:30:02.8123006Z",
+      "decision": "MANUAL_OR_ERROR_HOLD",
+      "command_sent": false,
+      "manifest": "88e418f5c967991d6f842ad732e26ab223ecfd6be24709140816e5cd77d26264",
+      "mower": {
+        "state": "IN_OPERATION",
+        "activity": "MOWING",
+        "mode": "MAIN_AREA",
+        "connected": true,
+        "error_code": 0,
+        "status_timestamp_ms": 1789223375409
+      },
+      "takeover": null,
+      "manual_session": {
+        "enabled": true,
+        "epoch": 2,
+        "kind": "START",
+        "permission_code": "MANUAL_SESSION_INACTIVE",
+        "session_id": "71da4492-c834-422d-97ea-bd70e926f68c",
+        "status": "ENDED"
+      },
+      "outage_guard": null,
+      "automation": {
+        "continuous_mowing_owned": false,
+        "continuous_mowing_observed_takeover": null,
+        "continuous_mowing_takeover_deadline_utc": null,
+        "continuous_mowing_takeover_hold_utc": null,
+        "continuous_mowing_window_end_utc": null,
+        "parked_by_automation": true,
+        "automation_restart_allowed": true,
+        "irrigation_phase": null,
+        "operator_request_status": "COMPLETED"
+      },
+      "water": {
+        "active_relay_ids": [],
+        "active_zone_count": 0,
+        "age_seconds": 0,
+        "available": true,
+        "clear_now": true,
+        "expected_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "fresh": true,
+        "imminent_relay_ids": [],
+        "imminent_zone_count": 0,
+        "observed_at_utc": "2026-09-12T14:30:01.0000000Z",
+        "observed_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "reason": "Hydrawise meldet alle ausgewählten Zonen aktuell frei.",
+        "relay_set_valid": true,
+        "selected_zone_count": 7
+      },
+      "drying": {
+        "allowed": true,
+        "clear_since_utc": "2026-09-12T05:32:59.9976840Z",
+        "confirmation_observed_until_utc": "2026-09-12T14:30:01.0000000Z",
+        "confirmed_for_seconds": 32220,
+        "dry_until_utc": "2026-09-11T07:40:00.0023880Z",
+        "drying_since_utc": "2026-09-11T05:10:00.0023880Z",
+        "persistent_state_available": true,
+        "physical_clear_now": true,
+        "reason": "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt.",
+        "release_at_utc": "2026-09-12T05:34:59.9976840Z",
+        "required_clear_minutes": 150,
+        "telemetry_confirmed": true,
+        "telemetry_required_minutes": 2
+      }
+    },
+    {
+      "at": "2026-09-12T14:29:02.311896Z",
+      "decision": "MANUAL_OR_ERROR_HOLD",
+      "command_sent": false,
+      "manifest": "88e418f5c967991d6f842ad732e26ab223ecfd6be24709140816e5cd77d26264",
+      "mower": {
+        "state": "IN_OPERATION",
+        "activity": "MOWING",
+        "mode": "MAIN_AREA",
+        "connected": true,
+        "error_code": 0,
+        "status_timestamp_ms": 1789223315416
+      },
+      "takeover": null,
+      "manual_session": {
+        "enabled": true,
+        "epoch": 2,
+        "kind": "START",
+        "permission_code": "MANUAL_SESSION_INACTIVE",
+        "session_id": "71da4492-c834-422d-97ea-bd70e926f68c",
+        "status": "ENDED"
+      },
+      "outage_guard": null,
+      "automation": {
+        "continuous_mowing_owned": false,
+        "continuous_mowing_observed_takeover": null,
+        "continuous_mowing_takeover_deadline_utc": null,
+        "continuous_mowing_takeover_hold_utc": null,
+        "continuous_mowing_window_end_utc": null,
+        "parked_by_automation": true,
+        "automation_restart_allowed": true,
+        "irrigation_phase": null,
+        "operator_request_status": "COMPLETED"
+      },
+      "water": {
+        "active_relay_ids": [],
+        "active_zone_count": 0,
+        "age_seconds": 0,
+        "available": true,
+        "clear_now": true,
+        "expected_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "fresh": true,
+        "imminent_relay_ids": [],
+        "imminent_zone_count": 0,
+        "observed_at_utc": "2026-09-12T14:29:00.0000000Z",
+        "observed_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "reason": "Hydrawise meldet alle ausgewählten Zonen aktuell frei.",
+        "relay_set_valid": true,
+        "selected_zone_count": 7
+      },
+      "drying": {
+        "allowed": true,
+        "clear_since_utc": "2026-09-12T05:32:59.9976840Z",
+        "confirmation_observed_until_utc": "2026-09-12T14:29:00.0000000Z",
+        "confirmed_for_seconds": 32160,
+        "dry_until_utc": "2026-09-11T07:40:00.0023880Z",
+        "drying_since_utc": "2026-09-11T05:10:00.0023880Z",
+        "persistent_state_available": true,
+        "physical_clear_now": true,
+        "reason": "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt.",
+        "release_at_utc": "2026-09-12T05:34:59.9976840Z",
+        "required_clear_minutes": 150,
+        "telemetry_confirmed": true,
+        "telemetry_required_minutes": 2
+      }
+    },
+    {
+      "at": "2026-09-12T14:28:02.4266686Z",
+      "decision": "MANUAL_OR_ERROR_HOLD",
+      "command_sent": false,
+      "manifest": "88e418f5c967991d6f842ad732e26ab223ecfd6be24709140816e5cd77d26264",
+      "mower": {
+        "state": "IN_OPERATION",
+        "activity": "MOWING",
+        "mode": "MAIN_AREA",
+        "connected": true,
+        "error_code": 0,
+        "status_timestamp_ms": 1789223255398
+      },
+      "takeover": null,
+      "manual_session": {
+        "enabled": true,
+        "epoch": 2,
+        "kind": "START",
+        "permission_code": "MANUAL_SESSION_INACTIVE",
+        "session_id": "71da4492-c834-422d-97ea-bd70e926f68c",
+        "status": "ENDED"
+      },
+      "outage_guard": null,
+      "automation": {
+        "continuous_mowing_owned": false,
+        "continuous_mowing_observed_takeover": null,
+        "continuous_mowing_takeover_deadline_utc": null,
+        "continuous_mowing_takeover_hold_utc": null,
+        "continuous_mowing_window_end_utc": null,
+        "parked_by_automation": true,
+        "automation_restart_allowed": true,
+        "irrigation_phase": null,
+        "operator_request_status": "COMPLETED"
+      },
+      "water": {
+        "active_relay_ids": [],
+        "active_zone_count": 0,
+        "age_seconds": 0,
+        "available": true,
+        "clear_now": true,
+        "expected_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "fresh": true,
+        "imminent_relay_ids": [],
+        "imminent_zone_count": 0,
+        "observed_at_utc": "2026-09-12T14:28:00.0000000Z",
+        "observed_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "reason": "Hydrawise meldet alle ausgewählten Zonen aktuell frei.",
+        "relay_set_valid": true,
+        "selected_zone_count": 7
+      },
+      "drying": {
+        "allowed": true,
+        "clear_since_utc": "2026-09-12T05:32:59.9976840Z",
+        "confirmation_observed_until_utc": "2026-09-12T14:28:00.0000000Z",
+        "confirmed_for_seconds": 32100,
+        "dry_until_utc": "2026-09-11T07:40:00.0023880Z",
+        "drying_since_utc": "2026-09-11T05:10:00.0023880Z",
+        "persistent_state_available": true,
+        "physical_clear_now": true,
+        "reason": "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt.",
+        "release_at_utc": "2026-09-12T05:34:59.9976840Z",
+        "required_clear_minutes": 150,
+        "telemetry_confirmed": true,
+        "telemetry_required_minutes": 2
+      }
+    },
+    {
+      "at": "2026-09-12T14:27:02.515132Z",
+      "decision": "MANUAL_OR_ERROR_HOLD",
+      "command_sent": false,
+      "manifest": "88e418f5c967991d6f842ad732e26ab223ecfd6be24709140816e5cd77d26264",
+      "mower": {
+        "state": "IN_OPERATION",
+        "activity": "MOWING",
+        "mode": "MAIN_AREA",
+        "connected": true,
+        "error_code": 0,
+        "status_timestamp_ms": 1789223195409
+      },
+      "takeover": null,
+      "manual_session": {
+        "enabled": true,
+        "epoch": 2,
+        "kind": "START",
+        "permission_code": "MANUAL_SESSION_INACTIVE",
+        "session_id": "71da4492-c834-422d-97ea-bd70e926f68c",
+        "status": "ENDED"
+      },
+      "outage_guard": null,
+      "automation": {
+        "continuous_mowing_owned": false,
+        "continuous_mowing_observed_takeover": null,
+        "continuous_mowing_takeover_deadline_utc": null,
+        "continuous_mowing_takeover_hold_utc": null,
+        "continuous_mowing_window_end_utc": null,
+        "parked_by_automation": true,
+        "automation_restart_allowed": true,
+        "irrigation_phase": null,
+        "operator_request_status": "COMPLETED"
+      },
+      "water": {
+        "active_relay_ids": [],
+        "active_zone_count": 0,
+        "age_seconds": 0,
+        "available": true,
+        "clear_now": true,
+        "expected_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "fresh": true,
+        "imminent_relay_ids": [],
+        "imminent_zone_count": 0,
+        "observed_at_utc": "2026-09-12T14:27:01.0000000Z",
+        "observed_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "reason": "Hydrawise meldet alle ausgewählten Zonen aktuell frei.",
+        "relay_set_valid": true,
+        "selected_zone_count": 7
+      },
+      "drying": {
+        "allowed": true,
+        "clear_since_utc": "2026-09-12T05:32:59.9976840Z",
+        "confirmation_observed_until_utc": "2026-09-12T14:27:01.0000000Z",
+        "confirmed_for_seconds": 32040,
+        "dry_until_utc": "2026-09-11T07:40:00.0023880Z",
+        "drying_since_utc": "2026-09-11T05:10:00.0023880Z",
+        "persistent_state_available": true,
+        "physical_clear_now": true,
+        "reason": "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt.",
+        "release_at_utc": "2026-09-12T05:34:59.9976840Z",
+        "required_clear_minutes": 150,
+        "telemetry_confirmed": true,
+        "telemetry_required_minutes": 2
+      }
+    },
+    {
+      "at": "2026-09-12T14:26:02.3156717Z",
+      "decision": "MANUAL_OR_ERROR_HOLD",
+      "command_sent": false,
+      "manifest": "88e418f5c967991d6f842ad732e26ab223ecfd6be24709140816e5cd77d26264",
+      "mower": {
+        "state": "IN_OPERATION",
+        "activity": "MOWING",
+        "mode": "MAIN_AREA",
+        "connected": true,
+        "error_code": 0,
+        "status_timestamp_ms": 1789223135409
+      },
+      "takeover": null,
+      "manual_session": {
+        "enabled": true,
+        "epoch": 2,
+        "kind": "START",
+        "permission_code": "MANUAL_SESSION_INACTIVE",
+        "session_id": "71da4492-c834-422d-97ea-bd70e926f68c",
+        "status": "ENDED"
+      },
+      "outage_guard": null,
+      "automation": {
+        "continuous_mowing_owned": false,
+        "continuous_mowing_observed_takeover": null,
+        "continuous_mowing_takeover_deadline_utc": null,
+        "continuous_mowing_takeover_hold_utc": null,
+        "continuous_mowing_window_end_utc": null,
+        "parked_by_automation": true,
+        "automation_restart_allowed": true,
+        "irrigation_phase": null,
+        "operator_request_status": "COMPLETED"
+      },
+      "water": {
+        "active_relay_ids": [],
+        "active_zone_count": 0,
+        "age_seconds": 0,
+        "available": true,
+        "clear_now": true,
+        "expected_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "fresh": true,
+        "imminent_relay_ids": [],
+        "imminent_zone_count": 0,
+        "observed_at_utc": "2026-09-12T14:26:00.0000000Z",
+        "observed_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "reason": "Hydrawise meldet alle ausgewählten Zonen aktuell frei.",
+        "relay_set_valid": true,
+        "selected_zone_count": 7
+      },
+      "drying": {
+        "allowed": true,
+        "clear_since_utc": "2026-09-12T05:32:59.9976840Z",
+        "confirmation_observed_until_utc": "2026-09-12T14:26:00.0000000Z",
+        "confirmed_for_seconds": 31980,
+        "dry_until_utc": "2026-09-11T07:40:00.0023880Z",
+        "drying_since_utc": "2026-09-11T05:10:00.0023880Z",
+        "persistent_state_available": true,
+        "physical_clear_now": true,
+        "reason": "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt.",
+        "release_at_utc": "2026-09-12T05:34:59.9976840Z",
+        "required_clear_minutes": 150,
+        "telemetry_confirmed": true,
+        "telemetry_required_minutes": 2
+      }
+    },
+    {
+      "at": "2026-09-12T14:25:02.5258729Z",
+      "decision": "MANUAL_OR_ERROR_HOLD",
+      "command_sent": false,
+      "manifest": "88e418f5c967991d6f842ad732e26ab223ecfd6be24709140816e5cd77d26264",
+      "mower": {
+        "state": "IN_OPERATION",
+        "activity": "MOWING",
+        "mode": "MAIN_AREA",
+        "connected": true,
+        "error_code": 0,
+        "status_timestamp_ms": 1789223075411
+      },
+      "takeover": null,
+      "manual_session": {
+        "enabled": true,
+        "epoch": 2,
+        "kind": "START",
+        "permission_code": "MANUAL_SESSION_INACTIVE",
+        "session_id": "71da4492-c834-422d-97ea-bd70e926f68c",
+        "status": "ENDED"
+      },
+      "outage_guard": null,
+      "automation": {
+        "continuous_mowing_owned": false,
+        "continuous_mowing_observed_takeover": null,
+        "continuous_mowing_takeover_deadline_utc": null,
+        "continuous_mowing_takeover_hold_utc": null,
+        "continuous_mowing_window_end_utc": null,
+        "parked_by_automation": true,
+        "automation_restart_allowed": true,
+        "irrigation_phase": null,
+        "operator_request_status": "COMPLETED"
+      },
+      "water": {
+        "active_relay_ids": [],
+        "active_zone_count": 0,
+        "age_seconds": 0,
+        "available": true,
+        "clear_now": true,
+        "expected_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "fresh": true,
+        "imminent_relay_ids": [],
+        "imminent_zone_count": 0,
+        "observed_at_utc": "2026-09-12T14:25:00.0000000Z",
+        "observed_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "reason": "Hydrawise meldet alle ausgewählten Zonen aktuell frei.",
+        "relay_set_valid": true,
+        "selected_zone_count": 7
+      },
+      "drying": {
+        "allowed": true,
+        "clear_since_utc": "2026-09-12T05:32:59.9976840Z",
+        "confirmation_observed_until_utc": "2026-09-12T14:25:00.0000000Z",
+        "confirmed_for_seconds": 31920,
+        "dry_until_utc": "2026-09-11T07:40:00.0023880Z",
+        "drying_since_utc": "2026-09-11T05:10:00.0023880Z",
+        "persistent_state_available": true,
+        "physical_clear_now": true,
+        "reason": "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt.",
+        "release_at_utc": "2026-09-12T05:34:59.9976840Z",
+        "required_clear_minutes": 150,
+        "telemetry_confirmed": true,
+        "telemetry_required_minutes": 2
+      }
+    },
+    {
+      "at": "2026-09-12T14:24:02.715158Z",
+      "decision": "MANUAL_OR_ERROR_HOLD",
+      "command_sent": false,
+      "manifest": "88e418f5c967991d6f842ad732e26ab223ecfd6be24709140816e5cd77d26264",
+      "mower": {
+        "state": "IN_OPERATION",
+        "activity": "MOWING",
+        "mode": "MAIN_AREA",
+        "connected": true,
+        "error_code": 0,
+        "status_timestamp_ms": 1789223015408
+      },
+      "takeover": null,
+      "manual_session": {
+        "enabled": true,
+        "epoch": 2,
+        "kind": "START",
+        "permission_code": "MANUAL_SESSION_INACTIVE",
+        "session_id": "71da4492-c834-422d-97ea-bd70e926f68c",
+        "status": "ENDED"
+      },
+      "outage_guard": null,
+      "automation": {
+        "continuous_mowing_owned": false,
+        "continuous_mowing_observed_takeover": null,
+        "continuous_mowing_takeover_deadline_utc": null,
+        "continuous_mowing_takeover_hold_utc": null,
+        "continuous_mowing_window_end_utc": null,
+        "parked_by_automation": true,
+        "automation_restart_allowed": true,
+        "irrigation_phase": null,
+        "operator_request_status": "COMPLETED"
+      },
+      "water": {
+        "active_relay_ids": [],
+        "active_zone_count": 0,
+        "age_seconds": 0,
+        "available": true,
+        "clear_now": true,
+        "expected_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "fresh": true,
+        "imminent_relay_ids": [],
+        "imminent_zone_count": 0,
+        "observed_at_utc": "2026-09-12T14:24:00.0000000Z",
+        "observed_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "reason": "Hydrawise meldet alle ausgewählten Zonen aktuell frei.",
+        "relay_set_valid": true,
+        "selected_zone_count": 7
+      },
+      "drying": {
+        "allowed": true,
+        "clear_since_utc": "2026-09-12T05:32:59.9976840Z",
+        "confirmation_observed_until_utc": "2026-09-12T14:24:00.0000000Z",
+        "confirmed_for_seconds": 31860,
+        "dry_until_utc": "2026-09-11T07:40:00.0023880Z",
+        "drying_since_utc": "2026-09-11T05:10:00.0023880Z",
+        "persistent_state_available": true,
+        "physical_clear_now": true,
+        "reason": "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt.",
+        "release_at_utc": "2026-09-12T05:34:59.9976840Z",
+        "required_clear_minutes": 150,
+        "telemetry_confirmed": true,
+        "telemetry_required_minutes": 2
+      }
+    },
+    {
+      "at": "2026-09-12T14:23:02.3499585Z",
+      "decision": "MANUAL_OR_ERROR_HOLD",
+      "command_sent": false,
+      "manifest": "88e418f5c967991d6f842ad732e26ab223ecfd6be24709140816e5cd77d26264",
+      "mower": {
+        "state": "IN_OPERATION",
+        "activity": "MOWING",
+        "mode": "MAIN_AREA",
+        "connected": true,
+        "error_code": 0,
+        "status_timestamp_ms": 1789222958069
+      },
+      "takeover": null,
+      "manual_session": {
+        "enabled": true,
+        "epoch": 2,
+        "kind": "START",
+        "permission_code": "MANUAL_SESSION_INACTIVE",
+        "session_id": "71da4492-c834-422d-97ea-bd70e926f68c",
+        "status": "ENDED"
+      },
+      "outage_guard": null,
+      "automation": {
+        "continuous_mowing_owned": false,
+        "continuous_mowing_observed_takeover": null,
+        "continuous_mowing_takeover_deadline_utc": null,
+        "continuous_mowing_takeover_hold_utc": null,
+        "continuous_mowing_window_end_utc": null,
+        "parked_by_automation": true,
+        "automation_restart_allowed": true,
+        "irrigation_phase": null,
+        "operator_request_status": "COMPLETED"
+      },
+      "water": {
+        "active_relay_ids": [],
+        "active_zone_count": 0,
+        "age_seconds": 0,
+        "available": true,
+        "clear_now": true,
+        "expected_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "fresh": true,
+        "imminent_relay_ids": [],
+        "imminent_zone_count": 0,
+        "observed_at_utc": "2026-09-12T14:23:00.0000000Z",
+        "observed_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "reason": "Hydrawise meldet alle ausgewählten Zonen aktuell frei.",
+        "relay_set_valid": true,
+        "selected_zone_count": 7
+      },
+      "drying": {
+        "allowed": true,
+        "clear_since_utc": "2026-09-12T05:32:59.9976840Z",
+        "confirmation_observed_until_utc": "2026-09-12T14:23:00.0000000Z",
+        "confirmed_for_seconds": 31800,
+        "dry_until_utc": "2026-09-11T07:40:00.0023880Z",
+        "drying_since_utc": "2026-09-11T05:10:00.0023880Z",
+        "persistent_state_available": true,
+        "physical_clear_now": true,
+        "reason": "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt.",
+        "release_at_utc": "2026-09-12T05:34:59.9976840Z",
+        "required_clear_minutes": 150,
+        "telemetry_confirmed": true,
+        "telemetry_required_minutes": 2
+      }
+    },
+    {
+      "at": "2026-09-12T14:22:02.3407621Z",
+      "decision": "MANUAL_OR_ERROR_HOLD",
+      "command_sent": false,
+      "manifest": "88e418f5c967991d6f842ad732e26ab223ecfd6be24709140816e5cd77d26264",
+      "mower": {
+        "state": "IN_OPERATION",
+        "activity": "MOWING",
+        "mode": "MAIN_AREA",
+        "connected": true,
+        "error_code": 0,
+        "status_timestamp_ms": 1789222895412
+      },
+      "takeover": null,
+      "manual_session": {
+        "enabled": true,
+        "epoch": 2,
+        "kind": "START",
+        "permission_code": "MANUAL_SESSION_INACTIVE",
+        "session_id": "71da4492-c834-422d-97ea-bd70e926f68c",
+        "status": "ENDED"
+      },
+      "outage_guard": null,
+      "automation": {
+        "continuous_mowing_owned": false,
+        "continuous_mowing_observed_takeover": null,
+        "continuous_mowing_takeover_deadline_utc": null,
+        "continuous_mowing_takeover_hold_utc": null,
+        "continuous_mowing_window_end_utc": null,
+        "parked_by_automation": true,
+        "automation_restart_allowed": true,
+        "irrigation_phase": null,
+        "operator_request_status": "COMPLETED"
+      },
+      "water": {
+        "active_relay_ids": [],
+        "active_zone_count": 0,
+        "age_seconds": 0,
+        "available": true,
+        "clear_now": true,
+        "expected_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "fresh": true,
+        "imminent_relay_ids": [],
+        "imminent_zone_count": 0,
+        "observed_at_utc": "2026-09-12T14:22:00.0000000Z",
+        "observed_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "reason": "Hydrawise meldet alle ausgewählten Zonen aktuell frei.",
+        "relay_set_valid": true,
+        "selected_zone_count": 7
+      },
+      "drying": {
+        "allowed": true,
+        "clear_since_utc": "2026-09-12T05:32:59.9976840Z",
+        "confirmation_observed_until_utc": "2026-09-12T14:22:00.0000000Z",
+        "confirmed_for_seconds": 31740,
+        "dry_until_utc": "2026-09-11T07:40:00.0023880Z",
+        "drying_since_utc": "2026-09-11T05:10:00.0023880Z",
+        "persistent_state_available": true,
+        "physical_clear_now": true,
+        "reason": "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt.",
+        "release_at_utc": "2026-09-12T05:34:59.9976840Z",
+        "required_clear_minutes": 150,
+        "telemetry_confirmed": true,
+        "telemetry_required_minutes": 2
+      }
+    },
+    {
+      "at": "2026-09-12T14:21:02.3467344Z",
+      "decision": "MANUAL_OR_ERROR_HOLD",
+      "command_sent": false,
+      "manifest": "88e418f5c967991d6f842ad732e26ab223ecfd6be24709140816e5cd77d26264",
+      "mower": {
+        "state": "IN_OPERATION",
+        "activity": "MOWING",
+        "mode": "MAIN_AREA",
+        "connected": true,
+        "error_code": 0,
+        "status_timestamp_ms": 1789222835399
+      },
+      "takeover": null,
+      "manual_session": {
+        "enabled": true,
+        "epoch": 2,
+        "kind": "START",
+        "permission_code": "MANUAL_SESSION_INACTIVE",
+        "session_id": "71da4492-c834-422d-97ea-bd70e926f68c",
+        "status": "ENDED"
+      },
+      "outage_guard": null,
+      "automation": {
+        "continuous_mowing_owned": false,
+        "continuous_mowing_observed_takeover": null,
+        "continuous_mowing_takeover_deadline_utc": null,
+        "continuous_mowing_takeover_hold_utc": null,
+        "continuous_mowing_window_end_utc": null,
+        "parked_by_automation": true,
+        "automation_restart_allowed": true,
+        "irrigation_phase": null,
+        "operator_request_status": "COMPLETED"
+      },
+      "water": {
+        "active_relay_ids": [],
+        "active_zone_count": 0,
+        "age_seconds": 0,
+        "available": true,
+        "clear_now": true,
+        "expected_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "fresh": true,
+        "imminent_relay_ids": [],
+        "imminent_zone_count": 0,
+        "observed_at_utc": "2026-09-12T14:21:01.0000000Z",
+        "observed_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "reason": "Hydrawise meldet alle ausgewählten Zonen aktuell frei.",
+        "relay_set_valid": true,
+        "selected_zone_count": 7
+      },
+      "drying": {
+        "allowed": true,
+        "clear_since_utc": "2026-09-12T05:32:59.9976840Z",
+        "confirmation_observed_until_utc": "2026-09-12T14:21:01.0000000Z",
+        "confirmed_for_seconds": 31680,
+        "dry_until_utc": "2026-09-11T07:40:00.0023880Z",
+        "drying_since_utc": "2026-09-11T05:10:00.0023880Z",
+        "persistent_state_available": true,
+        "physical_clear_now": true,
+        "reason": "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt.",
+        "release_at_utc": "2026-09-12T05:34:59.9976840Z",
+        "required_clear_minutes": 150,
+        "telemetry_confirmed": true,
+        "telemetry_required_minutes": 2
+      }
+    },
+    {
+      "at": "2026-09-12T14:20:03.3334763Z",
+      "decision": "MANUAL_OR_ERROR_HOLD",
+      "command_sent": false,
+      "manifest": "88e418f5c967991d6f842ad732e26ab223ecfd6be24709140816e5cd77d26264",
+      "mower": {
+        "state": "IN_OPERATION",
+        "activity": "MOWING",
+        "mode": "MAIN_AREA",
+        "connected": true,
+        "error_code": 0,
+        "status_timestamp_ms": 1789222775408
+      },
+      "takeover": null,
+      "manual_session": {
+        "enabled": true,
+        "epoch": 2,
+        "kind": "START",
+        "permission_code": "MANUAL_SESSION_INACTIVE",
+        "session_id": "71da4492-c834-422d-97ea-bd70e926f68c",
+        "status": "ENDED"
+      },
+      "outage_guard": null,
+      "automation": {
+        "continuous_mowing_owned": false,
+        "continuous_mowing_observed_takeover": null,
+        "continuous_mowing_takeover_deadline_utc": null,
+        "continuous_mowing_takeover_hold_utc": null,
+        "continuous_mowing_window_end_utc": null,
+        "parked_by_automation": true,
+        "automation_restart_allowed": true,
+        "irrigation_phase": null,
+        "operator_request_status": "COMPLETED"
+      },
+      "water": {
+        "active_relay_ids": [],
+        "active_zone_count": 0,
+        "age_seconds": 0,
+        "available": true,
+        "clear_now": true,
+        "expected_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "fresh": true,
+        "imminent_relay_ids": [],
+        "imminent_zone_count": 0,
+        "observed_at_utc": "2026-09-12T14:20:01.0000000Z",
+        "observed_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "reason": "Hydrawise meldet alle ausgewählten Zonen aktuell frei.",
+        "relay_set_valid": true,
+        "selected_zone_count": 7
+      },
+      "drying": {
+        "allowed": true,
+        "clear_since_utc": "2026-09-12T05:32:59.9976840Z",
+        "confirmation_observed_until_utc": "2026-09-12T14:20:01.0000000Z",
+        "confirmed_for_seconds": 31620,
+        "dry_until_utc": "2026-09-11T07:40:00.0023880Z",
+        "drying_since_utc": "2026-09-11T05:10:00.0023880Z",
+        "persistent_state_available": true,
+        "physical_clear_now": true,
+        "reason": "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt.",
+        "release_at_utc": "2026-09-12T05:34:59.9976840Z",
+        "required_clear_minutes": 150,
+        "telemetry_confirmed": true,
+        "telemetry_required_minutes": 2
+      }
+    },
+    {
+      "at": "2026-09-12T14:19:02.4350531Z",
+      "decision": "MANUAL_OR_ERROR_HOLD",
+      "command_sent": false,
+      "manifest": "88e418f5c967991d6f842ad732e26ab223ecfd6be24709140816e5cd77d26264",
+      "mower": {
+        "state": "IN_OPERATION",
+        "activity": "MOWING",
+        "mode": "MAIN_AREA",
+        "connected": true,
+        "error_code": 0,
+        "status_timestamp_ms": 1789222715388
+      },
+      "takeover": null,
+      "manual_session": {
+        "enabled": true,
+        "epoch": 2,
+        "kind": "START",
+        "permission_code": "MANUAL_SESSION_INACTIVE",
+        "session_id": "71da4492-c834-422d-97ea-bd70e926f68c",
+        "status": "ENDED"
+      },
+      "outage_guard": null,
+      "automation": {
+        "continuous_mowing_owned": false,
+        "continuous_mowing_observed_takeover": null,
+        "continuous_mowing_takeover_deadline_utc": null,
+        "continuous_mowing_takeover_hold_utc": null,
+        "continuous_mowing_window_end_utc": null,
+        "parked_by_automation": true,
+        "automation_restart_allowed": true,
+        "irrigation_phase": null,
+        "operator_request_status": "COMPLETED"
+      },
+      "water": {
+        "active_relay_ids": [],
+        "active_zone_count": 0,
+        "age_seconds": 0,
+        "available": true,
+        "clear_now": true,
+        "expected_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "fresh": true,
+        "imminent_relay_ids": [],
+        "imminent_zone_count": 0,
+        "observed_at_utc": "2026-09-12T14:19:01.0000000Z",
+        "observed_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "reason": "Hydrawise meldet alle ausgewählten Zonen aktuell frei.",
+        "relay_set_valid": true,
+        "selected_zone_count": 7
+      },
+      "drying": {
+        "allowed": true,
+        "clear_since_utc": "2026-09-12T05:32:59.9976840Z",
+        "confirmation_observed_until_utc": "2026-09-12T14:19:01.0000000Z",
+        "confirmed_for_seconds": 31560,
+        "dry_until_utc": "2026-09-11T07:40:00.0023880Z",
+        "drying_since_utc": "2026-09-11T05:10:00.0023880Z",
+        "persistent_state_available": true,
+        "physical_clear_now": true,
+        "reason": "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt.",
+        "release_at_utc": "2026-09-12T05:34:59.9976840Z",
+        "required_clear_minutes": 150,
+        "telemetry_confirmed": true,
+        "telemetry_required_minutes": 2
+      }
+    },
+    {
+      "at": "2026-09-12T14:18:02.1453618Z",
+      "decision": "MANUAL_OR_ERROR_HOLD",
+      "command_sent": false,
+      "manifest": "88e418f5c967991d6f842ad732e26ab223ecfd6be24709140816e5cd77d26264",
+      "mower": {
+        "state": "IN_OPERATION",
+        "activity": "MOWING",
+        "mode": "MAIN_AREA",
+        "connected": true,
+        "error_code": 0,
+        "status_timestamp_ms": 1789222655407
+      },
+      "takeover": null,
+      "manual_session": {
+        "enabled": true,
+        "epoch": 2,
+        "kind": "START",
+        "permission_code": "MANUAL_SESSION_INACTIVE",
+        "session_id": "71da4492-c834-422d-97ea-bd70e926f68c",
+        "status": "ENDED"
+      },
+      "outage_guard": null,
+      "automation": {
+        "continuous_mowing_owned": false,
+        "continuous_mowing_observed_takeover": null,
+        "continuous_mowing_takeover_deadline_utc": null,
+        "continuous_mowing_takeover_hold_utc": null,
+        "continuous_mowing_window_end_utc": null,
+        "parked_by_automation": true,
+        "automation_restart_allowed": true,
+        "irrigation_phase": null,
+        "operator_request_status": "COMPLETED"
+      },
+      "water": {
+        "active_relay_ids": [],
+        "active_zone_count": 0,
+        "age_seconds": 0,
+        "available": true,
+        "clear_now": true,
+        "expected_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "fresh": true,
+        "imminent_relay_ids": [],
+        "imminent_zone_count": 0,
+        "observed_at_utc": "2026-09-12T14:18:00.0000000Z",
+        "observed_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "reason": "Hydrawise meldet alle ausgewählten Zonen aktuell frei.",
+        "relay_set_valid": true,
+        "selected_zone_count": 7
+      },
+      "drying": {
+        "allowed": true,
+        "clear_since_utc": "2026-09-12T05:32:59.9976840Z",
+        "confirmation_observed_until_utc": "2026-09-12T14:18:00.0000000Z",
+        "confirmed_for_seconds": 31500,
+        "dry_until_utc": "2026-09-11T07:40:00.0023880Z",
+        "drying_since_utc": "2026-09-11T05:10:00.0023880Z",
+        "persistent_state_available": true,
+        "physical_clear_now": true,
+        "reason": "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt.",
+        "release_at_utc": "2026-09-12T05:34:59.9976840Z",
+        "required_clear_minutes": 150,
+        "telemetry_confirmed": true,
+        "telemetry_required_minutes": 2
+      }
+    },
+    {
+      "at": "2026-09-12T14:17:02.3486241Z",
+      "decision": "MANUAL_OR_ERROR_HOLD",
+      "command_sent": false,
+      "manifest": "88e418f5c967991d6f842ad732e26ab223ecfd6be24709140816e5cd77d26264",
+      "mower": {
+        "state": "IN_OPERATION",
+        "activity": "MOWING",
+        "mode": "MAIN_AREA",
+        "connected": true,
+        "error_code": 0,
+        "status_timestamp_ms": 1789222595371
+      },
+      "takeover": null,
+      "manual_session": {
+        "enabled": true,
+        "epoch": 2,
+        "kind": "START",
+        "permission_code": "MANUAL_SESSION_INACTIVE",
+        "session_id": "71da4492-c834-422d-97ea-bd70e926f68c",
+        "status": "ENDED"
+      },
+      "outage_guard": null,
+      "automation": {
+        "continuous_mowing_owned": false,
+        "continuous_mowing_observed_takeover": null,
+        "continuous_mowing_takeover_deadline_utc": null,
+        "continuous_mowing_takeover_hold_utc": null,
+        "continuous_mowing_window_end_utc": null,
+        "parked_by_automation": true,
+        "automation_restart_allowed": true,
+        "irrigation_phase": null,
+        "operator_request_status": "COMPLETED"
+      },
+      "water": {
+        "active_relay_ids": [],
+        "active_zone_count": 0,
+        "age_seconds": 0,
+        "available": true,
+        "clear_now": true,
+        "expected_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "fresh": true,
+        "imminent_relay_ids": [],
+        "imminent_zone_count": 0,
+        "observed_at_utc": "2026-09-12T14:17:00.0000000Z",
+        "observed_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "reason": "Hydrawise meldet alle ausgewählten Zonen aktuell frei.",
+        "relay_set_valid": true,
+        "selected_zone_count": 7
+      },
+      "drying": {
+        "allowed": true,
+        "clear_since_utc": "2026-09-12T05:32:59.9976840Z",
+        "confirmation_observed_until_utc": "2026-09-12T14:17:00.0000000Z",
+        "confirmed_for_seconds": 31440,
+        "dry_until_utc": "2026-09-11T07:40:00.0023880Z",
+        "drying_since_utc": "2026-09-11T05:10:00.0023880Z",
+        "persistent_state_available": true,
+        "physical_clear_now": true,
+        "reason": "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt.",
+        "release_at_utc": "2026-09-12T05:34:59.9976840Z",
+        "required_clear_minutes": 150,
+        "telemetry_confirmed": true,
+        "telemetry_required_minutes": 2
+      }
+    }
+  ]
+}
