@@ -1,0 +1,27 @@
+{
+  "source_commit": "59f421d5db6c8dbba299a4c0f89c05e3d1fe45f4",
+  "base_package_sha256": "62acc594a48cc4b5ac8edc94ad4c7598207da9ead2f57dbd6e9bc4b65dbd9638",
+  "package_sha256": "8c66deec91852654d748a496507ec97f547ec51afbaaebda277ec7a2fe928eed",
+  "manifest_sha256": "1c673889a654d8c2297510f2741b3ce7074d6e4c972654f7030cf846f3a16786",
+  "package_entries": 75,
+  "changed_files": [
+    "mower/dry_run.py",
+    "mower/husqvarna.py",
+    "package-manifest.json",
+    "platzwart_console.py"
+  ],
+  "changed_source_hashes": {
+    "mower/dry_run.py": "d8045be5b5fcb7c4f5f280ff7cf2d21ac19d10378586fa8acfbf4034169b88d5",
+    "mower/husqvarna.py": "7185106bdbc751d9ade6eabfa282b59a46a7ec5aec079f50ec4095adf7e1901c",
+    "platzwart_console.py": "70887186744da8d900f32707a44980aecf946be8ef0b69ce75b23fe679f01df0"
+  },
+  "unchanged_source_content_verified_against_commit": true,
+  "unchanged_package_bytes_preserved": true,
+  "offline_import": {
+    "functions": 16,
+    "manifest_files_verified": true,
+    "network_allowed": false
+  },
+  "deployed": false,
+  "device_commands_sent": false
+}

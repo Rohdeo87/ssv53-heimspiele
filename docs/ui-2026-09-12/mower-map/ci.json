@@ -1,0 +1,14 @@
+{
+  "workflow_runs": [
+    {
+      "id": 34717250074,
+      "name": "Azure-Function Quellpaket bauen",
+      "status": "completed",
+      "conclusion": "success",
+      "run_number": 140,
+      "jobs_url": "https://api.github.com/repos/Rohdeo87/ssv53-heimspiele/actions/runs/34717250074/jobs",
+      "logs_url": "https://api.github.com/repos/Rohdeo87/ssv53-heimspiele/actions/runs/34717250074/logs",
+      "workflow_id": 325570133
+    }
+  ]
+}
