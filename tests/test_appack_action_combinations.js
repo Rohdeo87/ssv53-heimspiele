@@ -96,9 +96,9 @@ test('528 irrigation combinations: stop whitelist, current zone, data quality an
 
 function mockElements(ids){return Object.fromEntries(ids.map(id=>[id,{disabled:false,hidden:false,classList:{toggle(name,hide){this[name]=hide}},querySelector(){return {textContent:''}}}]))}
 test('Water buttons recover after pending requests and every displayed action has its own capability',()=>{
-  const ids=['irrigation-stop','irrigation-start-all','stop-now','stop-after-zone'],elements=mockElements(ids),zone=mockElements(['zone']).zone,local={inFlight:{}};
+  const ids=['pf-water-start-note','pf-zone-start-note','irrigation-stop','irrigation-start-all','stop-now','stop-after-zone'],elements=mockElements(ids),zone=mockElements(['zone']).zone,local={inFlight:{}};
   const doc={getElementById:id=>elements[id],querySelectorAll:selector=>selector==='.zone-start'?[zone]:[]};
-  const render=new Function('document','state','irrigationActionContext','pfDecorate',sourceOf('pfWaterActions')+';return pfWaterActions')(doc,local,view.irrigationActionContext,()=>{});
+  const render=new Function('document','state','irrigationActionContext','pfWaterStartExplanation','pfDecorate',sourceOf('pfWaterActions')+';return pfWaterActions')(doc,local,view.irrigationActionContext,()=>"",()=>{});
   const s=ready();render(s);assert.equal(elements['irrigation-start-all'].disabled,false);
   local.inFlight.START_IRRIGATION='pending';render(s);assert.equal(elements['irrigation-start-all'].classList.hidden,true);
   delete local.inFlight.START_IRRIGATION;render(s);assert.equal(elements['irrigation-start-all'].classList.hidden,false);

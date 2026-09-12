@@ -855,6 +855,7 @@ SOFTWARE.
       var bladeValue=document.createElement("div");bladeValue.className="pf-blade-value";bladeValue.innerHTML='<span>Seit dem letzten Wechsel</span><strong id="pf-blade-hours">–</strong>';pfPages.blades.appendChild(bladeValue);pfMove("blade-reset",pfPages.blades);
       var husqvarna=document.getElementById("manual-husqvarna").closest("details");husqvarna.open=true;pfPages.husqvarna.appendChild(husqvarna);
       var waterGrid=document.createElement("div");waterGrid.className="pf-grid";pfPages.water.appendChild(waterGrid);pfMove("water-plan-open",waterGrid);pfNavigationButton(waterGrid,"zones","Einzelne Zonen","Grid2x2");pfMove("irrigation-start-all",waterGrid);pfMove("water-stats-open",waterGrid);
+      [waterCard,pfPages.zones].forEach(function(parent,index){var note=document.createElement("p");note.id=index?"pf-zone-start-note":"pf-water-start-note";note.className="muted";note.hidden=true;note.setAttribute("role","status");parent.appendChild(note)});
       var zones=document.getElementById("zones").closest("details");zones.open=true;pfPages.zones.appendChild(zones);pfMove("drying-end-row",waterCard);
       var menu=document.createElement("div");menu.className="pf-categories";pfPages.more.appendChild(menu);pfNavigationButton(menu,"mower","Mähroboter","Bot","Schnitthöhe, Klingen und Bedienung");pfNavigationButton(menu,"water","Bewässerung","Droplets","Zeitplan, Zonen und Laufzeiten");pfNavigationButton(menu,"grounds","Platz & Training","CalendarDays","Belegung und Trainingsplan");pfNavigationButton(menu,"clubhouse","Vereinsheim","Building2","Termine im Vereinsheim");
       var mowerGrid=document.createElement("div");mowerGrid.className="pf-grid";pfPages.mower.appendChild(mowerGrid);pfNavigationButton(mowerGrid,"height","Schnitthöhe","MoveVertical");pfNavigationButton(mowerGrid,"blades","Klingen","Scissors");pfNavigationButton(mowerGrid,"controls","Bedienung","Play");pfMove("stats-open",mowerGrid);pfNavigationButton(mowerGrid,"history","Letzte Aktionen","History");pfNavigationButton(mowerGrid,"husqvarna","Husqvarna","Smartphone");
@@ -958,9 +959,27 @@ SOFTWARE.
     }
     function pfWaterActions(s) {
       var v=irrigationActionContext(s,state);
+      var reason=pfWaterStartExplanation(s,state);["pf-water-start-note","pf-zone-start-note"].forEach(function(id){var note=document.getElementById(id);note.hidden=!reason;note.textContent=reason});
       [["irrigation-stop",v.showStop,"Square",v.stopLabel],["irrigation-start-all",v.showStart,"Play","Alle Zonen starten"],["stop-now",v.showStop,"Square","Direkt beenden"],["stop-after-zone",v.showStopAfterZone,"Droplets","Nach dieser Zone"]].forEach(function(row){var b=document.getElementById(row[0]);b.disabled=!row[1];b.classList.toggle("hidden",!row[1]);pfDecorate(b,row[2],row[3])});
       document.querySelectorAll(".zone-controls").forEach(function(el){el.classList.toggle("hidden",!v.showZoneStart)});
       document.querySelectorAll(".zone-start").forEach(function(b){b.disabled=!v.showZoneStart;b.classList.toggle("hidden",!v.showZoneStart);pfDecorate(b,"Play","Starten")});
+    }
+    function pfWaterStartExplanation(s,local) {
+      var v=irrigationActionContext(s,local),m=s.mower||{},a=s.automation||{},safe=s.irrigation&&s.irrigation.safety||{};
+      if(v.showStart)return "";
+      if(v.showZoneStart)return "Zurzeit können nur einzelne Zonen gestartet werden.";
+      if(m.state==="STOPPED")return "Manueller Start nicht möglich: Der Mäher ist gestoppt. Bitte vor Ort freigeben und sicher parken.";
+      if(m.state==="OFF")return "Manueller Start nicht möglich: Bitte den Mäher einschalten und sicher parken.";
+      if(safe.available===true&&safe.fresh===true&&Number(safe.active_zone_count)>0)return "";
+      if(a.pendingAction||local&&local.inFlight&&Object.keys(local.inFlight).length)return "Bitte warten, bis die aktuelle Anfrage bestätigt ist.";
+      if(m.connected!==true)return "Manueller Start nicht möglich: Die Verbindung zum Mäher fehlt. Bitte am Mäher nachsehen.";
+      if(hasActiveMowerError(m)||["ERROR","FATAL_ERROR","ERROR_AT_POWER_UP"].indexOf(m.state)>=0)return "Manueller Start nicht möglich: Bitte die Störung am Mäher beheben.";
+      if(a.irrigationPhase==="COMPLETE_HOLD")return "Manueller Start noch gesperrt: Der letzte Durchlauf ist noch nicht freigegeben. Bitte später aktualisieren.";
+      if(a.irrigationPhase)return "Ein Bewässerungsablauf ist bereits vorbereitet oder noch aktiv.";
+      if(!mowerTelemetryFresh(s)||safe.available!==true||safe.fresh!==true)return "Für einen manuellen Start fehlt eine aktuelle Rückmeldung. Bitte aktualisieren.";
+      if(Number(safe.imminent_zone_count)>0)return "Die nächste Bewässerung steht bereits an.";
+      if(!deviceActionAllowed(s,"START_IRRIGATION"))return "Der manuelle Start ist zurzeit nicht freigegeben.";
+      return "Ein manueller Start ist noch nicht möglich. Bitte aktualisieren.";
     }
     function pfPlanActions(s) {
       var actions={"plan-skip":"SKIP_NEXT_IRRIGATION","plan-pause-open":"PAUSE_IRRIGATION_UNTIL","plan-custom-open":"CUSTOMIZE_NEXT_IRRIGATION","plan-resume":"RESUME_IRRIGATION_SCHEDULE","plan-pause":"PAUSE_IRRIGATION_UNTIL","plan-save-custom":"CUSTOMIZE_NEXT_IRRIGATION"},busy=Object.keys(actions).some(function(id){var key=actions[id];return operatorActionPending(s,key)||!!(state.inFlight&&state.inFlight[key])});

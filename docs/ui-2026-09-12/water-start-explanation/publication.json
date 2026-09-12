@@ -1,0 +1,14 @@
+{
+  "at_utc": "2026-09-12T10:53:53.717624+00:00",
+  "read_only": true,
+  "url": "https://appack.de/rest-api/drender/6a86ab6c4b3c829dd60de9b7",
+  "http_status": 200,
+  "changed_functions_match": [
+    "pfWaterStartExplanation",
+    "pfWaterActions",
+    "pfMountDesign"
+  ],
+  "local_template_sha256_lf": "45867704d7b3005194337f5cda529845b61728b6a5d4297397841b0b44c60d82",
+  "device_commands_sent": false,
+  "native_device_tested": false
+}
