@@ -2106,6 +2106,55 @@ def _clear_irrigation(state: AutomationState) -> AutomationState:
     )
 
 
+def _retire_completed_irrigation(
+    state: AutomationState, details: Mapping[str, Any], *,
+    now_utc: datetime, expected_relay_ids: set[int], max_age_seconds: int,
+) -> AutomationState | None:
+    """Retire terminal bookkeeping independently of mowing; retain dry proof.
+
+    This is not a device command or a release of the physical STOP. A pending
+    send, changed source, active valve or nonterminal program prevents cleanup.
+    """
+    if (state.irrigation_phase != "COMPLETE_HOLD" or state.maintenance_mode
+        or state.operator_request_status == "PENDING" or state.mower_start_pending_since_utc
+        or state.irrigation_current_relay_id is not None
+        or state.irrigation_zone_start_reserved_utc is not None
+        or state.irrigation_zone_started_utc is not None
+        or state.irrigation_schedule_override_json):
+        return None
+    completed = _parse_time(state.irrigation_completed_utc)
+    if completed is None or completed > now_utc:
+        return None
+    safety = _as_dict(_as_dict(details.get("hydrawise")).get("safety"))
+    observed = _parse_time(safety.get("observed_at_utc"))
+    if (safety.get("available") is not True or safety.get("fresh") is not True
+        or safety.get("relay_set_valid") is not True or safety.get("clear_now") is not True
+        or type(safety.get("active_zone_count")) is not int or safety["active_zone_count"] != 0
+        or type(safety.get("imminent_zone_count")) is not int or safety["imminent_zone_count"] != 0
+        or safety.get("active_relay_ids") != []
+        or safety.get("imminent_relay_ids") != []
+        or not expected_relay_ids
+        or not isinstance(safety.get("observed_relay_ids"), list)
+        or observed is None or observed < completed
+        or not timedelta(0) <= now_utc - observed <= timedelta(seconds=max_age_seconds)):
+        return None
+    try:
+        observed_ids = safety["observed_relay_ids"]
+        if (any(type(relay) is not int for relay in observed_ids)
+            or len(observed_ids) != len(expected_relay_ids)
+            or set(observed_ids) != expected_relay_ids or unresolved_device_sends(state)):
+            return None
+    except (TypeError, DeviceSendBlocked):
+        return None
+    # Preserve the existing fallback origin explicitly before dropping phase.
+    # Otherwise an absent origin would change from IRRIGATION_END to DATA_GAP
+    # and shorten the downstream release rule from 150 to two minutes.
+    return replace(
+        _clear_irrigation(state),
+        hydrawise_clear_origin=state.hydrawise_clear_origin or "IRRIGATION_END",
+    )
+
+
 def _cancel_irrigation_without_run(
     state: AutomationState,
     *,
@@ -2410,6 +2459,20 @@ def run_full_failsafe_cycle(
         )
     elif state.irrigation_park_hold_json is not None:
         state = replace(state, irrigation_park_hold_json=None)
+    if _env_enabled(environment, "IRRIGATION_TERMINAL_CLEANUP_ENABLED"):
+        retired = _retire_completed_irrigation(
+            state, details, now_utc=now, expected_relay_ids=expected_relay_ids,
+            max_age_seconds=hydrawise_status_max_age_seconds,
+        )
+        if retired is not None:
+            details["irrigation_terminal_cleanup"] = {
+                "prepared": True, "completed_utc": state.irrigation_completed_utc,
+                "drying_preserved": True,
+            }
+            # Keep processing safety, manual stop and park decisions in this
+            # same cycle. The normal CAS persists this projection together
+            # with those decisions; cleanup must never delay a protective park.
+            state = retired
     operator_action = _operator_action(state, now)
 
     manual_session: dict[str, Any] | None = None
