@@ -4,7 +4,7 @@
 
 Der Nutzer hat am 12.09.2026 ausdrücklich zugestimmt, bei einem gestoppten Mäher eine Bestätigung „Ich sehe den Mäher in der Station“ anzubieten. Die Bewässerung darf dafür den physischen STOP nicht aufheben. Die gleichzeitig angefragte [konkrete Mäherstörung](../concrete-mower-error/README.md) ist eine separat veröffentlichte Anzeigekorrektur: Der danach gemeldete Fehler 9 („Mäher steckt fest“) erfüllt diese zusätzliche Freigabe ausdrücklich nicht.
 
-**Entwicklungsstand, kein Livebetrieb:** Die neue Stationsbestätigung und die separate Abschlussbereinigung sind standardmäßig ausgeschaltet. Weder Backenddeployment noch Aktivierung oder Gerätebefehle erfolgten in diesem Arbeitsschritt. Die Stationsbestätigung ist noch nicht in Appack veröffentlicht. Für die veröffentlichte Fehleranzeige gelten ausschließlich die Nachweise im oben verlinkten Bericht.
+**Livefreigabe am 12.09.2026:** Auf die ausdrückliche Anweisung „Bitte live setzen“ wurden Backend und Appack-Vorlage veröffentlicht und die Stationsbestätigung sowie die Abschlussbereinigung aktiviert. Die Voreinstellung im Code bleibt ausgeschaltet. Nachweise der Veröffentlichung und ihre Grenzen stehen im [Livebericht](live/README.md). Es wurde kein Geräte-Testlauf gestartet; die physische Abnahme der neuen Stationsbestätigung bleibt offen.
 
 ## Bedienung
 
@@ -18,7 +18,7 @@ Bei geänderter Meldung, aktivem Fehler, fehlender Verbindung oder geänderter A
 
 ## Technischer Vertrag
 
-- Schalter: `IRRIGATION_ONSITE_DOCK_CONFIRMATION_ENABLED=false`; für eine Freigabe ist zusätzlich `ENABLE_MANUAL_SESSIONS=true` samt persistentem Befehlsjournal erforderlich.
+- Schalter: `IRRIGATION_ONSITE_DOCK_CONFIRMATION_ENABLED=false` als Voreinstellung, produktiv seit 12.09.2026 um 15:26 Uhr aktiviert; zusätzlich ist `ENABLE_MANUAL_SESSIONS=true` samt persistentem Befehlsjournal erforderlich.
 - Status: `irrigationDockConfirmation` mit `enabled`, `required`, `canConfirm`, `contextToken`, `expiresInSeconds`, `reason`.
 - Zulässige Ausgangsmeldung: exakt der konfigurierte Mäher, verbunden, `STOPPED`, `NOT_APPLICABLE`, `HOME`, expliziter ganzzahliger Fehlercode 0; keine offenen Gerätebefehle, Startreservierung, Wartung, aktive Bewässerungsphase oder konkurrierender Auftrag. Ein frischer Herstellerstatus ist für die erstmalige Aufnahme erforderlich. Die allgemeine 180-Sekunden-Grenze wird nicht geändert.
 - Der vorhandene geschützte `POST /platzwart/action` erhält Vertrag 4, die normale Aktionsbestätigung und `manualControl: {operation: "CONFIRM_DOCK_FOR_IRRIGATION", confirmed: true, contextToken}`. Normale Wasseraufträge ohne Stationsbestätigung verwenden weiterhin Vertrag 2. Einzelzone und Laufzeit bleiben Teil des Auftrags.
@@ -54,7 +54,7 @@ Zwei unabhängige Reviewdurchgänge und die Integration durch den Hauptagenten f
 | Wasser erscheint zwischen Endbeobachtungen erneut | Endbeobachtungen verwerfen; Bestätigungsdauer neu beginnen; Trockenereignis nach tatsächlichem Ende bewahren | Keine Verkürzung fachlicher Trockenzeiten ohne gesonderte Entscheidung |
 | Rückfall während eines Laufs | Neue Starts sperren; laufenden bzw. möglicherweise angenommenen Auftrag samt nativem Zeitplan und Trockenfrist abgleichen | Das Ausschalten des Schalters allein beendet kein Wasser |
 
-Vor Aktivierung sind erforderlich: Tests und unabhängiges Review des vollständigen Pfads, geprüftes Installationsartefakt, Abgleich der tatsächlich laufenden Version und Konfiguration sowie ein überwachter Pilot mit physischem Dock- und Wasserendnachweis. Dabei müssen STOP bestehen bleiben, genau ein gewünschter Durchlauf erfolgen und widersprüchliche Meldungen einen belegten Schutzstopp auslösen. Zeitgrenzen 03:30–08:00 Uhr gelten weiterhin für automatische Bewässerung, nicht als neue Einschränkung manueller Aufträge.
+Tests, unabhängiges Review, Installationsartefakt und Abgleich der tatsächlich laufenden Version und Konfiguration wurden für die ausdrücklich freigegebene Veröffentlichung durchgeführt. Für die Geräteabnahme bleibt ein überwachter Pilot mit physischem Dock- und Wasserendnachweis erforderlich. Dabei müssen STOP bestehen bleiben, genau ein gewünschter Durchlauf erfolgen und widersprüchliche Meldungen einen belegten Schutzstopp auslösen. Zeitgrenzen 03:30–08:00 Uhr gelten weiterhin für automatische Bewässerung, nicht als neue Einschränkung manueller Aufträge.
 
 Rückfall umfasst mehr als das Ausschalten des Schalters: laufende bzw. möglicherweise angenommene Wasserbefehle und native Zeitpläne abgleichen, Wasserende bestätigen, Folgeaufträge sperren und vorhandene Trockenfristen erhalten. Erst anschließend den vorherigen Softwarestand wiederherstellen. Keine alte Stationsbestätigung rekonstruieren oder zurückkopieren.
 
@@ -66,10 +66,10 @@ Rückfall umfasst mehr als das Ausschalten des Schalters: laufende bzw. möglich
 | Implementiert | Opt-in-Aufnahme, Auftrags-/Planbindung, Widerruf, Wasserstopp, Schutz-PARK, Paketgrenzen und Bedienung |
 | Getestet / simuliert | 338 Backend-/Pakettests, 81 Subtests, 227 Appack-Tests; synthetische Browserbedienung; keine Gerätebefehle |
 | Parallelbetrieb | Für diese neue Erweiterung noch nicht durchgeführt |
-| Live | Nur die separate konkrete Fehleranzeige veröffentlicht; Stationsbestätigung und Cleanup nicht neu aktiviert |
+| Live | Backend und Appack-Vorlage veröffentlicht, Stationsbestätigung und Cleanup aktiviert; installierte Dateien und laufende Zyklen geprüft. Kein physischer Testlauf der neuen Bestätigung |
 
-Der nächste Einführungsschritt ist ein Abgleich des geprüften Installationspakets mit der produktiven Konfiguration, danach ein überwachter Pilot mit bestätigtem Dock, beobachtetem Wasserstart/-ende, STOP-Erhalt und kontrollierter Abbruchsituation. Ein erfolgreicher Build allein ist keine Livefreigabe.
+Der nächste Abnahmeschritt ist ein überwachter Pilot mit bestätigtem Dock, beobachtetem Wasserstart/-ende, STOP-Erhalt und kontrollierter Abbruchsituation. Softwareaktivierung und physischer Ausführungsnachweis bleiben getrennt.
 
 ## Artefakt
 
-[artifact.json](artifact.json) enthält den absoluten lokalen Dateipfad, SHA-256 und Quellcommit `5c9feffc5837a7663d7771cbd6e53f3b7797f8d9`. Die ZIP-Datei ist ein **Quellpaket für den Azure-Remote-Build**, kein Nachweis einer installierten oder aktivierten Steuerung. Das ZIP liegt lokal und wird nicht als Binärdatei in Git versioniert. Sein SHA-256 lautet `e4923cd32ad41991d7e6380a7b7232b4c4096eea4cfd96b9005fc655900fc76b`. Die beiden neuen Freigabeoptionen bleiben standardmäßig aus. Der produktive Manifest-Hash aus der Abschlussabfrage gehört weiterhin zum vorherigen Softwarestand.
+[artifact.json](artifact.json) dokumentiert das frühere allgemeine Entwicklungspaket (`5c9feff`, SHA-256 `e4923cd32ad41991d7e6380a7b7232b4c4096eea4cfd96b9005fc655900fc76b`). Dieses wurde nicht unverändert veröffentlicht. Für die Liveinstallation wurde ein begrenztes Paket über dem bytegenau geprüften vorherigen Installationssatz gebaut. [package-clock-fix.json](live/package-clock-fix.json) enthält den endgültigen Quellcommit `4fe90d7532bde36c6bd00864e6cdc351bffc1442`, ZIP-Hash `c5bb19a88021b0276166038725ca95e24368df3d612e9ca6e6ba833ac9519d79` und Manifest-Hash `88e418f5c967991d6f842ad732e26ab223ecfd6be24709140816e5cd77d26264`. Der separate Installationsnachweis im Livebericht belegt die tatsächlich ausgelieferten Dateien.

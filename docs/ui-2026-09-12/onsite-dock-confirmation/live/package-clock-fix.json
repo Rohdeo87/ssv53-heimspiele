@@ -1,0 +1,29 @@
+{
+  "source_commit": "4fe90d7532bde36c6bd00864e6cdc351bffc1442",
+  "base_package_sha256": "f16fd90869b4a79564dc6ab74ee5607554992eba35e592a5a660bb9eebb8a627",
+  "package_sha256": "c5bb19a88021b0276166038725ca95e24368df3d612e9ca6e6ba833ac9519d79",
+  "manifest_sha256": "88e418f5c967991d6f842ad732e26ab223ecfd6be24709140816e5cd77d26264",
+  "package_entries": 72,
+  "changed_files": [
+    "mower/full_failsafe.py",
+    "mower/onsite_dock_proof.py",
+    "mower/state.py",
+    "package-manifest.json",
+    "platzwart_console.py"
+  ],
+  "changed_source_hashes": {
+    "mower/full_failsafe.py": "376557515d0b3042f9ba57ae7a63a7e5ff5f9dd2b9b749f215a43b4d685414d6",
+    "mower/onsite_dock_proof.py": "f0abf0a31ac4fab7a7238f52b786b5b1e69258ae3fcd94fe64af3f03518bc104",
+    "mower/state.py": "c6124e728795d123be8b3d205c16b2400f236db1c04dbdbec7d7a791f1d8b745",
+    "platzwart_console.py": "3bd83605937fe2d19e2e85d67716c16fecf17e462ff3c880421e5ae18d31dfa5"
+  },
+  "unchanged_source_content_verified_against_commit": true,
+  "unchanged_package_bytes_preserved": true,
+  "offline_import": {
+    "functions": 16,
+    "manifest_files_verified": true,
+    "network_allowed": false
+  },
+  "deployed": false,
+  "device_commands_sent": false
+}

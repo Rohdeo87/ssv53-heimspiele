@@ -1,0 +1,16 @@
+[
+  {
+    "at": "2026-09-12T13:32:02.3431384Z",
+    "cycle_start": "2026-09-12T13:32:00.0022300Z",
+    "manifest": "dbef175d07e8eaebc7161ca1b07dfea3ba28f45b05053cf506b012d672963b24",
+    "cleanup": {
+      "completed_utc": "2026-09-12T05:32:59.9976840Z",
+      "drying_preserved": true,
+      "prepared": true
+    },
+    "command_sent": false,
+    "phase_after": null,
+    "persisted": true,
+    "hydrawise_observed": "2026-09-12T13:32:00.0000000Z"
+  }
+]

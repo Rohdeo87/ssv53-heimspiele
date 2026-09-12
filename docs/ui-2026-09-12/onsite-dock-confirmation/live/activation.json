@@ -1,0 +1,32 @@
+{
+  "at_utc": "2026-09-12T13:26:14.871821+00:00",
+  "function_app": "func-ssv53platzpflege-prod-q7kbw54s",
+  "activation_requested": true,
+  "device_commands_requested": false,
+  "manifest_sha256": "dbef175d07e8eaebc7161ca1b07dfea3ba28f45b05053cf506b012d672963b24",
+  "template_sha256": "5d562aaf7644e1aac3c15e0dd76e453c02a91e247465c0605b7d4d5347b48e31",
+  "public_url": "https://appack.de/rest-api/drender/6a86ab6c4b3c829dd60de9b7",
+  "public_functions_verified": [
+    "irrigationDockConfirmation",
+    "irrigationStartAllowed",
+    "clearOnsiteDockConfirmation",
+    "prepareOnsiteDockPayload",
+    "openAction",
+    "manualControlPrepare"
+  ],
+  "public_confirmation_handler_and_checkbox_match": true,
+  "flags_before": {
+    "IRRIGATION_ONSITE_DOCK_CONFIRMATION_ENABLED": null,
+    "IRRIGATION_TERMINAL_CLEANUP_ENABLED": null
+  },
+  "verified_at_utc": "2026-09-12T13:26:27.952193+00:00",
+  "changed_setting_names": [
+    "IRRIGATION_ONSITE_DOCK_CONFIRMATION_ENABLED",
+    "IRRIGATION_TERMINAL_CLEANUP_ENABLED"
+  ],
+  "unrelated_settings_unchanged": true,
+  "flags_after": {
+    "IRRIGATION_ONSITE_DOCK_CONFIRMATION_ENABLED": "true",
+    "IRRIGATION_TERMINAL_CLEANUP_ENABLED": "true"
+  }
+}
