@@ -1,0 +1,2758 @@
+{
+  "simulation_only": true,
+  "device_io": "in-memory fakes",
+  "results": [
+    {
+      "window_utc": [
+        "2026-08-13T02:30:00+00:00",
+        "2026-08-13T06:00:00+00:00"
+      ],
+      "persistent_park_hold": false,
+      "manual_sessions_enabled": false,
+      "event_offset_minutes": 0,
+      "dispatch_fault": null,
+      "window_europe_berlin": [
+        "04:30",
+        "08:00"
+      ],
+      "starts": [
+        {
+          "at": "2026-08-13T02:32:00+00:00",
+          "end": "2026-08-13T02:52:00+00:00",
+          "relay_id": 9104894,
+          "run_seconds": 1200
+        },
+        {
+          "at": "2026-08-13T03:00:00+00:00",
+          "end": "2026-08-13T03:20:00+00:00",
+          "relay_id": 9104906,
+          "run_seconds": 1200
+        },
+        {
+          "at": "2026-08-13T03:30:00+00:00",
+          "end": "2026-08-13T03:50:00+00:00",
+          "relay_id": 9104909,
+          "run_seconds": 1200
+        },
+        {
+          "at": "2026-08-13T04:00:00+00:00",
+          "end": "2026-08-13T04:20:00+00:00",
+          "relay_id": 9104911,
+          "run_seconds": 1200
+        },
+        {
+          "at": "2026-08-13T04:30:00+00:00",
+          "end": "2026-08-13T04:50:00+00:00",
+          "relay_id": 9104913,
+          "run_seconds": 1200
+        }
+      ],
+      "decision_counts": {
+        "IRRIGATION_SUSPENSION_REVALIDATING": 1,
+        "IRRIGATION_SUSPENSION_REVALIDATED": 1,
+        "IRRIGATION_ZONE_START_SENT": 5,
+        "IRRIGATION_ZONE_CONFIRMED_RUNNING": 5,
+        "IRRIGATION_ZONE_RUNNING": 90,
+        "IRRIGATION_CONFIRM_ZONE_END": 10,
+        "IRRIGATION_ZONE_CONFIRMED_COMPLETE": 5,
+        "IRRIGATION_WAIT_FOR_CONFIRMED_PARK": 55,
+        "IRRIGATION_WINDOW_CANNOT_FIT": 8,
+        "IRRIGATION_PARTIAL_RUN_COMPLETE_HOLD": 1,
+        "HYDRAWISE_CLEAR_CONFIRMATION_HOLD": 30
+      },
+      "decision_transitions": [
+        {
+          "at": "2026-08-13T02:30:00+00:00",
+          "decision": "IRRIGATION_SUSPENSION_REVALIDATING",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [],
+          "mower_status_event": "2026-08-13T02:30:00+00:00"
+        },
+        {
+          "at": "2026-08-13T02:31:00+00:00",
+          "decision": "IRRIGATION_SUSPENSION_REVALIDATED",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [],
+          "mower_status_event": "2026-08-13T02:30:00+00:00"
+        },
+        {
+          "at": "2026-08-13T02:32:00+00:00",
+          "decision": "IRRIGATION_ZONE_START_SENT",
+          "phase": "START_RESERVED",
+          "current_relay_id": 9104894,
+          "completed": [],
+          "mower_status_event": "2026-08-13T02:30:00+00:00"
+        },
+        {
+          "at": "2026-08-13T02:33:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104894,
+          "completed": [],
+          "mower_status_event": "2026-08-13T02:30:00+00:00"
+        },
+        {
+          "at": "2026-08-13T02:34:00+00:00",
+          "decision": "IRRIGATION_ZONE_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104894,
+          "completed": [],
+          "mower_status_event": "2026-08-13T02:30:00+00:00"
+        },
+        {
+          "at": "2026-08-13T02:52:00+00:00",
+          "decision": "IRRIGATION_CONFIRM_ZONE_END",
+          "phase": "RUNNING",
+          "current_relay_id": 9104894,
+          "completed": [],
+          "mower_status_event": "2026-08-13T02:45:00+00:00"
+        },
+        {
+          "at": "2026-08-13T02:54:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_COMPLETE",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [
+            9104894
+          ],
+          "mower_status_event": "2026-08-13T02:45:00+00:00"
+        },
+        {
+          "at": "2026-08-13T02:55:00+00:00",
+          "decision": "IRRIGATION_WAIT_FOR_CONFIRMED_PARK",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [
+            9104894
+          ],
+          "mower_status_event": "2026-08-13T02:45:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:00:00+00:00",
+          "decision": "IRRIGATION_ZONE_START_SENT",
+          "phase": "START_RESERVED",
+          "current_relay_id": 9104906,
+          "completed": [
+            9104894
+          ],
+          "mower_status_event": "2026-08-13T03:00:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:01:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104906,
+          "completed": [
+            9104894
+          ],
+          "mower_status_event": "2026-08-13T03:00:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:02:00+00:00",
+          "decision": "IRRIGATION_ZONE_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104906,
+          "completed": [
+            9104894
+          ],
+          "mower_status_event": "2026-08-13T03:00:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:20:00+00:00",
+          "decision": "IRRIGATION_CONFIRM_ZONE_END",
+          "phase": "RUNNING",
+          "current_relay_id": 9104906,
+          "completed": [
+            9104894
+          ],
+          "mower_status_event": "2026-08-13T03:15:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:22:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_COMPLETE",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [
+            9104894,
+            9104906
+          ],
+          "mower_status_event": "2026-08-13T03:15:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:23:00+00:00",
+          "decision": "IRRIGATION_WAIT_FOR_CONFIRMED_PARK",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [
+            9104894,
+            9104906
+          ],
+          "mower_status_event": "2026-08-13T03:15:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:30:00+00:00",
+          "decision": "IRRIGATION_ZONE_START_SENT",
+          "phase": "START_RESERVED",
+          "current_relay_id": 9104909,
+          "completed": [
+            9104894,
+            9104906
+          ],
+          "mower_status_event": "2026-08-13T03:30:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:31:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104909,
+          "completed": [
+            9104894,
+            9104906
+          ],
+          "mower_status_event": "2026-08-13T03:30:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:32:00+00:00",
+          "decision": "IRRIGATION_ZONE_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104909,
+          "completed": [
+            9104894,
+            9104906
+          ],
+          "mower_status_event": "2026-08-13T03:30:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:50:00+00:00",
+          "decision": "IRRIGATION_CONFIRM_ZONE_END",
+          "phase": "RUNNING",
+          "current_relay_id": 9104909,
+          "completed": [
+            9104894,
+            9104906
+          ],
+          "mower_status_event": "2026-08-13T03:45:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:52:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_COMPLETE",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [
+            9104894,
+            9104906,
+            9104909
+          ],
+          "mower_status_event": "2026-08-13T03:45:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:53:00+00:00",
+          "decision": "IRRIGATION_WAIT_FOR_CONFIRMED_PARK",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [
+            9104894,
+            9104906,
+            9104909
+          ],
+          "mower_status_event": "2026-08-13T03:45:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:00:00+00:00",
+          "decision": "IRRIGATION_ZONE_START_SENT",
+          "phase": "START_RESERVED",
+          "current_relay_id": 9104911,
+          "completed": [
+            9104894,
+            9104906,
+            9104909
+          ],
+          "mower_status_event": "2026-08-13T04:00:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:01:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104911,
+          "completed": [
+            9104894,
+            9104906,
+            9104909
+          ],
+          "mower_status_event": "2026-08-13T04:00:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:02:00+00:00",
+          "decision": "IRRIGATION_ZONE_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104911,
+          "completed": [
+            9104894,
+            9104906,
+            9104909
+          ],
+          "mower_status_event": "2026-08-13T04:00:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:20:00+00:00",
+          "decision": "IRRIGATION_CONFIRM_ZONE_END",
+          "phase": "RUNNING",
+          "current_relay_id": 9104911,
+          "completed": [
+            9104894,
+            9104906,
+            9104909
+          ],
+          "mower_status_event": "2026-08-13T04:15:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:22:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_COMPLETE",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911
+          ],
+          "mower_status_event": "2026-08-13T04:15:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:23:00+00:00",
+          "decision": "IRRIGATION_WAIT_FOR_CONFIRMED_PARK",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911
+          ],
+          "mower_status_event": "2026-08-13T04:15:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:30:00+00:00",
+          "decision": "IRRIGATION_ZONE_START_SENT",
+          "phase": "START_RESERVED",
+          "current_relay_id": 9104913,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911
+          ],
+          "mower_status_event": "2026-08-13T04:30:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:31:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104913,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911
+          ],
+          "mower_status_event": "2026-08-13T04:30:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:32:00+00:00",
+          "decision": "IRRIGATION_ZONE_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104913,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911
+          ],
+          "mower_status_event": "2026-08-13T04:30:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:50:00+00:00",
+          "decision": "IRRIGATION_CONFIRM_ZONE_END",
+          "phase": "RUNNING",
+          "current_relay_id": 9104913,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911
+          ],
+          "mower_status_event": "2026-08-13T04:45:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:52:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_COMPLETE",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913
+          ],
+          "mower_status_event": "2026-08-13T04:45:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:53:00+00:00",
+          "decision": "IRRIGATION_WAIT_FOR_CONFIRMED_PARK",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913
+          ],
+          "mower_status_event": "2026-08-13T04:45:00+00:00"
+        },
+        {
+          "at": "2026-08-13T05:00:00+00:00",
+          "decision": "IRRIGATION_WINDOW_CANNOT_FIT",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913
+          ],
+          "mower_status_event": "2026-08-13T05:00:00+00:00"
+        },
+        {
+          "at": "2026-08-13T05:04:00+00:00",
+          "decision": "IRRIGATION_WAIT_FOR_CONFIRMED_PARK",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913
+          ],
+          "mower_status_event": "2026-08-13T05:00:00+00:00"
+        },
+        {
+          "at": "2026-08-13T05:15:00+00:00",
+          "decision": "IRRIGATION_WINDOW_CANNOT_FIT",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913
+          ],
+          "mower_status_event": "2026-08-13T05:15:00+00:00"
+        },
+        {
+          "at": "2026-08-13T05:19:00+00:00",
+          "decision": "IRRIGATION_WAIT_FOR_CONFIRMED_PARK",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913
+          ],
+          "mower_status_event": "2026-08-13T05:15:00+00:00"
+        },
+        {
+          "at": "2026-08-13T05:30:00+00:00",
+          "decision": "IRRIGATION_PARTIAL_RUN_COMPLETE_HOLD",
+          "phase": "COMPLETE_HOLD",
+          "current_relay_id": null,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913
+          ],
+          "mower_status_event": "2026-08-13T05:30:00+00:00"
+        },
+        {
+          "at": "2026-08-13T05:31:00+00:00",
+          "decision": "HYDRAWISE_CLEAR_CONFIRMATION_HOLD",
+          "phase": "COMPLETE_HOLD",
+          "current_relay_id": null,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913
+          ],
+          "mower_status_event": "2026-08-13T05:30:00+00:00"
+        }
+      ],
+      "final_state": {
+        "phase": "COMPLETE_HOLD",
+        "current_relay_id": null,
+        "completed": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913
+        ]
+      }
+    },
+    {
+      "window_utc": [
+        "2026-08-13T01:30:00+00:00",
+        "2026-08-13T06:00:00+00:00"
+      ],
+      "persistent_park_hold": false,
+      "manual_sessions_enabled": false,
+      "event_offset_minutes": 0,
+      "dispatch_fault": null,
+      "window_europe_berlin": [
+        "03:30",
+        "08:00"
+      ],
+      "starts": [
+        {
+          "at": "2026-08-13T01:32:00+00:00",
+          "end": "2026-08-13T01:52:00+00:00",
+          "relay_id": 9104894,
+          "run_seconds": 1200
+        },
+        {
+          "at": "2026-08-13T02:00:00+00:00",
+          "end": "2026-08-13T02:20:00+00:00",
+          "relay_id": 9104906,
+          "run_seconds": 1200
+        },
+        {
+          "at": "2026-08-13T02:30:00+00:00",
+          "end": "2026-08-13T02:50:00+00:00",
+          "relay_id": 9104909,
+          "run_seconds": 1200
+        },
+        {
+          "at": "2026-08-13T03:00:00+00:00",
+          "end": "2026-08-13T03:20:00+00:00",
+          "relay_id": 9104911,
+          "run_seconds": 1200
+        },
+        {
+          "at": "2026-08-13T03:30:00+00:00",
+          "end": "2026-08-13T03:50:00+00:00",
+          "relay_id": 9104913,
+          "run_seconds": 1200
+        },
+        {
+          "at": "2026-08-13T04:00:00+00:00",
+          "end": "2026-08-13T04:30:00+00:00",
+          "relay_id": 9104920,
+          "run_seconds": 1800
+        },
+        {
+          "at": "2026-08-13T04:33:00+00:00",
+          "end": "2026-08-13T05:03:00+00:00",
+          "relay_id": 9104921,
+          "run_seconds": 1800
+        }
+      ],
+      "decision_counts": {
+        "IRRIGATION_SUSPENSION_REVALIDATING": 1,
+        "IRRIGATION_SUSPENSION_REVALIDATED": 1,
+        "IRRIGATION_ZONE_START_SENT": 7,
+        "IRRIGATION_ZONE_CONFIRMED_RUNNING": 7,
+        "IRRIGATION_ZONE_RUNNING": 146,
+        "IRRIGATION_CONFIRM_ZONE_END": 14,
+        "IRRIGATION_ZONE_CONFIRMED_COMPLETE": 6,
+        "IRRIGATION_WAIT_FOR_CONFIRMED_PARK": 33,
+        "IRRIGATION_ALL_ZONES_CONFIRMED_COMPLETE": 1,
+        "HYDRAWISE_CLEAR_CONFIRMATION_HOLD": 55
+      },
+      "decision_transitions": [
+        {
+          "at": "2026-08-13T01:30:00+00:00",
+          "decision": "IRRIGATION_SUSPENSION_REVALIDATING",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [],
+          "mower_status_event": "2026-08-13T01:30:00+00:00"
+        },
+        {
+          "at": "2026-08-13T01:31:00+00:00",
+          "decision": "IRRIGATION_SUSPENSION_REVALIDATED",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [],
+          "mower_status_event": "2026-08-13T01:30:00+00:00"
+        },
+        {
+          "at": "2026-08-13T01:32:00+00:00",
+          "decision": "IRRIGATION_ZONE_START_SENT",
+          "phase": "START_RESERVED",
+          "current_relay_id": 9104894,
+          "completed": [],
+          "mower_status_event": "2026-08-13T01:30:00+00:00"
+        },
+        {
+          "at": "2026-08-13T01:33:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104894,
+          "completed": [],
+          "mower_status_event": "2026-08-13T01:30:00+00:00"
+        },
+        {
+          "at": "2026-08-13T01:34:00+00:00",
+          "decision": "IRRIGATION_ZONE_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104894,
+          "completed": [],
+          "mower_status_event": "2026-08-13T01:30:00+00:00"
+        },
+        {
+          "at": "2026-08-13T01:52:00+00:00",
+          "decision": "IRRIGATION_CONFIRM_ZONE_END",
+          "phase": "RUNNING",
+          "current_relay_id": 9104894,
+          "completed": [],
+          "mower_status_event": "2026-08-13T01:45:00+00:00"
+        },
+        {
+          "at": "2026-08-13T01:54:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_COMPLETE",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [
+            9104894
+          ],
+          "mower_status_event": "2026-08-13T01:45:00+00:00"
+        },
+        {
+          "at": "2026-08-13T01:55:00+00:00",
+          "decision": "IRRIGATION_WAIT_FOR_CONFIRMED_PARK",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [
+            9104894
+          ],
+          "mower_status_event": "2026-08-13T01:45:00+00:00"
+        },
+        {
+          "at": "2026-08-13T02:00:00+00:00",
+          "decision": "IRRIGATION_ZONE_START_SENT",
+          "phase": "START_RESERVED",
+          "current_relay_id": 9104906,
+          "completed": [
+            9104894
+          ],
+          "mower_status_event": "2026-08-13T02:00:00+00:00"
+        },
+        {
+          "at": "2026-08-13T02:01:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104906,
+          "completed": [
+            9104894
+          ],
+          "mower_status_event": "2026-08-13T02:00:00+00:00"
+        },
+        {
+          "at": "2026-08-13T02:02:00+00:00",
+          "decision": "IRRIGATION_ZONE_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104906,
+          "completed": [
+            9104894
+          ],
+          "mower_status_event": "2026-08-13T02:00:00+00:00"
+        },
+        {
+          "at": "2026-08-13T02:20:00+00:00",
+          "decision": "IRRIGATION_CONFIRM_ZONE_END",
+          "phase": "RUNNING",
+          "current_relay_id": 9104906,
+          "completed": [
+            9104894
+          ],
+          "mower_status_event": "2026-08-13T02:15:00+00:00"
+        },
+        {
+          "at": "2026-08-13T02:22:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_COMPLETE",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [
+            9104894,
+            9104906
+          ],
+          "mower_status_event": "2026-08-13T02:15:00+00:00"
+        },
+        {
+          "at": "2026-08-13T02:23:00+00:00",
+          "decision": "IRRIGATION_WAIT_FOR_CONFIRMED_PARK",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [
+            9104894,
+            9104906
+          ],
+          "mower_status_event": "2026-08-13T02:15:00+00:00"
+        },
+        {
+          "at": "2026-08-13T02:30:00+00:00",
+          "decision": "IRRIGATION_ZONE_START_SENT",
+          "phase": "START_RESERVED",
+          "current_relay_id": 9104909,
+          "completed": [
+            9104894,
+            9104906
+          ],
+          "mower_status_event": "2026-08-13T02:30:00+00:00"
+        },
+        {
+          "at": "2026-08-13T02:31:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104909,
+          "completed": [
+            9104894,
+            9104906
+          ],
+          "mower_status_event": "2026-08-13T02:30:00+00:00"
+        },
+        {
+          "at": "2026-08-13T02:32:00+00:00",
+          "decision": "IRRIGATION_ZONE_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104909,
+          "completed": [
+            9104894,
+            9104906
+          ],
+          "mower_status_event": "2026-08-13T02:30:00+00:00"
+        },
+        {
+          "at": "2026-08-13T02:50:00+00:00",
+          "decision": "IRRIGATION_CONFIRM_ZONE_END",
+          "phase": "RUNNING",
+          "current_relay_id": 9104909,
+          "completed": [
+            9104894,
+            9104906
+          ],
+          "mower_status_event": "2026-08-13T02:45:00+00:00"
+        },
+        {
+          "at": "2026-08-13T02:52:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_COMPLETE",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [
+            9104894,
+            9104906,
+            9104909
+          ],
+          "mower_status_event": "2026-08-13T02:45:00+00:00"
+        },
+        {
+          "at": "2026-08-13T02:53:00+00:00",
+          "decision": "IRRIGATION_WAIT_FOR_CONFIRMED_PARK",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [
+            9104894,
+            9104906,
+            9104909
+          ],
+          "mower_status_event": "2026-08-13T02:45:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:00:00+00:00",
+          "decision": "IRRIGATION_ZONE_START_SENT",
+          "phase": "START_RESERVED",
+          "current_relay_id": 9104911,
+          "completed": [
+            9104894,
+            9104906,
+            9104909
+          ],
+          "mower_status_event": "2026-08-13T03:00:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:01:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104911,
+          "completed": [
+            9104894,
+            9104906,
+            9104909
+          ],
+          "mower_status_event": "2026-08-13T03:00:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:02:00+00:00",
+          "decision": "IRRIGATION_ZONE_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104911,
+          "completed": [
+            9104894,
+            9104906,
+            9104909
+          ],
+          "mower_status_event": "2026-08-13T03:00:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:20:00+00:00",
+          "decision": "IRRIGATION_CONFIRM_ZONE_END",
+          "phase": "RUNNING",
+          "current_relay_id": 9104911,
+          "completed": [
+            9104894,
+            9104906,
+            9104909
+          ],
+          "mower_status_event": "2026-08-13T03:15:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:22:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_COMPLETE",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911
+          ],
+          "mower_status_event": "2026-08-13T03:15:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:23:00+00:00",
+          "decision": "IRRIGATION_WAIT_FOR_CONFIRMED_PARK",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911
+          ],
+          "mower_status_event": "2026-08-13T03:15:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:30:00+00:00",
+          "decision": "IRRIGATION_ZONE_START_SENT",
+          "phase": "START_RESERVED",
+          "current_relay_id": 9104913,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911
+          ],
+          "mower_status_event": "2026-08-13T03:30:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:31:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104913,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911
+          ],
+          "mower_status_event": "2026-08-13T03:30:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:32:00+00:00",
+          "decision": "IRRIGATION_ZONE_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104913,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911
+          ],
+          "mower_status_event": "2026-08-13T03:30:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:50:00+00:00",
+          "decision": "IRRIGATION_CONFIRM_ZONE_END",
+          "phase": "RUNNING",
+          "current_relay_id": 9104913,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911
+          ],
+          "mower_status_event": "2026-08-13T03:45:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:52:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_COMPLETE",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913
+          ],
+          "mower_status_event": "2026-08-13T03:45:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:53:00+00:00",
+          "decision": "IRRIGATION_WAIT_FOR_CONFIRMED_PARK",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913
+          ],
+          "mower_status_event": "2026-08-13T03:45:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:00:00+00:00",
+          "decision": "IRRIGATION_ZONE_START_SENT",
+          "phase": "START_RESERVED",
+          "current_relay_id": 9104920,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913
+          ],
+          "mower_status_event": "2026-08-13T04:00:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:01:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104920,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913
+          ],
+          "mower_status_event": "2026-08-13T04:00:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:02:00+00:00",
+          "decision": "IRRIGATION_ZONE_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104920,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913
+          ],
+          "mower_status_event": "2026-08-13T04:00:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:30:00+00:00",
+          "decision": "IRRIGATION_CONFIRM_ZONE_END",
+          "phase": "RUNNING",
+          "current_relay_id": 9104920,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913
+          ],
+          "mower_status_event": "2026-08-13T04:30:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:32:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_COMPLETE",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913,
+            9104920
+          ],
+          "mower_status_event": "2026-08-13T04:30:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:33:00+00:00",
+          "decision": "IRRIGATION_ZONE_START_SENT",
+          "phase": "START_RESERVED",
+          "current_relay_id": 9104921,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913,
+            9104920
+          ],
+          "mower_status_event": "2026-08-13T04:30:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:34:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104921,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913,
+            9104920
+          ],
+          "mower_status_event": "2026-08-13T04:30:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:35:00+00:00",
+          "decision": "IRRIGATION_ZONE_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104921,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913,
+            9104920
+          ],
+          "mower_status_event": "2026-08-13T04:30:00+00:00"
+        },
+        {
+          "at": "2026-08-13T05:03:00+00:00",
+          "decision": "IRRIGATION_CONFIRM_ZONE_END",
+          "phase": "RUNNING",
+          "current_relay_id": 9104921,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913,
+            9104920
+          ],
+          "mower_status_event": "2026-08-13T05:00:00+00:00"
+        },
+        {
+          "at": "2026-08-13T05:05:00+00:00",
+          "decision": "IRRIGATION_ALL_ZONES_CONFIRMED_COMPLETE",
+          "phase": "COMPLETE_HOLD",
+          "current_relay_id": null,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913,
+            9104920,
+            9104921
+          ],
+          "mower_status_event": "2026-08-13T05:00:00+00:00"
+        },
+        {
+          "at": "2026-08-13T05:06:00+00:00",
+          "decision": "HYDRAWISE_CLEAR_CONFIRMATION_HOLD",
+          "phase": "COMPLETE_HOLD",
+          "current_relay_id": null,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913,
+            9104920,
+            9104921
+          ],
+          "mower_status_event": "2026-08-13T05:00:00+00:00"
+        }
+      ],
+      "final_state": {
+        "phase": "COMPLETE_HOLD",
+        "current_relay_id": null,
+        "completed": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ]
+      }
+    },
+    {
+      "window_utc": [
+        "2026-08-13T02:30:00+00:00",
+        "2026-08-13T06:00:00+00:00"
+      ],
+      "persistent_park_hold": true,
+      "manual_sessions_enabled": true,
+      "event_offset_minutes": 0,
+      "dispatch_fault": null,
+      "window_europe_berlin": [
+        "04:30",
+        "08:00"
+      ],
+      "starts": [
+        {
+          "at": "2026-08-13T02:33:00+00:00",
+          "end": "2026-08-13T02:53:00+00:00",
+          "relay_id": 9104894,
+          "run_seconds": 1200
+        },
+        {
+          "at": "2026-08-13T02:56:00+00:00",
+          "end": "2026-08-13T03:16:00+00:00",
+          "relay_id": 9104906,
+          "run_seconds": 1200
+        },
+        {
+          "at": "2026-08-13T03:19:00+00:00",
+          "end": "2026-08-13T03:39:00+00:00",
+          "relay_id": 9104909,
+          "run_seconds": 1200
+        },
+        {
+          "at": "2026-08-13T03:42:00+00:00",
+          "end": "2026-08-13T04:02:00+00:00",
+          "relay_id": 9104911,
+          "run_seconds": 1200
+        },
+        {
+          "at": "2026-08-13T04:05:00+00:00",
+          "end": "2026-08-13T04:25:00+00:00",
+          "relay_id": 9104913,
+          "run_seconds": 1200
+        },
+        {
+          "at": "2026-08-13T04:28:00+00:00",
+          "end": "2026-08-13T04:58:00+00:00",
+          "relay_id": 9104920,
+          "run_seconds": 1800
+        },
+        {
+          "at": "2026-08-13T05:01:00+00:00",
+          "end": "2026-08-13T05:31:00+00:00",
+          "relay_id": 9104921,
+          "run_seconds": 1800
+        }
+      ],
+      "decision_counts": {
+        "IRRIGATION_WAIT_FOR_CONFIRMED_PARK": 1,
+        "IRRIGATION_SUSPENSION_REVALIDATING": 1,
+        "IRRIGATION_SUSPENSION_REVALIDATED": 1,
+        "IRRIGATION_ZONE_START_SENT": 7,
+        "IRRIGATION_ZONE_CONFIRMED_RUNNING": 7,
+        "IRRIGATION_ZONE_RUNNING": 146,
+        "IRRIGATION_CONFIRM_ZONE_END": 14,
+        "IRRIGATION_ZONE_CONFIRMED_COMPLETE": 6,
+        "IRRIGATION_ALL_ZONES_CONFIRMED_COMPLETE": 1,
+        "HYDRAWISE_CLEAR_CONFIRMATION_HOLD": 27
+      },
+      "decision_transitions": [
+        {
+          "at": "2026-08-13T02:30:00+00:00",
+          "decision": "IRRIGATION_WAIT_FOR_CONFIRMED_PARK",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [],
+          "mower_status_event": "2026-08-13T02:30:00+00:00"
+        },
+        {
+          "at": "2026-08-13T02:31:00+00:00",
+          "decision": "IRRIGATION_SUSPENSION_REVALIDATING",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [],
+          "mower_status_event": "2026-08-13T02:30:00+00:00"
+        },
+        {
+          "at": "2026-08-13T02:32:00+00:00",
+          "decision": "IRRIGATION_SUSPENSION_REVALIDATED",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [],
+          "mower_status_event": "2026-08-13T02:30:00+00:00"
+        },
+        {
+          "at": "2026-08-13T02:33:00+00:00",
+          "decision": "IRRIGATION_ZONE_START_SENT",
+          "phase": "START_RESERVED",
+          "current_relay_id": 9104894,
+          "completed": [],
+          "mower_status_event": "2026-08-13T02:30:00+00:00"
+        },
+        {
+          "at": "2026-08-13T02:34:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104894,
+          "completed": [],
+          "mower_status_event": "2026-08-13T02:30:00+00:00"
+        },
+        {
+          "at": "2026-08-13T02:35:00+00:00",
+          "decision": "IRRIGATION_ZONE_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104894,
+          "completed": [],
+          "mower_status_event": "2026-08-13T02:30:00+00:00"
+        },
+        {
+          "at": "2026-08-13T02:53:00+00:00",
+          "decision": "IRRIGATION_CONFIRM_ZONE_END",
+          "phase": "RUNNING",
+          "current_relay_id": 9104894,
+          "completed": [],
+          "mower_status_event": "2026-08-13T02:45:00+00:00"
+        },
+        {
+          "at": "2026-08-13T02:55:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_COMPLETE",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [
+            9104894
+          ],
+          "mower_status_event": "2026-08-13T02:45:00+00:00"
+        },
+        {
+          "at": "2026-08-13T02:56:00+00:00",
+          "decision": "IRRIGATION_ZONE_START_SENT",
+          "phase": "START_RESERVED",
+          "current_relay_id": 9104906,
+          "completed": [
+            9104894
+          ],
+          "mower_status_event": "2026-08-13T02:45:00+00:00"
+        },
+        {
+          "at": "2026-08-13T02:57:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104906,
+          "completed": [
+            9104894
+          ],
+          "mower_status_event": "2026-08-13T02:45:00+00:00"
+        },
+        {
+          "at": "2026-08-13T02:58:00+00:00",
+          "decision": "IRRIGATION_ZONE_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104906,
+          "completed": [
+            9104894
+          ],
+          "mower_status_event": "2026-08-13T02:45:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:16:00+00:00",
+          "decision": "IRRIGATION_CONFIRM_ZONE_END",
+          "phase": "RUNNING",
+          "current_relay_id": 9104906,
+          "completed": [
+            9104894
+          ],
+          "mower_status_event": "2026-08-13T03:15:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:18:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_COMPLETE",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [
+            9104894,
+            9104906
+          ],
+          "mower_status_event": "2026-08-13T03:15:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:19:00+00:00",
+          "decision": "IRRIGATION_ZONE_START_SENT",
+          "phase": "START_RESERVED",
+          "current_relay_id": 9104909,
+          "completed": [
+            9104894,
+            9104906
+          ],
+          "mower_status_event": "2026-08-13T03:15:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:20:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104909,
+          "completed": [
+            9104894,
+            9104906
+          ],
+          "mower_status_event": "2026-08-13T03:15:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:21:00+00:00",
+          "decision": "IRRIGATION_ZONE_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104909,
+          "completed": [
+            9104894,
+            9104906
+          ],
+          "mower_status_event": "2026-08-13T03:15:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:39:00+00:00",
+          "decision": "IRRIGATION_CONFIRM_ZONE_END",
+          "phase": "RUNNING",
+          "current_relay_id": 9104909,
+          "completed": [
+            9104894,
+            9104906
+          ],
+          "mower_status_event": "2026-08-13T03:30:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:41:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_COMPLETE",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [
+            9104894,
+            9104906,
+            9104909
+          ],
+          "mower_status_event": "2026-08-13T03:30:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:42:00+00:00",
+          "decision": "IRRIGATION_ZONE_START_SENT",
+          "phase": "START_RESERVED",
+          "current_relay_id": 9104911,
+          "completed": [
+            9104894,
+            9104906,
+            9104909
+          ],
+          "mower_status_event": "2026-08-13T03:30:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:43:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104911,
+          "completed": [
+            9104894,
+            9104906,
+            9104909
+          ],
+          "mower_status_event": "2026-08-13T03:30:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:44:00+00:00",
+          "decision": "IRRIGATION_ZONE_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104911,
+          "completed": [
+            9104894,
+            9104906,
+            9104909
+          ],
+          "mower_status_event": "2026-08-13T03:30:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:02:00+00:00",
+          "decision": "IRRIGATION_CONFIRM_ZONE_END",
+          "phase": "RUNNING",
+          "current_relay_id": 9104911,
+          "completed": [
+            9104894,
+            9104906,
+            9104909
+          ],
+          "mower_status_event": "2026-08-13T04:00:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:04:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_COMPLETE",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911
+          ],
+          "mower_status_event": "2026-08-13T04:00:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:05:00+00:00",
+          "decision": "IRRIGATION_ZONE_START_SENT",
+          "phase": "START_RESERVED",
+          "current_relay_id": 9104913,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911
+          ],
+          "mower_status_event": "2026-08-13T04:00:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:06:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104913,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911
+          ],
+          "mower_status_event": "2026-08-13T04:00:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:07:00+00:00",
+          "decision": "IRRIGATION_ZONE_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104913,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911
+          ],
+          "mower_status_event": "2026-08-13T04:00:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:25:00+00:00",
+          "decision": "IRRIGATION_CONFIRM_ZONE_END",
+          "phase": "RUNNING",
+          "current_relay_id": 9104913,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911
+          ],
+          "mower_status_event": "2026-08-13T04:15:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:27:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_COMPLETE",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913
+          ],
+          "mower_status_event": "2026-08-13T04:15:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:28:00+00:00",
+          "decision": "IRRIGATION_ZONE_START_SENT",
+          "phase": "START_RESERVED",
+          "current_relay_id": 9104920,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913
+          ],
+          "mower_status_event": "2026-08-13T04:15:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:29:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104920,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913
+          ],
+          "mower_status_event": "2026-08-13T04:15:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:30:00+00:00",
+          "decision": "IRRIGATION_ZONE_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104920,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913
+          ],
+          "mower_status_event": "2026-08-13T04:30:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:58:00+00:00",
+          "decision": "IRRIGATION_CONFIRM_ZONE_END",
+          "phase": "RUNNING",
+          "current_relay_id": 9104920,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913
+          ],
+          "mower_status_event": "2026-08-13T04:45:00+00:00"
+        },
+        {
+          "at": "2026-08-13T05:00:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_COMPLETE",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913,
+            9104920
+          ],
+          "mower_status_event": "2026-08-13T05:00:00+00:00"
+        },
+        {
+          "at": "2026-08-13T05:01:00+00:00",
+          "decision": "IRRIGATION_ZONE_START_SENT",
+          "phase": "START_RESERVED",
+          "current_relay_id": 9104921,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913,
+            9104920
+          ],
+          "mower_status_event": "2026-08-13T05:00:00+00:00"
+        },
+        {
+          "at": "2026-08-13T05:02:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104921,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913,
+            9104920
+          ],
+          "mower_status_event": "2026-08-13T05:00:00+00:00"
+        },
+        {
+          "at": "2026-08-13T05:03:00+00:00",
+          "decision": "IRRIGATION_ZONE_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104921,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913,
+            9104920
+          ],
+          "mower_status_event": "2026-08-13T05:00:00+00:00"
+        },
+        {
+          "at": "2026-08-13T05:31:00+00:00",
+          "decision": "IRRIGATION_CONFIRM_ZONE_END",
+          "phase": "RUNNING",
+          "current_relay_id": 9104921,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913,
+            9104920
+          ],
+          "mower_status_event": "2026-08-13T05:30:00+00:00"
+        },
+        {
+          "at": "2026-08-13T05:33:00+00:00",
+          "decision": "IRRIGATION_ALL_ZONES_CONFIRMED_COMPLETE",
+          "phase": "COMPLETE_HOLD",
+          "current_relay_id": null,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913,
+            9104920,
+            9104921
+          ],
+          "mower_status_event": "2026-08-13T05:30:00+00:00"
+        },
+        {
+          "at": "2026-08-13T05:34:00+00:00",
+          "decision": "HYDRAWISE_CLEAR_CONFIRMATION_HOLD",
+          "phase": "COMPLETE_HOLD",
+          "current_relay_id": null,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913,
+            9104920,
+            9104921
+          ],
+          "mower_status_event": "2026-08-13T05:30:00+00:00"
+        }
+      ],
+      "final_state": {
+        "phase": "COMPLETE_HOLD",
+        "current_relay_id": null,
+        "completed": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ]
+      }
+    },
+    {
+      "window_utc": [
+        "2026-08-13T02:30:00+00:00",
+        "2026-08-13T06:00:00+00:00"
+      ],
+      "persistent_park_hold": true,
+      "manual_sessions_enabled": true,
+      "event_offset_minutes": 7,
+      "dispatch_fault": null,
+      "window_europe_berlin": [
+        "04:30",
+        "08:00"
+      ],
+      "starts": [
+        {
+          "at": "2026-08-13T02:41:00+00:00",
+          "end": "2026-08-13T03:01:00+00:00",
+          "relay_id": 9104894,
+          "run_seconds": 1200
+        },
+        {
+          "at": "2026-08-13T03:04:00+00:00",
+          "end": "2026-08-13T03:24:00+00:00",
+          "relay_id": 9104906,
+          "run_seconds": 1200
+        },
+        {
+          "at": "2026-08-13T03:27:00+00:00",
+          "end": "2026-08-13T03:47:00+00:00",
+          "relay_id": 9104909,
+          "run_seconds": 1200
+        },
+        {
+          "at": "2026-08-13T03:50:00+00:00",
+          "end": "2026-08-13T04:10:00+00:00",
+          "relay_id": 9104911,
+          "run_seconds": 1200
+        },
+        {
+          "at": "2026-08-13T04:13:00+00:00",
+          "end": "2026-08-13T04:33:00+00:00",
+          "relay_id": 9104913,
+          "run_seconds": 1200
+        },
+        {
+          "at": "2026-08-13T04:36:00+00:00",
+          "end": "2026-08-13T05:06:00+00:00",
+          "relay_id": 9104920,
+          "run_seconds": 1800
+        },
+        {
+          "at": "2026-08-13T05:09:00+00:00",
+          "end": "2026-08-13T05:39:00+00:00",
+          "relay_id": 9104921,
+          "run_seconds": 1800
+        }
+      ],
+      "decision_counts": {
+        "IRRIGATION_WAIT_FOR_CONFIRMED_PARK": 9,
+        "IRRIGATION_SUSPENSION_REVALIDATING": 1,
+        "IRRIGATION_SUSPENSION_REVALIDATED": 1,
+        "IRRIGATION_ZONE_START_SENT": 7,
+        "IRRIGATION_ZONE_CONFIRMED_RUNNING": 7,
+        "IRRIGATION_ZONE_RUNNING": 146,
+        "IRRIGATION_CONFIRM_ZONE_END": 14,
+        "IRRIGATION_ZONE_CONFIRMED_COMPLETE": 6,
+        "IRRIGATION_ALL_ZONES_CONFIRMED_COMPLETE": 1,
+        "HYDRAWISE_CLEAR_CONFIRMATION_HOLD": 19
+      },
+      "decision_transitions": [
+        {
+          "at": "2026-08-13T02:30:00+00:00",
+          "decision": "IRRIGATION_WAIT_FOR_CONFIRMED_PARK",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [],
+          "mower_status_event": "2026-08-13T02:23:00+00:00"
+        },
+        {
+          "at": "2026-08-13T02:39:00+00:00",
+          "decision": "IRRIGATION_SUSPENSION_REVALIDATING",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [],
+          "mower_status_event": "2026-08-13T02:38:00+00:00"
+        },
+        {
+          "at": "2026-08-13T02:40:00+00:00",
+          "decision": "IRRIGATION_SUSPENSION_REVALIDATED",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [],
+          "mower_status_event": "2026-08-13T02:38:00+00:00"
+        },
+        {
+          "at": "2026-08-13T02:41:00+00:00",
+          "decision": "IRRIGATION_ZONE_START_SENT",
+          "phase": "START_RESERVED",
+          "current_relay_id": 9104894,
+          "completed": [],
+          "mower_status_event": "2026-08-13T02:38:00+00:00"
+        },
+        {
+          "at": "2026-08-13T02:42:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104894,
+          "completed": [],
+          "mower_status_event": "2026-08-13T02:38:00+00:00"
+        },
+        {
+          "at": "2026-08-13T02:43:00+00:00",
+          "decision": "IRRIGATION_ZONE_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104894,
+          "completed": [],
+          "mower_status_event": "2026-08-13T02:38:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:01:00+00:00",
+          "decision": "IRRIGATION_CONFIRM_ZONE_END",
+          "phase": "RUNNING",
+          "current_relay_id": 9104894,
+          "completed": [],
+          "mower_status_event": "2026-08-13T02:53:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:03:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_COMPLETE",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [
+            9104894
+          ],
+          "mower_status_event": "2026-08-13T02:53:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:04:00+00:00",
+          "decision": "IRRIGATION_ZONE_START_SENT",
+          "phase": "START_RESERVED",
+          "current_relay_id": 9104906,
+          "completed": [
+            9104894
+          ],
+          "mower_status_event": "2026-08-13T02:53:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:05:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104906,
+          "completed": [
+            9104894
+          ],
+          "mower_status_event": "2026-08-13T02:53:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:06:00+00:00",
+          "decision": "IRRIGATION_ZONE_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104906,
+          "completed": [
+            9104894
+          ],
+          "mower_status_event": "2026-08-13T02:53:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:24:00+00:00",
+          "decision": "IRRIGATION_CONFIRM_ZONE_END",
+          "phase": "RUNNING",
+          "current_relay_id": 9104906,
+          "completed": [
+            9104894
+          ],
+          "mower_status_event": "2026-08-13T03:23:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:26:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_COMPLETE",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [
+            9104894,
+            9104906
+          ],
+          "mower_status_event": "2026-08-13T03:23:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:27:00+00:00",
+          "decision": "IRRIGATION_ZONE_START_SENT",
+          "phase": "START_RESERVED",
+          "current_relay_id": 9104909,
+          "completed": [
+            9104894,
+            9104906
+          ],
+          "mower_status_event": "2026-08-13T03:23:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:28:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104909,
+          "completed": [
+            9104894,
+            9104906
+          ],
+          "mower_status_event": "2026-08-13T03:23:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:29:00+00:00",
+          "decision": "IRRIGATION_ZONE_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104909,
+          "completed": [
+            9104894,
+            9104906
+          ],
+          "mower_status_event": "2026-08-13T03:23:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:47:00+00:00",
+          "decision": "IRRIGATION_CONFIRM_ZONE_END",
+          "phase": "RUNNING",
+          "current_relay_id": 9104909,
+          "completed": [
+            9104894,
+            9104906
+          ],
+          "mower_status_event": "2026-08-13T03:38:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:49:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_COMPLETE",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [
+            9104894,
+            9104906,
+            9104909
+          ],
+          "mower_status_event": "2026-08-13T03:38:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:50:00+00:00",
+          "decision": "IRRIGATION_ZONE_START_SENT",
+          "phase": "START_RESERVED",
+          "current_relay_id": 9104911,
+          "completed": [
+            9104894,
+            9104906,
+            9104909
+          ],
+          "mower_status_event": "2026-08-13T03:38:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:51:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104911,
+          "completed": [
+            9104894,
+            9104906,
+            9104909
+          ],
+          "mower_status_event": "2026-08-13T03:38:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:52:00+00:00",
+          "decision": "IRRIGATION_ZONE_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104911,
+          "completed": [
+            9104894,
+            9104906,
+            9104909
+          ],
+          "mower_status_event": "2026-08-13T03:38:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:10:00+00:00",
+          "decision": "IRRIGATION_CONFIRM_ZONE_END",
+          "phase": "RUNNING",
+          "current_relay_id": 9104911,
+          "completed": [
+            9104894,
+            9104906,
+            9104909
+          ],
+          "mower_status_event": "2026-08-13T04:08:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:12:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_COMPLETE",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911
+          ],
+          "mower_status_event": "2026-08-13T04:08:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:13:00+00:00",
+          "decision": "IRRIGATION_ZONE_START_SENT",
+          "phase": "START_RESERVED",
+          "current_relay_id": 9104913,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911
+          ],
+          "mower_status_event": "2026-08-13T04:08:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:14:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104913,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911
+          ],
+          "mower_status_event": "2026-08-13T04:08:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:15:00+00:00",
+          "decision": "IRRIGATION_ZONE_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104913,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911
+          ],
+          "mower_status_event": "2026-08-13T04:08:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:33:00+00:00",
+          "decision": "IRRIGATION_CONFIRM_ZONE_END",
+          "phase": "RUNNING",
+          "current_relay_id": 9104913,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911
+          ],
+          "mower_status_event": "2026-08-13T04:23:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:35:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_COMPLETE",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913
+          ],
+          "mower_status_event": "2026-08-13T04:23:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:36:00+00:00",
+          "decision": "IRRIGATION_ZONE_START_SENT",
+          "phase": "START_RESERVED",
+          "current_relay_id": 9104920,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913
+          ],
+          "mower_status_event": "2026-08-13T04:23:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:37:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104920,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913
+          ],
+          "mower_status_event": "2026-08-13T04:23:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:38:00+00:00",
+          "decision": "IRRIGATION_ZONE_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104920,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913
+          ],
+          "mower_status_event": "2026-08-13T04:38:00+00:00"
+        },
+        {
+          "at": "2026-08-13T05:06:00+00:00",
+          "decision": "IRRIGATION_CONFIRM_ZONE_END",
+          "phase": "RUNNING",
+          "current_relay_id": 9104920,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913
+          ],
+          "mower_status_event": "2026-08-13T04:53:00+00:00"
+        },
+        {
+          "at": "2026-08-13T05:08:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_COMPLETE",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913,
+            9104920
+          ],
+          "mower_status_event": "2026-08-13T05:08:00+00:00"
+        },
+        {
+          "at": "2026-08-13T05:09:00+00:00",
+          "decision": "IRRIGATION_ZONE_START_SENT",
+          "phase": "START_RESERVED",
+          "current_relay_id": 9104921,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913,
+            9104920
+          ],
+          "mower_status_event": "2026-08-13T05:08:00+00:00"
+        },
+        {
+          "at": "2026-08-13T05:10:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104921,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913,
+            9104920
+          ],
+          "mower_status_event": "2026-08-13T05:08:00+00:00"
+        },
+        {
+          "at": "2026-08-13T05:11:00+00:00",
+          "decision": "IRRIGATION_ZONE_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104921,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913,
+            9104920
+          ],
+          "mower_status_event": "2026-08-13T05:08:00+00:00"
+        },
+        {
+          "at": "2026-08-13T05:39:00+00:00",
+          "decision": "IRRIGATION_CONFIRM_ZONE_END",
+          "phase": "RUNNING",
+          "current_relay_id": 9104921,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913,
+            9104920
+          ],
+          "mower_status_event": "2026-08-13T05:38:00+00:00"
+        },
+        {
+          "at": "2026-08-13T05:41:00+00:00",
+          "decision": "IRRIGATION_ALL_ZONES_CONFIRMED_COMPLETE",
+          "phase": "COMPLETE_HOLD",
+          "current_relay_id": null,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913,
+            9104920,
+            9104921
+          ],
+          "mower_status_event": "2026-08-13T05:38:00+00:00"
+        },
+        {
+          "at": "2026-08-13T05:42:00+00:00",
+          "decision": "HYDRAWISE_CLEAR_CONFIRMATION_HOLD",
+          "phase": "COMPLETE_HOLD",
+          "current_relay_id": null,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913,
+            9104920,
+            9104921
+          ],
+          "mower_status_event": "2026-08-13T05:38:00+00:00"
+        }
+      ],
+      "final_state": {
+        "phase": "COMPLETE_HOLD",
+        "current_relay_id": null,
+        "completed": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ]
+      }
+    },
+    {
+      "window_utc": [
+        "2026-08-13T02:30:00+00:00",
+        "2026-08-13T06:00:00+00:00"
+      ],
+      "persistent_park_hold": true,
+      "manual_sessions_enabled": true,
+      "event_offset_minutes": 14,
+      "dispatch_fault": null,
+      "window_europe_berlin": [
+        "04:30",
+        "08:00"
+      ],
+      "starts": [
+        {
+          "at": "2026-08-13T02:34:00+00:00",
+          "end": "2026-08-13T02:54:00+00:00",
+          "relay_id": 9104894,
+          "run_seconds": 1200
+        },
+        {
+          "at": "2026-08-13T02:57:00+00:00",
+          "end": "2026-08-13T03:17:00+00:00",
+          "relay_id": 9104906,
+          "run_seconds": 1200
+        },
+        {
+          "at": "2026-08-13T03:20:00+00:00",
+          "end": "2026-08-13T03:40:00+00:00",
+          "relay_id": 9104909,
+          "run_seconds": 1200
+        },
+        {
+          "at": "2026-08-13T03:43:00+00:00",
+          "end": "2026-08-13T04:03:00+00:00",
+          "relay_id": 9104911,
+          "run_seconds": 1200
+        },
+        {
+          "at": "2026-08-13T04:06:00+00:00",
+          "end": "2026-08-13T04:26:00+00:00",
+          "relay_id": 9104913,
+          "run_seconds": 1200
+        },
+        {
+          "at": "2026-08-13T04:29:00+00:00",
+          "end": "2026-08-13T04:59:00+00:00",
+          "relay_id": 9104920,
+          "run_seconds": 1800
+        },
+        {
+          "at": "2026-08-13T05:02:00+00:00",
+          "end": "2026-08-13T05:32:00+00:00",
+          "relay_id": 9104921,
+          "run_seconds": 1800
+        }
+      ],
+      "decision_counts": {
+        "IRRIGATION_WAIT_FOR_CONFIRMED_PARK": 2,
+        "IRRIGATION_SUSPENSION_REVALIDATING": 1,
+        "IRRIGATION_SUSPENSION_REVALIDATED": 1,
+        "IRRIGATION_ZONE_START_SENT": 7,
+        "IRRIGATION_ZONE_CONFIRMED_RUNNING": 7,
+        "IRRIGATION_ZONE_RUNNING": 146,
+        "IRRIGATION_CONFIRM_ZONE_END": 14,
+        "IRRIGATION_ZONE_CONFIRMED_COMPLETE": 6,
+        "IRRIGATION_ALL_ZONES_CONFIRMED_COMPLETE": 1,
+        "HYDRAWISE_CLEAR_CONFIRMATION_HOLD": 26
+      },
+      "decision_transitions": [
+        {
+          "at": "2026-08-13T02:30:00+00:00",
+          "decision": "IRRIGATION_WAIT_FOR_CONFIRMED_PARK",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [],
+          "mower_status_event": "2026-08-13T02:16:00+00:00"
+        },
+        {
+          "at": "2026-08-13T02:32:00+00:00",
+          "decision": "IRRIGATION_SUSPENSION_REVALIDATING",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [],
+          "mower_status_event": "2026-08-13T02:31:00+00:00"
+        },
+        {
+          "at": "2026-08-13T02:33:00+00:00",
+          "decision": "IRRIGATION_SUSPENSION_REVALIDATED",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [],
+          "mower_status_event": "2026-08-13T02:31:00+00:00"
+        },
+        {
+          "at": "2026-08-13T02:34:00+00:00",
+          "decision": "IRRIGATION_ZONE_START_SENT",
+          "phase": "START_RESERVED",
+          "current_relay_id": 9104894,
+          "completed": [],
+          "mower_status_event": "2026-08-13T02:31:00+00:00"
+        },
+        {
+          "at": "2026-08-13T02:35:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104894,
+          "completed": [],
+          "mower_status_event": "2026-08-13T02:31:00+00:00"
+        },
+        {
+          "at": "2026-08-13T02:36:00+00:00",
+          "decision": "IRRIGATION_ZONE_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104894,
+          "completed": [],
+          "mower_status_event": "2026-08-13T02:31:00+00:00"
+        },
+        {
+          "at": "2026-08-13T02:54:00+00:00",
+          "decision": "IRRIGATION_CONFIRM_ZONE_END",
+          "phase": "RUNNING",
+          "current_relay_id": 9104894,
+          "completed": [],
+          "mower_status_event": "2026-08-13T02:46:00+00:00"
+        },
+        {
+          "at": "2026-08-13T02:56:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_COMPLETE",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [
+            9104894
+          ],
+          "mower_status_event": "2026-08-13T02:46:00+00:00"
+        },
+        {
+          "at": "2026-08-13T02:57:00+00:00",
+          "decision": "IRRIGATION_ZONE_START_SENT",
+          "phase": "START_RESERVED",
+          "current_relay_id": 9104906,
+          "completed": [
+            9104894
+          ],
+          "mower_status_event": "2026-08-13T02:46:00+00:00"
+        },
+        {
+          "at": "2026-08-13T02:58:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104906,
+          "completed": [
+            9104894
+          ],
+          "mower_status_event": "2026-08-13T02:46:00+00:00"
+        },
+        {
+          "at": "2026-08-13T02:59:00+00:00",
+          "decision": "IRRIGATION_ZONE_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104906,
+          "completed": [
+            9104894
+          ],
+          "mower_status_event": "2026-08-13T02:46:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:17:00+00:00",
+          "decision": "IRRIGATION_CONFIRM_ZONE_END",
+          "phase": "RUNNING",
+          "current_relay_id": 9104906,
+          "completed": [
+            9104894
+          ],
+          "mower_status_event": "2026-08-13T03:16:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:19:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_COMPLETE",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [
+            9104894,
+            9104906
+          ],
+          "mower_status_event": "2026-08-13T03:16:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:20:00+00:00",
+          "decision": "IRRIGATION_ZONE_START_SENT",
+          "phase": "START_RESERVED",
+          "current_relay_id": 9104909,
+          "completed": [
+            9104894,
+            9104906
+          ],
+          "mower_status_event": "2026-08-13T03:16:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:21:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104909,
+          "completed": [
+            9104894,
+            9104906
+          ],
+          "mower_status_event": "2026-08-13T03:16:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:22:00+00:00",
+          "decision": "IRRIGATION_ZONE_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104909,
+          "completed": [
+            9104894,
+            9104906
+          ],
+          "mower_status_event": "2026-08-13T03:16:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:40:00+00:00",
+          "decision": "IRRIGATION_CONFIRM_ZONE_END",
+          "phase": "RUNNING",
+          "current_relay_id": 9104909,
+          "completed": [
+            9104894,
+            9104906
+          ],
+          "mower_status_event": "2026-08-13T03:31:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:42:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_COMPLETE",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [
+            9104894,
+            9104906,
+            9104909
+          ],
+          "mower_status_event": "2026-08-13T03:31:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:43:00+00:00",
+          "decision": "IRRIGATION_ZONE_START_SENT",
+          "phase": "START_RESERVED",
+          "current_relay_id": 9104911,
+          "completed": [
+            9104894,
+            9104906,
+            9104909
+          ],
+          "mower_status_event": "2026-08-13T03:31:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:44:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104911,
+          "completed": [
+            9104894,
+            9104906,
+            9104909
+          ],
+          "mower_status_event": "2026-08-13T03:31:00+00:00"
+        },
+        {
+          "at": "2026-08-13T03:45:00+00:00",
+          "decision": "IRRIGATION_ZONE_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104911,
+          "completed": [
+            9104894,
+            9104906,
+            9104909
+          ],
+          "mower_status_event": "2026-08-13T03:31:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:03:00+00:00",
+          "decision": "IRRIGATION_CONFIRM_ZONE_END",
+          "phase": "RUNNING",
+          "current_relay_id": 9104911,
+          "completed": [
+            9104894,
+            9104906,
+            9104909
+          ],
+          "mower_status_event": "2026-08-13T04:01:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:05:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_COMPLETE",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911
+          ],
+          "mower_status_event": "2026-08-13T04:01:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:06:00+00:00",
+          "decision": "IRRIGATION_ZONE_START_SENT",
+          "phase": "START_RESERVED",
+          "current_relay_id": 9104913,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911
+          ],
+          "mower_status_event": "2026-08-13T04:01:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:07:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104913,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911
+          ],
+          "mower_status_event": "2026-08-13T04:01:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:08:00+00:00",
+          "decision": "IRRIGATION_ZONE_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104913,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911
+          ],
+          "mower_status_event": "2026-08-13T04:01:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:26:00+00:00",
+          "decision": "IRRIGATION_CONFIRM_ZONE_END",
+          "phase": "RUNNING",
+          "current_relay_id": 9104913,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911
+          ],
+          "mower_status_event": "2026-08-13T04:16:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:28:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_COMPLETE",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913
+          ],
+          "mower_status_event": "2026-08-13T04:16:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:29:00+00:00",
+          "decision": "IRRIGATION_ZONE_START_SENT",
+          "phase": "START_RESERVED",
+          "current_relay_id": 9104920,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913
+          ],
+          "mower_status_event": "2026-08-13T04:16:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:30:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104920,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913
+          ],
+          "mower_status_event": "2026-08-13T04:16:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:31:00+00:00",
+          "decision": "IRRIGATION_ZONE_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104920,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913
+          ],
+          "mower_status_event": "2026-08-13T04:31:00+00:00"
+        },
+        {
+          "at": "2026-08-13T04:59:00+00:00",
+          "decision": "IRRIGATION_CONFIRM_ZONE_END",
+          "phase": "RUNNING",
+          "current_relay_id": 9104920,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913
+          ],
+          "mower_status_event": "2026-08-13T04:46:00+00:00"
+        },
+        {
+          "at": "2026-08-13T05:01:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_COMPLETE",
+          "phase": "READY",
+          "current_relay_id": null,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913,
+            9104920
+          ],
+          "mower_status_event": "2026-08-13T05:01:00+00:00"
+        },
+        {
+          "at": "2026-08-13T05:02:00+00:00",
+          "decision": "IRRIGATION_ZONE_START_SENT",
+          "phase": "START_RESERVED",
+          "current_relay_id": 9104921,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913,
+            9104920
+          ],
+          "mower_status_event": "2026-08-13T05:01:00+00:00"
+        },
+        {
+          "at": "2026-08-13T05:03:00+00:00",
+          "decision": "IRRIGATION_ZONE_CONFIRMED_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104921,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913,
+            9104920
+          ],
+          "mower_status_event": "2026-08-13T05:01:00+00:00"
+        },
+        {
+          "at": "2026-08-13T05:04:00+00:00",
+          "decision": "IRRIGATION_ZONE_RUNNING",
+          "phase": "RUNNING",
+          "current_relay_id": 9104921,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913,
+            9104920
+          ],
+          "mower_status_event": "2026-08-13T05:01:00+00:00"
+        },
+        {
+          "at": "2026-08-13T05:32:00+00:00",
+          "decision": "IRRIGATION_CONFIRM_ZONE_END",
+          "phase": "RUNNING",
+          "current_relay_id": 9104921,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913,
+            9104920
+          ],
+          "mower_status_event": "2026-08-13T05:31:00+00:00"
+        },
+        {
+          "at": "2026-08-13T05:34:00+00:00",
+          "decision": "IRRIGATION_ALL_ZONES_CONFIRMED_COMPLETE",
+          "phase": "COMPLETE_HOLD",
+          "current_relay_id": null,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913,
+            9104920,
+            9104921
+          ],
+          "mower_status_event": "2026-08-13T05:31:00+00:00"
+        },
+        {
+          "at": "2026-08-13T05:35:00+00:00",
+          "decision": "HYDRAWISE_CLEAR_CONFIRMATION_HOLD",
+          "phase": "COMPLETE_HOLD",
+          "current_relay_id": null,
+          "completed": [
+            9104894,
+            9104906,
+            9104909,
+            9104911,
+            9104913,
+            9104920,
+            9104921
+          ],
+          "mower_status_event": "2026-08-13T05:31:00+00:00"
+        }
+      ],
+      "final_state": {
+        "phase": "COMPLETE_HOLD",
+        "current_relay_id": null,
+        "completed": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ]
+      }
+    }
+  ]
+}

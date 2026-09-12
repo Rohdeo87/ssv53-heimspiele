@@ -6,6 +6,7 @@ an incident reproduction aid for the 03:30/04:30--08:00 Europe/Berlin windows.
 """
 
 from copy import deepcopy
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from collections import Counter
 import json
@@ -115,7 +116,8 @@ def _cycle(
     return cycle
 
 
-def _run_simulation(sim_start: datetime) -> dict[str, object]:
+def _run_simulation(sim_start: datetime, *, park_hold=False, manual=False,
+                    event_offset_minutes=0, dispatch_fault=None) -> dict[str, object]:
     store = InMemoryStateStore(_simulation_state(sim_start))
     active: dict[str, object] = {"relay": None, "started": None, "ends": None}
     starts: list[dict[str, object]] = []
@@ -141,6 +143,18 @@ def _run_simulation(sim_start: datetime) -> dict[str, object]:
         raise AssertionError("unerwarteter Mäher- oder Suspendierungsbefehl")
 
     current_at = [sim_start]
+    def dispatch_clock():
+        if dispatch_fault == "delayed":
+            return current_at[0] + timedelta(seconds=91)
+        if dispatch_fault == "control_changed":
+            current = store.load()
+            if current.irrigation_phase == "START_RESERVED":
+                store.save(replace(current, revision=current.revision + 1,
+                           operator_request_id="intervening-manual-action"),
+                           expected_revision=current.revision)
+        return current_at[0]
+
+    event_origin = sim_start - timedelta(minutes=event_offset_minutes)
     at = sim_start
     while at <= SIM_END:
         current_at[0] = at
@@ -148,8 +162,8 @@ def _run_simulation(sim_start: datetime) -> dict[str, object]:
             active["relay"] = None
             active["started"] = None
             active["ends"] = None
-        elapsed = at - sim_start
-        mower_event_at = sim_start + (elapsed // MOWER_EVENT_PERIOD) * MOWER_EVENT_PERIOD
+        elapsed = at - event_origin
+        mower_event_at = event_origin + (elapsed // MOWER_EVENT_PERIOD) * MOWER_EVENT_PERIOD
         state = store.load()
         cycle = _cycle(
             at,
@@ -161,8 +175,8 @@ def _run_simulation(sim_start: datetime) -> dict[str, object]:
         )
         output = run_full_failsafe_cycle(
             now_utc=at,
-            settings=settings(),
-            environment=ENV,
+            settings=settings(manual=manual),
+            environment={**ENV, "IRRIGATION_CONFIRMED_PARK_HOLD_ENABLED": str(park_hold).lower()},
             past_due=False,
             source="local-simulation",
             read_only_runner=lambda **_kwargs: deepcopy(cycle),
@@ -174,7 +188,7 @@ def _run_simulation(sim_start: datetime) -> dict[str, object]:
             stop_zone_sender=forbidden,
             cutting_height_sender=forbidden,
             blade_usage_reset_sender=forbidden,
-            command_clock=lambda: current_at[0],
+            command_clock=dispatch_clock,
         )
         saved = store.load()
         decisions.append(
@@ -192,6 +206,10 @@ def _run_simulation(sim_start: datetime) -> dict[str, object]:
     final = store.load()
     return {
         "window_utc": [sim_start.isoformat(), SIM_END.isoformat()],
+        "persistent_park_hold": park_hold,
+        "manual_sessions_enabled": manual,
+        "event_offset_minutes": event_offset_minutes,
+        "dispatch_fault": dispatch_fault,
         "window_europe_berlin": [
             (sim_start + timedelta(hours=2)).strftime("%H:%M"),
             "08:00",
@@ -240,3 +258,24 @@ def test_full_seven_zone_run_with_fifteen_minute_mower_events(
         for index in range(1, len(ordered))
     )
     assert all(item["end"] <= SIM_END.isoformat() for item in starts)
+
+
+@pytest.mark.parametrize("manual", [False, True])
+@pytest.mark.parametrize("event_offset_minutes", [0, 7, 14])
+def test_confirmed_park_hold_completes_all_seven_zones_from_0430(manual, event_offset_minutes):
+    result = _run_simulation(SIM_START_0430, park_hold=True, manual=manual,
+                             event_offset_minutes=event_offset_minutes)
+    starts = result["starts"]
+    assert len(starts) == len(RELAYS)
+    assert {z["relay_id"] for z in starts} == set(RELAYS)
+    assert set(result["final_state"]["completed"]) == set(RELAYS)
+    assert sum(z["run_seconds"] for z in starts) == sum(RUN_SECONDS)
+    assert all(z["end"] <= SIM_END.isoformat() for z in starts)
+    assert all(starts[i]["at"] >= starts[i-1]["end"] for i in range(1, len(starts)))
+
+
+@pytest.mark.parametrize("fault", ["delayed", "control_changed"])
+def test_held_park_never_authorizes_late_or_concurrently_revoked_dispatch(fault):
+    result = _run_simulation(SIM_START_0430, park_hold=True, manual=True, dispatch_fault=fault)
+    assert not result["starts"]
+    assert not result["final_state"]["completed"]

@@ -83,6 +83,7 @@ from mower.irrigation_operating_window import (
     validate_fresh_start,
     validate_zone_sequence,
 )
+from mower import irrigation_park_hold
 from mower.runtime import ControlMode, CycleResult, RuntimeSettings
 from mower.safety import CommandIntent, evaluate_command_gate, occupancy_override_allowed
 from mower.state import AutomationState
@@ -370,6 +371,39 @@ def _park_confirmation_ready(
         and now_utc - confirmed >= timedelta(minutes=confirmation_minutes)
         and int(state.park_confirmed_observations or 0) >= required_observations
     )
+
+
+def _water_park_authorized(state, mower, *, now_utc, environment,
+                           max_age_seconds, expected_json=None):
+    if irrigation_park_hold.enabled(environment):
+        # An active manual START uses its existing per-conflict authorization
+        # and fresh-event checks. It never acquires the unattended HOME proof.
+        try:
+            session = load_manual_session(state)
+        except ManualSessionError:
+            return False
+        if session and session.get("kind") == "START" and session.get("status") != "ENDED":
+            return _mower_status_is_fresh(mower, now_utc=now_utc, max_age_seconds=max_age_seconds)
+        return irrigation_park_hold.valid(state, mower, now_utc=now_utc,
+                                          expected_json=expected_json)
+    return _mower_status_is_fresh(mower, now_utc=now_utc, max_age_seconds=max_age_seconds)
+
+
+def _revoke_park_hold_after_read_failure(factory, environment, now):
+    """Persist uncertainty before entering the separate protective PARK path."""
+    for _attempt in range(2):
+        try:
+            store = factory(environment)
+            previous = store.load()
+            revoked = irrigation_park_hold.invalidate(previous, now_utc=now, reason="INPUT_UNAVAILABLE")
+            store.save(replace(revoked, revision=previous.revision + 1),
+                       expected_revision=previous.revision)
+            return "REVOKED"
+        except StateConflictError:
+            continue
+        except Exception:
+            return "STATE_UNAVAILABLE"
+    return "STATE_CONFLICT"
 
 
 def _occupancy_block_key(block: Mapping[str, Any]) -> str | None:
@@ -2255,8 +2289,13 @@ def run_full_failsafe_cycle(
         read_only_kwargs["publish_dashboard_snapshot"] = True
     try:
         result = read_only_runner(**read_only_kwargs)
-    except InputUnavailable as exc:
-        return input_failure_runner(
+    except Exception as exc:
+        revocation = None
+        if irrigation_park_hold.enabled(environment):
+            revocation = _revoke_park_hold_after_read_failure(state_store_factory, environment, now)
+        if not isinstance(exc, InputUnavailable):
+            raise
+        guarded = input_failure_runner(
             now_utc=now,
             settings=settings,
             environment=environment,
@@ -2266,6 +2305,10 @@ def run_full_failsafe_cycle(
             state_store_factory=state_store_factory,
             park_sender=park_sender,
         )
+        if revocation is not None:
+            guarded = replace(guarded, details={**guarded.details,
+                "irrigation_park_hold": {"held": False, "status": revocation, "reason": "INPUT_UNAVAILABLE"}})
+        return guarded
     details = dict(result.details)
     current_plan = _as_dict(details.get("current_plan"))
     parking_block = _as_dict(current_plan.get("parking_block"))
@@ -2336,6 +2379,14 @@ def run_full_failsafe_cycle(
                 )
             original = height_projection
             state = replace(height_projection, revision=height_projection.revision + 1)
+    if irrigation_park_hold.enabled(environment):
+        state, details["irrigation_park_hold"] = irrigation_park_hold.observe(
+            state, mower, now_utc=now, event_fresh=mower_status_fresh,
+            confirmation_minutes=_env_int(environment, "MOWER_PARK_CONFIRMATION_MINUTES", 1, minimum=1, maximum=15),
+            required_observations=_env_int(environment, "MOWER_PARK_CONFIRMATION_CYCLES", 2, minimum=2, maximum=10),
+        )
+    elif state.irrigation_park_hold_json is not None:
+        state = replace(state, irrigation_park_hold_json=None)
     operator_action = _operator_action(state, now)
 
     manual_session: dict[str, Any] | None = None
@@ -5638,21 +5689,18 @@ def run_full_failsafe_cycle(
                 message="Beregnung wartet zunächst auf den eigenen sicheren Parkbefehl.",
             )
 
-        # ``status_timestamp_ms`` is the backend-generated timestamp of the
-        # latest status update according to Husqvarna, not a physical sensor
-        # timestamp or the receipt time of our poll. Before a water start a
-        # fresh status update remains mandatory. Nach einem Zonenstart muss die
-        # Hydrawise-Enderkennung aber weiterlaufen koennen, solange der aktuelle
-        # Live-Abruf den Maeher weiterhin verbunden, fehlerfrei und im Dock
-        # meldet. Die naechste READY-Zone erfordert danach wieder einen frischen
-        # Parknachweis.
+        # A vendor event may remain unchanged while direct reads keep proving
+        # the same owned HOME park. The opt-in durable proof is only for water;
+        # ordinary mower starts retain their strict event freshness requirement.
         fresh_park_event_required = state.irrigation_phase in {
             "PLANNED",
             "SUSPENDING",
             "READY",
         }
         fresh_park_event_accepted = (
-            mower_status_fresh or not fresh_park_event_required
+            not fresh_park_event_required
+            or _water_park_authorized(state, mower, now_utc=now, environment=environment,
+                                      max_age_seconds=mower_status_max_age_seconds)
         )
         park_gate_required = state.irrigation_phase in {
             "PLANNED", "SUSPENDING", "READY",
@@ -6547,9 +6595,10 @@ def run_full_failsafe_cycle(
                 dispatch_code, dispatch_reason = "IRRIGATION_OPERATING_WINDOW", "OPERATOR_ACTION_PENDING"
             elif latest.mower_start_pending_since_utc is not None:
                 dispatch_code, dispatch_reason = "IRRIGATION_OPERATING_WINDOW", "MOWER_START_PENDING"
-            elif not _mower_status_is_fresh(
-                mower, now_utc=dispatch_now,
+            elif not _water_park_authorized(
+                latest, mower, now_utc=dispatch_now, environment=environment,
                 max_age_seconds=mower_status_max_age_seconds,
+                expected_json=reserved.irrigation_park_hold_json,
             ):
                 dispatch_code, dispatch_reason = "IRRIGATION_OPERATING_WINDOW", "MOWER_STATUS_STALE"
             else:
@@ -6644,9 +6693,14 @@ def run_full_failsafe_cycle(
                         or latest.irrigation_phase != "START_RESERVED"
                         or latest.irrigation_current_relay_id != relay
                         or str(mower.get("mode") or "").strip().upper() != "HOME"
-                        or not _mower_status_is_fresh(
-                            mower, now_utc=at,
+                        or mower.get("connected") is not True
+                        or mower.get("activity") not in PARKED_ACTIVITIES
+                        or mower.get("error_code") != 0
+                        or mower.get("state") in ERROR_STATES
+                        or not _water_park_authorized(
+                            latest, mower, now_utc=at, environment=environment,
                             max_age_seconds=mower_status_max_age_seconds,
+                            expected_json=reserved.irrigation_park_hold_json,
                         )
                         or not hydra_still_fresh_clear
                     ):

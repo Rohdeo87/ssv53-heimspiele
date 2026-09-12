@@ -77,6 +77,8 @@ def main():
             "start_action": {k: (details.get("start_action") or {}).get(k) for k in (
                 "type", "outcome", "reason_code", "requested_deadline_utc", "failsafe_refresh")},
             "automation": details.get("automation_state"),
+            "park_hold": details.get("irrigation_park_hold"),
+            "irrigation_action": details.get("irrigation_action"),
             "manual": {k: manual.get(k) for k in ("enabled", "kind", "status", "permission_code")},
             "plan": compact_plan(details.get("current_plan")),
         })

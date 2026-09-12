@@ -1,8 +1,8 @@
-"""Build this incident's two-module patch from the verified installed package.
+"""Build this incident's bounded patch from the verified installed package.
 
 No service access, environment changes or deployment. Unchanged sources must
 match the chosen Git commit apart from line endings before preserving their
-installed bytes. Both changed files come from Git, never an uncommitted edit.
+installed bytes. Changed and added files come from Git, never an uncommitted edit.
 """
 from __future__ import annotations
 
@@ -18,7 +18,9 @@ import types
 import zipfile
 
 BASE_SHA256 = "27c8a826b12e5b9efd0f6414d0d2efe861cbd42bfd5972546033a3ee944aca9c"
-PATCHED = frozenset({"mower/full_failsafe.py", "mower/irrigation_recovery.py"})
+PATCHED = frozenset({"mower/full_failsafe.py", "mower/irrigation_recovery.py",
+                     "mower/state.py", "mower/irrigation_park_hold.py"})
+ADDED = frozenset({"mower/irrigation_park_hold.py"})
 
 
 def build(repository: Path, base: Path, commit: str, output: Path) -> dict:
@@ -33,7 +35,7 @@ def build(repository: Path, base: Path, commit: str, output: Path) -> dict:
     exec(compile(git("show", f"{source_commit}:{builder_path}"), builder_path, "exec"), builder.__dict__)
     with zipfile.ZipFile(base) as archive:
         previous = {name: archive.read(name) for name in archive.namelist()}
-    if set(previous) != {*builder.REQUIRED_FILES, "package-manifest.json"}:
+    if set(previous) != (set(builder.REQUIRED_FILES) - ADDED) | {"package-manifest.json"}:
         raise ValueError("Unexpected base package inventory")
 
     with tempfile.TemporaryDirectory(prefix="ssv53-irrigation-patch-") as temporary:
@@ -49,7 +51,7 @@ def build(repository: Path, base: Path, commit: str, output: Path) -> dict:
         result = builder.build_package(stage, output)
         with zipfile.ZipFile(output) as archive:
             current = {name: archive.read(name) for name in archive.namelist()}
-        changed = sorted(name for name in previous if previous[name] != current[name])
+        changed = sorted(name for name in set(previous) | set(current) if previous.get(name) != current.get(name))
         if set(changed) != PATCHED | {"package-manifest.json"}:
             raise ValueError(f"Unexpected changed package files: {changed}")
         (stage / "package-manifest.json").write_bytes(current["package-manifest.json"])

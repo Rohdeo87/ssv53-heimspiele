@@ -5,6 +5,11 @@ wurde für diese Untersuchung gesendet. Die beschriebenen Reparaturen sind
 zunächst Entwicklungsstand; Veröffentlichung und physischer Erfolg müssen
 gesondert nachgewiesen werden.
 
+**Fortsetzung nach Nutzerbestätigung:** Die dauerhafte eigene HOME-Parksperre
+ist inzwischen implementiert und getestet, standardmäßig ausgeschaltet.
+[Regel, Umsetzung, vollständiger Vergleich und Einführungsnachweis](PARK_HOLD.md).
+Die Paketangaben weiter unten dokumentieren den vorherigen Entwicklungsstand.
+
 ## Belegter Ablauf
 
 Die [Installation](installed-before.json) wurde um 07:26 Uhr gegen das vorherige
@@ -130,8 +135,8 @@ parkt dieser Befehl unbefristet; `mode=HOME` bestätigt diesen Modus. Ein
 
 Ein fortbestehender eigener HOME-Parkauftrag ist deshalb die richtige Grundlage
 für eine spätere Freigabe ohne Wartezeit auf unveränderte Geräteereignisse.
-Diese zusätzliche Änderung der Sicherheitslogik ist in diesem Paket **nicht
-aktiviert und nicht implementiert**. Der konkrete nächste Entwurf muss:
+Im unten beschriebenen ersten Paket war diese zusätzliche Änderung noch nicht
+implementiert. Die [Fortsetzung](PARK_HOLD.md) setzt nun diese Anforderungen um:
 
 - eine zunächst frische Stationsbestätigung nach dem eigenen Parkbefehl an
   Geräte-ID und Befehls-/Bediengeneration binden;

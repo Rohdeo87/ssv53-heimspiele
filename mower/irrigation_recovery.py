@@ -88,6 +88,7 @@ def _reset_state(
         last_hydrawise_active_count=0,
         next_irrigation_start_utc=None,
         irrigation_phase=None,
+        irrigation_park_hold_json=None,
         irrigation_plan_id=None,
         irrigation_plan_json=None,
         irrigation_suspended_relay_ids_json=None,

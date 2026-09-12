@@ -109,6 +109,7 @@ class AutomationState:
     irrigation_suspension_revalidation_observations: int = 0
     irrigation_zone_clear_observed_utc: str | None = None
     irrigation_cancelled_without_run_utc: str | None = None
+    irrigation_park_hold_json: str | None = None
     last_command_fingerprint: str | None = None
     last_command_utc: str | None = None
     maintenance_mode: bool = False
@@ -204,6 +205,7 @@ class AutomationState:
             "manual_water_conflict_json",
             "device_send_journal_json",
             "manual_control_receipts_json",
+            "irrigation_park_hold_json",
         ):
             raw = getattr(self, field_name)
             if raw is None:
@@ -504,6 +506,9 @@ class AutomationState:
             ),
             manual_session_json=_normalize_optional_text(
                 values.get("manual_session_json")
+            ),
+            irrigation_park_hold_json=_normalize_optional_text(
+                values.get("irrigation_park_hold_json")
             ),
             operator_request_session_id=_normalize_optional_text(
                 values.get("operator_request_session_id")
@@ -851,6 +856,10 @@ class AutomationState:
             self,
             revision=self.revision + 1,
             last_cycle_started_utc=started.isoformat(),
+            irrigation_park_hold_json=(self.irrigation_park_hold_json if success else json.dumps({
+                "version": 1, "status": "INVALID", "not_before_utc": started.isoformat(),
+                "reason": "INPUT_UNAVAILABLE",
+            }, sort_keys=True, separators=(",", ":"))),
             last_success_utc=(
                 started.isoformat() if success else self.last_success_utc
             ),
@@ -915,6 +924,7 @@ class AutomationState:
         }
         if normalized_action == "PARK":
             changes.update(
+                irrigation_park_hold_json=None,
                 parked_by_automation=True,
                 automation_park_source=normalized_source,
                 automation_restart_allowed=bool(restart_allowed),
@@ -935,6 +945,7 @@ class AutomationState:
                 raise ValueError("work_area_id muss für kontinuierliches Mähen positiv sein.")
             changes.update(
                 parked_by_automation=False,
+                irrigation_park_hold_json=None,
                 automation_park_source=None,
                 automation_restart_allowed=False,
                 last_start_command_utc=sent.isoformat(),
@@ -967,6 +978,7 @@ class AutomationState:
         return replace(
             self,
             revision=self.revision + 1,
+            irrigation_park_hold_json=None,
             parked_by_automation=False,
             automation_park_source=None,
             automation_restart_allowed=False,
