@@ -1,0 +1,26 @@
+{
+  "at_utc": "2026-09-12T07:07:34.212156+00:00",
+  "read_only": true,
+  "preview": {
+    "delta": null,
+    "dryRun": true,
+    "eligible": false,
+    "journal": {
+      "unresolvedDeviceSendCount": 6
+    },
+    "manualSessionStatus": "ENDED",
+    "operatorRequestStatus": "COMPLETED",
+    "pendingFingerprint": null,
+    "proof": null,
+    "proofToken": null,
+    "reasons": [
+      "START_PENDING_MISSING_OR_INVALID",
+      "START_PRE_SEND_PROOF_MISSING",
+      "UNKNOWN_START_HOLD_MISSING",
+      "AUTOMATION_RESTART_ALREADY_ALLOWED",
+      "UNKNOWN_START_DECISION_MISSING",
+      "DEVICE_SEND_OUTCOME_UNCONFIRMED"
+    ],
+    "stateRevision": 45954
+  }
+}

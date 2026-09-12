@@ -75,6 +75,36 @@ def unresolved_device_sends(state) -> list[dict[str, Any]]:
     return [entry for entry in load_device_send_journal(state) if entry["status"] in UNRESOLVED]
 
 
+def ordinary_suspension_until(entry: dict[str, Any]) -> datetime | None:
+    """Read the immutable absolute bound of the canonical irrigation sender.
+
+    Never derive an old command's bound from the currently selected plan:
+    Hydrawise may compact that plan while zones are being suspended.
+    Other senders/unknown transport outcomes deliberately have no such proof.
+    """
+    if entry.get("kind") != "SUSPEND" or entry.get("status") != "SENT_UNCONFIRMED":
+        return None
+    try:
+        prefix, suffix = str(entry["intent_key"]).split(":suspend:", 1)
+        target, raw = suffix.split(":", 1)
+        if not prefix.startswith("irrigation:") or not prefix[len("irrigation:"):] or target != entry["target"]:
+            return None
+        until = _utc(datetime.fromisoformat(raw.replace("Z", "+00:00")))
+        sent = _utc(datetime.fromisoformat(entry["dispatched_at_utc"].replace("Z", "+00:00")))
+        deadline = _utc(datetime.fromisoformat(entry["deadline_utc"].replace("Z", "+00:00")))
+        return until if sent < deadline <= until else None
+    except (ValueError, TypeError, KeyError, IndexError, DeviceSendBlocked):
+        return None
+
+
+def device_send_diagnostics(state) -> list[dict[str, Any]]:
+    """Bounded receipts for ADMIN diagnosis; no secrets, payloads or bindings."""
+    return [{key: entry.get(key) for key in (
+        "id", "kind", "status", "reserved_at_utc", "dispatched_at_utc",
+        "deadline_utc", "confirmed_at_utc", "evidence", "message_code",
+    )} for entry in load_device_send_journal(state)]
+
+
 def _journal_json(state, entries: list[dict[str, Any]]) -> str:
     """Serialize a bounded journal without ever discarding uncertain writes.
 

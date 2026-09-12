@@ -13,6 +13,8 @@ from mower.manual_session import (
 )
 from mower.runtime import ControlMode, RuntimeSettings
 from mower.safety import occupancy_override_allowed
+from mower import irrigation_park_hold
+from mower.device_send_guard import DeviceSendBlocked, unresolved_device_sends
 
 
 class ManualControlError(ValueError):
@@ -101,7 +103,16 @@ def manual_context(state, details: Mapping[str, Any], environment, now_utc):
         fault_free = type(mower.get("error_code")) is int and mower["error_code"] == 0
     except (KeyError, TypeError):
         fault_free = False
-    can_start = (enabled and exact and _fresh(mower, now) and not forbidden and not state.maintenance_mode
+    station_confirmed = bool(irrigation_park_hold.enabled(environment)
+                             and details.get("manual_sources_available") is not False
+                             and (irrigation_park_hold.valid(state, mower, now_utc=now)
+                                  or irrigation_park_hold.start_valid(state, mower, now_utc=now)))
+    try:
+        journal_clear = not unresolved_device_sends(state)
+    except DeviceSendBlocked:
+        journal_clear = False
+    can_start = (enabled and exact and (_fresh(mower, now) or station_confirmed) and journal_clear
+                 and not forbidden and not state.maintenance_mode
                  and state.mower_start_pending_since_utc is None
                  and fault_free
                  and str(mower.get("state") or "").upper() not in {"STOPPED", "OFF", "ERROR", "FATAL_ERROR"}
@@ -112,7 +123,7 @@ def manual_context(state, details: Mapping[str, Any], environment, now_utc):
             status, title, message = "UNKNOWN", "Aktion noch nicht bestätigt", "Bitte am Mäher nachsehen und die Bedienung bestätigen."
         elif current_session["kind"] == "PARK":
             status, title, message = "MANUAL_PARKED", "Manuell geparkt", "Die Automatik wartet auf deine Freigabe."
-            if not (_fresh(mower, now) and str(mower.get("mode") or "").upper() == "HOME"
+            if not ((_fresh(mower, now) or station_confirmed) and str(mower.get("mode") or "").upper() == "HOME"
                     and mower.get("activity") in {"PARKED_IN_CS", "CHARGING"}):
                 title, message = "Parken angefordert", "Bitte warten, bis der Mäher die Station erreicht hat."
         elif conflict.get("required"):
@@ -133,7 +144,7 @@ def manual_context(state, details: Mapping[str, Any], environment, now_utc):
         message = "Der letzte Start ist ungeklärt. Bitte den Mäher vor Ort prüfen."
         if exact and mower.get("connected") is True:
             message += " Parken bleibt möglich."
-    elif enabled and exact and mower.get("connected") is True and not _fresh(mower, now):
+    elif enabled and exact and mower.get("connected") is True and not (_fresh(mower, now) or station_confirmed):
         message += " Für einen Start bitte eine neue Mähermeldung abwarten. Parken bleibt möglich."
     active_start = bool(current_session and current_session["kind"] == "START" and current_session["status"] == "ACTIVE")
     occupancy_override = bool(active_start and not forbidden and keys and keys.issubset(set(current_session["confirmed_block_keys"])))
@@ -147,6 +158,7 @@ def manual_context(state, details: Mapping[str, Any], environment, now_utc):
         "until": until, "sessionId": current_session.get("session_id") if current_session else None,
         "epoch": session["epoch"] if session else 0, "contextToken": token,
         "canStart": can_start,
+        "stationConfirmed": station_confirmed,
         "canPark": enabled and exact and mower.get("connected") is True,
         "canResume": enabled and current_session is not None and current_session["status"] != "UNKNOWN"
                      and state.mower_start_pending_since_utc is None and not state.maintenance_mode,
@@ -269,6 +281,9 @@ def request_manual_control(*, store, state, details, environment, now_utc, reque
     if operation == "PARK":
         changes["automation_restart_allowed"] = False
     updated = replace(state, **changes)
+    if operation == "START" and source == "APP" and irrigation_park_hold.enabled(environment):
+        updated = irrigation_park_hold.prepare_manual_start(
+            state, updated, dict(details.get("mower") or {}), now_utc=now)
     store.save(updated, expected_revision=state.revision)
     response_public = manual_context(updated, details, environment, now)[0]
     return updated, {"accepted": True, "requestId": request_id,

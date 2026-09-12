@@ -1,0 +1,268 @@
+{
+  "at_utc": "2026-09-12T07:29:11.852854+00:00",
+  "read_only": true,
+  "query": "traces | where timestamp > datetime(2026-09-11T12:00:00Z) and message startswith \"SSV53_CONTROL_CYCLE \" | extend p=parse_json(substring(message,20)) | where p.command_sent == true or p.decision_code has_any (\"FAILED\", \"REJECTED\") | project timestamp,p | order by timestamp desc | take 150",
+  "rows": [
+    {
+      "at": "2026-09-12T02:11:04.0682372Z",
+      "decision": "IRRIGATION_ZONE_SUSPENDED",
+      "sent": true,
+      "message": "Planstart f\u00fcr Zone 7 wurde sicher suspendiert.",
+      "actions": {
+        "irrigation_action": {
+          "relay_id": 9104921,
+          "response": {
+            "message": "Suspending Mitte vorne 2 till Saturday, 12th of September 2026, 08:10AM (Germany Time)",
+            "message_type": "info"
+          },
+          "suspend_until_utc": "2026-09-12T06:10:00.0000000Z",
+          "type": "SuspendScheduledZone"
+        }
+      }
+    },
+    {
+      "at": "2026-09-12T02:07:03.9668249Z",
+      "decision": "IRRIGATION_ZONE_SUSPENDED",
+      "sent": true,
+      "message": "Planstart f\u00fcr Zone 6 wurde sicher suspendiert.",
+      "actions": {
+        "irrigation_action": {
+          "relay_id": 9104920,
+          "response": {
+            "message": "Suspending Mitte hinten 1 till Saturday, 12th of September 2026, 08:10AM (Germany Time)",
+            "message_type": "info"
+          },
+          "suspend_until_utc": "2026-09-12T06:10:00.0000000Z",
+          "type": "SuspendScheduledZone"
+        }
+      }
+    },
+    {
+      "at": "2026-09-12T02:03:03.8012455Z",
+      "decision": "IRRIGATION_ZONE_SUSPENDED",
+      "sent": true,
+      "message": "Planstart f\u00fcr Zone 5 wurde sicher suspendiert.",
+      "actions": {
+        "irrigation_action": {
+          "relay_id": 9104913,
+          "response": {
+            "message": "Suspending 5 Links vom Tor am Eingang till Saturday, 12th of September 2026, 08:10AM (Germany Time)",
+            "message_type": "info"
+          },
+          "suspend_until_utc": "2026-09-12T06:10:00.0000000Z",
+          "type": "SuspendScheduledZone"
+        }
+      }
+    },
+    {
+      "at": "2026-09-12T01:58:03.6664783Z",
+      "decision": "IRRIGATION_ZONE_SUSPENDED",
+      "sent": true,
+      "message": "Planstart f\u00fcr Zone 4 wurde sicher suspendiert.",
+      "actions": {
+        "irrigation_action": {
+          "relay_id": 9104911,
+          "response": {
+            "message": "Suspending 4 An der Zuschauerseite till Saturday, 12th of September 2026, 08:10AM (Germany Time)",
+            "message_type": "info"
+          },
+          "suspend_until_utc": "2026-09-12T06:10:00.0000000Z",
+          "type": "SuspendScheduledZone"
+        }
+      }
+    },
+    {
+      "at": "2026-09-12T01:54:03.5662348Z",
+      "decision": "IRRIGATION_ZONE_SUSPENDED",
+      "sent": true,
+      "message": "Planstart f\u00fcr Zone 3 wurde sicher suspendiert.",
+      "actions": {
+        "irrigation_action": {
+          "relay_id": 9104909,
+          "response": {
+            "message": "Suspending 3 Links + Rechts vom Tor hinten till Saturday, 12th of September 2026, 08:10AM (Germany Time)",
+            "message_type": "info"
+          },
+          "suspend_until_utc": "2026-09-12T06:10:00.0000000Z",
+          "type": "SuspendScheduledZone"
+        }
+      }
+    },
+    {
+      "at": "2026-09-12T01:50:04.1966299Z",
+      "decision": "IRRIGATION_ZONE_SUSPENDED",
+      "sent": true,
+      "message": "Planstart f\u00fcr Zone 2 wurde sicher suspendiert.",
+      "actions": {
+        "irrigation_action": {
+          "relay_id": 9104906,
+          "response": {
+            "message": "Suspending 2 An den Trainerb\u00e4nken till Saturday, 12th of September 2026, 08:10AM (Germany Time)",
+            "message_type": "info"
+          },
+          "suspend_until_utc": "2026-09-12T06:10:00.0000000Z",
+          "type": "SuspendScheduledZone"
+        }
+      }
+    },
+    {
+      "at": "2026-09-12T01:46:03.5983816Z",
+      "decision": "IRRIGATION_ZONE_SUSPENDED",
+      "sent": true,
+      "message": "Planstart f\u00fcr Zone 1 wurde sicher suspendiert.",
+      "actions": {
+        "irrigation_action": {
+          "relay_id": 9104894,
+          "response": {
+            "message": "Suspending 1 Rechts Tor Eingang till Saturday, 12th of September 2026, 08:10AM (Germany Time)",
+            "message_type": "info"
+          },
+          "suspend_until_utc": "2026-09-12T06:10:00.0000000Z",
+          "type": "SuspendScheduledZone"
+        }
+      }
+    },
+    {
+      "at": "2026-09-12T01:45:03.2779188Z",
+      "decision": "PARK_COMMAND_SENT",
+      "sent": true,
+      "message": "ParkUntilFurtherNotice wurde sicher gesendet.",
+      "actions": {
+        "park_action": {
+          "reasserted": false,
+          "response": {
+            "data": {
+              "id": "60623126-4e86-4ab1-bde4-b20b70a5d4f6",
+              "type": "control"
+            }
+          },
+          "source": "irrigation",
+          "type": "ParkUntilFurtherNotice"
+        }
+      }
+    },
+    {
+      "at": "2026-09-11T22:25:03.7791075Z",
+      "decision": "CONTINUOUS_MOWING_START_SENT",
+      "sent": true,
+      "message": "Der begrenzte M\u00e4hstart wurde angenommen; die Ger\u00e4teausf\u00fchrung ist noch nicht best\u00e4tigt.",
+      "actions": {
+        "start_action": {
+          "acknowledgement": "VENDOR_QUEUE_ACCEPTED",
+          "command_end_utc": "2026-09-12T01:49:00.0092540Z",
+          "continuous_mowing": true,
+          "duration_minutes": 204,
+          "failsafe_refresh": false,
+          "hydrawise_release_minutes": 150,
+          "physical_execution_confirmed": false,
+          "response": {
+            "data": {
+              "id": "7e9f0959-d693-4a42-8f80-64f1564cf9d4",
+              "type": "control"
+            }
+          },
+          "turnaround_before_dock": false,
+          "type": "StartInWorkArea",
+          "work_area_id": 849199
+        }
+      }
+    },
+    {
+      "at": "2026-09-11T22:15:03.1665535Z",
+      "decision": "CONTINUOUS_MOWING_START_SENT",
+      "sent": true,
+      "message": "Der begrenzte M\u00e4hstart wurde angenommen; die Ger\u00e4teausf\u00fchrung ist noch nicht best\u00e4tigt.",
+      "actions": {
+        "start_action": {
+          "acknowledgement": "VENDOR_QUEUE_ACCEPTED",
+          "command_end_utc": "2026-09-12T01:49:00.0088340Z",
+          "continuous_mowing": true,
+          "duration_minutes": 214,
+          "failsafe_refresh": false,
+          "hydrawise_release_minutes": 150,
+          "physical_execution_confirmed": false,
+          "response": {
+            "data": {
+              "id": "5b26329d-55f0-4ea2-b875-348abc14aef4",
+              "type": "control"
+            }
+          },
+          "turnaround_before_dock": false,
+          "type": "StartInWorkArea",
+          "work_area_id": 849199
+        }
+      }
+    },
+    {
+      "at": "2026-09-11T22:05:03.1792854Z",
+      "decision": "CONTINUOUS_MOWING_START_SENT",
+      "sent": true,
+      "message": "Der begrenzte M\u00e4hstart wurde angenommen; die Ger\u00e4teausf\u00fchrung ist noch nicht best\u00e4tigt.",
+      "actions": {
+        "start_action": {
+          "acknowledgement": "VENDOR_QUEUE_ACCEPTED",
+          "command_end_utc": "2026-09-12T01:49:00.0031160Z",
+          "continuous_mowing": true,
+          "duration_minutes": 224,
+          "failsafe_refresh": false,
+          "hydrawise_release_minutes": 150,
+          "physical_execution_confirmed": false,
+          "response": {
+            "data": {
+              "id": "823c4d7e-b68d-4331-95ee-20842e3f49c5",
+              "type": "control"
+            }
+          },
+          "turnaround_before_dock": false,
+          "type": "StartInWorkArea",
+          "work_area_id": 849199
+        }
+      }
+    },
+    {
+      "at": "2026-09-11T17:01:07.3857977Z",
+      "decision": "CONTINUOUS_MOWING_START_SENT",
+      "sent": true,
+      "message": "Der begrenzte M\u00e4hstart wurde angenommen; die Ger\u00e4teausf\u00fchrung ist noch nicht best\u00e4tigt.",
+      "actions": {
+        "start_action": {
+          "acknowledgement": "VENDOR_QUEUE_ACCEPTED",
+          "command_end_utc": "2026-09-12T01:49:00.0061010Z",
+          "continuous_mowing": true,
+          "duration_minutes": 528,
+          "failsafe_refresh": false,
+          "hydrawise_release_minutes": 150,
+          "physical_execution_confirmed": false,
+          "response": {
+            "data": {
+              "id": "ef1203bd-c14e-4387-85a5-35504f70d5c5",
+              "type": "control"
+            }
+          },
+          "turnaround_before_dock": false,
+          "type": "StartInWorkArea",
+          "work_area_id": 849199
+        }
+      }
+    },
+    {
+      "at": "2026-09-11T14:20:03.85272Z",
+      "decision": "PARK_COMMAND_SENT",
+      "sent": true,
+      "message": "ParkUntilFurtherNotice wurde sicher gesendet.",
+      "actions": {
+        "park_action": {
+          "reasserted": false,
+          "response": {
+            "data": {
+              "id": "9061756e-2d8f-4292-8fc3-4a87ab451d6c",
+              "type": "control"
+            }
+          },
+          "source": "training",
+          "type": "ParkUntilFurtherNotice"
+        }
+      }
+    }
+  ]
+}

@@ -53,6 +53,7 @@ from mower.device_send_guard import (
     DeviceSendBlocked,
     dispatch_device_send,
     load_device_send_journal,
+    ordinary_suspension_until,
     reconcile_device_send,
     unresolved_device_sends,
 )
@@ -274,12 +275,26 @@ def _reconcile_observed_device_writes(
             except (TypeError, ValueError):
                 relay = 0
             observation = observations.get(relay, {})
+            suspend_until = ordinary_suspension_until(entry)
+            next_start = _parse_time(observation.get("scheduled_start_utc"))
             if (
                 kind == "SUSPEND" and relay > 0 and exact_relay_state
                 and observation.get("valid") is True
                 and observation.get("scheduled") is False
             ):
                 proven, evidence = True, f"fresh-suspended-relay-{relay}"
+            elif (
+                kind == "SUSPEND" and suspend_until is not None
+                and exact_relay_state and relay in expected_relays and not active
+                and observation.get("valid") is True
+                and observation.get("scheduled") is True
+                and next_start is not None and next_start > max(suspend_until, now_utc)
+            ):
+                # A next run AFTER this write's absolute suspension is positive
+                # schedule evidence, even if compaction changed the plan id.
+                # Requires a returned transport and newer complete vendor read;
+                # an unknown/delayed transport is never cleared by this branch.
+                proven, evidence = True, f"fresh-next-run-after-suspension-relay-{relay}"
             elif (
                 kind == "WATER_STOP" and relay > 0 and exact_relay_state
                 and relay not in active
@@ -2357,6 +2372,14 @@ def run_full_failsafe_cycle(
         state = _reconcile_observed_device_writes(
             state, mower, details, now_utc=now,
         )
+        if state.device_send_journal_json != original.device_send_journal_json:
+            before = unresolved_device_sends(original)
+            after_ids = {entry["id"] for entry in unresolved_device_sends(state)}
+            details["device_write_reconciliation"] = {
+                "remaining": len(after_ids),
+                "resolved": [{"kind": entry["kind"], "dispatched_at_utc": entry.get("dispatched_at_utc")}
+                             for entry in before if entry["id"] not in after_ids],
+            }
         height_projection = reconcile_full_height_sends(
             state, mower, environment, now,
         )
@@ -7895,7 +7918,11 @@ def run_full_failsafe_cycle(
             command_sent=True,
         )
 
-    if mower.get("connected") is not True or not mower_status_fresh:
+    confirmed_manual_station = bool(
+        manual_start_active and irrigation_park_hold.enabled(environment)
+        and irrigation_park_hold.start_valid(state, mower, now_utc=now)
+    )
+    if mower.get("connected") is not True or not (mower_status_fresh or confirmed_manual_station):
         details["start_action"] = {
             "type": "StartInWorkArea",
             "outcome": "PRE_SEND_BLOCKED",
@@ -8028,6 +8055,7 @@ def run_full_failsafe_cycle(
                 int(manual_session["epoch"]) if manual_start_active else None
             ),
             _guard_provenance=dispatch_guard_provenance,
+            allow_confirmed_station_start=irrigation_park_hold.enabled(environment),
         )
 
     try:

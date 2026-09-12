@@ -1,0 +1,354 @@
+{
+  "observed_at_utc": "2026-09-12T08:24:03.838821+00:00",
+  "user_approved": true,
+  "deployment_exit_code": 0,
+  "implementation_commit": "fecb803451efadaddbb701d01a228f8e41f3659b",
+  "zip_sha256": "f16fd90869b4a79564dc6ab74ee5607554992eba35e592a5a660bb9eebb8a627",
+  "manifest_sha256": "cc36ebb779787ee97d0c499da61410cf9810505fb384400e1379c3262760a89c",
+  "installed_file_count": 71,
+  "host_state": "Running",
+  "function_count": 16,
+  "checked_settings_unchanged": true,
+  "journal_before": {
+    "at_utc": "2026-09-12T08:18:05.793801+00:00",
+    "unresolved": 6
+  },
+  "journal_after": {
+    "at_utc": "2026-09-12T08:24:03.838821+00:00",
+    "unresolved": 0
+  },
+  "reconciled_receipts": [
+    {
+      "confirmed_at_utc": "2026-09-12T08:20:10.230079+00:00",
+      "deadline_utc": "2026-09-12T01:46:30.002293+00:00",
+      "dispatched_at_utc": "2026-09-12T01:46:02.194610+00:00",
+      "evidence": "fresh-next-run-after-suspension-relay-9104894",
+      "id": "5906ba047e664a079bea15234c57c7f0",
+      "kind": "SUSPEND",
+      "message_code": null,
+      "reserved_at_utc": "2026-09-12T01:46:00.002293+00:00",
+      "status": "CONFIRMED"
+    },
+    {
+      "confirmed_at_utc": "2026-09-12T08:20:10.230079+00:00",
+      "deadline_utc": "2026-09-12T01:50:30.003448+00:00",
+      "dispatched_at_utc": "2026-09-12T01:50:02.986741+00:00",
+      "evidence": "fresh-next-run-after-suspension-relay-9104906",
+      "id": "a7c918ca2a8e4970a14f8ef3cd831f3c",
+      "kind": "SUSPEND",
+      "message_code": null,
+      "reserved_at_utc": "2026-09-12T01:50:00.003448+00:00",
+      "status": "CONFIRMED"
+    },
+    {
+      "confirmed_at_utc": "2026-09-12T08:20:10.230079+00:00",
+      "deadline_utc": "2026-09-12T01:54:29.999779+00:00",
+      "dispatched_at_utc": "2026-09-12T01:54:02.281952+00:00",
+      "evidence": "fresh-next-run-after-suspension-relay-9104909",
+      "id": "2303520e157c4bf29a6cd6a5a9a5512f",
+      "kind": "SUSPEND",
+      "message_code": null,
+      "reserved_at_utc": "2026-09-12T01:53:59.999779+00:00",
+      "status": "CONFIRMED"
+    },
+    {
+      "confirmed_at_utc": "2026-09-12T08:20:10.230079+00:00",
+      "deadline_utc": "2026-09-12T01:58:29.999233+00:00",
+      "dispatched_at_utc": "2026-09-12T01:58:02.476667+00:00",
+      "evidence": "fresh-next-run-after-suspension-relay-9104911",
+      "id": "cb2b8622fd2b4afb9deeb2540c8a6188",
+      "kind": "SUSPEND",
+      "message_code": null,
+      "reserved_at_utc": "2026-09-12T01:57:59.999233+00:00",
+      "status": "CONFIRMED"
+    },
+    {
+      "confirmed_at_utc": "2026-09-12T08:20:10.230079+00:00",
+      "deadline_utc": "2026-09-12T02:03:30.006436+00:00",
+      "dispatched_at_utc": "2026-09-12T02:03:02.495828+00:00",
+      "evidence": "fresh-next-run-after-suspension-relay-9104913",
+      "id": "ab10e0ad6629472c9c6c20aae818ddd9",
+      "kind": "SUSPEND",
+      "message_code": null,
+      "reserved_at_utc": "2026-09-12T02:03:00.006436+00:00",
+      "status": "CONFIRMED"
+    },
+    {
+      "confirmed_at_utc": "2026-09-12T08:20:10.230079+00:00",
+      "deadline_utc": "2026-09-12T02:07:30.007581+00:00",
+      "dispatched_at_utc": "2026-09-12T02:07:02.584259+00:00",
+      "evidence": "fresh-next-run-after-suspension-relay-9104920",
+      "id": "7d812c94ca2f4690921fd283ee980c6c",
+      "kind": "SUSPEND",
+      "message_code": null,
+      "reserved_at_utc": "2026-09-12T02:07:00.007581+00:00",
+      "status": "CONFIRMED"
+    }
+  ],
+  "observed_cycles": [
+    {
+      "at": "2026-09-12T08:21:03.0584125Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "sent": false,
+      "mower": {
+        "mode": "HOME",
+        "activity": "PARKED_IN_CS",
+        "state": "RESTRICTED",
+        "connected": true,
+        "status_timestamp_ms": 1789200602780,
+        "error_code": 0
+      },
+      "water": {
+        "active_relay_ids": [],
+        "active_zone_count": 0,
+        "age_seconds": 0,
+        "available": true,
+        "clear_now": true,
+        "expected_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "fresh": true,
+        "imminent_relay_ids": [],
+        "imminent_zone_count": 0,
+        "observed_at_utc": "2026-09-12T08:21:01.0000000Z",
+        "observed_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "reason": "Hydrawise meldet alle ausgewählten Zonen aktuell frei.",
+        "relay_set_valid": true,
+        "selected_zone_count": 7
+      },
+      "release": {
+        "allowed": true,
+        "clear_since_utc": "2026-09-12T05:32:59.9976840Z",
+        "confirmation_observed_until_utc": "2026-09-12T08:21:01.0000000Z",
+        "confirmed_for_seconds": 10080,
+        "dry_until_utc": "2026-09-11T07:40:00.0023880Z",
+        "drying_since_utc": "2026-09-11T05:10:00.0023880Z",
+        "persistent_state_available": true,
+        "physical_clear_now": true,
+        "reason": "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt.",
+        "release_at_utc": "2026-09-12T05:34:59.9976840Z",
+        "required_clear_minutes": 150,
+        "telemetry_confirmed": true,
+        "telemetry_required_minutes": 2
+      },
+      "park_hold": {
+        "confirmed_since_utc": "2026-09-12T07:54:00.0056390Z",
+        "current_read_utc": "2026-09-12T08:21:00.0035910Z",
+        "held": true,
+        "read_max_gap_seconds": 90,
+        "reason": null,
+        "status": "HELD"
+      },
+      "occupancy_block": {
+        "details": {
+          "items": [
+            {
+              "details": {
+                "uid": "dfb-031HB5B9Q0000000VS5489BTVVG7L386@ssv53.de"
+              },
+              "end": "2026-09-12T11:45:00.0000000Z",
+              "source": "match",
+              "start": "2026-09-12T08:00:00.0000000Z",
+              "title": "Schönwalder SV: Schönwalder SV – Oranienburger FC Eintracht"
+            }
+          ]
+        },
+        "end": "2026-09-12T11:45:00.0000000Z",
+        "source": "match",
+        "start": "2026-09-12T08:00:00.0000000Z",
+        "title": "Schönwalder SV: Schönwalder SV – Oranienburger FC Eintracht"
+      }
+    },
+    {
+      "at": "2026-09-12T08:22:02.9574609Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "sent": false,
+      "mower": {
+        "mode": "HOME",
+        "activity": "PARKED_IN_CS",
+        "state": "RESTRICTED",
+        "connected": true,
+        "status_timestamp_ms": 1789200602780,
+        "error_code": 0
+      },
+      "water": {
+        "active_relay_ids": [],
+        "active_zone_count": 0,
+        "age_seconds": 0,
+        "available": true,
+        "clear_now": true,
+        "expected_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "fresh": true,
+        "imminent_relay_ids": [],
+        "imminent_zone_count": 0,
+        "observed_at_utc": "2026-09-12T08:22:01.0000000Z",
+        "observed_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "reason": "Hydrawise meldet alle ausgewählten Zonen aktuell frei.",
+        "relay_set_valid": true,
+        "selected_zone_count": 7
+      },
+      "release": {
+        "allowed": true,
+        "clear_since_utc": "2026-09-12T05:32:59.9976840Z",
+        "confirmation_observed_until_utc": "2026-09-12T08:22:01.0000000Z",
+        "confirmed_for_seconds": 10140,
+        "dry_until_utc": "2026-09-11T07:40:00.0023880Z",
+        "drying_since_utc": "2026-09-11T05:10:00.0023880Z",
+        "persistent_state_available": true,
+        "physical_clear_now": true,
+        "reason": "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt.",
+        "release_at_utc": "2026-09-12T05:34:59.9976840Z",
+        "required_clear_minutes": 150,
+        "telemetry_confirmed": true,
+        "telemetry_required_minutes": 2
+      },
+      "park_hold": {
+        "confirmed_since_utc": "2026-09-12T07:54:00.0056390Z",
+        "current_read_utc": "2026-09-12T08:22:00.0020420Z",
+        "held": true,
+        "read_max_gap_seconds": 90,
+        "reason": null,
+        "status": "HELD"
+      },
+      "occupancy_block": {
+        "details": {
+          "items": [
+            {
+              "details": {
+                "uid": "dfb-031HB5B9Q0000000VS5489BTVVG7L386@ssv53.de"
+              },
+              "end": "2026-09-12T11:45:00.0000000Z",
+              "source": "match",
+              "start": "2026-09-12T08:00:00.0000000Z",
+              "title": "Schönwalder SV: Schönwalder SV – Oranienburger FC Eintracht"
+            }
+          ]
+        },
+        "end": "2026-09-12T11:45:00.0000000Z",
+        "source": "match",
+        "start": "2026-09-12T08:00:00.0000000Z",
+        "title": "Schönwalder SV: Schönwalder SV – Oranienburger FC Eintracht"
+      }
+    },
+    {
+      "at": "2026-09-12T08:23:04.0569154Z",
+      "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+      "sent": false,
+      "mower": {
+        "mode": "HOME",
+        "activity": "PARKED_IN_CS",
+        "state": "RESTRICTED",
+        "connected": true,
+        "status_timestamp_ms": 1789200602780,
+        "error_code": 0
+      },
+      "water": {
+        "active_relay_ids": [],
+        "active_zone_count": 0,
+        "age_seconds": 0,
+        "available": true,
+        "clear_now": true,
+        "expected_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "fresh": true,
+        "imminent_relay_ids": [],
+        "imminent_zone_count": 0,
+        "observed_at_utc": "2026-09-12T08:23:01.0000000Z",
+        "observed_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "reason": "Hydrawise meldet alle ausgewählten Zonen aktuell frei.",
+        "relay_set_valid": true,
+        "selected_zone_count": 7
+      },
+      "release": {
+        "allowed": true,
+        "clear_since_utc": "2026-09-12T05:32:59.9976840Z",
+        "confirmation_observed_until_utc": "2026-09-12T08:23:01.0000000Z",
+        "confirmed_for_seconds": 10200,
+        "dry_until_utc": "2026-09-11T07:40:00.0023880Z",
+        "drying_since_utc": "2026-09-11T05:10:00.0023880Z",
+        "persistent_state_available": true,
+        "physical_clear_now": true,
+        "reason": "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt.",
+        "release_at_utc": "2026-09-12T05:34:59.9976840Z",
+        "required_clear_minutes": 150,
+        "telemetry_confirmed": true,
+        "telemetry_required_minutes": 2
+      },
+      "park_hold": {
+        "confirmed_since_utc": "2026-09-12T07:54:00.0056390Z",
+        "current_read_utc": "2026-09-12T08:23:00.0053920Z",
+        "held": true,
+        "read_max_gap_seconds": 90,
+        "reason": null,
+        "status": "HELD"
+      },
+      "occupancy_block": {
+        "details": {
+          "items": [
+            {
+              "details": {
+                "uid": "dfb-031HB5B9Q0000000VS5489BTVVG7L386@ssv53.de"
+              },
+              "end": "2026-09-12T11:45:00.0000000Z",
+              "source": "match",
+              "start": "2026-09-12T08:00:00.0000000Z",
+              "title": "Schönwalder SV: Schönwalder SV – Oranienburger FC Eintracht"
+            }
+          ]
+        },
+        "end": "2026-09-12T11:45:00.0000000Z",
+        "source": "match",
+        "start": "2026-09-12T08:00:00.0000000Z",
+        "title": "Schönwalder SV: Schönwalder SV – Oranienburger FC Eintracht"
+      }
+    }
+  ],
+  "test_device_commands_sent": false,
+  "physical_manual_departure_verified": false,
+  "complete_irrigation_run_verified": false
+}
