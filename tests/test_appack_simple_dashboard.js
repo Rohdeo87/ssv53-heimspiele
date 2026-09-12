@@ -291,7 +291,7 @@ test("Fehlermeldungen und Fortschritt unterscheiden Anfrage und tatsächliche Au
 });
 
 test("Bedienkette verwendet Vertragsversion und Journalabfrage mit Request-ID", () => {
-  assert.match(html, /clientContractVersion=2/);
+  assert.match(html, /clientContractVersion=payload\.manualControl&&payload\.manualControl\.operation==="CONFIRM_DOCK_FOR_IRRIGATION"\?4:2/);
   assert.match(html, /operatorCommands/);
   assert.match(html, /QUEUED/);
   assert.match(html, /SENT_UNCONFIRMED/);

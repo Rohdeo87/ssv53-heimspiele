@@ -32,7 +32,7 @@ function harness(manualControl) {
   const requests = [];
   const dialog = {showModal() {}, close() { this.closed = true; }};
   const code = [
-    ...["manualControlView", "mowerActionContext", "manualMowerActions", "mowerTelemetryFresh", "stationConfirmed", "deviceControlsOpen", "hasActiveMowerError", "mowerFaultNotice", "operatorActionPending"].map(sourceOf), sourceOf("manualControlNeedsConfirmation"),
+    ...["manualControlView", "mowerActionContext", "manualMowerActions", "mowerTelemetryFresh", "stationConfirmed", "deviceControlsOpen", "hasActiveMowerError", "mowerFaultNotice", "operatorActionPending"].map(sourceOf), sourceOf("manualControlNeedsConfirmation"), sourceOf("clearOnsiteDockConfirmation"),
     sourceOf("manualControlPayload"), lastSourceOf("manualControlPrepare"),
     lastSourceOf("submitManualControl"),
   ].join("\n");
