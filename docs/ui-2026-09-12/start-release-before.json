@@ -1,0 +1,1821 @@
+{
+  "retrieved_at_utc": "2026-09-12T07:05:55.166130+00:00",
+  "read_only": true,
+  "observations": [
+    {
+      "at": "2026-09-12T06:51:02.4037313Z",
+      "mode": "FULL_FAILSAFE",
+      "decision": "MOWER_START_SEND_BLOCKED",
+      "command_sent": false,
+      "manifest": "6cab4b6a096571a3ad2402e31d54ecf9e1758e6b287d0aad2243bf9e55232002",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789195807970,
+        "error_code": 0
+      },
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-12T06:51:00+00:00"
+      },
+      "release": {
+        "allowed": true,
+        "clear_since_utc": "2026-09-12T05:32:59.997684+00:00",
+        "confirmation_observed_until_utc": "2026-09-12T06:51:00+00:00",
+        "confirmed_for_seconds": 4680,
+        "dry_until_utc": "2026-09-11T07:40:00.002388+00:00",
+        "drying_since_utc": "2026-09-11T05:10:00.002388+00:00",
+        "persistent_state_available": true,
+        "physical_clear_now": true,
+        "reason": "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt.",
+        "release_at_utc": "2026-09-12T05:34:59.997684+00:00",
+        "required_clear_minutes": 150,
+        "telemetry_confirmed": true,
+        "telemetry_required_minutes": 2
+      },
+      "start_action": {
+        "type": "StartInWorkArea",
+        "outcome": "PRE_SEND_BLOCKED",
+        "reason_code": "PREVIOUS_DEVICE_OUTCOME_UNCONFIRMED",
+        "requested_deadline_utc": "2026-09-12T07:49:00.003545+00:00",
+        "failsafe_refresh": false
+      },
+      "automation": {
+        "automation_park_source": "irrigation",
+        "automation_restart_allowed": true,
+        "continuous_mowing_owned": false,
+        "error": null,
+        "hydrawise_clear_origin": "IRRIGATION_END",
+        "hydrawise_clear_since_utc": "2026-09-12T05:32:59.997684+00:00",
+        "hydrawise_drying_since_utc": "2026-09-11T05:10:00.002388+00:00",
+        "irrigation_cancelled_without_run_utc": null,
+        "irrigation_change_candidate_since_utc": null,
+        "irrigation_completed_relay_ids": [],
+        "irrigation_completed_utc": "2026-09-12T05:32:59.997684+00:00",
+        "irrigation_current_relay_id": null,
+        "irrigation_failed_reason": null,
+        "irrigation_phase": "COMPLETE_HOLD",
+        "irrigation_plan_id": "bb569471aa442d420263a6f0fcabe02e11ce04d1b0fc8459f2382c7faedfd667",
+        "irrigation_schedule_override_kind": null,
+        "irrigation_schedule_override_status": null,
+        "irrigation_suspended_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "irrigation_suspension_completed_utc": "2026-09-12T05:19:00.005933+00:00",
+        "irrigation_suspension_revalidation_last_seen_utc": "2026-09-12T05:20:01+00:00",
+        "irrigation_suspension_revalidation_observations": 1,
+        "irrigation_suspension_until_utc": "2026-09-12T06:10:00+00:00",
+        "maintenance_mode": false,
+        "mower_start_pending_deadline_utc": null,
+        "mower_start_pending_since_utc": null,
+        "operator_request_action": "STOP_IRRIGATION_NOW",
+        "operator_request_id": "207b7eca-9e90-4827-822e-5af679b97ecc",
+        "operator_request_status": "COMPLETED",
+        "park_command_sent_utc": "2026-09-12T01:45:00.007432+00:00",
+        "park_confirmed_observations": 305,
+        "park_confirmed_utc": "2026-09-12T01:46:00.002293+00:00",
+        "parked_by_automation": true,
+        "persisted": true,
+        "revision": 45930
+      },
+      "park_hold": {
+        "confirmed_since_utc": "2026-09-12T06:51:00.003545+00:00",
+        "current_read_utc": "2026-09-12T06:51:00.003545+00:00",
+        "held": false,
+        "read_max_gap_seconds": 90,
+        "reason": null,
+        "status": "CANDIDATE"
+      },
+      "mower_status_gate": {
+        "connected": true,
+        "fresh": true,
+        "max_age_seconds": 180,
+        "status_timestamp_ms": 1789195807970
+      },
+      "irrigation_action": null,
+      "manual": {
+        "enabled": true,
+        "kind": "START",
+        "status": "ENDED",
+        "permission_code": "MANUAL_SESSION_INACTIVE"
+      },
+      "plan": {
+        "blocked_now": null,
+        "parking_block": null,
+        "next_block": {
+          "start": "2026-09-12T10:00:00+02:00",
+          "end": "2026-09-12T13:45:00+02:00",
+          "source": "match",
+          "title": "Schönwalder SV: Schönwalder SV – Oranienburger FC Eintracht",
+          "resource_id": null
+        }
+      }
+    },
+    {
+      "at": "2026-09-12T06:52:02.85185Z",
+      "mode": "FULL_FAILSAFE",
+      "decision": "MOWER_START_SEND_BLOCKED",
+      "command_sent": false,
+      "manifest": "6cab4b6a096571a3ad2402e31d54ecf9e1758e6b287d0aad2243bf9e55232002",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789195807970,
+        "error_code": 0
+      },
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-12T06:52:01+00:00"
+      },
+      "release": {
+        "allowed": true,
+        "clear_since_utc": "2026-09-12T05:32:59.997684+00:00",
+        "confirmation_observed_until_utc": "2026-09-12T06:52:01+00:00",
+        "confirmed_for_seconds": 4740,
+        "dry_until_utc": "2026-09-11T07:40:00.002388+00:00",
+        "drying_since_utc": "2026-09-11T05:10:00.002388+00:00",
+        "persistent_state_available": true,
+        "physical_clear_now": true,
+        "reason": "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt.",
+        "release_at_utc": "2026-09-12T05:34:59.997684+00:00",
+        "required_clear_minutes": 150,
+        "telemetry_confirmed": true,
+        "telemetry_required_minutes": 2
+      },
+      "start_action": {
+        "type": "StartInWorkArea",
+        "outcome": "PRE_SEND_BLOCKED",
+        "reason_code": "PREVIOUS_DEVICE_OUTCOME_UNCONFIRMED",
+        "requested_deadline_utc": "2026-09-12T07:49:00.002745+00:00",
+        "failsafe_refresh": false
+      },
+      "automation": {
+        "automation_park_source": "irrigation",
+        "automation_restart_allowed": true,
+        "continuous_mowing_owned": false,
+        "error": null,
+        "hydrawise_clear_origin": "IRRIGATION_END",
+        "hydrawise_clear_since_utc": "2026-09-12T05:32:59.997684+00:00",
+        "hydrawise_drying_since_utc": "2026-09-11T05:10:00.002388+00:00",
+        "irrigation_cancelled_without_run_utc": null,
+        "irrigation_change_candidate_since_utc": null,
+        "irrigation_completed_relay_ids": [],
+        "irrigation_completed_utc": "2026-09-12T05:32:59.997684+00:00",
+        "irrigation_current_relay_id": null,
+        "irrigation_failed_reason": null,
+        "irrigation_phase": "COMPLETE_HOLD",
+        "irrigation_plan_id": "bb569471aa442d420263a6f0fcabe02e11ce04d1b0fc8459f2382c7faedfd667",
+        "irrigation_schedule_override_kind": null,
+        "irrigation_schedule_override_status": null,
+        "irrigation_suspended_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "irrigation_suspension_completed_utc": "2026-09-12T05:19:00.005933+00:00",
+        "irrigation_suspension_revalidation_last_seen_utc": "2026-09-12T05:20:01+00:00",
+        "irrigation_suspension_revalidation_observations": 1,
+        "irrigation_suspension_until_utc": "2026-09-12T06:10:00+00:00",
+        "maintenance_mode": false,
+        "mower_start_pending_deadline_utc": null,
+        "mower_start_pending_since_utc": null,
+        "operator_request_action": "STOP_IRRIGATION_NOW",
+        "operator_request_id": "207b7eca-9e90-4827-822e-5af679b97ecc",
+        "operator_request_status": "COMPLETED",
+        "park_command_sent_utc": "2026-09-12T01:45:00.007432+00:00",
+        "park_confirmed_observations": 306,
+        "park_confirmed_utc": "2026-09-12T01:46:00.002293+00:00",
+        "parked_by_automation": true,
+        "persisted": true,
+        "revision": 45933
+      },
+      "park_hold": {
+        "confirmed_since_utc": "2026-09-12T06:51:00.003545+00:00",
+        "current_read_utc": "2026-09-12T06:52:00.002745+00:00",
+        "held": false,
+        "read_max_gap_seconds": 90,
+        "reason": null,
+        "status": "CANDIDATE"
+      },
+      "mower_status_gate": {
+        "connected": true,
+        "fresh": true,
+        "max_age_seconds": 180,
+        "status_timestamp_ms": 1789195807970
+      },
+      "irrigation_action": null,
+      "manual": {
+        "enabled": true,
+        "kind": "START",
+        "status": "ENDED",
+        "permission_code": "MANUAL_SESSION_INACTIVE"
+      },
+      "plan": {
+        "blocked_now": null,
+        "parking_block": null,
+        "next_block": {
+          "start": "2026-09-12T10:00:00+02:00",
+          "end": "2026-09-12T13:45:00+02:00",
+          "source": "match",
+          "title": "Schönwalder SV: Schönwalder SV – Oranienburger FC Eintracht",
+          "resource_id": null
+        }
+      }
+    },
+    {
+      "at": "2026-09-12T06:53:03.1772494Z",
+      "mode": "FULL_FAILSAFE",
+      "decision": "MOWER_START_SEND_BLOCKED",
+      "command_sent": false,
+      "manifest": "6cab4b6a096571a3ad2402e31d54ecf9e1758e6b287d0aad2243bf9e55232002",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789195807970,
+        "error_code": 0
+      },
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-12T06:53:01+00:00"
+      },
+      "release": {
+        "allowed": true,
+        "clear_since_utc": "2026-09-12T05:32:59.997684+00:00",
+        "confirmation_observed_until_utc": "2026-09-12T06:53:01+00:00",
+        "confirmed_for_seconds": 4800,
+        "dry_until_utc": "2026-09-11T07:40:00.002388+00:00",
+        "drying_since_utc": "2026-09-11T05:10:00.002388+00:00",
+        "persistent_state_available": true,
+        "physical_clear_now": true,
+        "reason": "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt.",
+        "release_at_utc": "2026-09-12T05:34:59.997684+00:00",
+        "required_clear_minutes": 150,
+        "telemetry_confirmed": true,
+        "telemetry_required_minutes": 2
+      },
+      "start_action": {
+        "type": "StartInWorkArea",
+        "outcome": "PRE_SEND_BLOCKED",
+        "reason_code": "PREVIOUS_DEVICE_OUTCOME_UNCONFIRMED",
+        "requested_deadline_utc": "2026-09-12T07:49:00.004482+00:00",
+        "failsafe_refresh": false
+      },
+      "automation": {
+        "automation_park_source": "irrigation",
+        "automation_restart_allowed": true,
+        "continuous_mowing_owned": false,
+        "error": null,
+        "hydrawise_clear_origin": "IRRIGATION_END",
+        "hydrawise_clear_since_utc": "2026-09-12T05:32:59.997684+00:00",
+        "hydrawise_drying_since_utc": "2026-09-11T05:10:00.002388+00:00",
+        "irrigation_cancelled_without_run_utc": null,
+        "irrigation_change_candidate_since_utc": null,
+        "irrigation_completed_relay_ids": [],
+        "irrigation_completed_utc": "2026-09-12T05:32:59.997684+00:00",
+        "irrigation_current_relay_id": null,
+        "irrigation_failed_reason": null,
+        "irrigation_phase": "COMPLETE_HOLD",
+        "irrigation_plan_id": "bb569471aa442d420263a6f0fcabe02e11ce04d1b0fc8459f2382c7faedfd667",
+        "irrigation_schedule_override_kind": null,
+        "irrigation_schedule_override_status": null,
+        "irrigation_suspended_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "irrigation_suspension_completed_utc": "2026-09-12T05:19:00.005933+00:00",
+        "irrigation_suspension_revalidation_last_seen_utc": "2026-09-12T05:20:01+00:00",
+        "irrigation_suspension_revalidation_observations": 1,
+        "irrigation_suspension_until_utc": "2026-09-12T06:10:00+00:00",
+        "maintenance_mode": false,
+        "mower_start_pending_deadline_utc": null,
+        "mower_start_pending_since_utc": null,
+        "operator_request_action": "STOP_IRRIGATION_NOW",
+        "operator_request_id": "207b7eca-9e90-4827-822e-5af679b97ecc",
+        "operator_request_status": "COMPLETED",
+        "park_command_sent_utc": "2026-09-12T01:45:00.007432+00:00",
+        "park_confirmed_observations": 307,
+        "park_confirmed_utc": "2026-09-12T01:46:00.002293+00:00",
+        "parked_by_automation": true,
+        "persisted": true,
+        "revision": 45936
+      },
+      "park_hold": {
+        "confirmed_since_utc": "2026-09-12T06:51:00.003545+00:00",
+        "current_read_utc": "2026-09-12T06:53:00.004482+00:00",
+        "held": true,
+        "read_max_gap_seconds": 90,
+        "reason": null,
+        "status": "HELD"
+      },
+      "mower_status_gate": {
+        "connected": true,
+        "fresh": true,
+        "max_age_seconds": 180,
+        "status_timestamp_ms": 1789195807970
+      },
+      "irrigation_action": null,
+      "manual": {
+        "enabled": true,
+        "kind": "START",
+        "status": "ENDED",
+        "permission_code": "MANUAL_SESSION_INACTIVE"
+      },
+      "plan": {
+        "blocked_now": null,
+        "parking_block": null,
+        "next_block": {
+          "start": "2026-09-12T10:00:00+02:00",
+          "end": "2026-09-12T13:45:00+02:00",
+          "source": "match",
+          "title": "Schönwalder SV: Schönwalder SV – Oranienburger FC Eintracht",
+          "resource_id": null
+        }
+      }
+    },
+    {
+      "at": "2026-09-12T06:54:03.8080969Z",
+      "mode": "FULL_FAILSAFE",
+      "decision": "MOWER_START_SEND_BLOCKED",
+      "command_sent": false,
+      "manifest": "6cab4b6a096571a3ad2402e31d54ecf9e1758e6b287d0aad2243bf9e55232002",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789195807970,
+        "error_code": 0
+      },
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-12T06:54:01+00:00"
+      },
+      "release": {
+        "allowed": true,
+        "clear_since_utc": "2026-09-12T05:32:59.997684+00:00",
+        "confirmation_observed_until_utc": "2026-09-12T06:54:01+00:00",
+        "confirmed_for_seconds": 4860,
+        "dry_until_utc": "2026-09-11T07:40:00.002388+00:00",
+        "drying_since_utc": "2026-09-11T05:10:00.002388+00:00",
+        "persistent_state_available": true,
+        "physical_clear_now": true,
+        "reason": "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt.",
+        "release_at_utc": "2026-09-12T05:34:59.997684+00:00",
+        "required_clear_minutes": 150,
+        "telemetry_confirmed": true,
+        "telemetry_required_minutes": 2
+      },
+      "start_action": {
+        "type": "StartInWorkArea",
+        "outcome": "PRE_SEND_BLOCKED",
+        "reason_code": "MOWER_STATUS_STALE",
+        "requested_deadline_utc": "2026-09-12T07:50:00+00:00",
+        "failsafe_refresh": false
+      },
+      "automation": {
+        "automation_park_source": "irrigation",
+        "automation_restart_allowed": true,
+        "continuous_mowing_owned": false,
+        "error": null,
+        "hydrawise_clear_origin": "IRRIGATION_END",
+        "hydrawise_clear_since_utc": "2026-09-12T05:32:59.997684+00:00",
+        "hydrawise_drying_since_utc": "2026-09-11T05:10:00.002388+00:00",
+        "irrigation_cancelled_without_run_utc": null,
+        "irrigation_change_candidate_since_utc": null,
+        "irrigation_completed_relay_ids": [],
+        "irrigation_completed_utc": "2026-09-12T05:32:59.997684+00:00",
+        "irrigation_current_relay_id": null,
+        "irrigation_failed_reason": null,
+        "irrigation_phase": "COMPLETE_HOLD",
+        "irrigation_plan_id": "bb569471aa442d420263a6f0fcabe02e11ce04d1b0fc8459f2382c7faedfd667",
+        "irrigation_schedule_override_kind": null,
+        "irrigation_schedule_override_status": null,
+        "irrigation_suspended_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "irrigation_suspension_completed_utc": "2026-09-12T05:19:00.005933+00:00",
+        "irrigation_suspension_revalidation_last_seen_utc": "2026-09-12T05:20:01+00:00",
+        "irrigation_suspension_revalidation_observations": 1,
+        "irrigation_suspension_until_utc": "2026-09-12T06:10:00+00:00",
+        "maintenance_mode": false,
+        "mower_start_pending_deadline_utc": null,
+        "mower_start_pending_since_utc": null,
+        "operator_request_action": "STOP_IRRIGATION_NOW",
+        "operator_request_id": "207b7eca-9e90-4827-822e-5af679b97ecc",
+        "operator_request_status": "COMPLETED",
+        "park_command_sent_utc": "2026-09-12T01:45:00.007432+00:00",
+        "park_confirmed_observations": 308,
+        "park_confirmed_utc": "2026-09-12T01:46:00.002293+00:00",
+        "parked_by_automation": true,
+        "persisted": true,
+        "revision": 45937
+      },
+      "park_hold": {
+        "confirmed_since_utc": "2026-09-12T06:51:00.003545+00:00",
+        "current_read_utc": "2026-09-12T06:54:00.004134+00:00",
+        "held": true,
+        "read_max_gap_seconds": 90,
+        "reason": null,
+        "status": "HELD"
+      },
+      "mower_status_gate": {
+        "connected": true,
+        "fresh": false,
+        "max_age_seconds": 180,
+        "status_timestamp_ms": 1789195807970
+      },
+      "irrigation_action": null,
+      "manual": {
+        "enabled": true,
+        "kind": "START",
+        "status": "ENDED",
+        "permission_code": "MANUAL_SESSION_INACTIVE"
+      },
+      "plan": {
+        "blocked_now": null,
+        "parking_block": null,
+        "next_block": {
+          "start": "2026-09-12T10:00:00+02:00",
+          "end": "2026-09-12T13:45:00+02:00",
+          "source": "match",
+          "title": "Schönwalder SV: Schönwalder SV – Oranienburger FC Eintracht",
+          "resource_id": null
+        }
+      }
+    },
+    {
+      "at": "2026-09-12T06:55:02.5044899Z",
+      "mode": "FULL_FAILSAFE",
+      "decision": "MOWER_START_SEND_BLOCKED",
+      "command_sent": false,
+      "manifest": "6cab4b6a096571a3ad2402e31d54ecf9e1758e6b287d0aad2243bf9e55232002",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789195807970,
+        "error_code": 0
+      },
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-12T06:55:01+00:00"
+      },
+      "release": {
+        "allowed": true,
+        "clear_since_utc": "2026-09-12T05:32:59.997684+00:00",
+        "confirmation_observed_until_utc": "2026-09-12T06:55:01+00:00",
+        "confirmed_for_seconds": 4920,
+        "dry_until_utc": "2026-09-11T07:40:00.002388+00:00",
+        "drying_since_utc": "2026-09-11T05:10:00.002388+00:00",
+        "persistent_state_available": true,
+        "physical_clear_now": true,
+        "reason": "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt.",
+        "release_at_utc": "2026-09-12T05:34:59.997684+00:00",
+        "required_clear_minutes": 150,
+        "telemetry_confirmed": true,
+        "telemetry_required_minutes": 2
+      },
+      "start_action": {
+        "type": "StartInWorkArea",
+        "outcome": "PRE_SEND_BLOCKED",
+        "reason_code": "MOWER_STATUS_STALE",
+        "requested_deadline_utc": "2026-09-12T07:50:00+00:00",
+        "failsafe_refresh": false
+      },
+      "automation": {
+        "automation_park_source": "irrigation",
+        "automation_restart_allowed": true,
+        "continuous_mowing_owned": false,
+        "error": null,
+        "hydrawise_clear_origin": "IRRIGATION_END",
+        "hydrawise_clear_since_utc": "2026-09-12T05:32:59.997684+00:00",
+        "hydrawise_drying_since_utc": "2026-09-11T05:10:00.002388+00:00",
+        "irrigation_cancelled_without_run_utc": null,
+        "irrigation_change_candidate_since_utc": null,
+        "irrigation_completed_relay_ids": [],
+        "irrigation_completed_utc": "2026-09-12T05:32:59.997684+00:00",
+        "irrigation_current_relay_id": null,
+        "irrigation_failed_reason": null,
+        "irrigation_phase": "COMPLETE_HOLD",
+        "irrigation_plan_id": "bb569471aa442d420263a6f0fcabe02e11ce04d1b0fc8459f2382c7faedfd667",
+        "irrigation_schedule_override_kind": null,
+        "irrigation_schedule_override_status": null,
+        "irrigation_suspended_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "irrigation_suspension_completed_utc": "2026-09-12T05:19:00.005933+00:00",
+        "irrigation_suspension_revalidation_last_seen_utc": "2026-09-12T05:20:01+00:00",
+        "irrigation_suspension_revalidation_observations": 1,
+        "irrigation_suspension_until_utc": "2026-09-12T06:10:00+00:00",
+        "maintenance_mode": false,
+        "mower_start_pending_deadline_utc": null,
+        "mower_start_pending_since_utc": null,
+        "operator_request_action": "STOP_IRRIGATION_NOW",
+        "operator_request_id": "207b7eca-9e90-4827-822e-5af679b97ecc",
+        "operator_request_status": "COMPLETED",
+        "park_command_sent_utc": "2026-09-12T01:45:00.007432+00:00",
+        "park_confirmed_observations": 309,
+        "park_confirmed_utc": "2026-09-12T01:46:00.002293+00:00",
+        "parked_by_automation": true,
+        "persisted": true,
+        "revision": 45938
+      },
+      "park_hold": {
+        "confirmed_since_utc": "2026-09-12T06:51:00.003545+00:00",
+        "current_read_utc": "2026-09-12T06:55:00.002162+00:00",
+        "held": true,
+        "read_max_gap_seconds": 90,
+        "reason": null,
+        "status": "HELD"
+      },
+      "mower_status_gate": {
+        "connected": true,
+        "fresh": false,
+        "max_age_seconds": 180,
+        "status_timestamp_ms": 1789195807970
+      },
+      "irrigation_action": null,
+      "manual": {
+        "enabled": true,
+        "kind": "START",
+        "status": "ENDED",
+        "permission_code": "MANUAL_SESSION_INACTIVE"
+      },
+      "plan": {
+        "blocked_now": null,
+        "parking_block": null,
+        "next_block": {
+          "start": "2026-09-12T10:00:00+02:00",
+          "end": "2026-09-12T13:45:00+02:00",
+          "source": "match",
+          "title": "Schönwalder SV: Schönwalder SV – Oranienburger FC Eintracht",
+          "resource_id": null
+        }
+      }
+    },
+    {
+      "at": "2026-09-12T06:56:02.5942816Z",
+      "mode": "FULL_FAILSAFE",
+      "decision": "MOWER_START_SEND_BLOCKED",
+      "command_sent": false,
+      "manifest": "6cab4b6a096571a3ad2402e31d54ecf9e1758e6b287d0aad2243bf9e55232002",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789195807970,
+        "error_code": 0
+      },
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-12T06:56:01+00:00"
+      },
+      "release": {
+        "allowed": true,
+        "clear_since_utc": "2026-09-12T05:32:59.997684+00:00",
+        "confirmation_observed_until_utc": "2026-09-12T06:56:01+00:00",
+        "confirmed_for_seconds": 4980,
+        "dry_until_utc": "2026-09-11T07:40:00.002388+00:00",
+        "drying_since_utc": "2026-09-11T05:10:00.002388+00:00",
+        "persistent_state_available": true,
+        "physical_clear_now": true,
+        "reason": "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt.",
+        "release_at_utc": "2026-09-12T05:34:59.997684+00:00",
+        "required_clear_minutes": 150,
+        "telemetry_confirmed": true,
+        "telemetry_required_minutes": 2
+      },
+      "start_action": {
+        "type": "StartInWorkArea",
+        "outcome": "PRE_SEND_BLOCKED",
+        "reason_code": "MOWER_STATUS_STALE",
+        "requested_deadline_utc": "2026-09-12T07:50:00+00:00",
+        "failsafe_refresh": false
+      },
+      "automation": {
+        "automation_park_source": "irrigation",
+        "automation_restart_allowed": true,
+        "continuous_mowing_owned": false,
+        "error": null,
+        "hydrawise_clear_origin": "IRRIGATION_END",
+        "hydrawise_clear_since_utc": "2026-09-12T05:32:59.997684+00:00",
+        "hydrawise_drying_since_utc": "2026-09-11T05:10:00.002388+00:00",
+        "irrigation_cancelled_without_run_utc": null,
+        "irrigation_change_candidate_since_utc": null,
+        "irrigation_completed_relay_ids": [],
+        "irrigation_completed_utc": "2026-09-12T05:32:59.997684+00:00",
+        "irrigation_current_relay_id": null,
+        "irrigation_failed_reason": null,
+        "irrigation_phase": "COMPLETE_HOLD",
+        "irrigation_plan_id": "bb569471aa442d420263a6f0fcabe02e11ce04d1b0fc8459f2382c7faedfd667",
+        "irrigation_schedule_override_kind": null,
+        "irrigation_schedule_override_status": null,
+        "irrigation_suspended_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "irrigation_suspension_completed_utc": "2026-09-12T05:19:00.005933+00:00",
+        "irrigation_suspension_revalidation_last_seen_utc": "2026-09-12T05:20:01+00:00",
+        "irrigation_suspension_revalidation_observations": 1,
+        "irrigation_suspension_until_utc": "2026-09-12T06:10:00+00:00",
+        "maintenance_mode": false,
+        "mower_start_pending_deadline_utc": null,
+        "mower_start_pending_since_utc": null,
+        "operator_request_action": "STOP_IRRIGATION_NOW",
+        "operator_request_id": "207b7eca-9e90-4827-822e-5af679b97ecc",
+        "operator_request_status": "COMPLETED",
+        "park_command_sent_utc": "2026-09-12T01:45:00.007432+00:00",
+        "park_confirmed_observations": 310,
+        "park_confirmed_utc": "2026-09-12T01:46:00.002293+00:00",
+        "parked_by_automation": true,
+        "persisted": true,
+        "revision": 45939
+      },
+      "park_hold": {
+        "confirmed_since_utc": "2026-09-12T06:51:00.003545+00:00",
+        "current_read_utc": "2026-09-12T06:56:00.002388+00:00",
+        "held": true,
+        "read_max_gap_seconds": 90,
+        "reason": null,
+        "status": "HELD"
+      },
+      "mower_status_gate": {
+        "connected": true,
+        "fresh": false,
+        "max_age_seconds": 180,
+        "status_timestamp_ms": 1789195807970
+      },
+      "irrigation_action": null,
+      "manual": {
+        "enabled": true,
+        "kind": "START",
+        "status": "ENDED",
+        "permission_code": "MANUAL_SESSION_INACTIVE"
+      },
+      "plan": {
+        "blocked_now": null,
+        "parking_block": null,
+        "next_block": {
+          "start": "2026-09-12T10:00:00+02:00",
+          "end": "2026-09-12T13:45:00+02:00",
+          "source": "match",
+          "title": "Schönwalder SV: Schönwalder SV – Oranienburger FC Eintracht",
+          "resource_id": null
+        }
+      }
+    },
+    {
+      "at": "2026-09-12T06:57:03.9717308Z",
+      "mode": "FULL_FAILSAFE",
+      "decision": "MOWER_START_SEND_BLOCKED",
+      "command_sent": false,
+      "manifest": "6cab4b6a096571a3ad2402e31d54ecf9e1758e6b287d0aad2243bf9e55232002",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789195807970,
+        "error_code": 0
+      },
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-12T06:57:00+00:00"
+      },
+      "release": {
+        "allowed": true,
+        "clear_since_utc": "2026-09-12T05:32:59.997684+00:00",
+        "confirmation_observed_until_utc": "2026-09-12T06:57:00+00:00",
+        "confirmed_for_seconds": 5040,
+        "dry_until_utc": "2026-09-11T07:40:00.002388+00:00",
+        "drying_since_utc": "2026-09-11T05:10:00.002388+00:00",
+        "persistent_state_available": true,
+        "physical_clear_now": true,
+        "reason": "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt.",
+        "release_at_utc": "2026-09-12T05:34:59.997684+00:00",
+        "required_clear_minutes": 150,
+        "telemetry_confirmed": true,
+        "telemetry_required_minutes": 2
+      },
+      "start_action": {
+        "type": "StartInWorkArea",
+        "outcome": "PRE_SEND_BLOCKED",
+        "reason_code": "MOWER_STATUS_STALE",
+        "requested_deadline_utc": "2026-09-12T07:50:00+00:00",
+        "failsafe_refresh": false
+      },
+      "automation": {
+        "automation_park_source": "irrigation",
+        "automation_restart_allowed": true,
+        "continuous_mowing_owned": false,
+        "error": null,
+        "hydrawise_clear_origin": "IRRIGATION_END",
+        "hydrawise_clear_since_utc": "2026-09-12T05:32:59.997684+00:00",
+        "hydrawise_drying_since_utc": "2026-09-11T05:10:00.002388+00:00",
+        "irrigation_cancelled_without_run_utc": null,
+        "irrigation_change_candidate_since_utc": null,
+        "irrigation_completed_relay_ids": [],
+        "irrigation_completed_utc": "2026-09-12T05:32:59.997684+00:00",
+        "irrigation_current_relay_id": null,
+        "irrigation_failed_reason": null,
+        "irrigation_phase": "COMPLETE_HOLD",
+        "irrigation_plan_id": "bb569471aa442d420263a6f0fcabe02e11ce04d1b0fc8459f2382c7faedfd667",
+        "irrigation_schedule_override_kind": null,
+        "irrigation_schedule_override_status": null,
+        "irrigation_suspended_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "irrigation_suspension_completed_utc": "2026-09-12T05:19:00.005933+00:00",
+        "irrigation_suspension_revalidation_last_seen_utc": "2026-09-12T05:20:01+00:00",
+        "irrigation_suspension_revalidation_observations": 1,
+        "irrigation_suspension_until_utc": "2026-09-12T06:10:00+00:00",
+        "maintenance_mode": false,
+        "mower_start_pending_deadline_utc": null,
+        "mower_start_pending_since_utc": null,
+        "operator_request_action": "STOP_IRRIGATION_NOW",
+        "operator_request_id": "207b7eca-9e90-4827-822e-5af679b97ecc",
+        "operator_request_status": "COMPLETED",
+        "park_command_sent_utc": "2026-09-12T01:45:00.007432+00:00",
+        "park_confirmed_observations": 311,
+        "park_confirmed_utc": "2026-09-12T01:46:00.002293+00:00",
+        "parked_by_automation": true,
+        "persisted": true,
+        "revision": 45940
+      },
+      "park_hold": {
+        "confirmed_since_utc": "2026-09-12T06:51:00.003545+00:00",
+        "current_read_utc": "2026-09-12T06:57:00.006302+00:00",
+        "held": true,
+        "read_max_gap_seconds": 90,
+        "reason": null,
+        "status": "HELD"
+      },
+      "mower_status_gate": {
+        "connected": true,
+        "fresh": false,
+        "max_age_seconds": 180,
+        "status_timestamp_ms": 1789195807970
+      },
+      "irrigation_action": null,
+      "manual": {
+        "enabled": true,
+        "kind": "START",
+        "status": "ENDED",
+        "permission_code": "MANUAL_SESSION_INACTIVE"
+      },
+      "plan": {
+        "blocked_now": null,
+        "parking_block": null,
+        "next_block": {
+          "start": "2026-09-12T10:00:00+02:00",
+          "end": "2026-09-12T13:45:00+02:00",
+          "source": "match",
+          "title": "Schönwalder SV: Schönwalder SV – Oranienburger FC Eintracht",
+          "resource_id": null
+        }
+      }
+    },
+    {
+      "at": "2026-09-12T06:58:02.5030072Z",
+      "mode": "FULL_FAILSAFE",
+      "decision": "MOWER_START_SEND_BLOCKED",
+      "command_sent": false,
+      "manifest": "6cab4b6a096571a3ad2402e31d54ecf9e1758e6b287d0aad2243bf9e55232002",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789195807970,
+        "error_code": 0
+      },
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-12T06:58:00+00:00"
+      },
+      "release": {
+        "allowed": true,
+        "clear_since_utc": "2026-09-12T05:32:59.997684+00:00",
+        "confirmation_observed_until_utc": "2026-09-12T06:58:00+00:00",
+        "confirmed_for_seconds": 5100,
+        "dry_until_utc": "2026-09-11T07:40:00.002388+00:00",
+        "drying_since_utc": "2026-09-11T05:10:00.002388+00:00",
+        "persistent_state_available": true,
+        "physical_clear_now": true,
+        "reason": "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt.",
+        "release_at_utc": "2026-09-12T05:34:59.997684+00:00",
+        "required_clear_minutes": 150,
+        "telemetry_confirmed": true,
+        "telemetry_required_minutes": 2
+      },
+      "start_action": {
+        "type": "StartInWorkArea",
+        "outcome": "PRE_SEND_BLOCKED",
+        "reason_code": "MOWER_STATUS_STALE",
+        "requested_deadline_utc": "2026-09-12T07:50:00+00:00",
+        "failsafe_refresh": false
+      },
+      "automation": {
+        "automation_park_source": "irrigation",
+        "automation_restart_allowed": true,
+        "continuous_mowing_owned": false,
+        "error": null,
+        "hydrawise_clear_origin": "IRRIGATION_END",
+        "hydrawise_clear_since_utc": "2026-09-12T05:32:59.997684+00:00",
+        "hydrawise_drying_since_utc": "2026-09-11T05:10:00.002388+00:00",
+        "irrigation_cancelled_without_run_utc": null,
+        "irrigation_change_candidate_since_utc": null,
+        "irrigation_completed_relay_ids": [],
+        "irrigation_completed_utc": "2026-09-12T05:32:59.997684+00:00",
+        "irrigation_current_relay_id": null,
+        "irrigation_failed_reason": null,
+        "irrigation_phase": "COMPLETE_HOLD",
+        "irrigation_plan_id": "bb569471aa442d420263a6f0fcabe02e11ce04d1b0fc8459f2382c7faedfd667",
+        "irrigation_schedule_override_kind": null,
+        "irrigation_schedule_override_status": null,
+        "irrigation_suspended_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "irrigation_suspension_completed_utc": "2026-09-12T05:19:00.005933+00:00",
+        "irrigation_suspension_revalidation_last_seen_utc": "2026-09-12T05:20:01+00:00",
+        "irrigation_suspension_revalidation_observations": 1,
+        "irrigation_suspension_until_utc": "2026-09-12T06:10:00+00:00",
+        "maintenance_mode": false,
+        "mower_start_pending_deadline_utc": null,
+        "mower_start_pending_since_utc": null,
+        "operator_request_action": "STOP_IRRIGATION_NOW",
+        "operator_request_id": "207b7eca-9e90-4827-822e-5af679b97ecc",
+        "operator_request_status": "COMPLETED",
+        "park_command_sent_utc": "2026-09-12T01:45:00.007432+00:00",
+        "park_confirmed_observations": 312,
+        "park_confirmed_utc": "2026-09-12T01:46:00.002293+00:00",
+        "parked_by_automation": true,
+        "persisted": true,
+        "revision": 45941
+      },
+      "park_hold": {
+        "confirmed_since_utc": "2026-09-12T06:51:00.003545+00:00",
+        "current_read_utc": "2026-09-12T06:58:00.002905+00:00",
+        "held": true,
+        "read_max_gap_seconds": 90,
+        "reason": null,
+        "status": "HELD"
+      },
+      "mower_status_gate": {
+        "connected": true,
+        "fresh": false,
+        "max_age_seconds": 180,
+        "status_timestamp_ms": 1789195807970
+      },
+      "irrigation_action": null,
+      "manual": {
+        "enabled": true,
+        "kind": "START",
+        "status": "ENDED",
+        "permission_code": "MANUAL_SESSION_INACTIVE"
+      },
+      "plan": {
+        "blocked_now": null,
+        "parking_block": null,
+        "next_block": {
+          "start": "2026-09-12T10:00:00+02:00",
+          "end": "2026-09-12T13:45:00+02:00",
+          "source": "match",
+          "title": "Schönwalder SV: Schönwalder SV – Oranienburger FC Eintracht",
+          "resource_id": null
+        }
+      }
+    },
+    {
+      "at": "2026-09-12T06:59:02.3501925Z",
+      "mode": "FULL_FAILSAFE",
+      "decision": "MOWER_START_SEND_BLOCKED",
+      "command_sent": false,
+      "manifest": "6cab4b6a096571a3ad2402e31d54ecf9e1758e6b287d0aad2243bf9e55232002",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789195807970,
+        "error_code": 0
+      },
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-12T06:59:00+00:00"
+      },
+      "release": {
+        "allowed": true,
+        "clear_since_utc": "2026-09-12T05:32:59.997684+00:00",
+        "confirmation_observed_until_utc": "2026-09-12T06:59:00+00:00",
+        "confirmed_for_seconds": 5160,
+        "dry_until_utc": "2026-09-11T07:40:00.002388+00:00",
+        "drying_since_utc": "2026-09-11T05:10:00.002388+00:00",
+        "persistent_state_available": true,
+        "physical_clear_now": true,
+        "reason": "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt.",
+        "release_at_utc": "2026-09-12T05:34:59.997684+00:00",
+        "required_clear_minutes": 150,
+        "telemetry_confirmed": true,
+        "telemetry_required_minutes": 2
+      },
+      "start_action": {
+        "type": "StartInWorkArea",
+        "outcome": "PRE_SEND_BLOCKED",
+        "reason_code": "MOWER_STATUS_STALE",
+        "requested_deadline_utc": "2026-09-12T07:50:00+00:00",
+        "failsafe_refresh": false
+      },
+      "automation": {
+        "automation_park_source": "irrigation",
+        "automation_restart_allowed": true,
+        "continuous_mowing_owned": false,
+        "error": null,
+        "hydrawise_clear_origin": "IRRIGATION_END",
+        "hydrawise_clear_since_utc": "2026-09-12T05:32:59.997684+00:00",
+        "hydrawise_drying_since_utc": "2026-09-11T05:10:00.002388+00:00",
+        "irrigation_cancelled_without_run_utc": null,
+        "irrigation_change_candidate_since_utc": null,
+        "irrigation_completed_relay_ids": [],
+        "irrigation_completed_utc": "2026-09-12T05:32:59.997684+00:00",
+        "irrigation_current_relay_id": null,
+        "irrigation_failed_reason": null,
+        "irrigation_phase": "COMPLETE_HOLD",
+        "irrigation_plan_id": "bb569471aa442d420263a6f0fcabe02e11ce04d1b0fc8459f2382c7faedfd667",
+        "irrigation_schedule_override_kind": null,
+        "irrigation_schedule_override_status": null,
+        "irrigation_suspended_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "irrigation_suspension_completed_utc": "2026-09-12T05:19:00.005933+00:00",
+        "irrigation_suspension_revalidation_last_seen_utc": "2026-09-12T05:20:01+00:00",
+        "irrigation_suspension_revalidation_observations": 1,
+        "irrigation_suspension_until_utc": "2026-09-12T06:10:00+00:00",
+        "maintenance_mode": false,
+        "mower_start_pending_deadline_utc": null,
+        "mower_start_pending_since_utc": null,
+        "operator_request_action": "STOP_IRRIGATION_NOW",
+        "operator_request_id": "207b7eca-9e90-4827-822e-5af679b97ecc",
+        "operator_request_status": "COMPLETED",
+        "park_command_sent_utc": "2026-09-12T01:45:00.007432+00:00",
+        "park_confirmed_observations": 313,
+        "park_confirmed_utc": "2026-09-12T01:46:00.002293+00:00",
+        "parked_by_automation": true,
+        "persisted": true,
+        "revision": 45942
+      },
+      "park_hold": {
+        "confirmed_since_utc": "2026-09-12T06:51:00.003545+00:00",
+        "current_read_utc": "2026-09-12T06:59:00.001855+00:00",
+        "held": true,
+        "read_max_gap_seconds": 90,
+        "reason": null,
+        "status": "HELD"
+      },
+      "mower_status_gate": {
+        "connected": true,
+        "fresh": false,
+        "max_age_seconds": 180,
+        "status_timestamp_ms": 1789195807970
+      },
+      "irrigation_action": null,
+      "manual": {
+        "enabled": true,
+        "kind": "START",
+        "status": "ENDED",
+        "permission_code": "MANUAL_SESSION_INACTIVE"
+      },
+      "plan": {
+        "blocked_now": null,
+        "parking_block": null,
+        "next_block": {
+          "start": "2026-09-12T10:00:00+02:00",
+          "end": "2026-09-12T13:45:00+02:00",
+          "source": "match",
+          "title": "Schönwalder SV: Schönwalder SV – Oranienburger FC Eintracht",
+          "resource_id": null
+        }
+      }
+    },
+    {
+      "at": "2026-09-12T07:00:03.3003466Z",
+      "mode": "FULL_FAILSAFE",
+      "decision": "MOWER_START_SEND_BLOCKED",
+      "command_sent": false,
+      "manifest": "6cab4b6a096571a3ad2402e31d54ecf9e1758e6b287d0aad2243bf9e55232002",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789195807970,
+        "error_code": 0
+      },
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-12T07:00:01+00:00"
+      },
+      "release": {
+        "allowed": true,
+        "clear_since_utc": "2026-09-12T05:32:59.997684+00:00",
+        "confirmation_observed_until_utc": "2026-09-12T07:00:01+00:00",
+        "confirmed_for_seconds": 5220,
+        "dry_until_utc": "2026-09-11T07:40:00.002388+00:00",
+        "drying_since_utc": "2026-09-11T05:10:00.002388+00:00",
+        "persistent_state_available": true,
+        "physical_clear_now": true,
+        "reason": "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt.",
+        "release_at_utc": "2026-09-12T05:34:59.997684+00:00",
+        "required_clear_minutes": 150,
+        "telemetry_confirmed": true,
+        "telemetry_required_minutes": 2
+      },
+      "start_action": {
+        "type": "StartInWorkArea",
+        "outcome": "PRE_SEND_BLOCKED",
+        "reason_code": "MOWER_STATUS_STALE",
+        "requested_deadline_utc": "2026-09-12T07:50:00+00:00",
+        "failsafe_refresh": false
+      },
+      "automation": {
+        "automation_park_source": "irrigation",
+        "automation_restart_allowed": true,
+        "continuous_mowing_owned": false,
+        "error": null,
+        "hydrawise_clear_origin": "IRRIGATION_END",
+        "hydrawise_clear_since_utc": "2026-09-12T05:32:59.997684+00:00",
+        "hydrawise_drying_since_utc": "2026-09-11T05:10:00.002388+00:00",
+        "irrigation_cancelled_without_run_utc": null,
+        "irrigation_change_candidate_since_utc": null,
+        "irrigation_completed_relay_ids": [],
+        "irrigation_completed_utc": "2026-09-12T05:32:59.997684+00:00",
+        "irrigation_current_relay_id": null,
+        "irrigation_failed_reason": null,
+        "irrigation_phase": "COMPLETE_HOLD",
+        "irrigation_plan_id": "bb569471aa442d420263a6f0fcabe02e11ce04d1b0fc8459f2382c7faedfd667",
+        "irrigation_schedule_override_kind": null,
+        "irrigation_schedule_override_status": null,
+        "irrigation_suspended_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "irrigation_suspension_completed_utc": "2026-09-12T05:19:00.005933+00:00",
+        "irrigation_suspension_revalidation_last_seen_utc": "2026-09-12T05:20:01+00:00",
+        "irrigation_suspension_revalidation_observations": 1,
+        "irrigation_suspension_until_utc": "2026-09-12T06:10:00+00:00",
+        "maintenance_mode": false,
+        "mower_start_pending_deadline_utc": null,
+        "mower_start_pending_since_utc": null,
+        "operator_request_action": "STOP_IRRIGATION_NOW",
+        "operator_request_id": "207b7eca-9e90-4827-822e-5af679b97ecc",
+        "operator_request_status": "COMPLETED",
+        "park_command_sent_utc": "2026-09-12T01:45:00.007432+00:00",
+        "park_confirmed_observations": 314,
+        "park_confirmed_utc": "2026-09-12T01:46:00.002293+00:00",
+        "parked_by_automation": true,
+        "persisted": true,
+        "revision": 45943
+      },
+      "park_hold": {
+        "confirmed_since_utc": "2026-09-12T06:51:00.003545+00:00",
+        "current_read_utc": "2026-09-12T07:00:00.006448+00:00",
+        "held": true,
+        "read_max_gap_seconds": 90,
+        "reason": null,
+        "status": "HELD"
+      },
+      "mower_status_gate": {
+        "connected": true,
+        "fresh": false,
+        "max_age_seconds": 180,
+        "status_timestamp_ms": 1789195807970
+      },
+      "irrigation_action": null,
+      "manual": {
+        "enabled": true,
+        "kind": "START",
+        "status": "ENDED",
+        "permission_code": "MANUAL_SESSION_INACTIVE"
+      },
+      "plan": {
+        "blocked_now": null,
+        "parking_block": null,
+        "next_block": {
+          "start": "2026-09-12T10:00:00+02:00",
+          "end": "2026-09-12T13:45:00+02:00",
+          "source": "match",
+          "title": "Schönwalder SV: Schönwalder SV – Oranienburger FC Eintracht",
+          "resource_id": null
+        }
+      }
+    },
+    {
+      "at": "2026-09-12T07:01:02.2960682Z",
+      "mode": "FULL_FAILSAFE",
+      "decision": "MOWER_START_SEND_BLOCKED",
+      "command_sent": false,
+      "manifest": "6cab4b6a096571a3ad2402e31d54ecf9e1758e6b287d0aad2243bf9e55232002",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789195807970,
+        "error_code": 0
+      },
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-12T07:01:00+00:00"
+      },
+      "release": {
+        "allowed": true,
+        "clear_since_utc": "2026-09-12T05:32:59.997684+00:00",
+        "confirmation_observed_until_utc": "2026-09-12T07:01:00+00:00",
+        "confirmed_for_seconds": 5280,
+        "dry_until_utc": "2026-09-11T07:40:00.002388+00:00",
+        "drying_since_utc": "2026-09-11T05:10:00.002388+00:00",
+        "persistent_state_available": true,
+        "physical_clear_now": true,
+        "reason": "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt.",
+        "release_at_utc": "2026-09-12T05:34:59.997684+00:00",
+        "required_clear_minutes": 150,
+        "telemetry_confirmed": true,
+        "telemetry_required_minutes": 2
+      },
+      "start_action": {
+        "type": "StartInWorkArea",
+        "outcome": "PRE_SEND_BLOCKED",
+        "reason_code": "MOWER_STATUS_STALE",
+        "requested_deadline_utc": "2026-09-12T07:50:00+00:00",
+        "failsafe_refresh": false
+      },
+      "automation": {
+        "automation_park_source": "irrigation",
+        "automation_restart_allowed": true,
+        "continuous_mowing_owned": false,
+        "error": null,
+        "hydrawise_clear_origin": "IRRIGATION_END",
+        "hydrawise_clear_since_utc": "2026-09-12T05:32:59.997684+00:00",
+        "hydrawise_drying_since_utc": "2026-09-11T05:10:00.002388+00:00",
+        "irrigation_cancelled_without_run_utc": null,
+        "irrigation_change_candidate_since_utc": null,
+        "irrigation_completed_relay_ids": [],
+        "irrigation_completed_utc": "2026-09-12T05:32:59.997684+00:00",
+        "irrigation_current_relay_id": null,
+        "irrigation_failed_reason": null,
+        "irrigation_phase": "COMPLETE_HOLD",
+        "irrigation_plan_id": "bb569471aa442d420263a6f0fcabe02e11ce04d1b0fc8459f2382c7faedfd667",
+        "irrigation_schedule_override_kind": null,
+        "irrigation_schedule_override_status": null,
+        "irrigation_suspended_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "irrigation_suspension_completed_utc": "2026-09-12T05:19:00.005933+00:00",
+        "irrigation_suspension_revalidation_last_seen_utc": "2026-09-12T05:20:01+00:00",
+        "irrigation_suspension_revalidation_observations": 1,
+        "irrigation_suspension_until_utc": "2026-09-12T06:10:00+00:00",
+        "maintenance_mode": false,
+        "mower_start_pending_deadline_utc": null,
+        "mower_start_pending_since_utc": null,
+        "operator_request_action": "STOP_IRRIGATION_NOW",
+        "operator_request_id": "207b7eca-9e90-4827-822e-5af679b97ecc",
+        "operator_request_status": "COMPLETED",
+        "park_command_sent_utc": "2026-09-12T01:45:00.007432+00:00",
+        "park_confirmed_observations": 315,
+        "park_confirmed_utc": "2026-09-12T01:46:00.002293+00:00",
+        "parked_by_automation": true,
+        "persisted": true,
+        "revision": 45944
+      },
+      "park_hold": {
+        "confirmed_since_utc": "2026-09-12T06:51:00.003545+00:00",
+        "current_read_utc": "2026-09-12T07:01:00.002643+00:00",
+        "held": true,
+        "read_max_gap_seconds": 90,
+        "reason": null,
+        "status": "HELD"
+      },
+      "mower_status_gate": {
+        "connected": true,
+        "fresh": false,
+        "max_age_seconds": 180,
+        "status_timestamp_ms": 1789195807970
+      },
+      "irrigation_action": null,
+      "manual": {
+        "enabled": true,
+        "kind": "START",
+        "status": "ENDED",
+        "permission_code": "MANUAL_SESSION_INACTIVE"
+      },
+      "plan": {
+        "blocked_now": null,
+        "parking_block": null,
+        "next_block": {
+          "start": "2026-09-12T10:00:00+02:00",
+          "end": "2026-09-12T13:45:00+02:00",
+          "source": "match",
+          "title": "Schönwalder SV: Schönwalder SV – Oranienburger FC Eintracht",
+          "resource_id": null
+        }
+      }
+    },
+    {
+      "at": "2026-09-12T07:02:02.5719076Z",
+      "mode": "FULL_FAILSAFE",
+      "decision": "MOWER_START_SEND_BLOCKED",
+      "command_sent": false,
+      "manifest": "6cab4b6a096571a3ad2402e31d54ecf9e1758e6b287d0aad2243bf9e55232002",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789195807970,
+        "error_code": 0
+      },
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-12T07:02:00+00:00"
+      },
+      "release": {
+        "allowed": true,
+        "clear_since_utc": "2026-09-12T05:32:59.997684+00:00",
+        "confirmation_observed_until_utc": "2026-09-12T07:02:00+00:00",
+        "confirmed_for_seconds": 5340,
+        "dry_until_utc": "2026-09-11T07:40:00.002388+00:00",
+        "drying_since_utc": "2026-09-11T05:10:00.002388+00:00",
+        "persistent_state_available": true,
+        "physical_clear_now": true,
+        "reason": "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt.",
+        "release_at_utc": "2026-09-12T05:34:59.997684+00:00",
+        "required_clear_minutes": 150,
+        "telemetry_confirmed": true,
+        "telemetry_required_minutes": 2
+      },
+      "start_action": {
+        "type": "StartInWorkArea",
+        "outcome": "PRE_SEND_BLOCKED",
+        "reason_code": "MOWER_STATUS_STALE",
+        "requested_deadline_utc": "2026-09-12T07:50:00+00:00",
+        "failsafe_refresh": false
+      },
+      "automation": {
+        "automation_park_source": "irrigation",
+        "automation_restart_allowed": true,
+        "continuous_mowing_owned": false,
+        "error": null,
+        "hydrawise_clear_origin": "IRRIGATION_END",
+        "hydrawise_clear_since_utc": "2026-09-12T05:32:59.997684+00:00",
+        "hydrawise_drying_since_utc": "2026-09-11T05:10:00.002388+00:00",
+        "irrigation_cancelled_without_run_utc": null,
+        "irrigation_change_candidate_since_utc": null,
+        "irrigation_completed_relay_ids": [],
+        "irrigation_completed_utc": "2026-09-12T05:32:59.997684+00:00",
+        "irrigation_current_relay_id": null,
+        "irrigation_failed_reason": null,
+        "irrigation_phase": "COMPLETE_HOLD",
+        "irrigation_plan_id": "bb569471aa442d420263a6f0fcabe02e11ce04d1b0fc8459f2382c7faedfd667",
+        "irrigation_schedule_override_kind": null,
+        "irrigation_schedule_override_status": null,
+        "irrigation_suspended_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "irrigation_suspension_completed_utc": "2026-09-12T05:19:00.005933+00:00",
+        "irrigation_suspension_revalidation_last_seen_utc": "2026-09-12T05:20:01+00:00",
+        "irrigation_suspension_revalidation_observations": 1,
+        "irrigation_suspension_until_utc": "2026-09-12T06:10:00+00:00",
+        "maintenance_mode": false,
+        "mower_start_pending_deadline_utc": null,
+        "mower_start_pending_since_utc": null,
+        "operator_request_action": "STOP_IRRIGATION_NOW",
+        "operator_request_id": "207b7eca-9e90-4827-822e-5af679b97ecc",
+        "operator_request_status": "COMPLETED",
+        "park_command_sent_utc": "2026-09-12T01:45:00.007432+00:00",
+        "park_confirmed_observations": 316,
+        "park_confirmed_utc": "2026-09-12T01:46:00.002293+00:00",
+        "parked_by_automation": true,
+        "persisted": true,
+        "revision": 45945
+      },
+      "park_hold": {
+        "confirmed_since_utc": "2026-09-12T06:51:00.003545+00:00",
+        "current_read_utc": "2026-09-12T07:02:00.002905+00:00",
+        "held": true,
+        "read_max_gap_seconds": 90,
+        "reason": null,
+        "status": "HELD"
+      },
+      "mower_status_gate": {
+        "connected": true,
+        "fresh": false,
+        "max_age_seconds": 180,
+        "status_timestamp_ms": 1789195807970
+      },
+      "irrigation_action": null,
+      "manual": {
+        "enabled": true,
+        "kind": "START",
+        "status": "ENDED",
+        "permission_code": "MANUAL_SESSION_INACTIVE"
+      },
+      "plan": {
+        "blocked_now": null,
+        "parking_block": null,
+        "next_block": {
+          "start": "2026-09-12T10:00:00+02:00",
+          "end": "2026-09-12T13:45:00+02:00",
+          "source": "match",
+          "title": "Schönwalder SV: Schönwalder SV – Oranienburger FC Eintracht",
+          "resource_id": null
+        }
+      }
+    },
+    {
+      "at": "2026-09-12T07:03:02.2929624Z",
+      "mode": "FULL_FAILSAFE",
+      "decision": "MOWER_START_SEND_BLOCKED",
+      "command_sent": false,
+      "manifest": "6cab4b6a096571a3ad2402e31d54ecf9e1758e6b287d0aad2243bf9e55232002",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789195807970,
+        "error_code": 0
+      },
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-12T07:03:00+00:00"
+      },
+      "release": {
+        "allowed": true,
+        "clear_since_utc": "2026-09-12T05:32:59.997684+00:00",
+        "confirmation_observed_until_utc": "2026-09-12T07:03:00+00:00",
+        "confirmed_for_seconds": 5400,
+        "dry_until_utc": "2026-09-11T07:40:00.002388+00:00",
+        "drying_since_utc": "2026-09-11T05:10:00.002388+00:00",
+        "persistent_state_available": true,
+        "physical_clear_now": true,
+        "reason": "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt.",
+        "release_at_utc": "2026-09-12T05:34:59.997684+00:00",
+        "required_clear_minutes": 150,
+        "telemetry_confirmed": true,
+        "telemetry_required_minutes": 2
+      },
+      "start_action": {
+        "type": "StartInWorkArea",
+        "outcome": "PRE_SEND_BLOCKED",
+        "reason_code": "MOWER_STATUS_STALE",
+        "requested_deadline_utc": "2026-09-12T07:50:00+00:00",
+        "failsafe_refresh": false
+      },
+      "automation": {
+        "automation_park_source": "irrigation",
+        "automation_restart_allowed": true,
+        "continuous_mowing_owned": false,
+        "error": null,
+        "hydrawise_clear_origin": "IRRIGATION_END",
+        "hydrawise_clear_since_utc": "2026-09-12T05:32:59.997684+00:00",
+        "hydrawise_drying_since_utc": "2026-09-11T05:10:00.002388+00:00",
+        "irrigation_cancelled_without_run_utc": null,
+        "irrigation_change_candidate_since_utc": null,
+        "irrigation_completed_relay_ids": [],
+        "irrigation_completed_utc": "2026-09-12T05:32:59.997684+00:00",
+        "irrigation_current_relay_id": null,
+        "irrigation_failed_reason": null,
+        "irrigation_phase": "COMPLETE_HOLD",
+        "irrigation_plan_id": "bb569471aa442d420263a6f0fcabe02e11ce04d1b0fc8459f2382c7faedfd667",
+        "irrigation_schedule_override_kind": null,
+        "irrigation_schedule_override_status": null,
+        "irrigation_suspended_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "irrigation_suspension_completed_utc": "2026-09-12T05:19:00.005933+00:00",
+        "irrigation_suspension_revalidation_last_seen_utc": "2026-09-12T05:20:01+00:00",
+        "irrigation_suspension_revalidation_observations": 1,
+        "irrigation_suspension_until_utc": "2026-09-12T06:10:00+00:00",
+        "maintenance_mode": false,
+        "mower_start_pending_deadline_utc": null,
+        "mower_start_pending_since_utc": null,
+        "operator_request_action": "STOP_IRRIGATION_NOW",
+        "operator_request_id": "207b7eca-9e90-4827-822e-5af679b97ecc",
+        "operator_request_status": "COMPLETED",
+        "park_command_sent_utc": "2026-09-12T01:45:00.007432+00:00",
+        "park_confirmed_observations": 317,
+        "park_confirmed_utc": "2026-09-12T01:46:00.002293+00:00",
+        "parked_by_automation": true,
+        "persisted": true,
+        "revision": 45946
+      },
+      "park_hold": {
+        "confirmed_since_utc": "2026-09-12T06:51:00.003545+00:00",
+        "current_read_utc": "2026-09-12T07:03:00.003219+00:00",
+        "held": true,
+        "read_max_gap_seconds": 90,
+        "reason": null,
+        "status": "HELD"
+      },
+      "mower_status_gate": {
+        "connected": true,
+        "fresh": false,
+        "max_age_seconds": 180,
+        "status_timestamp_ms": 1789195807970
+      },
+      "irrigation_action": null,
+      "manual": {
+        "enabled": true,
+        "kind": "START",
+        "status": "ENDED",
+        "permission_code": "MANUAL_SESSION_INACTIVE"
+      },
+      "plan": {
+        "blocked_now": null,
+        "parking_block": null,
+        "next_block": {
+          "start": "2026-09-12T10:00:00+02:00",
+          "end": "2026-09-12T13:45:00+02:00",
+          "source": "match",
+          "title": "Schönwalder SV: Schönwalder SV – Oranienburger FC Eintracht",
+          "resource_id": null
+        }
+      }
+    },
+    {
+      "at": "2026-09-12T07:04:02.4402664Z",
+      "mode": "FULL_FAILSAFE",
+      "decision": "MOWER_START_SEND_BLOCKED",
+      "command_sent": false,
+      "manifest": "6cab4b6a096571a3ad2402e31d54ecf9e1758e6b287d0aad2243bf9e55232002",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789195807970,
+        "error_code": 0
+      },
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-12T07:04:00+00:00"
+      },
+      "release": {
+        "allowed": true,
+        "clear_since_utc": "2026-09-12T05:32:59.997684+00:00",
+        "confirmation_observed_until_utc": "2026-09-12T07:04:00+00:00",
+        "confirmed_for_seconds": 5460,
+        "dry_until_utc": "2026-09-11T07:40:00.002388+00:00",
+        "drying_since_utc": "2026-09-11T05:10:00.002388+00:00",
+        "persistent_state_available": true,
+        "physical_clear_now": true,
+        "reason": "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt.",
+        "release_at_utc": "2026-09-12T05:34:59.997684+00:00",
+        "required_clear_minutes": 150,
+        "telemetry_confirmed": true,
+        "telemetry_required_minutes": 2
+      },
+      "start_action": {
+        "type": "StartInWorkArea",
+        "outcome": "PRE_SEND_BLOCKED",
+        "reason_code": "MOWER_STATUS_STALE",
+        "requested_deadline_utc": "2026-09-12T07:50:00+00:00",
+        "failsafe_refresh": false
+      },
+      "automation": {
+        "automation_park_source": "irrigation",
+        "automation_restart_allowed": true,
+        "continuous_mowing_owned": false,
+        "error": null,
+        "hydrawise_clear_origin": "IRRIGATION_END",
+        "hydrawise_clear_since_utc": "2026-09-12T05:32:59.997684+00:00",
+        "hydrawise_drying_since_utc": "2026-09-11T05:10:00.002388+00:00",
+        "irrigation_cancelled_without_run_utc": null,
+        "irrigation_change_candidate_since_utc": null,
+        "irrigation_completed_relay_ids": [],
+        "irrigation_completed_utc": "2026-09-12T05:32:59.997684+00:00",
+        "irrigation_current_relay_id": null,
+        "irrigation_failed_reason": null,
+        "irrigation_phase": "COMPLETE_HOLD",
+        "irrigation_plan_id": "bb569471aa442d420263a6f0fcabe02e11ce04d1b0fc8459f2382c7faedfd667",
+        "irrigation_schedule_override_kind": null,
+        "irrigation_schedule_override_status": null,
+        "irrigation_suspended_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "irrigation_suspension_completed_utc": "2026-09-12T05:19:00.005933+00:00",
+        "irrigation_suspension_revalidation_last_seen_utc": "2026-09-12T05:20:01+00:00",
+        "irrigation_suspension_revalidation_observations": 1,
+        "irrigation_suspension_until_utc": "2026-09-12T06:10:00+00:00",
+        "maintenance_mode": false,
+        "mower_start_pending_deadline_utc": null,
+        "mower_start_pending_since_utc": null,
+        "operator_request_action": "STOP_IRRIGATION_NOW",
+        "operator_request_id": "207b7eca-9e90-4827-822e-5af679b97ecc",
+        "operator_request_status": "COMPLETED",
+        "park_command_sent_utc": "2026-09-12T01:45:00.007432+00:00",
+        "park_confirmed_observations": 318,
+        "park_confirmed_utc": "2026-09-12T01:46:00.002293+00:00",
+        "parked_by_automation": true,
+        "persisted": true,
+        "revision": 45947
+      },
+      "park_hold": {
+        "confirmed_since_utc": "2026-09-12T06:51:00.003545+00:00",
+        "current_read_utc": "2026-09-12T07:04:00.002202+00:00",
+        "held": true,
+        "read_max_gap_seconds": 90,
+        "reason": null,
+        "status": "HELD"
+      },
+      "mower_status_gate": {
+        "connected": true,
+        "fresh": false,
+        "max_age_seconds": 180,
+        "status_timestamp_ms": 1789195807970
+      },
+      "irrigation_action": null,
+      "manual": {
+        "enabled": true,
+        "kind": "START",
+        "status": "ENDED",
+        "permission_code": "MANUAL_SESSION_INACTIVE"
+      },
+      "plan": {
+        "blocked_now": null,
+        "parking_block": null,
+        "next_block": {
+          "start": "2026-09-12T10:00:00+02:00",
+          "end": "2026-09-12T13:45:00+02:00",
+          "source": "match",
+          "title": "Schönwalder SV: Schönwalder SV – Oranienburger FC Eintracht",
+          "resource_id": null
+        }
+      }
+    },
+    {
+      "at": "2026-09-12T07:05:02.7188351Z",
+      "mode": "FULL_FAILSAFE",
+      "decision": "MOWER_START_SEND_BLOCKED",
+      "command_sent": false,
+      "manifest": "6cab4b6a096571a3ad2402e31d54ecf9e1758e6b287d0aad2243bf9e55232002",
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "mode": "HOME",
+        "state": "RESTRICTED",
+        "connected": true,
+        "battery_percent": 100,
+        "status_timestamp_ms": 1789195807970,
+        "error_code": 0
+      },
+      "water": {
+        "available": true,
+        "fresh": true,
+        "clear_now": true,
+        "active_zone_count": 0,
+        "observed_at_utc": "2026-09-12T07:05:01+00:00"
+      },
+      "release": {
+        "allowed": true,
+        "clear_since_utc": "2026-09-12T05:32:59.997684+00:00",
+        "confirmation_observed_until_utc": "2026-09-12T07:05:01+00:00",
+        "confirmed_for_seconds": 5520,
+        "dry_until_utc": "2026-09-11T07:40:00.002388+00:00",
+        "drying_since_utc": "2026-09-11T05:10:00.002388+00:00",
+        "persistent_state_available": true,
+        "physical_clear_now": true,
+        "reason": "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt.",
+        "release_at_utc": "2026-09-12T05:34:59.997684+00:00",
+        "required_clear_minutes": 150,
+        "telemetry_confirmed": true,
+        "telemetry_required_minutes": 2
+      },
+      "start_action": {
+        "type": "StartInWorkArea",
+        "outcome": "PRE_SEND_BLOCKED",
+        "reason_code": "MOWER_STATUS_STALE",
+        "requested_deadline_utc": "2026-09-12T07:50:00+00:00",
+        "failsafe_refresh": false
+      },
+      "automation": {
+        "automation_park_source": "irrigation",
+        "automation_restart_allowed": true,
+        "continuous_mowing_owned": false,
+        "error": null,
+        "hydrawise_clear_origin": "IRRIGATION_END",
+        "hydrawise_clear_since_utc": "2026-09-12T05:32:59.997684+00:00",
+        "hydrawise_drying_since_utc": "2026-09-11T05:10:00.002388+00:00",
+        "irrigation_cancelled_without_run_utc": null,
+        "irrigation_change_candidate_since_utc": null,
+        "irrigation_completed_relay_ids": [],
+        "irrigation_completed_utc": "2026-09-12T05:32:59.997684+00:00",
+        "irrigation_current_relay_id": null,
+        "irrigation_failed_reason": null,
+        "irrigation_phase": "COMPLETE_HOLD",
+        "irrigation_plan_id": "bb569471aa442d420263a6f0fcabe02e11ce04d1b0fc8459f2382c7faedfd667",
+        "irrigation_schedule_override_kind": null,
+        "irrigation_schedule_override_status": null,
+        "irrigation_suspended_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920,
+          9104921
+        ],
+        "irrigation_suspension_completed_utc": "2026-09-12T05:19:00.005933+00:00",
+        "irrigation_suspension_revalidation_last_seen_utc": "2026-09-12T05:20:01+00:00",
+        "irrigation_suspension_revalidation_observations": 1,
+        "irrigation_suspension_until_utc": "2026-09-12T06:10:00+00:00",
+        "maintenance_mode": false,
+        "mower_start_pending_deadline_utc": null,
+        "mower_start_pending_since_utc": null,
+        "operator_request_action": "STOP_IRRIGATION_NOW",
+        "operator_request_id": "207b7eca-9e90-4827-822e-5af679b97ecc",
+        "operator_request_status": "COMPLETED",
+        "park_command_sent_utc": "2026-09-12T01:45:00.007432+00:00",
+        "park_confirmed_observations": 319,
+        "park_confirmed_utc": "2026-09-12T01:46:00.002293+00:00",
+        "parked_by_automation": true,
+        "persisted": true,
+        "revision": 45948
+      },
+      "park_hold": {
+        "confirmed_since_utc": "2026-09-12T06:51:00.003545+00:00",
+        "current_read_utc": "2026-09-12T07:05:00.010115+00:00",
+        "held": true,
+        "read_max_gap_seconds": 90,
+        "reason": null,
+        "status": "HELD"
+      },
+      "mower_status_gate": {
+        "connected": true,
+        "fresh": false,
+        "max_age_seconds": 180,
+        "status_timestamp_ms": 1789195807970
+      },
+      "irrigation_action": null,
+      "manual": {
+        "enabled": true,
+        "kind": "START",
+        "status": "ENDED",
+        "permission_code": "MANUAL_SESSION_INACTIVE"
+      },
+      "plan": {
+        "blocked_now": null,
+        "parking_block": null,
+        "next_block": {
+          "start": "2026-09-12T10:00:00+02:00",
+          "end": "2026-09-12T13:45:00+02:00",
+          "source": "match",
+          "title": "Schönwalder SV: Schönwalder SV – Oranienburger FC Eintracht",
+          "resource_id": null
+        }
+      }
+    }
+  ]
+}

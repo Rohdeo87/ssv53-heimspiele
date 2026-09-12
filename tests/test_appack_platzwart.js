@@ -202,21 +202,22 @@ test("Mäheraktionen sind für Fahren, Laden, Sperren und manuelle Bedienung ein
   const actionsFunction = html.split("\n").find((line) => line.includes("function mowerActions(s)"));
   const deviceGateFunction = html.split("\n").find((line) => line.includes("function deviceControlsOpen(s)"));
   const telemetryFunction = html.split("\n").find((line) => line.includes("function mowerTelemetryFresh(s)"));
+  const stationConfirmedFunction = html.split("\n").find((line) => line.includes("function stationConfirmed(s)"));
   const actionAllowedFunction = html.split("\n").find((line) => line.includes("function deviceActionAllowed(s,action)"));
   const effectiveActionsFunction = html.split("\n").find((line) => line.includes("function effectiveMowerActions(s)"));
   const coordinationBlockedFunction = html.split("\n").find((line) => line.includes("function coordinationExecutionBlocked(s)"));
   assert.ok(searchingFunction);
   assert.ok(pausedFunction);
   assert.ok(schedulePendingFunction);
-  assert.ok(actionsFunction);
+  assert.ok(actionsFunction); assert.ok(stationConfirmedFunction);
   assert.ok(effectiveActionsFunction); assert.ok(coordinationBlockedFunction);
-  const rawActions = new Function(`${searchingFunction}\n${pausedFunction}\n${schedulePendingFunction}\n${deviceGateFunction}\n${telemetryFunction}\n${actionAllowedFunction}\n${actionsFunction}\n${coordinationBlockedFunction}\n${effectiveActionsFunction}\nreturn effectiveMowerActions;`)();
+  const rawActions = new Function(`${searchingFunction}\n${pausedFunction}\n${schedulePendingFunction}\n${deviceGateFunction}\n${telemetryFunction}\n${stationConfirmedFunction}\n${actionAllowedFunction}\n${actionsFunction}\n${coordinationBlockedFunction}\n${effectiveActionsFunction}\nreturn effectiveMowerActions;`)();
   const actions = (s) => rawActions({deviceControlsAvailable: true, ...s, mower: {telemetryFresh: true, ...(s.mower || {})}, coordination: {blockers: [], ...(s.coordination || {})}});
   const safe = { available: true, fresh: true, clear_now: true };
 
   assert.deepEqual(
     { ...actions({ mower: { activity: "MOWING", connected: true, errorCode: 0 }, irrigation: { safety: safe }, automation: { continuousMowingOwned: true }, occupancy: {} }), startQuestion: undefined },
-    { showPark: true, showStart: false, startLabel: "Mäher starten", startQuestion: undefined, occupancyOverrideKey: "" }
+    { showPark: true, showStart: false, startLabel: "Mäher starten", parkLabel: "Mäher parken", startQuestion: undefined, occupancyOverrideKey: "" }
   );
   const searching = actions({ mower: { activity: "MOWING", displayActivity: "SEARCHING_FOR_POSITION", connected: true, errorCode: 0 }, irrigation: { safety: safe }, automation: { continuousMowingOwned: true }, occupancy: {} });
   assert.equal(searching.showPark, true);

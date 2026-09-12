@@ -162,6 +162,7 @@ def prepare_start_dispatch(
     manual_session_id: str | None = None,
     manual_session_epoch: int | None = None,
     _guard_provenance: object | None = None,
+    allow_confirmed_station_start: bool = False,
 ) -> int:
     """Return the still safe whole-minute duration or block before POST.
 
@@ -231,7 +232,12 @@ def prepare_start_dispatch(
             in {"PARK_MOWER", "STOP_MOWER", "STOP_IRRIGATION_NOW", "STOP_IRRIGATION_AFTER_ZONE"}
         ):
             raise StartDispatchBlocked("MANUAL_STOP_PENDING")
-        if not _mower_observation_fresh(
+        from mower.irrigation_park_hold import start_valid
+        confirmed_manual_station = bool(
+            allow_confirmed_station_start and manual_session_id is not None
+            and start_valid(current, mower, now_utc=now)
+        )
+        if not confirmed_manual_station and not _mower_observation_fresh(
             mower, now_utc=now, max_age_seconds=mower_status_max_age_seconds
         ):
             raise StartDispatchBlocked("MOWER_STATUS_STALE")

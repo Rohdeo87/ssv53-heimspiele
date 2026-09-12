@@ -13,7 +13,7 @@ from dataclasses import dataclass, replace
 from datetime import datetime, timedelta, timezone
 from typing import Any, Mapping, Sequence
 
-from mower.device_send_guard import DeviceSendBlocked, unresolved_device_sends
+from mower.device_send_guard import DeviceSendBlocked, unresolved_device_sends, device_send_diagnostics
 from mower.manual_session import ManualSessionError, load_manual_session
 from mower.state import AutomationState
 from mower.state_store import StateConflictError
@@ -69,6 +69,10 @@ class StartRecoveryInspection:
     manual_session_status: str
 
     def public_payload(self) -> dict[str, Any]:
+        try:
+            receipts = device_send_diagnostics(self.state)
+        except DeviceSendBlocked:
+            receipts = None
         payload: dict[str, Any] = {
             "dryRun": True,
             "eligible": self.eligible,
@@ -78,6 +82,7 @@ class StartRecoveryInspection:
             "proofToken": self.proof_token,
             "journal": {
                 "unresolvedDeviceSendCount": self.unresolved_device_send_count,
+                "receipts": receipts,
             },
             "manualSessionStatus": self.manual_session_status,
             "operatorRequestStatus": self.state.operator_request_status,

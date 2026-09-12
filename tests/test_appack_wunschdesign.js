@@ -98,6 +98,15 @@ test('Design blendet unpassende Aktionen aus, ohne Parken mit Starts zu sperren'
   assert.equal(visibility(s).manualPark,false);
 });
 
+test('Bestätigte Station lässt manuelle Startaktion trotz alter Mähermeldung sichtbar',()=>{
+  const s=status();s.mower.activity='PARKED_IN_CS';s.mower.mode='HOME';s.mower.errorCode=0;s.mower.telemetryFresh=false;
+  s.manualControl.stationConfirmed=true;s.manualControl.canStart=true;
+  const value=presentation('pfVisibility')(s);
+  assert.equal(views.mowerTelemetryFresh(s),false);
+  assert.equal(value.manualStart,true);
+  assert.equal(value.parkLabel,'In Station lassen');
+});
+
 test('Start zur Konfliktentscheidung bleibt erreichbar; laufende Anfrage bietet keinen zweiten Start',()=>{
   const s=status();s.mower.activity='MOWING';s.manualControl.confirmations={waterChoiceRequired:true};
   assert.equal(presentation('pfVisibility')(s).manualStart,true);

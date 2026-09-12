@@ -146,6 +146,42 @@ test("Veraltete Mäherdaten sperren Start und bleiben als letzter Stand erkennba
   assert.equal(view.effectiveMowerActions(s).showStart, false);
 });
 
+test("Bestätigte Station ersetzt nur die reine Alterswarnung und ändert nicht die Startfreigabe", () => {
+  const s = snapshot();
+  s.mower = {...s.mower, activity: "PARKED_IN_CS", state: "RESTRICTED", mode: "HOME", telemetryFresh: false, errorCode: 0};
+  s.manualControl = {stationConfirmed: true, canStart: false};
+  s.automation = {continuousMowingOwned: true, irrigationPhase: null};
+  s.coordination = {...s.coordination, dryUntil: null, blockers: [{code: "MOWER_TELEMETRY"}]};
+  s.occupancy = {current: null, parking: null};
+  assert.equal(view.stationConfirmed(s), true);
+  assert.equal(view.mowerTelemetryFresh(s), false);
+  assert.equal(view.dashboardMessage(s).title, "Mäher ist in der Station");
+  assert.equal(view.dashboardMessage(s).text, "Der Mäher wartet in der Station.");
+  s.manualControl.canStart = true;
+  assert.equal(view.dashboardMessage(s).text, "Du kannst den Mäher starten.");
+  assert.equal(view.effectiveMowerActions(s).showStart, false);
+  assert.equal(view.effectiveMowerActions(s).parkLabel, "In Station lassen");
+});
+
+test("Bestätigte Station überstimmt keine Wasser-, Belegungs- oder Fehlerlage", () => {
+  const cases = [
+    s => { s.irrigation.safety.active_zone_count = 1; },
+    s => { s.occupancy.current = {start: s.generatedAt, end: "2026-09-09T12:00:00Z"}; },
+    s => { s.mower.errorCode = 93; },
+    s => { s.coordination.dryUntil = "2026-09-09T12:30:00Z"; }
+  ];
+  for (const change of cases) {
+    const s = snapshot();
+    s.mower = {...s.mower, activity: "PARKED_IN_CS", state: "RESTRICTED", mode: "HOME", telemetryFresh: false, errorCode: 0};
+    s.manualControl = {stationConfirmed: true};
+    s.automation = {continuousMowingOwned: true, irrigationPhase: null};
+    s.coordination = {...s.coordination, blockers: [{code: "MOWER_TELEMETRY"}]};
+    s.occupancy = {current: null, parking: null};
+    change(s);
+    assert.notEqual(view.dashboardMessage(s).title, "Mäher in Station geparkt");
+  }
+});
+
 test("Trocknungsanzeige rundet nur nach oben und behandelt Mitternacht", () => {
   assert.equal(view.dryingTime("2026-09-09T20:41:51.487Z", "2026-09-09T20:00:00Z"), "Heute, 22:42 Uhr");
   assert.equal(view.dryingTime("2026-09-09T20:42:00Z", "2026-09-09T20:00:00Z"), "Heute, 22:42 Uhr");

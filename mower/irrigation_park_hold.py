@@ -1,8 +1,9 @@
 """Continue an owned, confirmed HOME park across unchanged vendor events.
 
 The operator must end/confirm irrigation before starting in the vendor app or
-at the mower. This is not a hardware interlock. Only the irrigation gate may
-use this proof; mower starts still require fresh device events.
+at the mower. This is not a hardware interlock. A confirmed manual APP start
+may consume a held park proof once, through a short-lived request-bound handoff.
+Automatic starts and unconfirmed device actions still require fresh events.
 """
 from __future__ import annotations
 
@@ -38,7 +39,7 @@ def _load(state: AutomationState) -> dict:
         raise ValueError("Invalid park proof version")
     if raw.get("status") == "INVALID":
         _time(raw.get("not_before_utc"))
-    elif raw.get("status") in {"CANDIDATE", "HELD"}:
+    elif raw.get("status") in {"CANDIDATE", "HELD", "START_READY"}:
         since, checked = _time(raw.get("since_utc")), _time(raw.get("checked_at_utc"))
         _time(raw.get("source_at_utc"))
         count = raw.get("observations")
@@ -46,8 +47,14 @@ def _load(state: AutomationState) -> dict:
         if (type(count) is not int or count < 1 or checked < since
             or not isinstance(binding, str) or len(binding) != 64
             or any(c not in "0123456789abcdef" for c in binding)
-            or (raw["status"] == "HELD" and (count < 2 or checked - since < timedelta(minutes=1)))):
+            or (raw["status"] in {"HELD", "START_READY"} and (count < 2 or checked - since < timedelta(minutes=1)))):
             raise ValueError("Invalid park proof observations")
+        if raw["status"] == "START_READY":
+            issued, expires = _time(raw["issued_at_utc"]), _time(raw["expires_at_utc"])
+            if (not checked <= issued < expires <= issued + timedelta(seconds=120)
+                or not isinstance(raw.get("request_id"), str)
+                or type(raw.get("request_epoch")) is not int):
+                raise ValueError("Invalid start handoff")
     else:
         raise ValueError("Invalid park proof status")
     return raw
@@ -120,6 +127,60 @@ def valid(state: AutomationState, mower: Mapping[str, Any], *, now_utc: datetime
         return False
 
 
+def prepare_manual_start(previous: AutomationState, requested: AutomationState,
+                         mower: Mapping[str, Any], *, now_utc: datetime) -> AutomationState:
+    """Consume server-held park evidence in the same CAS as one APP request."""
+    if not valid(previous, mower, now_utc=now_utc) or unresolved_device_sends(previous):
+        return requested
+    proof = _load(previous)
+    proof.update(status="START_READY", binding=_binding(requested, mower),
+                 issued_at_utc=now_utc.isoformat(),
+                 expires_at_utc=(now_utc + timedelta(seconds=120)).isoformat(),
+                 request_id=requested.operator_request_session_id,
+                 request_epoch=requested.operator_request_session_epoch)
+    candidate = replace(requested, irrigation_park_hold_json=_dump(proof))
+    return candidate if start_valid(candidate, mower, now_utc=now_utc) else requested
+
+
+def start_valid(state: AutomationState, mower: Mapping[str, Any], *, now_utc: datetime) -> bool:
+    """Only the admitted APP start may use this proof; never a water release.
+
+    The proof is not renewed. A changed request, failed read, device departure,
+    unresolved write or expired handoff revokes it, including after OAuth.
+    """
+    try:
+        proof = _load(state)
+        session = json.loads(state.manual_session_json or "null")
+        observed = datetime.fromtimestamp(float(mower["status_timestamp_ms"]) / 1000, timezone.utc)
+        issued = _time(proof["issued_at_utc"])
+        pending = state.mower_start_pending_since_utc
+        return bool(
+            proof.get("status") == "START_READY" and issued <= now_utc < _time(proof["expires_at_utc"])
+            and proof["binding"] == _binding(state, mower)
+            and isinstance(session, dict) and session.get("kind") == "START"
+            and session.get("status") == "PENDING" and session.get("source") == "APP"
+            and session.get("session_id") == proof["request_id"] == state.operator_request_session_id
+            and session.get("epoch") == proof["request_epoch"] == state.operator_request_session_epoch
+            and session.get("mower_id") == mower.get("mower_id")
+            and state.operator_request_id == proof["request_id"]
+            and state.operator_request_action == "START_MOWING" and state.operator_request_status == "PENDING"
+            and state.parked_by_automation and state.park_confirmed_utc
+            and not state.maintenance_mode and not state.continuous_mowing_owned
+            and not unresolved_device_sends(state)
+            and (pending is None or (
+                issued <= _time(pending) <= now_utc
+                and state.mower_start_pending_session_id == proof["request_id"]
+                and state.mower_start_pending_session_epoch == proof["request_epoch"]))
+            and mower.get("connected") is True and mower.get("mode") == "HOME"
+            and mower.get("activity") in {"PARKED_IN_CS", "CHARGING"}
+            and mower.get("state") in {"RESTRICTED", "IN_OPERATION", "PAUSED"}
+            and type(mower.get("error_code")) is int and mower["error_code"] == 0
+            and _time(proof["source_at_utc"]) <= observed <= now_utc + timedelta(seconds=30)
+        )
+    except (KeyError, TypeError, ValueError, OverflowError, OSError, DeviceSendBlocked):
+        return False
+
+
 def observe(state: AutomationState, mower: Mapping[str, Any], *, now_utc: datetime,
             event_fresh: bool, confirmation_minutes: int = 1,
             required_observations: int = 2) -> tuple[AutomationState, dict]:
@@ -129,6 +190,8 @@ def observe(state: AutomationState, mower: Mapping[str, Any], *, now_utc: dateti
     a proof after an outage or intervening manual action.
     """
     now = now_utc
+    if start_valid(state, mower, now_utc=now):
+        return state, {"status": "START_READY", "held": False, "reason": "MANUAL_START_PENDING"}
     reason = None
     try:
         proof = _load(state)
