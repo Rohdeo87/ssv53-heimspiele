@@ -85,6 +85,10 @@ class AutomationState:
     mower_start_pending_since_utc: str | None = None
     mower_start_pending_deadline_utc: str | None = None
     continuous_mowing_owned: bool = False
+    # Observed external run has no device-side duration installed by us.
+    continuous_mowing_observed_takeover: bool = False
+    continuous_mowing_takeover_deadline_utc: str | None = None
+    continuous_mowing_takeover_hold_utc: str | None = None
     continuous_mowing_work_area_id: int | None = None
     continuous_mowing_window_end_utc: str | None = None
     irrigation_phase: str | None = None
@@ -241,6 +245,8 @@ class AutomationState:
             "mower_start_pending_since_utc",
             "mower_start_pending_deadline_utc",
             "continuous_mowing_window_end_utc",
+            "continuous_mowing_takeover_deadline_utc",
+            "continuous_mowing_takeover_hold_utc",
             "irrigation_zone_start_reserved_utc",
             "irrigation_zone_stop_requested_utc",
             "irrigation_suspension_until_utc",
@@ -363,6 +369,13 @@ class AutomationState:
             continuous_mowing_owned=bool(
                 values.get("continuous_mowing_owned", False)
             ),
+            continuous_mowing_observed_takeover=values.get("continuous_mowing_observed_takeover") is True,
+            continuous_mowing_takeover_deadline_utc=_require_utc_iso(
+                _normalize_optional_text(values.get("continuous_mowing_takeover_deadline_utc")),
+                "continuous_mowing_takeover_deadline_utc"),
+            continuous_mowing_takeover_hold_utc=_require_utc_iso(
+                _normalize_optional_text(values.get("continuous_mowing_takeover_hold_utc")),
+                "continuous_mowing_takeover_hold_utc"),
             continuous_mowing_work_area_id=_normalize_optional_int(
                 values.get("continuous_mowing_work_area_id")
             ),
@@ -988,6 +1001,8 @@ class AutomationState:
                     else None
                 ),
                 continuous_mowing_owned=False,
+                continuous_mowing_observed_takeover=False,
+                continuous_mowing_takeover_deadline_utc=None,
                 continuous_mowing_work_area_id=None,
                 continuous_mowing_window_end_utc=None,
             )
@@ -1006,6 +1021,9 @@ class AutomationState:
                 park_confirmed_observations=0,
                 automation_park_until_utc=None,
                 continuous_mowing_owned=bool(continuous_mowing),
+                continuous_mowing_observed_takeover=False,
+                continuous_mowing_takeover_deadline_utc=None,
+                continuous_mowing_takeover_hold_utc=None,
                 continuous_mowing_work_area_id=(
                     int(work_area_id) if continuous_mowing else None
                 ),

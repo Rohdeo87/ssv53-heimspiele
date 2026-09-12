@@ -84,7 +84,7 @@ from mower.irrigation_operating_window import (
     validate_fresh_start,
     validate_zone_sequence,
 )
-from mower import irrigation_park_hold, onsite_dock_proof
+from mower import irrigation_park_hold, onsite_dock_proof, automatic_takeover
 from mower.runtime import ControlMode, CycleResult, RuntimeSettings
 from mower.safety import CommandIntent, evaluate_command_gate, occupancy_override_allowed
 from mower.state import AutomationState
@@ -1773,6 +1773,9 @@ def _state_details(state: AutomationState, *, persisted: bool, error: str | None
         "park_confirmed_utc": state.park_confirmed_utc,
         "park_confirmed_observations": state.park_confirmed_observations,
         "continuous_mowing_owned": state.continuous_mowing_owned,
+        "continuous_mowing_observed_takeover": state.continuous_mowing_observed_takeover,
+        "continuous_mowing_takeover_deadline_utc": state.continuous_mowing_takeover_deadline_utc,
+        "continuous_mowing_takeover_hold_utc": state.continuous_mowing_takeover_hold_utc,
         "mower_start_pending_since_utc": state.mower_start_pending_since_utc,
         "mower_start_pending_deadline_utc": state.mower_start_pending_deadline_utc,
         "irrigation_phase": state.irrigation_phase,
@@ -2889,6 +2892,19 @@ def run_full_failsafe_cycle(
     original = store.load()
     previous_activity = str(original.last_mower_activity or "").upper()
     state = _cycle_state(original, result, now)
+    # Revoke before any water/occupancy early return can persist the cycle.
+    # A later idle report cannot silently restore automatic start authority.
+    if state.continuous_mowing_observed_takeover and (
+        activity in MANUAL_ACTIVITIES or mower_state in MANUAL_STATES
+        or error_code != 0 or mower_state in ERROR_STATES
+        or (override_action in PARK_OVERRIDE_ACTIONS
+            and not (state.parked_by_automation and external_reason == AUTOMATION_EXTERNAL_REASON))
+    ):
+        state = replace(state, continuous_mowing_owned=False,
+                        continuous_mowing_observed_takeover=False,
+                        continuous_mowing_takeover_deadline_utc=None,
+                        continuous_mowing_takeover_hold_utc=now.isoformat(),
+                        continuous_mowing_work_area_id=None, continuous_mowing_window_end_utc=None)
     if settings.enable_manual_sessions:
         state = _reconcile_observed_device_writes(
             state, mower, details, now_utc=now,
@@ -5447,6 +5463,12 @@ def run_full_failsafe_cycle(
     )
     if irrigation_outage_park_due:
         wants_park = True
+    takeover_deadline = _parse_time(state.continuous_mowing_takeover_deadline_utc)
+    takeover_return_due = bool(state.continuous_mowing_owned and state.continuous_mowing_observed_takeover
+                               and activity in PARK_COMMAND_ACTIVITIES
+                               and (takeover_deadline is None or now >= takeover_deadline))
+    if takeover_return_due:
+        wants_park = True
 
     park_guard_required = (
         bool(
@@ -5505,6 +5527,7 @@ def run_full_failsafe_cycle(
         park_source = (
             ("operator" if operator_action == "PARK_MOWER" else "")
             or block_source
+            or ("continuous" if takeover_return_due else "")
             or (
                 "irrigation"
                 if irrigation_outage_park_due
@@ -8125,9 +8148,28 @@ def run_full_failsafe_cycle(
                 message="Die manuelle Start-Sitzung wartet auf alle ausdrücklich bestätigten Sicherheitsnachweise.",
             )
 
+    # This admission cannot grant occupancy/drying/water exceptions. All
+    # protection paths above remain reachable before an ownership change.
+    takeover_checked_at = now
+    takeover_allowed = False
+    if _env_enabled(environment, "MOWER_AUTOMATIC_TAKEOVER_ENABLED"):
+        try:
+            takeover_checked_at = command_clock()
+            if (isinstance(takeover_checked_at, datetime) and takeover_checked_at.tzinfo is not None
+                and takeover_checked_at.utcoffset() is not None
+                and timedelta(0) <= takeover_checked_at - now <= timedelta(seconds=90)):
+                takeover_allowed = automatic_takeover.eligible(state, details, environment, takeover_checked_at)
+        except (ValueError, TypeError, OverflowError, OSError, RuntimeError, DeviceSendBlocked):
+            takeover_allowed = False
+    details["automatic_takeover"] = {"eligible": takeover_allowed, "adopted": False}
     manual_lock = activity in MANUAL_ACTIVITIES or mower_state in MANUAL_STATES
+    if state.continuous_mowing_takeover_hold_utc and not takeover_allowed and operator_action != "START_MOWING":
+        return _persist_result(store=store, original=original, state=state, result=result, details=details,
+                               settings=settings, decision_code="OBSERVED_MANUAL_STOP_HOLD",
+                               message="Der manuelle Stopp bleibt bis zu einer ausdrücklichen Freigabe bestehen.")
     confirmed_operator_paused_start = (
         manual_start_requested
+        and operator_action == "START_MOWING"
         and mower_state == "PAUSED"
         and activity == "NOT_APPLICABLE"
         and (state.parked_by_automation or state.continuous_mowing_owned)
@@ -8152,7 +8194,7 @@ def run_full_failsafe_cycle(
         (manual_lock and not confirmed_operator_paused_start)
         or error_code != 0
         or mower_state in ERROR_STATES
-        or (external_override and not manual_start_requested)
+        or (external_override and not manual_start_requested and not takeover_allowed)
     ):
         return _persist_result(
             store=store,
@@ -8235,6 +8277,7 @@ def run_full_failsafe_cycle(
     turnaround_before_dock = (
         activity == "GOING_HOME"
         and state.continuous_mowing_owned
+        and not state.continuous_mowing_observed_takeover
         and not manual_start_active
         and not (
             settings.enable_manual_sessions and manual_session is not None
@@ -8356,6 +8399,7 @@ def run_full_failsafe_cycle(
     failsafe_refresh = (
         mowing_now
         and state.continuous_mowing_owned
+        and not state.continuous_mowing_observed_takeover
         and (
             existing_command_end is None
             or existing_command_end > safe_command_deadline
@@ -8376,7 +8420,39 @@ def run_full_failsafe_cycle(
             else None
         ),
         "failsafe_refresh_required": failsafe_refresh,
+        "device_deadline_installed_by_automation": not state.continuous_mowing_observed_takeover,
     }
+    if takeover_allowed and mowing_now and not failsafe_refresh:
+        # Persist ownership only after the normal window and water checks, and
+        # never claim that observing a run installed a native timed command.
+        if remaining < minimum_window:
+            takeover_allowed = False
+        else:
+            if manual_session is not None and manual_session.get("status") == "ACTIVE":
+                manual_session = with_session_status(manual_session, "ENDED", now_utc=takeover_checked_at)
+                state = replace(state, manual_session_json=dump_manual_session(manual_session))
+                details["manual_session"] = {
+                    **details.get("manual_session", {}),
+                    "status": "ENDED",
+                    "permission_code": "MANUAL_SESSION_INACTIVE",
+                }
+            if operator_action == "START_MOWING":
+                state = _finish_operator_request(state, "Der laufende Einsatz wird automatisch fortgeführt.")
+            observed_only = state.continuous_mowing_observed_takeover or not state.continuous_mowing_owned
+            state = replace(state, revision=state.revision + 1, continuous_mowing_owned=True,
+                            continuous_mowing_observed_takeover=observed_only,
+                            continuous_mowing_takeover_deadline_utc=(safe_command_deadline.isoformat() if observed_only else None),
+                            continuous_mowing_takeover_hold_utc=None,
+                            continuous_mowing_work_area_id=target_area["id"],
+                            continuous_mowing_window_end_utc=(None if observed_only else state.continuous_mowing_window_end_utc),
+                            parked_by_automation=False, automation_park_source=None,
+                            automation_park_until_utc=None)
+            details["automatic_takeover"] = {"eligible": True, "adopted": True,
+                                              "device_command_sent": False, "planned_return_utc": safe_command_deadline.isoformat()}
+            details["mower_outage_guard"]["device_deadline_installed_by_automation"] = not observed_only
+            return _persist_result(store=store, original=original, state=state, result=result,
+                                   details=details, settings=settings, decision_code="AUTOMATIC_MOWING_TAKEOVER",
+                                   message="Der laufende Mäheinsatz wird automatisch fortgeführt.")
     if mowing_now and not failsafe_refresh:
         if manual_start_requested:
             work_area_id = int(target_area.get("id") or 0)

@@ -1,0 +1,28 @@
+{
+  "at_utc": "2026-09-12T14:33:47.280176+00:00",
+  "function_app": "func-ssv53platzpflege-prod-q7kbw54s",
+  "activation_requested": true,
+  "device_commands_requested": false,
+  "manifest_sha256": "d4577a8a110f2e05fae6b01e9fdfa27190be3ece4daff47a9cda9dddff122bc4",
+  "template_sha256": "1a4802d6f29dec4e3d8e8fba936bab2a36f447a8e0a023604df60f769dbfff74",
+  "public_url": "https://appack.de/rest-api/drender/6a86ab6c4b3c829dd60de9b7",
+  "public_functions_verified": [
+    "dashboardMessage",
+    "manualControlPrepare",
+    "irrigationStartAllowed"
+  ],
+  "public_confirmation_handler_matches": true,
+  "flag_before": null,
+  "verified_at_utc": "2026-09-12T14:33:59.628761+00:00",
+  "changed_setting_names": [
+    "MOWER_AUTOMATIC_TAKEOVER_ENABLED"
+  ],
+  "unrelated_settings_unchanged": true,
+  "flag_after": "true",
+  "required_flags_after": {
+    "IRRIGATION_ONSITE_DOCK_CONFIRMATION_ENABLED": "true",
+    "IRRIGATION_TERMINAL_CLEANUP_ENABLED": "true",
+    "ENABLE_MANUAL_SESSIONS": "true",
+    "ENABLE_OPERATOR_SAFETY_GUARD": "true"
+  }
+}

@@ -45,6 +45,7 @@ REQUIRED_FILES = (
     "mower/dry_run.py",
     "mower/device_send_guard.py",
     "mower/full_failsafe.py",
+    "mower/automatic_takeover.py",
     "mower/full_height_control.py",
     "mower/operator_controls.py",
     "mower/input_failure_guard.py",

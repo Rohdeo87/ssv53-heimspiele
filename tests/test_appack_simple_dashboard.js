@@ -417,7 +417,8 @@ test("Alte oder widersprüchliche Meldungen sperren Start, aber erlauben verfüg
 test("Historische Bestätigungen verdecken keinen neuen manuellen Betrieb", () => {
  const s=snapshot();s.deviceControlsAvailable=false;s.mower.activity="MOWING";s.mower.operationMode="MANUAL";s.mower.cuttingHeightMm=25;s.automation={};s.coordination.dryUntil=null;s.coordination.blockers=[];
  s.operatorCommands={PARK_MOWER:{status:"CONFIRMED",requestId:"old-park"},SET_CUTTING_HEIGHT:{status:"CONFIRMED",targetMm:26,requestId:"old-height"}};
- assert.equal(view.dashboardMessage(s).title,"Manueller Betrieb");
+ assert.equal(view.dashboardMessage(s).title,"Mäher mäht");
+ assert.match(view.dashboardMessage(s).text,/Manuell gestartet/);
  assert.equal(view.heightStatusText(s),"");
  assert.equal(view.nextMowerStart(s),"Mäher läuft bereits");
 });
@@ -447,7 +448,8 @@ test("Schutzflags erklären ausgeschaltete Automatik ohne aktive Warnung zu verd
  assert.equal(view.dashboardMessage(s).title,"Mäher lädt");
  assert.equal(view.protectionNotice(s),"Automatisches Starten aus. Mäherstart nur manuell.");
  s.mower.activity="MOWING";s.mower.operationMode="MANUAL";
- assert.equal(view.dashboardMessage(s).title,"Manueller Betrieb");
+ assert.equal(view.dashboardMessage(s).title,"Mäher mäht");
+ assert.match(view.dashboardMessage(s).text,/Manuell gestartet/);
  assert.equal(view.protectionNotice(s),"Automatisches Starten aus. Mäherstart nur manuell.");
 });
 
@@ -528,4 +530,17 @@ test("Bekannte Trockenzeit und Datenlücke zeigen Grund und Ablaufzeit in der Ze
  }
  s.generatedAt="2026-09-09T16:26:00Z";render(s);
  assert.equal(nodes.get("drying-end-row").classList.hidden,true);
+});
+
+
+test("Übernommener Einsatz zeigt Mähen, Fortschritt bleibt getrennt und Konflikte behalten Vorrang", () => {
+ const s=snapshot();s.mower.activity="MOWING";s.mower.operationMode="AUTOMATIC";s.automation.irrigationPhase=null;
+ s.automation.continuousMowingOwned=true;s.coordination.blockers=[];s.coordination.dryUntil=null;
+ s.manualControl={enabled:true,status:"AUTOMATIC"};
+ assert.equal(view.dashboardMessage(s).title,"Mäher mäht");
+ assert.equal(view.dashboardMessage(s).tone,"good");
+ assert.match(view.dashboardMessage(s).text,/automatisch/);
+ s.irrigation.safety.active_zone_count=1;
+ assert.equal(view.dashboardMessage(s).title,"Bewässerung läuft");
+ assert.equal(view.dashboardMessage(s).tone,"bad");
 });
