@@ -1,5 +1,5 @@
 from copy import deepcopy
-from datetime import timedelta
+from datetime import datetime, timedelta
 import pytest
 from daily_safety_report import estimate_charging_display_end, estimate_charging_end
 from mower.husqvarna import parse_snapshot
@@ -35,14 +35,12 @@ def test_manufacturer_time_never_overrides_actual_status(changes):
     assert estimate_charging_display_end(None, live_mower(remaining_charging_seconds=420, **changes), NOW) is None
 
 
-def test_two_measured_reference_charges_are_display_only():
+def test_two_measured_reference_charges_cannot_replace_missing_manufacturer_time():
     model = evidence(history((1,2)) + current())
     before = deepcopy(model)
     assert estimate_charging_end(model, live_mower(), NOW) is None
     estimate = estimate_charging_display_end(model, live_mower(), NOW)
-    assert estimate['at'] == (NOW + timedelta(minutes=20)).isoformat()
-    assert estimate['sampleCount'] == 2 and estimate['daysCovered'] == 2
-    assert estimate['source'] == 'OBSERVED_CHARGING_DISPLAY' and estimate['displayOnly']
+    assert estimate is None
     assert model == before
 
 
@@ -53,9 +51,17 @@ def test_briefly_delayed_past_report_does_not_discard_display_for_rest_of_charge
     assert model['ongoing'] is None and model['displayOngoing'] is not None
     assert estimate_charging_end(model, live_mower(), NOW) is None
     estimate = estimate_charging_display_end(model, live_mower(), NOW)
-    assert estimate['at'] == (NOW + timedelta(minutes=20)).isoformat()
+    assert estimate is None
     # No display clock while the current live reading itself is stale.
     assert estimate_charging_display_end(model, live_mower(status_timestamp_ms=int(NOW.timestamp()*1000)-182000), NOW) is None
+
+
+def test_a_real_manufacturer_revision_is_used_without_hiding_its_jump():
+    first = estimate_charging_display_end(None, live_mower(battery=9,remaining_charging_seconds=600), NOW)
+    later = NOW+timedelta(minutes=1)
+    changed = estimate_charging_display_end(None, live_mower(later,14,remaining_charging_seconds=2712), later)
+    assert datetime.fromisoformat(changed['at'])-datetime.fromisoformat(first['at']) > timedelta(minutes=30)
+    assert changed['source'] == 'HUSQVARNA_REMAINING_CHARGING_TIME'
 
 
 @pytest.mark.parametrize('fault', ['gap','old','error','battery','offline'])

@@ -420,9 +420,8 @@ def estimate_charging_display_end(
     """Optional UI clock only. Never supplied to the irrigation optimizer.
 
     Prefer manufacturer seconds, anchored to its report (not each refresh).
-    Fallback: two complete comparable charges on distinct days and the original
-    charge anchor. A briefly delayed past report (<=300s) is acceptable only in
-    this display path; current data and completed reference sections stay strict.
+    No unvalidated empirical fallback. A separately collected, prospective
+    calibration may replace this value in the console's display-only field.
     """
     if (mower.get("activity") != "CHARGING" or mower.get("connected") is not True
             or not _valid_charging_telemetry({
@@ -443,13 +442,7 @@ def estimate_charging_display_end(
                         "source": "HUSQVARNA_REMAINING_CHARGING_TIME", "precisionMinutes": 1}
         except (ValueError, OverflowError, OSError):
             pass
-    if not isinstance(evidence, Mapping):
-        return None
-    display_evidence = {**evidence, "ongoing": evidence.get("displayOngoing", evidence.get("ongoing"))}
-    estimate = _estimate_charging_end(display_evidence, mower, now_utc, minimum_sections=2)
-    if estimate:
-        estimate.update(source="OBSERVED_CHARGING_DISPLAY", displayOnly=True)
-    return estimate
+    return None
 
 
 def report_recipient(values: Mapping[str, str]) -> str:

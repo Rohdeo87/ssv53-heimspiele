@@ -49,6 +49,7 @@ from mower.irrigation_schedule import (
     validate_schedule_request,
 )
 from daily_safety_report import dashboard_irrigation_statistics, dashboard_statistics, estimate_charging_end, estimate_charging_display_end
+from mower.charging_forecast_store import display as validated_charging_display
 from mower.statistics_cache import (
     peek_dashboard_statistics,
     get_dashboard_statistics,
@@ -1589,7 +1590,6 @@ def live_status(environment: Mapping[str, str], now_utc: datetime, *,
         charging_evidence = statistics.pop("_chargingEvidence", None)
         charging_mower = dict(details.get("mower") or {})
         charging_end_estimate = estimate_charging_end(charging_evidence, charging_mower, now_utc)
-        charging_display_estimate = estimate_charging_display_end(charging_evidence, charging_mower, now_utc)
         completed_cycles = statistics.get("estimatedAreaCycles7d", statistics.get("completedAreaCycles7d"))
         statistics["mownAreaEquivalentsEstimated"] = True
         current_progress = statistics.get("currentAreaProgress")
@@ -1608,7 +1608,13 @@ def live_status(environment: Mapping[str, str], now_utc: datetime, *,
                       "bladeUsageSeconds": device_statistics.get("cutting_blade_usage_seconds"),
                       "totalRunningSeconds": device_statistics.get("total_running_seconds")}
         charging_end_estimate = None
-        charging_display_estimate = None
+    # This single display source is independent of optional statistics/cache
+    # failures. Neither manufacturer nor calibrated clocks grant a start.
+    charging_mower = dict(details.get("mower") or {})
+    charging_display_estimate = (
+        validated_charging_display(charging_mower, now_utc, environment)
+        or estimate_charging_display_end(None, charging_mower, now_utc)
+    )
     irrigation_statistics = (_dashboard_irrigation_statistics(environment, now_utc)
                              if include_details else _peek_display_cache(
                                  _IRRIGATION_STATISTICS_CACHE, _IRRIGATION_STATISTICS_CACHE_LOCK, now_utc))
