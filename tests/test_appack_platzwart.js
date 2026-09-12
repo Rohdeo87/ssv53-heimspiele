@@ -212,13 +212,14 @@ test("Mäheraktionen sind für Fahren, Laden, Sperren und manuelle Bedienung ein
   assert.ok(schedulePendingFunction);
   assert.ok(actionsFunction); assert.ok(stationConfirmedFunction);
   assert.ok(effectiveActionsFunction); assert.ok(coordinationBlockedFunction);
-  const rawActions = new Function(`${searchingFunction}\n${pausedFunction}\n${schedulePendingFunction}\n${deviceGateFunction}\n${telemetryFunction}\n${stationConfirmedFunction}\n${actionAllowedFunction}\n${actionsFunction}\n${coordinationBlockedFunction}\n${effectiveActionsFunction}\nreturn effectiveMowerActions;`)();
-  const actions = (s) => rawActions({deviceControlsAvailable: true, ...s, mower: {telemetryFresh: true, ...(s.mower || {})}, coordination: {blockers: [], ...(s.coordination || {})}});
+  const contextFunction = html.split("\n").find(line => line.includes("function mowerActionContext(s)"));
+  const rawActions = new Function(`${contextFunction}\n${searchingFunction}\n${pausedFunction}\n${schedulePendingFunction}\n${deviceGateFunction}\n${telemetryFunction}\n${stationConfirmedFunction}\n${actionAllowedFunction}\n${actionsFunction}\n${coordinationBlockedFunction}\n${effectiveActionsFunction}\nreturn effectiveMowerActions;`)();
+  const actions = (s) => rawActions({deviceControlsAvailable: true, ...s, mower: {connected: true, telemetryFresh: true, ...(s.mower || {})}, coordination: {blockers: [], ...(s.coordination || {})}});
   const safe = { available: true, fresh: true, clear_now: true };
 
   assert.deepEqual(
     { ...actions({ mower: { activity: "MOWING", connected: true, errorCode: 0 }, irrigation: { safety: safe }, automation: { continuousMowingOwned: true }, occupancy: {} }), startQuestion: undefined },
-    { showPark: true, showStart: false, startLabel: "Mäher starten", parkLabel: "Mäher parken", startQuestion: undefined, occupancyOverrideKey: "" }
+    { showPark: true, showStart: false, startLabel: "Mäher starten", parkLabel: "Mäher parken", parkQuestion: "Der Mäher fährt zur Station und bleibt dort, bis du ihn wieder freigibst.", startQuestion: undefined, occupancyOverrideKey: "" }
   );
   const searching = actions({ mower: { activity: "MOWING", displayActivity: "SEARCHING_FOR_POSITION", connected: true, errorCode: 0 }, irrigation: { safety: safe }, automation: { continuousMowingOwned: true }, occupancy: {} });
   assert.equal(searching.showPark, true);
@@ -286,9 +287,10 @@ test("Bewässerungsaktionen erscheinen nur im passenden Zustand", () => {
   const actionAllowedFunction = html.split("\n").find((line) => line.includes("function deviceActionAllowed(s,action)"));
   assert.ok(actionsFunction);
   const coordinationBlockedFunction = html.split("\n").find((line) => line.includes("function coordinationExecutionBlocked(s)"));
-  const rawActions = new Function(`${coordinationBlockedFunction}\n${deviceGateFunction}\n${telemetryFunction}\n${actionAllowedFunction}\n${actionsFunction}\nreturn irrigationActions;`)();
-  const actions = (s) => rawActions({deviceControlsAvailable: true, ...s, mower: {telemetryFresh: true, ...(s.mower || {})}, coordination: {blockers: [], ...(s.coordination || {})}});
-  const safe = { available: true, fresh: true };
+  const startFunctions = ["irrigationStartAllowed", "irrigationScheduleChangePending", "hasActiveMowerError"].map(name => html.split("\n").find(line => line.startsWith("    function "+name+"("))).join("\n");
+  const rawActions = new Function(`${startFunctions}\n${coordinationBlockedFunction}\n${deviceGateFunction}\n${telemetryFunction}\n${actionAllowedFunction}\n${actionsFunction}\nreturn irrigationActions;`)();
+  const actions = (s) => rawActions({deviceControlsAvailable: true, ...s, mower: {connected: true, telemetryFresh: true, ...(s.mower || {})}, coordination: {blockers: [], ...(s.coordination || {})}});
+  const safe = { available: true, fresh: true, clear_now: true, active_zone_count: 0, imminent_zone_count: 0 };
   assert.deepEqual(actions({ automation: {}, irrigation: { safety: safe } }), { showStart: true, showStop: false });
   assert.deepEqual(actions({ automation: { irrigationPhase: "RUNNING" }, irrigation: { safety: safe } }), { showStart: false, showStop: true });
   assert.deepEqual(actions({ automation: { irrigationPhase: "COMPLETE_HOLD" }, irrigation: { safety: safe } }), { showStart: false, showStop: false });

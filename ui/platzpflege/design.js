@@ -192,11 +192,11 @@
       var toggle=document.getElementById("plan-history-toggle"),toggleBase=toggle.onclick;toggle.onclick=function(){toggleBase.apply(this,arguments);pfDecorate(this,"History")};
     }
     function pfVisibility(s) {
-      var m=s.mower||{},manual=manualControlView(s),fresh=mowerTelemetryFresh(s),moving=fresh&&["MOWING","LEAVING","GOING_HOME"].indexOf(m.activity)>=0,busy=operatorActionPending(s,"MANUAL_CONTROL")||!!(state.inFlight&&state.inFlight.MANUAL_CONTROL),parked=manual.status==="MANUAL_PARKED"||manual.status==="PARKING",resumeMeaningful=manual.enabled&&manual.status!=="AUTOMATIC"&&manual.status!=="UNKNOWN";
-      return {manualStart:manual.enabled&&manual.canStart&&deviceControlsOpen(s)&&(!moving||manual.waterRequired)&&!busy,manualPark:manual.enabled&&manual.canPark&&!parked,manualResume:manual.enabled&&manual.canResume&&resumeMeaningful&&!busy,husqvarnaStart:manual.enabled&&manual.canStart&&deviceControlsOpen(s)&&(!moving||manual.waterRequired)&&!busy,husqvarnaPark:manual.enabled&&manual.canPark&&!parked,height:m.cuttingHeightSupported===true,parkLabel:stationConfirmed(s)||fresh&&["CHARGING","PARKED_IN_CS"].indexOf(m.activity)>=0?"In Station lassen":"Mäher parken"};
+      return manualMowerActions(s,state);
     }
     function pfNextMoment(s) {
       var m=s.mower||{},manual=manualControlView(s),info=nextStartInfo(s,true),now=new Date(s.generatedAt),o=s.occupancy||{};
+      if(mowerActionContext(s).stopped)return {label:"Nächster Mähstart",at:null,text:"",hidden:true,note:""};
       if(manual.enabled&&["MANUAL_PARKED","PARKING"].indexOf(manual.status)>=0)return {label:"Nächster Mähstart",at:null,text:"Du entscheidest",note:"Erst nach deiner Freigabe."};
       if(mowerTelemetryFresh(s)&&["MOWING","LEAVING"].indexOf(m.activity)>=0&&o.available!==false){
         var blocks=(o.upcoming||[]).concat(o.next?[o.next]:[]).filter(function(x){return x&&new Date(x.start)>now}).sort(function(a,b){return new Date(a.start)-new Date(b.start)});
@@ -262,14 +262,29 @@
       document.querySelectorAll("#plan-zones label").forEach(function(label){pfDecorate(label,"Droplets")});
       document.querySelectorAll("#plan-zones .duration-stepper").forEach(function(stepper){var buttons=stepper.querySelectorAll("button");buttons.forEach(function(b,index){b.setAttribute("aria-label",index?"Eine Minute länger":"Eine Minute kürzer");pfDecorate(b,index?"Plus":"Minus","")})});
     }
+    function pfWaterActions(s) {
+      var v=irrigationActionContext(s,state);
+      [["irrigation-stop",v.showStop,"Square",v.stopLabel],["irrigation-start-all",v.showStart,"Play","Alle Zonen starten"],["stop-now",v.showStop,"Square","Direkt beenden"],["stop-after-zone",v.showStopAfterZone,"Droplets","Nach dieser Zone"]].forEach(function(row){var b=document.getElementById(row[0]);b.disabled=!row[1];b.classList.toggle("hidden",!row[1]);pfDecorate(b,row[2],row[3])});
+      document.querySelectorAll(".zone-controls").forEach(function(el){el.classList.toggle("hidden",!v.showZoneStart)});
+      document.querySelectorAll(".zone-start").forEach(function(b){b.disabled=!v.showZoneStart;b.classList.toggle("hidden",!v.showZoneStart);pfDecorate(b,"Play","Starten")});
+    }
+    function pfPlanActions(s) {
+      var actions={"plan-skip":"SKIP_NEXT_IRRIGATION","plan-pause-open":"PAUSE_IRRIGATION_UNTIL","plan-custom-open":"CUSTOMIZE_NEXT_IRRIGATION","plan-resume":"RESUME_IRRIGATION_SCHEDULE","plan-pause":"PAUSE_IRRIGATION_UNTIL","plan-save-custom":"CUSTOMIZE_NEXT_IRRIGATION"},busy=Object.keys(actions).some(function(id){var key=actions[id];return operatorActionPending(s,key)||!!(state.inFlight&&state.inFlight[key])});
+      var schedule=s.irrigationSchedule||{},a=s.automation||{},next=schedule.nextRun,override=schedule.override,zones=next&&next.zones||override&&override.zones||[],canEdit=deviceControlsOpen(s)&&schedule.available===true&&!a.pendingAction&&!a.irrigationPhase&&!coordinationExecutionBlocked(s)&&!irrigationScheduleChangePending(s);
+      Object.keys(actions).forEach(function(id){var key=actions[id],b=document.getElementById(id),hasTarget=key==="RESUME_IRRIGATION_SCHEDULE"?!!override:!override,ready=hasTarget&&(key!=="SKIP_NEXT_IRRIGATION"||!!next)&&(key!=="CUSTOMIZE_NEXT_IRRIGATION"||!!next&&zones.length===7);b.disabled=!canEdit||!ready||busy||!deviceActionAllowed(s,key);b.classList.toggle("hidden",b.disabled)});
+      var resume=document.getElementById("plan-resume"),kind=override&&override.kind;
+      resume.querySelector("strong").textContent=kind==="SKIP_NEXT"?"Aussetzen zurücknehmen":kind==="CUSTOM_NEXT"?"Änderung zurücknehmen":"Bewässerung fortsetzen";
+      resume.querySelector("small").textContent=kind==="SKIP_NEXT"?"Der nächste Lauf findet wieder statt.":"Ab jetzt gilt wieder der normale Bewässerungsplan.";
+    }
     function pfUpdate(s) {
       if(!pfReady||!s)return;var v=pfVisibility(s),manual=manualControlView(s),overview=dashboardMessage(s),safe=s.irrigation&&s.irrigation.safety||{};
-      [["manual-start",v.manualStart,"Play","Mäher starten"],["manual-park",v.manualPark,"House",v.parkLabel],["manual-resume",v.manualResume,"Repeat2","Automatik einschalten"],["manual-husqvarna",v.husqvarnaStart,"Play","Über Husqvarna starten"],["manual-husqvarna-park",v.husqvarnaPark,"House","Über Husqvarna parken"]].forEach(function(row){var b=document.getElementById(row[0]);b.classList.toggle("hidden",!row[1]);pfDecorate(b,row[2],row[3])});
+      [["manual-start",v.manualStart,manual.waterRequired?"Droplets":"Play",v.startLabel],["manual-park",v.manualPark,"House",v.parkLabel],["manual-resume",v.manualResume,"Repeat2","Automatik einschalten"],["manual-husqvarna",v.husqvarnaStart,manual.waterRequired?"Droplets":"Play",manual.waterRequired?v.startLabel:"Über Husqvarna starten"],["manual-husqvarna-park",v.husqvarnaPark,"House","Über Husqvarna parken"]].forEach(function(row){var b=document.getElementById(row[0]);b.classList.toggle("hidden",!row[1]);b.disabled=!row[1];pfDecorate(b,row[2],row[3])});
       ["mow-start","mow-park"].forEach(function(id){var b=document.getElementById(id);if(b.disabled)b.classList.add("hidden");pfDecorate(b,id==="mow-start"?"Play":"House")});
       pfDecorate(document.getElementById("irrigation-stop"),"Square",irrigationAwaitingStart(s)?"Bewässerung abbrechen":"Bewässerung beenden");
       document.getElementById("pf-mower-actions").classList.toggle("pf-single-action",document.querySelectorAll('#pf-mower-actions>.btn:not(.hidden)').length===1);
+      document.getElementById("pf-mower-actions").hidden=document.querySelectorAll('#pf-mower-actions>.btn:not(.hidden)').length===0;
       document.querySelectorAll('[data-pf-target="height"]').forEach(function(b){b.hidden=!v.height});
-      document.querySelectorAll('[data-pf-target="husqvarna"]').forEach(function(b){b.hidden=!manual.enabled});
+      document.querySelectorAll('[data-pf-target="husqvarna"]').forEach(function(b){b.hidden=!v.husqvarnaStart&&!v.husqvarnaPark});
       document.querySelectorAll(".zone-start").forEach(function(b){pfDecorate(b,"Play","Starten");b.classList.toggle("hidden",b.disabled)});
       document.querySelectorAll(".zone-head").forEach(function(h){pfDecorate(h,"Droplets")});
       document.querySelectorAll("#plan-zones label").forEach(function(h){pfDecorate(h,"Droplets")});
@@ -282,7 +297,7 @@
       pfDecorate(document.getElementById("overall"),document.getElementById("overall-title").textContent===overview.title?overview.icon:"TriangleAlert");
       [["mower-connection","Smartphone"],["battery","Battery"],["progress","Grid2x2"],["cutting-height-current","MoveVertical"],["mower-error","TriangleAlert"]].forEach(function(row){pfDecorate(document.getElementById(row[0]).previousElementSibling,row[1])});
       pfDecorate(document.getElementById("winter-training-switch"),"Snowflake");
-      pfRenderHeight(s);pfRenderMoment(s);pfRenderCharging(s);pfRenderMowingProgress(s);pfRenderHistory(s);
+      pfWaterActions(s);pfPlanActions(s);var blade=document.getElementById("blade-reset"),bladeReady=Number(s.statistics&&s.statistics.bladeUsageSeconds)>0&&deviceActionAllowed(s,"RESET_BLADE_USAGE")&&!operatorActionPending(s,"RESET_BLADE_USAGE")&&!(s.automation&&s.automation.pendingAction)&&!(state.inFlight&&state.inFlight.RESET_BLADE_USAGE);blade.disabled=!bladeReady;blade.classList.toggle("hidden",!bladeReady);pfRenderHeight(s);pfRenderMoment(s);pfRenderCharging(s);pfRenderMowingProgress(s);pfRenderHistory(s);
     }
     pfMountDesign();
     var pfRenderBase=render;render=function(s){pfRenderBase(s);pfUpdate(s)};
@@ -293,6 +308,6 @@
     var pfManualBase=manualControlPrepare;manualControlPrepare=function(){var result=pfManualBase.apply(this,arguments);pfConfirmationIcons();return result};
     var pfResetPlanBase=resetPlanDialog;resetPlanDialog=function(){pfResetPlanBase();pfDecorate(document.getElementById("plan-history-toggle"),"History")};
     var pfZonesBase=buildPlanZones;buildPlanZones=function(zones){pfZonesBase(zones);pfPlanIcons()};
-    var pfPlanBase=renderIrrigationSchedule;renderIrrigationSchedule=function(){pfPlanBase.apply(this,arguments);["plan-skip","plan-pause-open","plan-custom-open","plan-resume","plan-pause"].forEach(function(id){var b=document.getElementById(id);b.classList.toggle("hidden",b.disabled)});pfDecorate(document.getElementById("plan-history-toggle"),"History")};
+    var pfPlanBase=renderIrrigationSchedule;renderIrrigationSchedule=function(){pfPlanBase.apply(this,arguments);if(state.status)pfPlanActions(state.status);pfDecorate(document.getElementById("plan-history-toggle"),"History")};
     var pfWaterStatsBase=renderIrrigationStatistics;renderIrrigationStatistics=function(stats){pfWaterStatsBase(stats);document.querySelectorAll("#water-stat-zones li").forEach(function(li){pfDecorate(li,"Droplets")})};
     var pfAttentionBase=renderIrrigationAttention;renderIrrigationAttention=function(stats){pfAttentionBase(stats);pfDecorate(document.getElementById("water-attention-title"),"TriangleAlert");pfDecorate(document.getElementById("water-attention-open"),"TriangleAlert")};
