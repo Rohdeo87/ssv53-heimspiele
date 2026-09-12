@@ -1,0 +1,71 @@
+{
+  "generatedAt": "2026-09-12T12:13:00Z",
+  "controlsAvailable": true,
+  "deviceControlsAvailable": true,
+  "overall": {
+    "code": "MANUAL_OR_ERROR_HOLD"
+  },
+  "operationMode": "AUTOMATIC",
+  "mower": {
+    "activity": "NOT_APPLICABLE",
+    "state": "ERROR",
+    "connected": true,
+    "telemetryFresh": false,
+    "statusAgeSeconds": 266,
+    "errorCode": 9,
+    "batteryPercent": 73,
+    "mode": "MAIN_AREA",
+    "errorActive": true,
+    "errorMessage": "Gerätefehler (Code 9)",
+    "statusTimestamp": "2026-09-12T12:08:34Z"
+  },
+  "automation": {
+    "irrigationPhase": "COMPLETE_HOLD"
+  },
+  "irrigation": {
+    "safety": {
+      "available": true,
+      "fresh": true,
+      "clear_now": true,
+      "active_zone_count": 0
+    }
+  },
+  "irrigationSchedule": {
+    "available": true,
+    "nextRun": {
+      "start": "2026-09-10T02:00:00Z"
+    }
+  },
+  "occupancy": {
+    "current": null,
+    "safeWindows": [
+      {
+        "start": "2026-09-09T10:00:00Z",
+        "command_deadline": "2026-09-09T14:00:00Z",
+        "minimum_mowing_minutes": 30
+      }
+    ]
+  },
+  "coordination": {
+    "blockers": [
+      {
+        "code": "MOWER_ERROR"
+      }
+    ]
+  },
+  "ok": true,
+  "controlMode": "FULL_FAILSAFE",
+  "statistics": {},
+  "irrigationStatistics": {},
+  "dataQuality": {},
+  "clubhouse": {
+    "events": []
+  },
+  "manualControl": {
+    "enabled": true,
+    "status": "AUTOMATIC",
+    "canPark": true,
+    "canStart": false,
+    "canResume": false
+  }
+}

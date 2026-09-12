@@ -1,0 +1,16 @@
+{
+  "built_at_utc": "2026-09-12T13:09:10.040272+00:00",
+  "source_commit": "5c9feffc5837a7663d7771cbd6e53f3b7797f8d9",
+  "artifact_path": "C:\\Users\\Install\\.codex\\.chatgpt-projects\\g-p-6a77779d6d3c8191b87b93eb3b703809\\trainer-access-20260910\\docs\\ui-2026-09-12\\onsite-dock-confirmation\\ssv53-onsite-dock-source.zip",
+  "sha256": "e4923cd32ad41991d7e6380a7b7232b4c4096eea4cfd96b9005fc655900fc76b",
+  "manifest_sha256": "9dd85c77f2f15b62a38982c070befe571b3fbbfec03c133f9ff57ac7de949d6b",
+  "size_bytes": 380550,
+  "remote_build_required": true,
+  "deployed": false,
+  "activated": false,
+  "device_tested": false,
+  "backend_tests": 338,
+  "backend_subtests": 81,
+  "appack_tests": 227,
+  "build_command": "python scripts/build_azure_full_failsafe_package.py --output <archive>"
+}

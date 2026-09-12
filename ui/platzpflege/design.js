@@ -197,7 +197,7 @@
     }
     function pfNextMoment(s) {
       var m=s.mower||{},manual=manualControlView(s),info=nextStartInfo(s,true),now=new Date(s.generatedAt),o=s.occupancy||{};
-      if(mowerActionContext(s).stopped)return {label:"Nächster Mähstart",at:null,text:"",hidden:true,note:""};
+      if(mowerActionContext(s).stopped||mowerFaultNotice(m))return {label:"Nächster Mähstart",at:null,text:"",hidden:true,note:""};
       if(manual.enabled&&["MANUAL_PARKED","PARKING"].indexOf(manual.status)>=0)return {label:"Nächster Mähstart",at:null,text:"Du entscheidest",note:"Erst nach deiner Freigabe."};
       if(mowerTelemetryFresh(s)&&["MOWING","LEAVING"].indexOf(m.activity)>=0&&o.available!==false){
         var blocks=(o.upcoming||[]).concat(o.next?[o.next]:[]).filter(function(x){return x&&new Date(x.start)>now}).sort(function(a,b){return new Date(a.start)-new Date(b.start)});
@@ -274,12 +274,12 @@
       var v=irrigationActionContext(s,local),m=s.mower||{},a=s.automation||{},safe=s.irrigation&&s.irrigation.safety||{};
       if(v.showStart)return "";
       if(v.showZoneStart)return "Zurzeit können nur einzelne Zonen gestartet werden.";
-      if(m.state==="STOPPED")return "Manueller Start nicht möglich: Der Mäher ist gestoppt. Bitte vor Ort freigeben und sicher parken.";
-      if(m.state==="OFF")return "Manueller Start nicht möglich: Bitte den Mäher einschalten und sicher parken.";
       if(safe.available===true&&safe.fresh===true&&Number(safe.active_zone_count)>0)return "";
       if(a.pendingAction||local&&local.inFlight&&Object.keys(local.inFlight).length)return "Bitte warten, bis die aktuelle Anfrage bestätigt ist.";
       if(m.connected!==true)return "Manueller Start nicht möglich: Die Verbindung zum Mäher fehlt. Bitte am Mäher nachsehen.";
       if(hasActiveMowerError(m)||["ERROR","FATAL_ERROR","ERROR_AT_POWER_UP"].indexOf(m.state)>=0)return "Manueller Start nicht möglich: Bitte die Störung am Mäher beheben.";
+      if(m.state==="STOPPED")return "Die Station ist noch nicht bestätigt. Der Mäher darf gestoppt bleiben.";
+      if(m.state==="OFF")return "Manueller Start nicht möglich: Bitte den Mäher einschalten und sicher parken.";
       if(a.irrigationPhase==="COMPLETE_HOLD")return "Manueller Start noch gesperrt: Der letzte Durchlauf ist noch nicht freigegeben. Bitte später aktualisieren.";
       if(a.irrigationPhase)return "Ein Bewässerungsablauf ist bereits vorbereitet oder noch aktiv.";
       if(!mowerTelemetryFresh(s)||safe.available!==true||safe.fresh!==true)return "Für einen manuellen Start fehlt eine aktuelle Rückmeldung. Bitte aktualisieren.";

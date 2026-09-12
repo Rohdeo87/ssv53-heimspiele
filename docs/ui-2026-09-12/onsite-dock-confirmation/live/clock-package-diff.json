@@ -1,0 +1,7 @@
+{
+  "changed_files": [
+    "mower/full_failsafe.py",
+    "package-manifest.json"
+  ],
+  "unchanged_70_files_preserved": true
+}

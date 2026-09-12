@@ -84,7 +84,7 @@ from mower.irrigation_operating_window import (
     validate_fresh_start,
     validate_zone_sequence,
 )
-from mower import irrigation_park_hold
+from mower import irrigation_park_hold, onsite_dock_proof
 from mower.runtime import ControlMode, CycleResult, RuntimeSettings
 from mower.safety import CommandIntent, evaluate_command_gate, occupancy_override_allowed
 from mower.state import AutomationState
@@ -128,6 +128,10 @@ PARTIAL_IRRIGATION_WINDOW_FAILURE = (
 EXPIRED_IRRIGATION_PLAN_LEASE_FAILURE = (
     "Der bestätigte Suspendierungsnachweis ist unvollständig, abgelaufen "
     "oder der ursprüngliche Beregnungsstart ist bereits erreicht."
+)
+ONSITE_DOCK_PROOF_LOST_STOP_REASON = (
+    "Der gebundene Vor-Ort-Stationsnachweis ist verloren; "
+    "die zugeordnete Wasserzone wird sicher beendet."
 )
 PARK_GUARD_BLOCK_SOURCES = frozenset({"training", "match", "special", "irrigation"})
 
@@ -389,7 +393,18 @@ def _park_confirmation_ready(
 
 
 def _water_park_authorized(state, mower, *, now_utc, environment,
-                           max_age_seconds, expected_json=None):
+                           max_age_seconds, expected_json=None,
+                           expected_onsite_json=None,
+                           allowed_intent_key=None):
+    if onsite_dock_proof.valid_for_plan(
+        state,
+        mower,
+        environment,
+        now_utc,
+        expected_json=expected_onsite_json,
+        allowed_intent_key=allowed_intent_key,
+    ):
+        return True
     if irrigation_park_hold.enabled(environment):
         # An active manual START uses its existing per-conflict authorization
         # and fresh-event checks. It never acquires the unattended HOME proof.
@@ -404,13 +419,51 @@ def _water_park_authorized(state, mower, *, now_utc, environment,
     return _mower_status_is_fresh(mower, now_utc=now_utc, max_age_seconds=max_age_seconds)
 
 
+def _water_dispatch_station_authorized(
+    state, mower, *, now_utc, environment, max_age_seconds,
+    expected_json=None, expected_onsite_json=None, allowed_intent_key=None,
+):
+    if onsite_dock_proof.valid_for_plan(
+        state, mower, environment, now_utc,
+        expected_json=expected_onsite_json,
+        allowed_intent_key=allowed_intent_key,
+    ):
+        return True
+    normal_station_safe = (
+        str(mower.get("mode") or "").strip().upper() == "HOME"
+        and mower.get("connected") is True
+        and str(mower.get("activity") or "").strip().upper() in PARKED_ACTIVITIES
+        and type(mower.get("error_code")) is int
+        and mower.get("error_code") == 0
+        and str(mower.get("state") or "").strip().upper()
+        not in ERROR_STATES | {"OFF"}
+    )
+    if not normal_station_safe:
+        return False
+    return _water_park_authorized(
+        state, mower, now_utc=now_utc, environment=environment,
+        max_age_seconds=max_age_seconds, expected_json=expected_json,
+    )
+
+
 def _revoke_park_hold_after_read_failure(factory, environment, now):
-    """Persist uncertainty before entering the separate protective PARK path."""
+    """Persist station-proof uncertainty before the protective PARK path."""
     for _attempt in range(2):
         try:
             store = factory(environment)
             previous = store.load()
-            revoked = irrigation_park_hold.invalidate(previous, now_utc=now, reason="INPUT_UNAVAILABLE")
+            revoked = previous
+            if irrigation_park_hold.enabled(environment):
+                revoked = irrigation_park_hold.invalidate(
+                    revoked, now_utc=now, reason="INPUT_UNAVAILABLE",
+                )
+            if (
+                onsite_dock_proof.enabled(environment)
+                and previous.irrigation_onsite_dock_proof_json is not None
+            ):
+                revoked = onsite_dock_proof.invalidate(
+                    revoked, now_utc=now, reason="INPUT_UNAVAILABLE",
+                )
             store.save(replace(revoked, revision=previous.revision + 1),
                        expected_revision=previous.revision)
             return "REVOKED"
@@ -2103,6 +2156,56 @@ def _clear_irrigation(state: AutomationState) -> AutomationState:
         irrigation_suspension_revalidation_observed_utc=None,
         irrigation_suspension_revalidation_observations=0,
         irrigation_cancelled_without_run_utc=None,
+        irrigation_onsite_dock_proof_json=None,
+    )
+
+
+def _retire_completed_irrigation(
+    state: AutomationState, details: Mapping[str, Any], *,
+    now_utc: datetime, expected_relay_ids: set[int], max_age_seconds: int,
+) -> AutomationState | None:
+    """Retire terminal bookkeeping independently of mowing; retain dry proof.
+
+    This is not a device command or a release of the physical STOP. A pending
+    send, changed source, active valve or nonterminal program prevents cleanup.
+    """
+    if (state.irrigation_phase != "COMPLETE_HOLD" or state.maintenance_mode
+        or state.operator_request_status == "PENDING" or state.mower_start_pending_since_utc
+        or state.irrigation_current_relay_id is not None
+        or state.irrigation_zone_start_reserved_utc is not None
+        or state.irrigation_zone_started_utc is not None
+        or state.irrigation_schedule_override_json):
+        return None
+    completed = _parse_time(state.irrigation_completed_utc)
+    if completed is None or completed > now_utc:
+        return None
+    safety = _as_dict(_as_dict(details.get("hydrawise")).get("safety"))
+    observed = _parse_time(safety.get("observed_at_utc"))
+    if (safety.get("available") is not True or safety.get("fresh") is not True
+        or safety.get("relay_set_valid") is not True or safety.get("clear_now") is not True
+        or type(safety.get("active_zone_count")) is not int or safety["active_zone_count"] != 0
+        or type(safety.get("imminent_zone_count")) is not int or safety["imminent_zone_count"] != 0
+        or safety.get("active_relay_ids") != []
+        or safety.get("imminent_relay_ids") != []
+        or not expected_relay_ids
+        or not isinstance(safety.get("observed_relay_ids"), list)
+        or observed is None or observed < completed
+        or not timedelta(0) <= now_utc - observed <= timedelta(seconds=max_age_seconds)):
+        return None
+    try:
+        observed_ids = safety["observed_relay_ids"]
+        if (any(type(relay) is not int for relay in observed_ids)
+            or len(observed_ids) != len(expected_relay_ids)
+            or set(observed_ids) != expected_relay_ids or unresolved_device_sends(state)):
+            return None
+    except (TypeError, DeviceSendBlocked):
+        return None
+    # Preserve the existing fallback origin explicitly before dropping phase.
+    # Otherwise an absent origin would change from IRRIGATION_END to DATA_GAP
+    # and shorten the downstream release rule from 150 to two minutes.
+    return replace(
+        _clear_irrigation(state),
+        hydrawise_clear_origin=state.hydrawise_clear_origin or "IRRIGATION_END",
     )
 
 
@@ -2135,6 +2238,390 @@ def _cancel_irrigation_without_run(
         irrigation_suspension_revalidation_observed_utc=None,
         irrigation_suspension_revalidation_observations=0,
         irrigation_cancelled_without_run_utc=now_utc.isoformat(),
+        irrigation_onsite_dock_proof_json=None,
+    )
+
+
+def _handle_onsite_proof_loss_stop(
+    *, store: StateStore, original: AutomationState, state: AutomationState,
+    result: CycleResult, details: dict[str, Any], settings: RuntimeSettings,
+    environment: Mapping[str, str], now_utc: datetime,
+    expected_relay_ids: frozenset[int], park_sender: ParkSender,
+    stop_zone_sender: StopZoneSender,
+    command_clock: Clock,
+) -> CycleResult | None:
+    """Stop the exact owned water zone after a bound dock proof is lost."""
+    newly_lost = (
+        state.irrigation_phase in {"START_RESERVED", "RUNNING"}
+        and onsite_dock_proof.invalidated_for_active_plan(state)
+    )
+    continuing = (
+        state.irrigation_phase == "STOPPING"
+        and state.irrigation_failed_reason == ONSITE_DOCK_PROOF_LOST_STOP_REASON
+    )
+    if not newly_lost and not continuing:
+        return None
+
+    stopping = state
+    if newly_lost:
+        stopping = replace(
+            state,
+            revision=state.revision + 1,
+            irrigation_phase="STOPPING",
+            irrigation_failed_reason=ONSITE_DOCK_PROOF_LOST_STOP_REASON,
+            irrigation_zone_clear_since_utc=None,
+            irrigation_zone_clear_observed_utc=None,
+            irrigation_zone_stop_requested_utc=None,
+        )
+    elif stopping.revision <= original.revision:
+        stopping = replace(stopping, revision=original.revision + 1)
+
+    current_id = stopping.irrigation_current_relay_id
+    try:
+        relay = int(current_id) if current_id is not None else None
+    except (TypeError, ValueError):
+        relay = None
+    try:
+        plan_relays = [
+            int(zone["relay_id"])
+            for zone in _plan_from_state(stopping)
+            if zone.get("selected", True) is not False
+        ]
+    except (KeyError, TypeError, ValueError):
+        plan_relays = []
+    if (
+        relay is None
+        or relay not in expected_relay_ids
+        or plan_relays.count(relay) != 1
+    ):
+        return _persist_result(
+            store=store, original=original, state=stopping, result=result,
+            details=details, settings=settings,
+            decision_code="ONSITE_DOCK_PROOF_LOST_STOP_TARGET_UNCLEAR",
+            message=(
+                "Der Stationsnachweis ist verloren; ohne eindeutige eigene Zone "
+                "wird kein Relais angesprochen und der Lauf bleibt gesperrt."
+            ),
+        )
+
+    safety = _as_dict(_as_dict(details.get("hydrawise")).get("safety"))
+    observed_ids = safety.get("observed_relay_ids")
+    hydra_complete = (
+        safety.get("available") is True
+        and safety.get("fresh") is True
+        and safety.get("relay_set_valid") is True
+        and isinstance(observed_ids, list)
+        and all(type(item) is int for item in observed_ids)
+        and set(observed_ids) == expected_relay_ids
+        and int(safety.get("selected_zone_count") or 0) == len(expected_relay_ids)
+    )
+    physically_clear = (
+        hydra_complete
+        and safety.get("clear_now") is True
+        and type(safety.get("active_zone_count")) is int
+        and safety.get("active_zone_count") == 0
+        and type(safety.get("imminent_zone_count")) is int
+        and safety.get("imminent_zone_count") == 0
+        and safety.get("active_relay_ids") == []
+        and safety.get("imminent_relay_ids") == []
+    )
+    if not physically_clear and (
+        stopping.irrigation_zone_clear_since_utc is not None
+        or stopping.irrigation_zone_clear_observed_utc is not None
+    ):
+        stopping = replace(
+            stopping,
+            revision=stopping.revision + 1,
+            irrigation_zone_clear_since_utc=None,
+            irrigation_zone_clear_observed_utc=None,
+        )
+    intent_key = f"onsite-proof-loss:water-stop:{stopping.irrigation_plan_id}:{relay}"
+    try:
+        journal = load_device_send_journal(stopping)
+    except DeviceSendBlocked as exc:
+        return _persist_result(
+            store=store, original=original, state=stopping, result=result,
+            details=details, settings=settings, decision_code=exc.code,
+            message="Das persistente Sendejournal ist unklar; weitere Zonen bleiben gesperrt.",
+        )
+    prior = next(
+        (entry for entry in reversed(journal)
+         if entry.get("intent_key") == intent_key and entry.get("status") != "REJECTED"),
+        None,
+    )
+
+    if prior is None:
+        if (
+            not settings.full_failsafe_write_gate_enabled
+            or not settings.enable_irrigation_commands
+            or not settings.enable_manual_sessions
+        ):
+            return _persist_result(
+                store=store, original=original, state=stopping, result=result,
+                details=details, settings=settings,
+                decision_code="ONSITE_DOCK_PROOF_LOST_STOP_LOCKED",
+                message=(
+                    "Der Stationsnachweis ist verloren; der Zonenstopp bleibt "
+                    "durch die Geräteschreibsperre vorgemerkt."
+                ),
+            )
+        stopping = replace(
+            stopping, irrigation_zone_stop_requested_utc=now_utc.isoformat(),
+        )
+        api_key = str(environment.get("HYDRAWISE_API_KEY", "")).strip()
+        controller_id = str(environment.get("HYDRAWISE_CONTROLLER_ID", "")).strip() or None
+
+        def check_water_stop(latest: AutomationState, _at: datetime) -> None:
+            if (
+                latest.irrigation_phase != "STOPPING"
+                or latest.irrigation_failed_reason != ONSITE_DOCK_PROOF_LOST_STOP_REASON
+                or latest.irrigation_current_relay_id != relay
+                or not onsite_dock_proof.invalidated_for_active_plan(latest)
+            ):
+                raise DeviceSendBlocked("ONSITE_DOCK_PROOF_LOST_STOP_REVOKED")
+
+        try:
+            sent = dispatch_device_send(
+                store=store, original=original, state=stopping,
+                sender=stop_zone_sender, args=(api_key, relay, controller_id),
+                kind="WATER_STOP", target=str(relay), intent_key=intent_key,
+                now_utc=now_utc, clock=command_clock,
+                before_send_check=check_water_stop,
+                deadline_utc=now_utc + timedelta(seconds=30),
+            )
+        except DeviceSendBlocked as exc:
+            blocked = exc.state if isinstance(exc.state, AutomationState) else stopping
+            return replace(
+                result, decision_code=exc.code,
+                message=(
+                    "Der genaue Zonenstopp ist persistent gesperrt oder ungeklärt; "
+                    "keine weitere Zone startet."
+                ),
+                command_sent=exc.transport_started,
+                details=_decorate(
+                    details, state=blocked, settings=settings, persisted=True,
+                    command_sent=exc.transport_started,
+                ),
+            )
+        details["irrigation_action"] = {
+            "type": "StopZone", "reason": "ONSITE_DOCK_PROOF_LOST",
+            "relay_id": relay, "response": sent.response,
+        }
+        return replace(
+            result, decision_code="ONSITE_DOCK_PROOF_LOST_STOP_SENT",
+            message=(
+                "Der gebundene Stationsnachweis ist verloren; der genaue "
+                "Zonenstopp wurde gesendet und wird nun physisch bestätigt."
+            ),
+            command_sent=sent.sent,
+            details=_decorate(
+                details, state=sent.state, settings=settings, persisted=True,
+                command_sent=sent.sent,
+            ),
+        )
+
+    # WATER_STOP has already been durably dispatched or confirmed.  If the
+    # mower left the station, reserve its protective PARK through the same
+    # durable journal. The retained INVALID proof keeps this stop latch alive.
+    mower = _as_dict(details.get("mower"))
+    mower_activity = str(mower.get("activity") or "").strip().upper()
+    mower_state = str(mower.get("state") or "").strip().upper()
+    try:
+        bound_mower_id = json.loads(stopping.irrigation_onsite_dock_proof_json or "null").get("mower_id")
+    except (TypeError, ValueError, AttributeError):
+        bound_mower_id = None
+    configured_mower_id = str(environment.get("HUSQVARNA_MOWER_ID") or "").strip()
+    park_protection_due = (
+        bool(configured_mower_id)
+        and str(mower.get("mower_id") or "").strip() == configured_mower_id
+        and bound_mower_id == configured_mower_id
+        and mower.get("connected") is True
+        and _mower_status_is_fresh(
+            mower,
+            now_utc=now_utc,
+            max_age_seconds=_env_int(
+                environment, "MOWER_STATUS_MAX_AGE_SECONDS", 180,
+                minimum=30, maximum=900,
+            ),
+        )
+        and type(mower.get("error_code")) is int
+        and mower.get("error_code") == 0
+        and mower_state not in ERROR_STATES
+        and mower_activity in PARK_COMMAND_ACTIVITIES - PARKED_ACTIVITIES
+    )
+    if park_protection_due:
+        details["onsite_dock_proof_loss_stop"] = {
+            "target_relay_id": relay,
+            "water_stop_persisted": True,
+            "protective_park_due": True,
+        }
+        if (
+            settings.full_failsafe_write_gate_enabled
+            and settings.enable_park_commands
+            and settings.enable_manual_sessions
+            and str(mower.get("mower_id") or "").strip()
+        ):
+            mower_id = str(mower["mower_id"]).strip()
+            park_key = (
+                f"onsite-proof-loss:park:{stopping.irrigation_plan_id}:{mower_id}"
+            )
+            park_until = now_utc + timedelta(hours=12)
+            command_state = stopping.record_command(
+                fingerprint=hashlib.sha256(park_key.encode("utf-8")).hexdigest(),
+                sent_utc=now_utc,
+                action="PARK",
+                park_until_utc=park_until,
+                park_source="irrigation",
+                restart_allowed=False,
+            )
+
+            def check_protective_park(latest: AutomationState, _at: datetime) -> None:
+                if (
+                    latest.maintenance_mode
+                    or latest.irrigation_phase != "STOPPING"
+                    or latest.irrigation_current_relay_id != relay
+                    or not onsite_dock_proof.invalidated_for_active_plan(latest)
+                ):
+                    raise DeviceSendBlocked("ONSITE_DOCK_PROOF_LOST_PARK_REVOKED")
+
+            try:
+                parked = dispatch_device_send(
+                    store=store, original=original, state=command_state,
+                    sender=park_sender,
+                    args=(
+                        str(environment.get("HUSQVARNA_CLIENT_ID", "")).strip(),
+                        str(environment.get("HUSQVARNA_CLIENT_SECRET", "")).strip(),
+                        mower_id,
+                    ),
+                    kind="PARK", target=mower_id, intent_key=park_key,
+                    now_utc=now_utc, clock=command_clock,
+                    before_send_check=check_protective_park,
+                    deadline_utc=now_utc + timedelta(seconds=30),
+                )
+            except DeviceSendBlocked as exc:
+                blocked = exc.state if isinstance(exc.state, AutomationState) else stopping
+                return replace(
+                    result, decision_code=exc.code,
+                    message=(
+                        "Der Schutz-Parkbefehl ist persistent gesperrt oder ungeklärt; "
+                        "Wasser- und Mäherstarts bleiben gesperrt."
+                    ),
+                    command_sent=exc.transport_started,
+                    details=_decorate(
+                        details, state=blocked, settings=settings, persisted=True,
+                        command_sent=exc.transport_started,
+                    ),
+                )
+            return replace(
+                result,
+                decision_code="ONSITE_DOCK_PROOF_LOST_PARK_SENT",
+                message=(
+                    "Nach dem persistenten Wasserstopp wurde der abfahrende Mäher "
+                    "mit einem persistenten Schutz-Parkbefehl zurückgerufen."
+                ),
+                command_sent=parked.sent,
+                details=_decorate(
+                    details, state=parked.state, settings=settings, persisted=True,
+                    command_sent=parked.sent,
+                ),
+            )
+
+    if not hydra_complete:
+        return _persist_result(
+            store=store, original=original, state=stopping, result=result,
+            details=details, settings=settings,
+            decision_code="ONSITE_DOCK_PROOF_LOST_STOP_INPUTS_UNSAFE",
+            message=(
+                "Der genaue Zonenstopp ist vorgemerkt; das physische Ende kann "
+                "erst mit vollständigen frischen Hydrawise-Daten bestätigt werden."
+            ),
+        )
+
+    active_ids = _active_relay_ids(details)
+    if active_ids:
+        details["onsite_dock_proof_loss_stop"] = {
+            "target_relay_id": relay,
+            "active_relay_ids": sorted(active_ids),
+            "foreign_relays_targeted": False,
+        }
+        return _persist_result(
+            store=store, original=original, state=stopping, result=result,
+            details=details, settings=settings,
+            decision_code="ONSITE_DOCK_PROOF_LOST_WAIT_FOR_STOP",
+            message=(
+                "Das physische Zonenende ist noch nicht vollständig bestätigt; "
+                "andere Relais werden nicht angesprochen."
+            ),
+        )
+    if not physically_clear:
+        return _persist_result(
+            store=store, original=original, state=stopping, result=result,
+            details=details, settings=settings,
+            decision_code="ONSITE_DOCK_PROOF_LOST_STOP_END_UNCLEAR",
+            message="Das physische Zonenende ist noch nicht eindeutig bestätigt.",
+        )
+
+    requested_at = _parse_time(stopping.irrigation_zone_stop_requested_utc)
+    dispatched_at = _parse_time(prior.get("dispatched_at_utc"))
+    confirming, advanced = _record_zone_clear_observation(
+        stopping,
+        observed_utc=_hydrawise_source_observation(details, now_utc=now_utc),
+        not_before_utc=dispatched_at or requested_at,
+    )
+    clear_since = _parse_time(confirming.irrigation_zone_clear_since_utc)
+    if clear_since is None or not advanced:
+        return _persist_result(
+            store=store, original=original, state=confirming, result=result,
+            details=details, settings=settings,
+            decision_code="ONSITE_DOCK_PROOF_LOST_CONFIRM_STOP",
+            message="Hydrawise meldet die Zone erstmals beendet; die Bestätigung läuft.",
+        )
+    end_confirmation = _env_int(
+        environment, "IRRIGATION_ZONE_END_CONFIRMATION_MINUTES", 2,
+        minimum=1, maximum=10,
+    )
+    observed_at = _hydrawise_source_observation(details, now_utc=now_utc)
+    if observed_at is None or observed_at - clear_since < timedelta(minutes=end_confirmation):
+        return _persist_result(
+            store=store, original=original, state=confirming, result=result,
+            details=details, settings=settings,
+            decision_code="ONSITE_DOCK_PROOF_LOST_CONFIRM_STOP",
+            message="Das physische Zonenende wird fortlaufend bestätigt.",
+        )
+
+    confirmed = confirming
+    if prior.get("status") in {"RESERVED", "DISPATCHING", "SENT_UNCONFIRMED", "UNKNOWN"}:
+        confirmed = reconcile_device_send(
+            confirmed, intent_key, now_utc,
+            f"relay-{relay}-continuously-inactive-after-onsite-proof-loss",
+        )
+    stopped = replace(
+        confirmed,
+        revision=confirmed.revision + 1,
+        irrigation_phase="COMPLETE_HOLD",
+        irrigation_failed_reason=None,
+        irrigation_current_relay_id=None,
+        irrigation_zone_start_reserved_utc=None,
+        irrigation_zone_started_utc=None,
+        irrigation_zone_stop_requested_utc=None,
+        irrigation_zone_clear_since_utc=None,
+        irrigation_zone_clear_observed_utc=None,
+        irrigation_completed_utc=now_utc.isoformat(),
+        hydrawise_clear_since_utc=now_utc.isoformat(),
+        hydrawise_clear_origin="IRRIGATION_END",
+        hydrawise_drying_since_utc=(
+            confirmed.hydrawise_drying_since_utc or now_utc.isoformat()
+        ),
+        last_hydrawise_active_count=0,
+    )
+    return _persist_result(
+        store=store, original=original, state=stopped, result=result,
+        details=details, settings=settings,
+        decision_code="ONSITE_DOCK_PROOF_LOST_STOP_CONFIRMED",
+        message=(
+            "Hydrawise hat das Ende bestätigt; keine weitere Zone startet und "
+            "die vollständige Trocknungssperre läuft."
+        ),
     )
 
 
@@ -2306,7 +2793,7 @@ def run_full_failsafe_cycle(
         result = read_only_runner(**read_only_kwargs)
     except Exception as exc:
         revocation = None
-        if irrigation_park_hold.enabled(environment):
+        if irrigation_park_hold.enabled(environment) or onsite_dock_proof.enabled(environment):
             revocation = _revoke_park_hold_after_read_failure(state_store_factory, environment, now)
         if not isinstance(exc, InputUnavailable):
             raise
@@ -2323,6 +2810,40 @@ def run_full_failsafe_cycle(
         if revocation is not None:
             guarded = replace(guarded, details={**guarded.details,
                 "irrigation_park_hold": {"held": False, "status": revocation, "reason": "INPUT_UNAVAILABLE"}})
+        # A bound proof loss has one protective write that does not depend on
+        # inferring field availability: stop the already persisted exact water
+        # relay.  No physical end is accepted until full Hydrawise reads return.
+        if revocation is not None:
+            try:
+                recovery_store = state_store_factory(environment)
+                recovery_original = recovery_store.load()
+                recovery = _handle_onsite_proof_loss_stop(
+                    store=recovery_store,
+                    original=recovery_original,
+                    state=recovery_original,
+                    result=guarded,
+                    details=dict(guarded.details),
+                    settings=settings,
+                    environment=environment,
+                    now_utc=now,
+                    expected_relay_ids=expected_relay_ids,
+                    park_sender=park_sender,
+                    stop_zone_sender=stop_zone_sender,
+                    command_clock=command_clock,
+                )
+                if recovery is not None:
+                    return recovery
+            except Exception as stop_exc:
+                guarded = replace(
+                    guarded,
+                    details={
+                        **guarded.details,
+                        "onsite_dock_proof_loss_stop": {
+                            "status": "FAILED_CLOSED",
+                            "error_type": type(stop_exc).__name__,
+                        },
+                    },
+                )
         return guarded
     details = dict(result.details)
     current_plan = _as_dict(details.get("current_plan"))
@@ -2402,6 +2923,7 @@ def run_full_failsafe_cycle(
                 )
             original = height_projection
             state = replace(height_projection, revision=height_projection.revision + 1)
+    state = onsite_dock_proof.observe(state, mower, environment, now)
     if irrigation_park_hold.enabled(environment):
         state, details["irrigation_park_hold"] = irrigation_park_hold.observe(
             state, mower, now_utc=now, event_fresh=mower_status_fresh,
@@ -2410,6 +2932,83 @@ def run_full_failsafe_cycle(
         )
     elif state.irrigation_park_hold_json is not None:
         state = replace(state, irrigation_park_hold_json=None)
+    proof_loss_latched = (
+        onsite_dock_proof.invalidated_for_active_plan(state)
+        or (
+            state.irrigation_phase == "STOPPING"
+            and state.irrigation_failed_reason == ONSITE_DOCK_PROOF_LOST_STOP_REASON
+        )
+    )
+    if proof_loss_latched:
+        loss_safety = _as_dict(_as_dict(details.get("hydrawise")).get("safety"))
+        exact_clear = (
+            loss_safety.get("available") is True
+            and loss_safety.get("fresh") is True
+            and loss_safety.get("relay_set_valid") is True
+            and loss_safety.get("clear_now") is True
+            and type(loss_safety.get("active_zone_count")) is int
+            and loss_safety.get("active_zone_count") == 0
+            and type(loss_safety.get("imminent_zone_count")) is int
+            and loss_safety.get("imminent_zone_count") == 0
+            and loss_safety.get("active_relay_ids") == []
+            and loss_safety.get("imminent_relay_ids") == []
+            and isinstance(loss_safety.get("observed_relay_ids"), list)
+            and set(loss_safety["observed_relay_ids"]) == expected_relay_ids
+        )
+        if not exact_clear and (
+            state.irrigation_zone_clear_since_utc is not None
+            or state.irrigation_zone_clear_observed_utc is not None
+        ):
+            state = replace(
+                state,
+                revision=state.revision + 1,
+                irrigation_zone_clear_since_utc=None,
+                irrigation_zone_clear_observed_utc=None,
+            )
+    proof_loss_stop = _handle_onsite_proof_loss_stop(
+        store=store,
+        original=original,
+        state=state,
+        result=result,
+        details=details,
+        settings=settings,
+        environment=environment,
+        now_utc=now,
+        expected_relay_ids=expected_relay_ids,
+        park_sender=park_sender,
+        stop_zone_sender=stop_zone_sender,
+        command_clock=command_clock,
+    )
+    if proof_loss_stop is not None:
+        return proof_loss_stop
+    if _env_enabled(environment, "IRRIGATION_TERMINAL_CLEANUP_ENABLED"):
+        # Direct source reads finish after the timer starts. Compare their age
+        # with the actual check time, not the earlier timer timestamp. A bad
+        # clock or excessively delayed cycle must not retire any state.
+        try:
+            cleanup_checked_at = command_clock()
+        except Exception:
+            cleanup_checked_at = None
+        cleanup_clock_valid = (
+            isinstance(cleanup_checked_at, datetime)
+            and cleanup_checked_at.tzinfo is not None
+            and cleanup_checked_at.utcoffset() is not None
+            and timedelta(0) <= cleanup_checked_at - now
+            <= timedelta(seconds=hydrawise_status_max_age_seconds)
+        )
+        retired = (_retire_completed_irrigation(
+            state, details, now_utc=cleanup_checked_at, expected_relay_ids=expected_relay_ids,
+            max_age_seconds=hydrawise_status_max_age_seconds,
+        ) if cleanup_clock_valid else None)
+        if retired is not None:
+            details["irrigation_terminal_cleanup"] = {
+                "prepared": True, "completed_utc": state.irrigation_completed_utc,
+                "drying_preserved": True, "checked_at_utc": cleanup_checked_at.isoformat(),
+            }
+            # Keep processing safety, manual stop and park decisions in this
+            # same cycle. The normal CAS persists this projection together
+            # with those decisions; cleanup must never delay a protective park.
+            state = retired
     operator_action = _operator_action(state, now)
 
     manual_session: dict[str, Any] | None = None
@@ -4563,6 +5162,22 @@ def run_full_failsafe_cycle(
                 irrigation_cancelled_without_run_utc=None,
             )
             if operator_action in {"START_IRRIGATION", "START_IRRIGATION_ZONE"}:
+                if state.irrigation_onsite_dock_proof_json is not None:
+                    state = onsite_dock_proof.bind_plan(
+                        state,
+                        request_id=str(state.operator_request_id or ""),
+                        action=operator_action,
+                        plan_id=plan_id,
+                        plan=zones,
+                        now_utc=now,
+                        end_confirmation_minutes=_env_int(
+                            environment,
+                            "IRRIGATION_ZONE_END_CONFIRMATION_MINUTES",
+                            2,
+                            minimum=1,
+                            maximum=10,
+                        ),
+                    )
                 state = _finish_operator_request(
                     state,
                     (
@@ -4799,9 +5414,13 @@ def run_full_failsafe_cycle(
     )
     if schedule_resume_parking:
         wants_park = True
+    onsite_station_authorized = onsite_dock_proof.valid_for_plan(
+        state, mower, environment, now,
+    )
     if (
         state.irrigation_phase in ACTIVE_IRRIGATION_PHASES
         and not state.parked_by_automation
+        and not onsite_station_authorized
     ):
         wants_park = True
     owns_matching_park = (
@@ -4811,7 +5430,7 @@ def run_full_failsafe_cycle(
             _source_parts(state.automation_park_source)
         )
     )
-    if effective_parking_block and not owns_matching_park:
+    if effective_parking_block and not owns_matching_park and not onsite_station_authorized:
         wants_park = True
     if result.decision_code.startswith("HYDRAWISE_") and activity in PARKABLE_ACTIVITIES:
         wants_park = True
@@ -5700,7 +6319,10 @@ def run_full_failsafe_cycle(
                     ),
                 )
 
-        if not state.parked_by_automation:
+        onsite_station_authorized = onsite_dock_proof.valid_for_plan(
+            state, mower, environment, now,
+        )
+        if not state.parked_by_automation and not onsite_station_authorized:
             return _persist_result(
                 store=store,
                 original=original,
@@ -5728,8 +6350,7 @@ def run_full_failsafe_cycle(
         park_gate_required = state.irrigation_phase in {
             "PLANNED", "SUSPENDING", "READY",
         }
-        if park_gate_required and (
-            not _park_confirmation_ready(
+        normal_park_ready = _park_confirmation_ready(
                 state,
                 now_utc=now,
                 activity=activity,
@@ -5738,6 +6359,8 @@ def run_full_failsafe_cycle(
                 confirmation_minutes=confirmation_minutes,
                 required_observations=required_park_observations,
             )
+        if park_gate_required and (
+            not (normal_park_ready or onsite_station_authorized)
             or mower.get("connected") is not True
             or not fresh_park_event_accepted
             or error_code != 0
@@ -6622,6 +7245,7 @@ def run_full_failsafe_cycle(
                 latest, mower, now_utc=dispatch_now, environment=environment,
                 max_age_seconds=mower_status_max_age_seconds,
                 expected_json=reserved.irrigation_park_hold_json,
+                expected_onsite_json=reserved.irrigation_onsite_dock_proof_json,
             ):
                 dispatch_code, dispatch_reason = "IRRIGATION_OPERATING_WINDOW", "MOWER_STATUS_STALE"
             else:
@@ -6715,15 +7339,12 @@ def run_full_failsafe_cycle(
                         latest.maintenance_mode
                         or latest.irrigation_phase != "START_RESERVED"
                         or latest.irrigation_current_relay_id != relay
-                        or str(mower.get("mode") or "").strip().upper() != "HOME"
-                        or mower.get("connected") is not True
-                        or mower.get("activity") not in PARKED_ACTIVITIES
-                        or mower.get("error_code") != 0
-                        or mower.get("state") in ERROR_STATES
-                        or not _water_park_authorized(
+                        or not _water_dispatch_station_authorized(
                             latest, mower, now_utc=at, environment=environment,
                             max_age_seconds=mower_status_max_age_seconds,
                             expected_json=reserved.irrigation_park_hold_json,
+                            expected_onsite_json=reserved.irrigation_onsite_dock_proof_json,
+                            allowed_intent_key=start_key,
                         )
                         or not hydra_still_fresh_clear
                     ):

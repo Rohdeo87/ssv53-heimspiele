@@ -71,7 +71,7 @@ test('Ältere Offline- und Fehlermeldungen werden nicht als bestätigter sichere
   assert.equal(view.dashboardMessage(s).title,'Mäher nicht erreichbar');
   assert.equal(view.nextStartInfo(s,true).text,'Noch offen');
   s.mower.connected=true;s.mower.state='ERROR';s.mower.errorCode=93;s.mower.errorActive=true;
-  assert.equal(view.dashboardMessage(s).title,'Mäher braucht Hilfe');
+  assert.equal(view.dashboardMessage(s).title,'Keine genaue Satellitenposition');
   s.mower.state='OFF';s.mower.errorCode=0;s.mower.errorActive=false;
   assert.equal(view.dashboardMessage(s).title,'Mäher ausgeschaltet');
 });
