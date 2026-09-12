@@ -1,0 +1,30 @@
+{
+  "at_utc": "2026-09-12T20:20:24.067346+00:00",
+  "read_only": true,
+  "vendor_read": "success",
+  "manifest_sha256": "799fc6f2afb5c8f7e1770f9d99d15bdd66ffb4391400edcbdb8e4c32d017d619",
+  "model": "Husqvarna Automower\u00ae 580 EPOS\u00ae",
+  "capability_position": true,
+  "position_count": 50,
+  "latest_position_fields": [
+    "latitude",
+    "longitude"
+  ],
+  "metadata": {
+    "connected": true,
+    "statusTimestamp": 1789244405331
+  },
+  "map_endpoint": "https://isk.geobasis-bb.de/mapproxy/dop20c/service/wms",
+  "map_layers": [
+    {
+      "name": "bebb_dop20c",
+      "title": "DOP20c BB-BE (WMS)",
+      "srs": null
+    },
+    {
+      "name": "bb_dop_info",
+      "title": "DOP - Aktualit\u00e4ts\u00fcbersicht",
+      "srs": null
+    }
+  ]
+}

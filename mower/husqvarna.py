@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 import threading
 import time
 from dataclasses import asdict, dataclass
@@ -281,6 +282,28 @@ def _parse_statistics(raw: Any) -> dict[str, int | None]:
         target: _parse_external_reason(source.get(api_name))
         for target, api_name in fields.items()
     }
+
+
+def parse_display_position(item: dict[str, Any]) -> dict[str, float] | None:
+    """Latest reported GPS point, for display only. No fix timestamp is supplied.
+
+    Never substitute an older point if the newest point is malformed, and never
+    infer a dock, occupied area, travel direction or safety permission from GPS.
+    Keep this out of MowerSnapshot so regular control telemetry stores no track.
+    """
+    attributes = as_dict(item.get("attributes"))
+    if as_dict(attributes.get("capabilities")).get("position") is False:
+        return None
+    positions = attributes.get("positions")
+    if not isinstance(positions, list) or not positions:
+        return None
+    point = as_dict(positions[0])
+    lat, lon = point.get("latitude"), point.get("longitude")
+    if any(type(value) not in (int, float) or not math.isfinite(value) for value in (lat, lon)):
+        return None
+    if not -90 <= lat <= 90 or not -180 <= lon <= 180 or (lat == 0 and lon == 0):
+        return None
+    return {"latitude": float(lat), "longitude": float(lon)}
 
 
 def parse_snapshot(item: dict[str, Any]) -> MowerSnapshot:
