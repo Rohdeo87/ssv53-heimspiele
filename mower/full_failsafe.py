@@ -2982,14 +2982,28 @@ def run_full_failsafe_cycle(
     if proof_loss_stop is not None:
         return proof_loss_stop
     if _env_enabled(environment, "IRRIGATION_TERMINAL_CLEANUP_ENABLED"):
-        retired = _retire_completed_irrigation(
-            state, details, now_utc=now, expected_relay_ids=expected_relay_ids,
-            max_age_seconds=hydrawise_status_max_age_seconds,
+        # Direct source reads finish after the timer starts. Compare their age
+        # with the actual check time, not the earlier timer timestamp. A bad
+        # clock or excessively delayed cycle must not retire any state.
+        try:
+            cleanup_checked_at = command_clock()
+        except Exception:
+            cleanup_checked_at = None
+        cleanup_clock_valid = (
+            isinstance(cleanup_checked_at, datetime)
+            and cleanup_checked_at.tzinfo is not None
+            and cleanup_checked_at.utcoffset() is not None
+            and timedelta(0) <= cleanup_checked_at - now
+            <= timedelta(seconds=hydrawise_status_max_age_seconds)
         )
+        retired = (_retire_completed_irrigation(
+            state, details, now_utc=cleanup_checked_at, expected_relay_ids=expected_relay_ids,
+            max_age_seconds=hydrawise_status_max_age_seconds,
+        ) if cleanup_clock_valid else None)
         if retired is not None:
             details["irrigation_terminal_cleanup"] = {
                 "prepared": True, "completed_utc": state.irrigation_completed_utc,
-                "drying_preserved": True,
+                "drying_preserved": True, "checked_at_utc": cleanup_checked_at.isoformat(),
             }
             # Keep processing safety, manual stop and park decisions in this
             # same cycle. The normal CAS persists this projection together

@@ -92,7 +92,8 @@ def test_controller_retires_terminal_state_while_stopped_without_any_device_comm
         environment={**ENV,**({"IRRIGATION_TERMINAL_CLEANUP_ENABLED":"true"} if enabled else {})},
         past_due=False,source="test",read_only_runner=lambda **_:live,
         state_store_factory=lambda _:store,park_sender=forbidden,start_sender=forbidden,
-        suspend_zone_sender=forbidden,start_zone_sender=forbidden,stop_zone_sender=forbidden)
+        suspend_zone_sender=forbidden,start_zone_sender=forbidden,stop_zone_sender=forbidden,
+        command_clock=lambda: NOW)
     assert ("irrigation_terminal_cleanup" in cycle.details) is enabled
     assert cycle.command_sent is False
     assert store.load().irrigation_phase == (None if enabled else "COMPLETE_HOLD")
@@ -111,7 +112,8 @@ def test_cleanup_does_not_delay_protective_park_during_occupancy():
         past_due=False,source="test",read_only_runner=lambda **_:live,
         state_store_factory=lambda _:store,park_sender=lambda *args:parks.append(args) or {"accepted":True},
         start_sender=forbidden,suspend_zone_sender=forbidden,start_zone_sender=forbidden,
-        stop_zone_sender=forbidden,cutting_height_sender=forbidden,blade_usage_reset_sender=forbidden)
+        stop_zone_sender=forbidden,cutting_height_sender=forbidden,blade_usage_reset_sender=forbidden,
+        command_clock=lambda: NOW)
     assert cycle.details["irrigation_terminal_cleanup"]["prepared"] is True
     assert len(parks)==1
     assert cycle.command_sent is True
@@ -135,3 +137,38 @@ def test_unconfirmed_commands_are_never_retired_even_when_relays_are_off(kind, s
 def test_terminal_receipts_are_preserved_for_audit(status):
     state=replace(terminal(),device_send_journal_json=json.dumps([_entry(1,status=status)]))
     assert retire(state).device_send_journal_json == state.device_send_journal_json
+
+
+@pytest.mark.parametrize("checked_at,observed_at,retired", [
+    (NOW + timedelta(seconds=3), NOW + timedelta(seconds=1), True),
+    (NOW + timedelta(seconds=3), NOW + timedelta(seconds=4), False),
+    (NOW + timedelta(seconds=181), NOW + timedelta(seconds=180), False),
+    (NOW - timedelta(seconds=1), NOW - timedelta(seconds=2), False),
+    (NOW.replace(tzinfo=None), NOW, False),
+    (None, NOW, False),
+    ("clock-error", NOW, False),
+])
+def test_post_read_clock_handles_real_read_delay_without_accepting_future_data(checked_at, observed_at, retired):
+    live = result(activity="NOT_APPLICABLE", mower_state="STOPPED", block_source="training")
+    live.details["hydrawise"]["safety"].update(details()["hydrawise"]["safety"])
+    live.details["hydrawise"]["safety"]["observed_at_utc"] = observed_at.isoformat()
+    before = terminal()
+    store = InMemoryStateStore(before)
+    def forbidden(*args, **kwargs):
+        raise AssertionError("No device command is needed for terminal cleanup")
+    def clock():
+        if checked_at == "clock-error":
+            raise RuntimeError("Clock unavailable")
+        return checked_at
+    cycle = run_full_failsafe_cycle(
+        now_utc=NOW, settings=settings(), environment={**ENV,"IRRIGATION_TERMINAL_CLEANUP_ENABLED":"true"},
+        past_due=False, source="test", read_only_runner=lambda **_:live,
+        state_store_factory=lambda _:store, command_clock=clock,
+        park_sender=forbidden, start_sender=forbidden, suspend_zone_sender=forbidden,
+        start_zone_sender=forbidden, stop_zone_sender=forbidden,
+    )
+    assert ("irrigation_terminal_cleanup" in cycle.details) is retired
+    assert store.load().irrigation_phase == (None if retired else "COMPLETE_HOLD")
+    assert store.load().automation_restart_allowed is False
+    assert store.load().hydrawise_drying_since_utc == before.hydrawise_drying_since_utc
+    assert cycle.command_sent is False
