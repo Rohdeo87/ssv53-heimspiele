@@ -1,0 +1,23 @@
+{
+  "at_utc": "2026-09-12T06:55:49.576508+00:00",
+  "package_sha256": "d374016b808a6171f7fb81f98f5957eef146c96ba8a586001e7c750de3d9ae10",
+  "deployment_cli_exit_code": 0,
+  "installed_files_verified": 71,
+  "functions": 16,
+  "new_flag_active": true,
+  "direct_test_device_commands": 0,
+  "observed_new_rule_cycles": 8,
+  "first_held_utc": "2026-09-12T06:53:03.1772494Z",
+  "held_despite_older_event_cycles": [
+    "2026-09-12T06:54:03.8080969Z",
+    "2026-09-12T06:55:02.5044899Z"
+  ],
+  "observed_commands_sent": 0,
+  "last_decision": "MOWER_START_SEND_BLOCKED",
+  "distinct_start_blocks": [
+    "MOWER_STATUS_STALE",
+    "PREVIOUS_DEVICE_OUTCOME_UNCONFIRMED"
+  ],
+  "full_physical_irrigation_run_verified": false,
+  "remaining_block": "Earlier device command outcome remains unconfirmed; journal was not cleared."
+}

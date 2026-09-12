@@ -6,7 +6,8 @@ zunächst Entwicklungsstand; Veröffentlichung und physischer Erfolg müssen
 gesondert nachgewiesen werden.
 
 **Fortsetzung nach Nutzerbestätigung:** Die dauerhafte eigene HOME-Parksperre
-ist inzwischen implementiert und getestet, standardmäßig ausgeschaltet.
+ist implementiert, getestet und nach konkreter Nutzerfreigabe am 12.09.2026
+um 08:46 Uhr produktiv aktiviert. Im Code bleibt sie standardmäßig ausgeschaltet.
 [Regel, Umsetzung, vollständiger Vergleich und Einführungsnachweis](PARK_HOLD.md).
 Die Paketangaben weiter unten dokumentieren den vorherigen Entwicklungsstand.
 

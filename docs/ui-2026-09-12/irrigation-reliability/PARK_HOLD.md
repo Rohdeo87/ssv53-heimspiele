@@ -128,15 +128,55 @@ alle 70 Dateien des Altpakets und unveränderte Schutzschalter. Die
 mit HOME/geparkt, frischen inaktiven Wasserzonen, COMPLETE_HOLD und ohne offenen
 Mäherstart. Der heutige Lauf war zuvor durch Bedienung beendet worden.
 
-**Noch nicht installiert/aktiviert:** Die automatische Freigabeprüfung lehnte
-den produktiven `config-zip`-Aufruf vor dessen Ausführung ab. Begründung: keine
-für diese konkrete Bereitstellung ausreichend eindeutige Produktionsfreigabe.
-Die bisherigen Nutzerzusagen und die bestätigte Betriebsregel wurden von dieser
-Prüfung nicht als konkrete Rolloutfreigabe anerkannt. Es wurde anschließend
-gezielt nach Installation dieses Pakets und Aktivierung dieses Flags gefragt.
-Kein Ersatzweg, keine Geräte-Testbefehle und keine Einstellungsänderung.
+**Installiert und seit 08:46 Uhr aktiviert:** Nach der zunächst abgelehnten
+Bereitstellung bestätigte der Nutzer ausdrücklich mit „Ja“ die konkrete
+Installation und Aktivierung dieses Updates. Erst danach wurde derselbe
+geprüfte Stand bereitgestellt. Keine Umgehung der Freigabeprüfung.
 
-Die Vorprüfung zeigt außerdem weiter `MOWER_START_SEND_BLOCKED` mit
-`MOWER_STATUS_STALE`. Dieses Paket lockert die Mäherstartprüfung ausdrücklich
-nicht; ein erfolgreicher Mäherstart ist durch diese Untersuchung nicht belegt.
-Tests und Simulation allein belegen keinen erfolgreichen Livebetrieb.
+- [Aktuelle Vorprüfung](approved-deployment-preflight.json): kein laufendes
+  Wasser, kein offener Mäherstart, HOME/geparkt.
+- Azure-CLI `config-zip` mit genau dem oben genannten Paket: Exit 0.
+- [Prüfung vor Aktivierung](installed-park-hold-off.json): Host Running,
+  16 Funktionen, alle 71 Dateien bytegenau richtig, Schutzschalter unverändert.
+- [Aktivierung und vollständiger Einstellungsvergleich](park-hold-activation.json):
+  ausschließlich `IRRIGATION_CONFIRMED_PARK_HOLD_ENABLED` von fehlend auf `true`;
+  alle übrigen App-Einstellungswerte unverändert, CLI Exit 0.
+- [Prüfung nach Aktivierung](installed-park-hold-active.json): erneut alle 71
+  Dateien korrekt, Host Running, genau die erwarteten Schalter aktiv.
+
+Es wurde kein Geräte-Testbefehl gesendet, kein alter Bewässerungsplan
+zurückgesetzt und keine ausgefallene Bewässerung automatisch nachgeholt.
+Die neue Option beseitigt Wartezeit nach Aufbau eines gültigen Parknachweises;
+nach der ersten Aktivierung wird dieser zunächst frisch aufgebaut.
+
+## Beobachtung nach Aktivierung und verbleibende Sperre
+
+[Laufende Steuerungszyklen](park-hold-live-cycles.json) belegen die Ausführung
+des neuen Pakets. Um 08:48 Uhr wartet die aktivierte Option zunächst korrekt
+auf ein frisches Ereignis. Um 08:51 Uhr beginnt die Bestätigung; um 08:53 Uhr
+ist der Parknachweis `HELD`. Wasserdaten sind dabei frisch und inaktiv,
+Mähermeldung HOME/geparkt und verbunden. Keine manuelle Geräte-Testaktion.
+Um 08:54 und 08:55 Uhr bleibt der Nachweis bei weiter erfolgreichem Abruf erhalten,
+obwohl das unveränderte Geräteereignis wieder älter als 180 Sekunden ist.
+[Kompakter Live-Nachweis](park-hold-live-summary.json): acht Zyklen mit neuer
+Regel, zwei davon mit erhaltenem Nachweis trotz älterem Ereignis; keine
+Gerätebefehle in diesen beobachteten Zyklen. Damit ist die Fortführung des
+Parknachweises live belegt, nicht der vollständige Bewässerungsablauf.
+
+Die frischen Mäherdaten machen zusätzlich eine zuvor von der Altersmeldung
+verdeckte Sperre sichtbar: um 08:51–08:53 Uhr wird der Mäherstart unmittelbar
+vor dem Versand wegen `PREVIOUS_DEVICE_OUTCOME_UNCONFIRMED` angehalten.
+Mindestens ein früherer Geräteauftrag im persistenten Journal ist weiterhin
+ungeklärt. Welcher Auftrag genau betroffen ist, ist in diesem begrenzten
+Protokollexport nicht enthalten. Auch neue Zonenstarts dürfen diese Sperre
+laut bestehendem Befehlsjournal nicht übergehen. Die neue Parkregel hebt sie
+nicht auf und kein Journaleintrag wurde gelöscht oder als erledigt erfunden.
+
+Vor der nächsten vollständigen Bewässerungsabnahme muss der betreffende alte
+Auftrag anhand seines Journaleintrags und neuer Gerätedaten gezielt geklärt
+werden. Der direkte Tabellenzugriff war mit der vorhandenen Azure-Identität
+zuvor verweigert worden (siehe Ursachenanalyse); diese Untersuchung hat keine
+zusätzlichen Speicherrechte eingeräumt oder den Schutz durch einen Reset umgangen.
+Eine uneingeschränkte automatische Wiederaufnahme oder erfolgreiche nächste
+Bewässerung wird deshalb nicht behauptet. Installations- und Parkregelnachweis
+sind erbracht; vollständiger Gerätebetrieb bleibt offen.
