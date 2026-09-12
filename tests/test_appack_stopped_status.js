@@ -18,20 +18,20 @@ function stopped(fresh=true) {
 
 test('STOP-Meldung nennt den Gerätestopp statt abgeschlossener Bewässerung',()=>{
   const s=stopped(),msg=view.dashboardMessage(s);
-  assert.equal(msg.title,'Mäher ist gestoppt');
-  assert.match(msg.text,/direkt am Mäher prüfen/);
+  assert.equal(msg.title,'Manuell gestoppt');
+  assert.equal(msg.text,'Zum Fortsetzen bitte den Mäher vor Ort freigeben.');
   assert.doesNotMatch(msg.text,/Bewässerung|trocknet|abwarten/);
   assert.equal(msg.icon,'Square');
-  assert.equal(view.nextStartInfo(s,true).text,'Stopp am Mäher klären');
+  assert.equal(view.nextStartInfo(s,true).manualStop,true);
   assert.equal(view.effectiveMowerActions(s).showStart,false);
   assert.equal(s.manualControl.canStart,false);
 });
 
 test('Auch nach Ablauf der drei Minuten bleibt der zuletzt gemeldete STOP verständlich',()=>{
   const s=stopped(false);s.generatedAt='2026-09-12T09:02:00Z';
-  assert.equal(view.dashboardMessage(s).title,'Zuletzt: Mäher gestoppt');
-  assert.match(view.dashboardMessage(s).text,/10:58 Uhr/);
-  assert.equal(view.nextStartInfo(s,true).text,'Stopp am Mäher klären');
+  assert.equal(view.dashboardMessage(s).title,'Manuell gestoppt');
+  assert.doesNotMatch(view.dashboardMessage(s).text,/Letzte Meldung|älter|10:58/);
+  assert.equal(view.nextStartInfo(s,true).manualStop,true);
   assert.equal(view.effectiveMowerActions(s).showStart,false);
   s.mower.telemetryFresh=true;s.mower.state='RESTRICTED';s.mower.activity='PARKED_IN_CS';
   s.coordination.blockers=[];
@@ -47,7 +47,7 @@ test('Laufendes Wasser und unsichere Starts werden nicht vom STOP-Hinweis verdec
     assert.match(view.dashboardMessage(s).title,/^Bewässerung (läuft|bitte beenden)$/);
     s.automation.mowerStartOutcomeUnconfirmed=true;
     assert.equal(view.dashboardMessage(s).title,'Mäherstart nicht bestätigt');
-    assert.notEqual(view.nextStartInfo(s,true).text,'Stopp am Mäher klären');
+    assert.notEqual(view.nextStartInfo(s,true).manualStop,true);
   }
   const unknown=stopped(false);unknown.automation.irrigationPhase='RUNNING';unknown.irrigation.safety.fresh=false;
   assert.equal(view.dashboardMessage(unknown).title,'Bewässerung nicht bestätigt');
@@ -73,5 +73,21 @@ test('Ältere Offline- und Fehlermeldungen werden nicht als bestätigter sichere
   s.mower.connected=true;s.mower.state='ERROR';s.mower.errorCode=93;s.mower.errorActive=true;
   assert.equal(view.dashboardMessage(s).title,'Mäher braucht Hilfe');
   s.mower.state='OFF';s.mower.errorCode=0;s.mower.errorActive=false;
-  assert.equal(view.dashboardMessage(s).title,'Zuletzt: Mäher ausgeschaltet');
+  assert.equal(view.dashboardMessage(s).title,'Mäher ausgeschaltet');
+});
+
+test('Unveränderter STOP bleibt bei neun oder dreißig Minuten klar, echte Ausfälle haben Vorrang',()=>{
+  const s=stopped(false);
+  for(const minutes of [9,30]){
+    s.mower.statusAgeSeconds=minutes*60;
+    s.mower.statusTimestamp=new Date(s.generatedAt).getTime()-minutes*60000;
+    assert.equal(view.dashboardMessage(s).title,'Manuell gestoppt');
+    assert.equal(view.mowerTelemetryFresh(s),false);
+    assert.equal(view.effectiveMowerActions(s).showStart,false);
+    assert.equal(view.stationConfirmed(s),false);
+  }
+  s.coordination.blockers.push({code:'CONTROLLER_STALE'});
+  assert.equal(view.dashboardMessage(s).title,'Automatik antwortet nicht');
+  s.controlsAvailable=false;s.dataQuality={code:'CONFIG_STALE'};
+  assert.equal(view.dashboardMessage(s).title,'Belegungsplan nicht aktuell');
 });
