@@ -816,7 +816,7 @@ SOFTWARE.
       buttons.id="pf-map-buttons";buttons.className="pf-map-buttons";buttons.hidden=true;
       buttons.appendChild(pfButton("Vergrößern","Plus",function(){if(pfMap)pfMap.zoomIn()}));buttons.appendChild(pfButton("Verkleinern","Minus",function(){if(pfMap)pfMap.zoomOut()}));
       var center=pfButton("Mäher zeigen","MapPin",pfMapCenter);center.id="pf-map-center";buttons.appendChild(center);page.appendChild(buttons);
-      credit.className="pf-map-credit";credit.innerHTML='Luftbild: <a href="https://geobasis-bb.de/lgb/de/geodaten/luftbilder/luftbilder-aktuell/" target="_blank" rel="noopener noreferrer">© GeoBasis-DE/LGB</a>, <a href="https://www.govdata.de/dl-de/by-2-0" target="_blank" rel="noopener noreferrer">dl-de/by-2-0</a>; © Geoportal Berlin, dl-de/zero-2-0. Karte: <a href="https://leafletjs.com" target="_blank" rel="noopener noreferrer">Leaflet</a>.';page.appendChild(credit);
+      credit.className="pf-map-credit";credit.innerHTML='Luftbild: <a href="https://isk.geobasis-bb.de/mapproxy/dop20c/service/wms?SERVICE=WMS&amp;VERSION=1.1.1&amp;REQUEST=GetCapabilities" target="_blank" rel="noopener noreferrer">© GeoBasis-DE/LGB</a>, <a href="https://www.govdata.de/dl-de/by-2-0" target="_blank" rel="noopener noreferrer">dl-de/by-2-0</a>; © Geoportal Berlin, dl-de/by-2-0. Darstellung um Mähersymbol ergänzt. Karte: <a href="https://leafletjs.com" target="_blank" rel="noopener noreferrer">Leaflet</a>.';page.appendChild(credit);
     }
     function pfRenderMap() {
       var point=pfMapPoint(state.status),home=document.getElementById("pf-map-home");if(home)home.hidden=!point;
