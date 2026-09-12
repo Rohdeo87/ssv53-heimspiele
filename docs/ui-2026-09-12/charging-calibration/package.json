@@ -1,0 +1,31 @@
+{
+  "source_commit": "982d242f8a994f8ce53bf088ea04a722b94c6a1a",
+  "base_package_sha256": "4a0fd69a343429be1f60f7f82cb484d828f508b721d64ad94c81ee19f1fdd266",
+  "package_sha256": "62acc594a48cc4b5ac8edc94ad4c7598207da9ead2f57dbd6e9bc4b65dbd9638",
+  "manifest_sha256": "799fc6f2afb5c8f7e1770f9d99d15bdd66ffb4391400edcbdb8e4c32d017d619",
+  "package_entries": 75,
+  "changed_files": [
+    "daily_safety_report.py",
+    "function_app.py",
+    "mower/charging_forecast.py",
+    "mower/charging_forecast_store.py",
+    "package-manifest.json",
+    "platzwart_console.py"
+  ],
+  "changed_source_hashes": {
+    "daily_safety_report.py": "b00c79cd44c6c8d7fd76926c9593275dfffebc5ba9ca6b278fe09079cd434011",
+    "function_app.py": "4cd34734bbc511d6ec4fb7a03cbc0f7463ae2112781f98e5ed30870097ecc8f1",
+    "mower/charging_forecast.py": "6ecf0b3651bb373a772011da92489d68705958a6eee402bb329c6ffcec8ba321",
+    "mower/charging_forecast_store.py": "a339555a0c8a961c8afaf42f9c62542ca3d82a33add300c8d2ad4a8dd57ef05d",
+    "platzwart_console.py": "3bff7fdd234f449e1c036f09d3d45a60c55fb751a5c199f3d51eb2844208c8ea"
+  },
+  "unchanged_source_content_verified_against_commit": true,
+  "unchanged_package_bytes_preserved": true,
+  "offline_import": {
+    "functions": 16,
+    "manifest_files_verified": true,
+    "network_allowed": false
+  },
+  "deployed": false,
+  "device_commands_sent": false
+}
