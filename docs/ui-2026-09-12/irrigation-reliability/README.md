@@ -100,6 +100,73 @@ beschreibt strom-/verkehrsbedingte Abstände bis etwa 15 Minuten. Ein erfolgreic
 REST-Abruf oder WebSocket-Ping ist deshalb kein neuer physischer Stationsnachweis.
 Ein WebSocket allein beseitigt diese Wartezeit nicht.
 
+## Vollständige Sequenz und verbleibende Wartezeit
+
+Die [vollständige lokale Simulation](full-run-simulation.json) führt den echten
+Controller mit ersetzten Geräten aus. Annahmen: bereits bestätigte Station und
+vollständig suspendierter Plan, Minutentakt, ein Mäherereignis alle 15 Minuten,
+stets vollständige Wasserdaten und freie Belegung. Erfassung/Suspendierung vor
+dem Start, Netzausfälle, reale Hydraulik und manuelle Eingriffe sind hier nicht
+nachgebildet. Es handelt sich nicht um einen live beobachteten Durchlauf.
+
+| Planstart | Ergebnis nach beiden Codekorrekturen | Reine Wasserzeit | Grenze |
+| --- | --- | --- | --- |
+| 04:30 | Starts 04:32, 05:00, 05:30, 06:00, 06:30; fünfte Zone endet 06:50 | 100 von 160 Sollminuten | Zonen 6/7 passen ab 07:00 nicht mehr vollständig vor 08:00; korrekte Sperre statt Verkürzung |
+| 03:30 | Starts 03:32, 04:00, 04:30, 05:00, 05:30, 06:00, 06:33; letzte Zone endet 07:03, bestätigt 07:05 | Alle 160 Sollminuten | In diesem Szenario 55 Minuten Reserve nach Bestätigung; kein Beweis für alle Ereignisphasen/Ausfälle |
+
+Die zwei Reparaturen allein belegen folglich noch keinen zuverlässigen
+vollständigen 04:30-Lauf. Eine bloße erfolgreiche Simulation des ersten Starts
+wäre ein unzureichendes Abnahmekriterium. Der reale Zeitplan wurde nicht auf
+03:30 geändert. Vor einer Änderung ist die vom Nutzer gewünschte fortbestehende
+Parksperre vorrangig zu prüfen, damit Wartezeit nicht nur nach vorn verschoben wird.
+
+## Nutzerregel: bestätigtes Parken fortführen
+
+Der zentrale Sender verwendet `ParkUntilFurtherNotice`. Laut aktueller
+[Husqvarna-Befehlsspezifikation](https://docs.developer.husqvarnagroup.cloud/automower-connect-api/swagger.yml)
+parkt dieser Befehl unbefristet; `mode=HOME` bestätigt diesen Modus. Ein
+`PARKED_IN_CS` allein bezeichnet dagegen nur den Zustand in der Station.
+`FORCE_PARK` allein ist laut Spezifikation ebenfalls kein unbefristeter Nachweis.
+
+Ein fortbestehender eigener HOME-Parkauftrag ist deshalb die richtige Grundlage
+für eine spätere Freigabe ohne Wartezeit auf unveränderte Geräteereignisse.
+Diese zusätzliche Änderung der Sicherheitslogik ist in diesem Paket **nicht
+aktiviert und nicht implementiert**. Der konkrete nächste Entwurf muss:
+
+- eine zunächst frische Stationsbestätigung nach dem eigenen Parkbefehl an
+  Geräte-ID und Befehls-/Bediengeneration binden;
+- Mäherstarts während der aktiven Bewässerung zentral weiterhin verhindern und
+  die bestehende ausdrückliche Konfliktentscheidung erhalten;
+- jeden beobachteten Fremdeingriff, Startauftrag, Moduswechsel, Gerätefehler,
+  Kommunikationsausfall oder unklaren Wiederanlauf als Entwertung behandeln;
+- direkt vor jedem Ventilstart erneut denselben Zustand und die unveränderte
+  Bediengeneration prüfen;
+- den Zugriff über Husqvarna/am Gerät ausdrücklich berücksichtigen: ein noch
+  nicht übermittelter manueller Start ist für die Zentrale nicht erkennbar.
+
+Die externe App und der Knopf am Gerät lassen sich über die vorliegenden APIs
+nicht durch eine lokale Softwarevariable verriegeln. Ein verspätet gemeldeter
+Fremdstart bleibt daher ein technisches Restrisiko. Auch die bestehende
+180-Sekunden-Regel schließt dieses nicht vollständig aus. Der betriebliche
+Grundsatz muss weiterhin sein: vor einem externen manuellen Start während
+Bewässerung zuerst deren bestätigtes Ende abwarten. Keine unbemerkte Lockerung
+der bisherigen Grenze nur aufgrund eines alten `PARKED_IN_CS`.
+
+## Reviewfähiges Paket
+
+Codecommit `1b7f8a85454cd390c30ac9ffb1c26251cb6c6812`.
+[Paketnachweis](package-proof.json): nur `mower/full_failsafe.py`,
+`mower/irrigation_recovery.py` und Manifest ändern sich. Alle übrigen Paketbytes
+sind identisch zur zuvor nachgewiesenen Installation und ihr Inhalt entspricht
+dem Quellcommit. Offline importiert: 16 Funktionen, Dateiprovenienz gültig,
+Netzwerk gesperrt. ZIP-SHA256:
+`ac519e857df869837e09ca2ecb643b08f813746c2c3fb27be133d1cfbe3fa073`.
+
+1.476 Python-Tests plus 482 Untertests bestanden. Die danach ergänzte
+Vollsequenzsimulation wurde gesondert in beiden Startvarianten geprüft.
+Das Paket ist **gebaut und geprüft, nicht veröffentlicht**. Eine Freigabe der
+kompletten unbeaufsichtigten Automatik wird daraus nicht abgeleitet.
+
 ## Einführung, Überwachung und Rückfall
 
 1. Geprüftes Paket aus dem nachgewiesenen Altartefakt und ausschließlich den
