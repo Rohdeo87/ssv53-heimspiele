@@ -1,0 +1,18 @@
+{
+  "at": "2026-09-12T09:16:23.340Z",
+  "width": 390,
+  "older": {
+    "title": "Zuletzt: Mäher gestoppt",
+    "next": "Stopp am Mäher klären",
+    "overflow": false
+  },
+  "fresh": {
+    "next": "Stopp am Mäher klären",
+    "overflow": false,
+    "startHidden": true,
+    "title": "Mäher ist gestoppt"
+  },
+  "screenshotAvailable": false,
+  "offlineFixture": true,
+  "deviceCommandsSent": false
+}

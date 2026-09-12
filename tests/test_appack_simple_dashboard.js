@@ -217,6 +217,8 @@ test("Manueller Stopp bleibt als Pause sichtbar, auch mit berechenbarem Ladeende
   assert.match(view.dashboardMessage(s).text, /abwarten/);
   s.automation.irrigationPhase = null;
   s.overall.code = "OPERATOR_PARK_HOLD";
+  s.coordination.dryUntil = null;
+  s.coordination.blockers = [{code: "MANUAL_STOP"}];
   assert.match(view.dashboardMessage(s).text, /„Mäher starten“/);
   s.mower.state = "PAUSED"; s.mower.activity = "NOT_APPLICABLE"; s.automation = {};
   assert.match(view.dashboardMessage(s).text, /am Mäher nachsehen/);

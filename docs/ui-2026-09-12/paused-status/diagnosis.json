@@ -1,0 +1,608 @@
+{
+  "read_only": true,
+  "transition": {
+    "read_only": true,
+    "query": "traces | where timestamp between (datetime(2026-09-12T08:23:00Z) .. datetime(2026-09-12T08:48:00Z)) and message startswith \"SSV53_CONTROL_CYCLE \" | extend p=parse_json(substring(message,20)) | project timestamp, decision=tostring(p.decision_code), sent=tobool(p.command_sent), mower=p.details.mower, manual=p.details.manual_session, manifest=tostring(p.build_provenance.package_manifest_sha256) | order by timestamp asc",
+    "rows": [
+      {
+        "at": "2026-09-12T08:23:04.0569154Z",
+        "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+        "sent": false,
+        "mower": {
+          "state": "RESTRICTED",
+          "activity": "PARKED_IN_CS",
+          "mode": "HOME",
+          "error_code": 0,
+          "status_timestamp_ms": 1789200602780
+        },
+        "manual": {
+          "enabled": true,
+          "epoch": 2,
+          "kind": "START",
+          "permission_code": "MANUAL_SESSION_INACTIVE",
+          "session_id": "71da4492-c834-422d-97ea-bd70e926f68c",
+          "status": "ENDED"
+        },
+        "manifest": "cc36ebb779787ee97d0c499da61410cf9810505fb384400e1379c3262760a89c"
+      },
+      {
+        "at": "2026-09-12T08:24:02.5824674Z",
+        "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+        "sent": false,
+        "mower": {
+          "state": "RESTRICTED",
+          "activity": "PARKED_IN_CS",
+          "mode": "HOME",
+          "error_code": 0,
+          "status_timestamp_ms": 1789200602780
+        },
+        "manual": {
+          "enabled": true,
+          "epoch": 2,
+          "kind": "START",
+          "permission_code": "MANUAL_SESSION_INACTIVE",
+          "session_id": "71da4492-c834-422d-97ea-bd70e926f68c",
+          "status": "ENDED"
+        },
+        "manifest": "cc36ebb779787ee97d0c499da61410cf9810505fb384400e1379c3262760a89c"
+      },
+      {
+        "at": "2026-09-12T08:25:02.4999767Z",
+        "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+        "sent": false,
+        "mower": {
+          "state": "STOPPED",
+          "activity": "NOT_APPLICABLE",
+          "mode": "HOME",
+          "error_code": 0,
+          "status_timestamp_ms": 1789201491981
+        },
+        "manual": {
+          "enabled": true,
+          "epoch": 2,
+          "kind": "START",
+          "permission_code": "MANUAL_SESSION_INACTIVE",
+          "session_id": "71da4492-c834-422d-97ea-bd70e926f68c",
+          "status": "ENDED"
+        },
+        "manifest": "cc36ebb779787ee97d0c499da61410cf9810505fb384400e1379c3262760a89c"
+      },
+      {
+        "at": "2026-09-12T08:26:04.2746687Z",
+        "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+        "sent": false,
+        "mower": {
+          "state": "STOPPED",
+          "activity": "NOT_APPLICABLE",
+          "mode": "HOME",
+          "error_code": 0,
+          "status_timestamp_ms": 1789201491981
+        },
+        "manual": {
+          "enabled": true,
+          "epoch": 2,
+          "kind": "START",
+          "permission_code": "MANUAL_SESSION_INACTIVE",
+          "session_id": "71da4492-c834-422d-97ea-bd70e926f68c",
+          "status": "ENDED"
+        },
+        "manifest": "cc36ebb779787ee97d0c499da61410cf9810505fb384400e1379c3262760a89c"
+      },
+      {
+        "at": "2026-09-12T08:27:03.7813821Z",
+        "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+        "sent": false,
+        "mower": {
+          "state": "STOPPED",
+          "activity": "NOT_APPLICABLE",
+          "mode": "HOME",
+          "error_code": 0,
+          "status_timestamp_ms": 1789201491981
+        },
+        "manual": {
+          "enabled": true,
+          "epoch": 2,
+          "kind": "START",
+          "permission_code": "MANUAL_SESSION_INACTIVE",
+          "session_id": "71da4492-c834-422d-97ea-bd70e926f68c",
+          "status": "ENDED"
+        },
+        "manifest": "cc36ebb779787ee97d0c499da61410cf9810505fb384400e1379c3262760a89c"
+      },
+      {
+        "at": "2026-09-12T08:28:02.3880951Z",
+        "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+        "sent": false,
+        "mower": {
+          "state": "STOPPED",
+          "activity": "NOT_APPLICABLE",
+          "mode": "HOME",
+          "error_code": 0,
+          "status_timestamp_ms": 1789201680768
+        },
+        "manual": {
+          "enabled": true,
+          "epoch": 2,
+          "kind": "START",
+          "permission_code": "MANUAL_SESSION_INACTIVE",
+          "session_id": "71da4492-c834-422d-97ea-bd70e926f68c",
+          "status": "ENDED"
+        },
+        "manifest": "cc36ebb779787ee97d0c499da61410cf9810505fb384400e1379c3262760a89c"
+      },
+      {
+        "at": "2026-09-12T08:29:02.4001167Z",
+        "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+        "sent": false,
+        "mower": {
+          "state": "STOPPED",
+          "activity": "NOT_APPLICABLE",
+          "mode": "HOME",
+          "error_code": 0,
+          "status_timestamp_ms": 1789201732773
+        },
+        "manual": {
+          "enabled": true,
+          "epoch": 2,
+          "kind": "START",
+          "permission_code": "MANUAL_SESSION_INACTIVE",
+          "session_id": "71da4492-c834-422d-97ea-bd70e926f68c",
+          "status": "ENDED"
+        },
+        "manifest": "cc36ebb779787ee97d0c499da61410cf9810505fb384400e1379c3262760a89c"
+      },
+      {
+        "at": "2026-09-12T08:30:02.6715489Z",
+        "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+        "sent": false,
+        "mower": {
+          "state": "STOPPED",
+          "activity": "NOT_APPLICABLE",
+          "mode": "HOME",
+          "error_code": 0,
+          "status_timestamp_ms": 1789201762783
+        },
+        "manual": {
+          "enabled": true,
+          "epoch": 2,
+          "kind": "START",
+          "permission_code": "MANUAL_SESSION_INACTIVE",
+          "session_id": "71da4492-c834-422d-97ea-bd70e926f68c",
+          "status": "ENDED"
+        },
+        "manifest": "cc36ebb779787ee97d0c499da61410cf9810505fb384400e1379c3262760a89c"
+      },
+      {
+        "at": "2026-09-12T08:31:02.257593Z",
+        "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+        "sent": false,
+        "mower": {
+          "state": "STOPPED",
+          "activity": "NOT_APPLICABLE",
+          "mode": "HOME",
+          "error_code": 0,
+          "status_timestamp_ms": 1789201762783
+        },
+        "manual": {
+          "enabled": true,
+          "epoch": 2,
+          "kind": "START",
+          "permission_code": "MANUAL_SESSION_INACTIVE",
+          "session_id": "71da4492-c834-422d-97ea-bd70e926f68c",
+          "status": "ENDED"
+        },
+        "manifest": "cc36ebb779787ee97d0c499da61410cf9810505fb384400e1379c3262760a89c"
+      },
+      {
+        "at": "2026-09-12T08:32:02.284583Z",
+        "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+        "sent": false,
+        "mower": {
+          "state": "STOPPED",
+          "activity": "NOT_APPLICABLE",
+          "mode": "HOME",
+          "error_code": 0,
+          "status_timestamp_ms": 1789201868224
+        },
+        "manual": {
+          "enabled": true,
+          "epoch": 2,
+          "kind": "START",
+          "permission_code": "MANUAL_SESSION_INACTIVE",
+          "session_id": "71da4492-c834-422d-97ea-bd70e926f68c",
+          "status": "ENDED"
+        },
+        "manifest": "cc36ebb779787ee97d0c499da61410cf9810505fb384400e1379c3262760a89c"
+      },
+      {
+        "at": "2026-09-12T08:33:02.6546844Z",
+        "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+        "sent": false,
+        "mower": {
+          "state": "STOPPED",
+          "activity": "NOT_APPLICABLE",
+          "mode": "HOME",
+          "error_code": 0,
+          "status_timestamp_ms": 1789201968002
+        },
+        "manual": {
+          "enabled": true,
+          "epoch": 2,
+          "kind": "START",
+          "permission_code": "MANUAL_SESSION_INACTIVE",
+          "session_id": "71da4492-c834-422d-97ea-bd70e926f68c",
+          "status": "ENDED"
+        },
+        "manifest": "cc36ebb779787ee97d0c499da61410cf9810505fb384400e1379c3262760a89c"
+      },
+      {
+        "at": "2026-09-12T08:34:02.4834549Z",
+        "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+        "sent": false,
+        "mower": {
+          "state": "STOPPED",
+          "activity": "NOT_APPLICABLE",
+          "mode": "HOME",
+          "error_code": 0,
+          "status_timestamp_ms": 1789202017982
+        },
+        "manual": {
+          "enabled": true,
+          "epoch": 2,
+          "kind": "START",
+          "permission_code": "MANUAL_SESSION_INACTIVE",
+          "session_id": "71da4492-c834-422d-97ea-bd70e926f68c",
+          "status": "ENDED"
+        },
+        "manifest": "cc36ebb779787ee97d0c499da61410cf9810505fb384400e1379c3262760a89c"
+      },
+      {
+        "at": "2026-09-12T08:35:02.6952579Z",
+        "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+        "sent": false,
+        "mower": {
+          "state": "STOPPED",
+          "activity": "NOT_APPLICABLE",
+          "mode": "HOME",
+          "error_code": 0,
+          "status_timestamp_ms": 1789202062947
+        },
+        "manual": {
+          "enabled": true,
+          "epoch": 2,
+          "kind": "START",
+          "permission_code": "MANUAL_SESSION_INACTIVE",
+          "session_id": "71da4492-c834-422d-97ea-bd70e926f68c",
+          "status": "ENDED"
+        },
+        "manifest": "cc36ebb779787ee97d0c499da61410cf9810505fb384400e1379c3262760a89c"
+      },
+      {
+        "at": "2026-09-12T08:36:02.3048922Z",
+        "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+        "sent": false,
+        "mower": {
+          "state": "STOPPED",
+          "activity": "NOT_APPLICABLE",
+          "mode": "HOME",
+          "error_code": 0,
+          "status_timestamp_ms": 1789202123585
+        },
+        "manual": {
+          "enabled": true,
+          "epoch": 2,
+          "kind": "START",
+          "permission_code": "MANUAL_SESSION_INACTIVE",
+          "session_id": "71da4492-c834-422d-97ea-bd70e926f68c",
+          "status": "ENDED"
+        },
+        "manifest": "cc36ebb779787ee97d0c499da61410cf9810505fb384400e1379c3262760a89c"
+      },
+      {
+        "at": "2026-09-12T08:37:02.3083649Z",
+        "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+        "sent": false,
+        "mower": {
+          "state": "STOPPED",
+          "activity": "NOT_APPLICABLE",
+          "mode": "HOME",
+          "error_code": 0,
+          "status_timestamp_ms": 1789202123585
+        },
+        "manual": {
+          "enabled": true,
+          "epoch": 2,
+          "kind": "START",
+          "permission_code": "MANUAL_SESSION_INACTIVE",
+          "session_id": "71da4492-c834-422d-97ea-bd70e926f68c",
+          "status": "ENDED"
+        },
+        "manifest": "cc36ebb779787ee97d0c499da61410cf9810505fb384400e1379c3262760a89c"
+      },
+      {
+        "at": "2026-09-12T08:38:02.1864198Z",
+        "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+        "sent": false,
+        "mower": {
+          "state": "STOPPED",
+          "activity": "NOT_APPLICABLE",
+          "mode": "HOME",
+          "error_code": 0,
+          "status_timestamp_ms": 1789202123585
+        },
+        "manual": {
+          "enabled": true,
+          "epoch": 2,
+          "kind": "START",
+          "permission_code": "MANUAL_SESSION_INACTIVE",
+          "session_id": "71da4492-c834-422d-97ea-bd70e926f68c",
+          "status": "ENDED"
+        },
+        "manifest": "cc36ebb779787ee97d0c499da61410cf9810505fb384400e1379c3262760a89c"
+      },
+      {
+        "at": "2026-09-12T08:39:02.296138Z",
+        "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+        "sent": false,
+        "mower": {
+          "state": "STOPPED",
+          "activity": "NOT_APPLICABLE",
+          "mode": "HOME",
+          "error_code": 0,
+          "status_timestamp_ms": 1789202123585
+        },
+        "manual": {
+          "enabled": true,
+          "epoch": 2,
+          "kind": "START",
+          "permission_code": "MANUAL_SESSION_INACTIVE",
+          "session_id": "71da4492-c834-422d-97ea-bd70e926f68c",
+          "status": "ENDED"
+        },
+        "manifest": "cc36ebb779787ee97d0c499da61410cf9810505fb384400e1379c3262760a89c"
+      },
+      {
+        "at": "2026-09-12T08:40:02.6736329Z",
+        "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+        "sent": false,
+        "mower": {
+          "state": "STOPPED",
+          "activity": "NOT_APPLICABLE",
+          "mode": "HOME",
+          "error_code": 0,
+          "status_timestamp_ms": 1789202123585
+        },
+        "manual": {
+          "enabled": true,
+          "epoch": 2,
+          "kind": "START",
+          "permission_code": "MANUAL_SESSION_INACTIVE",
+          "session_id": "71da4492-c834-422d-97ea-bd70e926f68c",
+          "status": "ENDED"
+        },
+        "manifest": "cc36ebb779787ee97d0c499da61410cf9810505fb384400e1379c3262760a89c"
+      },
+      {
+        "at": "2026-09-12T08:41:02.2032492Z",
+        "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+        "sent": false,
+        "mower": {
+          "state": "STOPPED",
+          "activity": "NOT_APPLICABLE",
+          "mode": "HOME",
+          "error_code": 0,
+          "status_timestamp_ms": 1789202123585
+        },
+        "manual": {
+          "enabled": true,
+          "epoch": 2,
+          "kind": "START",
+          "permission_code": "MANUAL_SESSION_INACTIVE",
+          "session_id": "71da4492-c834-422d-97ea-bd70e926f68c",
+          "status": "ENDED"
+        },
+        "manifest": "cc36ebb779787ee97d0c499da61410cf9810505fb384400e1379c3262760a89c"
+      },
+      {
+        "at": "2026-09-12T08:42:02.2672915Z",
+        "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+        "sent": false,
+        "mower": {
+          "state": "STOPPED",
+          "activity": "NOT_APPLICABLE",
+          "mode": "HOME",
+          "error_code": 0,
+          "status_timestamp_ms": 1789202123585
+        },
+        "manual": {
+          "enabled": true,
+          "epoch": 2,
+          "kind": "START",
+          "permission_code": "MANUAL_SESSION_INACTIVE",
+          "session_id": "71da4492-c834-422d-97ea-bd70e926f68c",
+          "status": "ENDED"
+        },
+        "manifest": "cc36ebb779787ee97d0c499da61410cf9810505fb384400e1379c3262760a89c"
+      },
+      {
+        "at": "2026-09-12T08:43:02.3826555Z",
+        "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+        "sent": false,
+        "mower": {
+          "state": "STOPPED",
+          "activity": "NOT_APPLICABLE",
+          "mode": "HOME",
+          "error_code": 0,
+          "status_timestamp_ms": 1789202123585
+        },
+        "manual": {
+          "enabled": true,
+          "epoch": 2,
+          "kind": "START",
+          "permission_code": "MANUAL_SESSION_INACTIVE",
+          "session_id": "71da4492-c834-422d-97ea-bd70e926f68c",
+          "status": "ENDED"
+        },
+        "manifest": "cc36ebb779787ee97d0c499da61410cf9810505fb384400e1379c3262760a89c"
+      },
+      {
+        "at": "2026-09-12T08:44:02.2829278Z",
+        "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+        "sent": false,
+        "mower": {
+          "state": "STOPPED",
+          "activity": "NOT_APPLICABLE",
+          "mode": "HOME",
+          "error_code": 0,
+          "status_timestamp_ms": 1789202590127
+        },
+        "manual": {
+          "enabled": true,
+          "epoch": 2,
+          "kind": "START",
+          "permission_code": "MANUAL_SESSION_INACTIVE",
+          "session_id": "71da4492-c834-422d-97ea-bd70e926f68c",
+          "status": "ENDED"
+        },
+        "manifest": "cc36ebb779787ee97d0c499da61410cf9810505fb384400e1379c3262760a89c"
+      },
+      {
+        "at": "2026-09-12T08:45:02.4834619Z",
+        "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+        "sent": false,
+        "mower": {
+          "state": "STOPPED",
+          "activity": "NOT_APPLICABLE",
+          "mode": "HOME",
+          "error_code": 0,
+          "status_timestamp_ms": 1789202590127
+        },
+        "manual": {
+          "enabled": true,
+          "epoch": 2,
+          "kind": "START",
+          "permission_code": "MANUAL_SESSION_INACTIVE",
+          "session_id": "71da4492-c834-422d-97ea-bd70e926f68c",
+          "status": "ENDED"
+        },
+        "manifest": "cc36ebb779787ee97d0c499da61410cf9810505fb384400e1379c3262760a89c"
+      },
+      {
+        "at": "2026-09-12T08:46:02.3823254Z",
+        "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+        "sent": false,
+        "mower": {
+          "state": "STOPPED",
+          "activity": "NOT_APPLICABLE",
+          "mode": "HOME",
+          "error_code": 0,
+          "status_timestamp_ms": 1789202590127
+        },
+        "manual": {
+          "enabled": true,
+          "epoch": 2,
+          "kind": "START",
+          "permission_code": "MANUAL_SESSION_INACTIVE",
+          "session_id": "71da4492-c834-422d-97ea-bd70e926f68c",
+          "status": "ENDED"
+        },
+        "manifest": "cc36ebb779787ee97d0c499da61410cf9810505fb384400e1379c3262760a89c"
+      },
+      {
+        "at": "2026-09-12T08:47:02.1560435Z",
+        "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+        "sent": false,
+        "mower": {
+          "state": "STOPPED",
+          "activity": "NOT_APPLICABLE",
+          "mode": "HOME",
+          "error_code": 0,
+          "status_timestamp_ms": 1789202590127
+        },
+        "manual": {
+          "enabled": true,
+          "epoch": 2,
+          "kind": "START",
+          "permission_code": "MANUAL_SESSION_INACTIVE",
+          "session_id": "71da4492-c834-422d-97ea-bd70e926f68c",
+          "status": "ENDED"
+        },
+        "manifest": "cc36ebb779787ee97d0c499da61410cf9810505fb384400e1379c3262760a89c"
+      }
+    ]
+  },
+  "latest_cycle": {
+    "at": "2026-09-12T09:02:02.2575398Z",
+    "manifest": "cc36ebb779787ee97d0c499da61410cf9810505fb384400e1379c3262760a89c",
+    "decision": "OCCUPANCY_OR_IRRIGATION_HOLD",
+    "sent": false,
+    "mower": {
+      "mode": "HOME",
+      "activity": "NOT_APPLICABLE",
+      "state": "STOPPED",
+      "connected": true,
+      "status_timestamp_ms": 1789203520127,
+      "error_code": 0
+    },
+    "water": {
+      "active_relay_ids": [],
+      "active_zone_count": 0,
+      "age_seconds": 0,
+      "available": true,
+      "clear_now": true,
+      "expected_relay_ids": [
+        9104894,
+        9104906,
+        9104909,
+        9104911,
+        9104913,
+        9104920,
+        9104921
+      ],
+      "fresh": true,
+      "imminent_relay_ids": [],
+      "imminent_zone_count": 0,
+      "observed_at_utc": "2026-09-12T09:02:00.0000000Z",
+      "observed_relay_ids": [
+        9104894,
+        9104906,
+        9104909,
+        9104911,
+        9104913,
+        9104920,
+        9104921
+      ],
+      "reason": "Hydrawise meldet alle ausgewählten Zonen aktuell frei.",
+      "relay_set_valid": true,
+      "selected_zone_count": 7
+    },
+    "release": {
+      "allowed": true,
+      "clear_since_utc": "2026-09-12T05:32:59.9976840Z",
+      "confirmation_observed_until_utc": "2026-09-12T09:02:00.0000000Z",
+      "confirmed_for_seconds": 12540,
+      "dry_until_utc": "2026-09-11T07:40:00.0023880Z",
+      "drying_since_utc": "2026-09-11T05:10:00.0023880Z",
+      "persistent_state_available": true,
+      "physical_clear_now": true,
+      "reason": "Die Trocknungsfrist ist abgelaufen und aktuelle Hydrawise-Daten sind bestätigt.",
+      "release_at_utc": "2026-09-12T05:34:59.9976840Z",
+      "required_clear_minutes": 150,
+      "telemetry_confirmed": true,
+      "telemetry_required_minutes": 2
+    },
+    "park_hold": {
+      "confirmed_since_utc": null,
+      "current_read_utc": null,
+      "held": false,
+      "read_max_gap_seconds": 90,
+      "reason": "STATION_OR_CONTROL_CHANGED",
+      "status": "INVALID"
+    }
+  },
+  "unresolved_device_sends": 0,
+  "journal_read_at_utc": "2026-09-12T09:02:22.916491+00:00",
+  "user_report": "Anscheinend wurde die Stop Taste gedrückt am Mäher",
+  "configuration_changed": false,
+  "backend_changed": false
+}
