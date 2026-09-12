@@ -19,7 +19,8 @@ preview = r.json()
 (out/'existing-admin-preview.json').write_text(json.dumps({'at_utc':datetime.now(timezone.utc).isoformat(),
     'read_only':True,'preview':preview},indent=2)+'\n',encoding='utf-8')
 print(json.dumps({'unresolved':preview.get('journal', {}).get('unresolvedDeviceSendCount'),
-                 'journal':preview.get('journal'), 'legacy_recovery_eligible':preview.get('eligible')}))
+                 'receipt_count':len(preview.get('journal', {}).get('receipts') or []),
+                 'legacy_recovery_eligible':preview.get('eligible')}))
 query = ('traces | where timestamp > datetime(2026-09-11T12:00:00Z) and message startswith "SSV53_CONTROL_CYCLE " '
     '| extend p=parse_json(substring(message,20)) '
     '| where p.command_sent == true or p.decision_code has_any ("FAILED", "REJECTED") '
@@ -49,9 +50,15 @@ for at,p in data:
         'manifest':(p.get('build_provenance') or {}).get('package_manifest_sha256'),
         'mower':{k:(d.get('mower') or {}).get(k) for k in ('mode','activity','state','connected','status_timestamp_ms','error_code')},
         'water':water.get('safety'), 'release':water.get('release_confirmation'),
+        'occupancy':d.get('current_plan'),
         'park_hold':d.get('irrigation_park_hold'), 'start':d.get('start_action'),
         'device_write_reconciliation':d.get('device_write_reconciliation'),
         'manual':d.get('manual_session'), 'automation':d.get('automation_state')})
 (out/'recent-cycles.json').write_text(json.dumps({'at_utc':datetime.now(timezone.utc).isoformat(),
     'read_only':True,'query':query,'rows':recent},indent=2)+'\n',encoding='utf-8')
-print(json.dumps({'recent_cycles':len(recent), 'latest':recent[-1] if recent else None}))
+last = recent[-1] if recent else {}
+print(json.dumps({'recent_cycles':len(recent), 'latest':{k:last.get(k) for k in
+    ('at','decision','sent','manifest','mower','park_hold','device_write_reconciliation')},
+    'water_active_count':(last.get('water') or {}).get('active_zone_count'),
+    'water_release_allowed':(last.get('release') or {}).get('allowed'),
+    'occupancy_block':(last.get('occupancy') or {}).get('blocked_now')}))

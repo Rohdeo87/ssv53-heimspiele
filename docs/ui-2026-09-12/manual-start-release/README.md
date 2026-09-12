@@ -21,8 +21,9 @@ Aussetzbefehle für Hydrawise zwischen 03:46 und 04:11 Uhr Berlin, jeweils bis
 der weitergehende Abgleich bindet an die **aktuelle** Plan-ID. Frühere
 Planänderungen lassen damit alte Aussetzbelege offen, obwohl Hydrawise bereits
 den nächsten Lauf nach der Aussetzfrist meldet. Der Zusammenhang zu exakt den
-sechs produktiven Belegen muss nach Installation über die jetzt ergänzte
-ADMIN-Diagnose bestätigt werden; die Zahl allein beweist deren Typ nicht.
+sechs produktiven Belegen wurde nach Installation durch die ergänzte
+ADMIN-Diagnose bestätigt: Alle sechs waren alte Aussetzbelege und wurden am
+12.09. um 10:20:10 Uhr Berlin anhand neuer Hydrawise-Daten abgeschlossen.
 
 ## Änderungen und Grenzen
 
@@ -94,8 +95,8 @@ CMS-Vorlage wiederherstellen. Ein eventuell bereits gesendeter Start wird dadurc
 nicht rückgängig: erst Geräte-/Wasserzustand und offene Belege prüfen, erforderlichenfalls
 Mäher parken und tatsächliche Station bestätigen. Alte Versionen akzeptieren
 `START_READY` nicht als Freigabe. Der schreibende Alt-Recovery-Endpunkt bleibt
-unbenutzt. Installations- und Veröffentlichungsbelege werden nach Ausführung
-separat ergänzt; dieser Entwicklungsnachweis behauptet keinen Geräteerfolg.
+unbenutzt. Die folgenden Installations- und Veröffentlichungsbelege bestätigen
+die Softwarebereitstellung und den Belegabgleich, keine physische Abfahrt.
 
 ## Bereitstellungsstand nach der Freigabeprüfung
 
@@ -119,13 +120,29 @@ separat ergänzt; dieser Entwicklungsnachweis behauptet keinen Geräteerfolg.
   [öffentliche Auslieferung](publication.json) um 09:35:58 Uhr aller sechs
   geänderten UI-Funktionen vollständig mit dem lokalen Stand abgeglichen.
   Die Backendfreigabe wird dabei nicht vorweggenommen.
-- **Backend noch nicht installiert**: Die automatische Freigabeprüfung hat
-  `config-zip` vor Ausführung abgelehnt. Begründung: für dieses konkrete neue
-  Produktionsdeployment fehlt die gesonderte Live-Bestätigung. Keine Umgehung,
-  kein erneuter Versuch über einen anderen Zugang, keine Änderung der Schalter.
+- **Backend installiert und geprüft**: Nach der ausdrücklichen Bestätigung
+  „Ja“ wurde genau das oben genannte ZIP mit `config-zip --build-remote true`
+  installiert; der Befehl endete erfolgreich. Zuvor war derselbe Schritt wegen
+  fehlender gesonderter Bestätigung von der automatischen Freigabeprüfung
+  abgelehnt worden. Die erneute Ausführung erfolgte nach der Nutzerfreigabe.
+- [Installationsabgleich](installed-approved.json) um 10:21:49 Uhr Berlin:
+  alle 71 installierten Dateien stimmen mit dem freigegebenen Paket überein;
+  Host Running, 16 Funktionen. Alle im Prüfskript erfassten Betriebs- und
+  Schutzschalter sind unverändert. Keine Konfigurationsänderung durchgeführt.
+- [Live-Nachweis](live-verification.json): sechs offene Geräteaufträge vor
+  Installation, null danach. Die sechs alten Aussetzbelege wurden um 10:20:10
+  Uhr Berlin einzeln durch neuere Hydrawise-Daten bestätigt. Kein Löschen oder
+  pauschales Zurücksetzen des Journals. Die erneute lesende Abfrage um
+  10:24:03 Uhr bestätigt weiterhin null offene Aufträge.
+- Drei beobachtete Kontrollzyklen mit dem neuen Manifest (10:21–10:23 Uhr)
+  melden HOME/geparkt, gehaltenen Stationsnachweis, alle sieben Wasserzonen
+  frisch und inaktiv sowie eine erlaubte Freigabe nach abgelaufener Trockenfrist.
+  In diesen Zyklen wurde kein Gerätebefehl gesendet. Die eingetragene
+  Spielbelegung von 10:00 bis 13:45 Uhr bleibt wirksam.
 
-Nächste Freigabe: genau das oben genannte Paket in
-`func-ssv53platzpflege-prod-q7kbw54s` installieren; anschließend Dateien/Schalter,
-die sechs echten Journalbelege und die Steuerungszyklen erneut prüfen. Kein
-Start zu Testzwecken. Der technische Freigabeschritt ermöglicht künftige
-manuelle Bedienung; er beweist noch keine physische Abfahrt.
+Die konkrete Reparatur ist damit live. Die App wurde bereits veröffentlicht;
+nach Aktualisieren verwendet sie die neue Backendfreigabe. Eine Bestätigung
+für tatsächliche Platzbelegung bleibt beim manuellen Start gemäß vereinbarter
+Regel notwendig; aktuell ist keine Trockenwarnung begründet. Ein echter
+manueller Start samt beobachteter Abfahrt und ein kompletter Bewässerungslauf
+wurden im Rahmen dieser Einführung nicht ausgeführt oder live nachgewiesen.

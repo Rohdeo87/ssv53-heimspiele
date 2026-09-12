@@ -1,0 +1,203 @@
+{
+  "at_utc": "2026-09-12T08:24:03.838821+00:00",
+  "read_only": true,
+  "preview": {
+    "delta": null,
+    "dryRun": true,
+    "eligible": false,
+    "journal": {
+      "receipts": [
+        {
+          "confirmed_at_utc": "2026-09-10T09:47:00.002128+00:00",
+          "deadline_utc": "2026-09-10T09:44:30.055348+00:00",
+          "dispatched_at_utc": "2026-09-10T09:44:06.128605+00:00",
+          "evidence": "fresh-home-station",
+          "id": "7c122e81395c4a07881c17d89b043124",
+          "kind": "PARK",
+          "message_code": null,
+          "reserved_at_utc": "2026-09-10T09:44:00.055348+00:00",
+          "status": "CONFIRMED"
+        },
+        {
+          "confirmed_at_utc": "2026-09-10T16:57:00.006614+00:00",
+          "deadline_utc": "2026-09-10T16:56:30.317513+00:00",
+          "dispatched_at_utc": "2026-09-10T16:56:06.443686+00:00",
+          "evidence": "fresh-home-station",
+          "id": "c76f054d354244a2a76234c2b140da47",
+          "kind": "PARK",
+          "message_code": null,
+          "reserved_at_utc": "2026-09-10T16:56:00.317513+00:00",
+          "status": "CONFIRMED"
+        },
+        {
+          "confirmed_at_utc": "2026-09-10T20:10:00.004346+00:00",
+          "deadline_utc": "2026-09-10T20:09:30.004425+00:00",
+          "dispatched_at_utc": "2026-09-10T20:09:03.034415+00:00",
+          "evidence": "fresh-home-station",
+          "id": "9e519fd3fa2e48338fcbd36a371e8d39",
+          "kind": "PARK",
+          "message_code": null,
+          "reserved_at_utc": "2026-09-10T20:09:00.004425+00:00",
+          "status": "CONFIRMED"
+        },
+        {
+          "confirmed_at_utc": "2026-09-11T06:59:00.003238+00:00",
+          "deadline_utc": "2026-09-11T06:56:30.003810+00:00",
+          "dispatched_at_utc": "2026-09-11T06:56:02.682079+00:00",
+          "evidence": "fresh-home-station",
+          "id": "9df08d7038b1417c89107a52d939daa8",
+          "kind": "PARK",
+          "message_code": null,
+          "reserved_at_utc": "2026-09-11T06:56:00.003810+00:00",
+          "status": "CONFIRMED"
+        },
+        {
+          "confirmed_at_utc": "2026-09-11T07:04:00.002157+00:00",
+          "deadline_utc": "2026-09-11T07:03:29.998939+00:00",
+          "dispatched_at_utc": "2026-09-11T07:03:02.081928+00:00",
+          "evidence": "fresh-home-station",
+          "id": "e64b3ad40cbc4e93a1e0b031083331b9",
+          "kind": "PARK",
+          "message_code": null,
+          "reserved_at_utc": "2026-09-11T07:02:59.998939+00:00",
+          "status": "CONFIRMED"
+        },
+        {
+          "confirmed_at_utc": "2026-09-11T07:06:00.009900+00:00",
+          "deadline_utc": "2026-09-11T07:05:30.005174+00:00",
+          "dispatched_at_utc": "2026-09-11T07:05:02.876175+00:00",
+          "evidence": "fresh-home-station",
+          "id": "91f9f0d716464eef822ced8643fd329f",
+          "kind": "PARK",
+          "message_code": null,
+          "reserved_at_utc": "2026-09-11T07:05:00.005174+00:00",
+          "status": "CONFIRMED"
+        },
+        {
+          "confirmed_at_utc": "2026-09-11T14:21:00.003105+00:00",
+          "deadline_utc": "2026-09-11T14:20:30.004809+00:00",
+          "dispatched_at_utc": "2026-09-11T14:20:02.434114+00:00",
+          "evidence": "fresh-home-station",
+          "id": "14426544f7ad4566a7ae450f74fc98ac",
+          "kind": "PARK",
+          "message_code": null,
+          "reserved_at_utc": "2026-09-11T14:20:00.004809+00:00",
+          "status": "CONFIRMED"
+        },
+        {
+          "confirmed_at_utc": "2026-09-12T01:46:00.002293+00:00",
+          "deadline_utc": "2026-09-12T01:45:30.007432+00:00",
+          "dispatched_at_utc": "2026-09-12T01:45:02.674443+00:00",
+          "evidence": "fresh-home-station",
+          "id": "4a8fb926def445b68b8d315bea2d4069",
+          "kind": "PARK",
+          "message_code": null,
+          "reserved_at_utc": "2026-09-12T01:45:00.007432+00:00",
+          "status": "CONFIRMED"
+        },
+        {
+          "confirmed_at_utc": "2026-09-12T08:20:10.230079+00:00",
+          "deadline_utc": "2026-09-12T01:46:30.002293+00:00",
+          "dispatched_at_utc": "2026-09-12T01:46:02.194610+00:00",
+          "evidence": "fresh-next-run-after-suspension-relay-9104894",
+          "id": "5906ba047e664a079bea15234c57c7f0",
+          "kind": "SUSPEND",
+          "message_code": null,
+          "reserved_at_utc": "2026-09-12T01:46:00.002293+00:00",
+          "status": "CONFIRMED"
+        },
+        {
+          "confirmed_at_utc": "2026-09-12T08:20:10.230079+00:00",
+          "deadline_utc": "2026-09-12T01:50:30.003448+00:00",
+          "dispatched_at_utc": "2026-09-12T01:50:02.986741+00:00",
+          "evidence": "fresh-next-run-after-suspension-relay-9104906",
+          "id": "a7c918ca2a8e4970a14f8ef3cd831f3c",
+          "kind": "SUSPEND",
+          "message_code": null,
+          "reserved_at_utc": "2026-09-12T01:50:00.003448+00:00",
+          "status": "CONFIRMED"
+        },
+        {
+          "confirmed_at_utc": "2026-09-12T08:20:10.230079+00:00",
+          "deadline_utc": "2026-09-12T01:54:29.999779+00:00",
+          "dispatched_at_utc": "2026-09-12T01:54:02.281952+00:00",
+          "evidence": "fresh-next-run-after-suspension-relay-9104909",
+          "id": "2303520e157c4bf29a6cd6a5a9a5512f",
+          "kind": "SUSPEND",
+          "message_code": null,
+          "reserved_at_utc": "2026-09-12T01:53:59.999779+00:00",
+          "status": "CONFIRMED"
+        },
+        {
+          "confirmed_at_utc": "2026-09-12T08:20:10.230079+00:00",
+          "deadline_utc": "2026-09-12T01:58:29.999233+00:00",
+          "dispatched_at_utc": "2026-09-12T01:58:02.476667+00:00",
+          "evidence": "fresh-next-run-after-suspension-relay-9104911",
+          "id": "cb2b8622fd2b4afb9deeb2540c8a6188",
+          "kind": "SUSPEND",
+          "message_code": null,
+          "reserved_at_utc": "2026-09-12T01:57:59.999233+00:00",
+          "status": "CONFIRMED"
+        },
+        {
+          "confirmed_at_utc": "2026-09-12T08:20:10.230079+00:00",
+          "deadline_utc": "2026-09-12T02:03:30.006436+00:00",
+          "dispatched_at_utc": "2026-09-12T02:03:02.495828+00:00",
+          "evidence": "fresh-next-run-after-suspension-relay-9104913",
+          "id": "ab10e0ad6629472c9c6c20aae818ddd9",
+          "kind": "SUSPEND",
+          "message_code": null,
+          "reserved_at_utc": "2026-09-12T02:03:00.006436+00:00",
+          "status": "CONFIRMED"
+        },
+        {
+          "confirmed_at_utc": "2026-09-12T08:20:10.230079+00:00",
+          "deadline_utc": "2026-09-12T02:07:30.007581+00:00",
+          "dispatched_at_utc": "2026-09-12T02:07:02.584259+00:00",
+          "evidence": "fresh-next-run-after-suspension-relay-9104920",
+          "id": "7d812c94ca2f4690921fd283ee980c6c",
+          "kind": "SUSPEND",
+          "message_code": null,
+          "reserved_at_utc": "2026-09-12T02:07:00.007581+00:00",
+          "status": "CONFIRMED"
+        },
+        {
+          "confirmed_at_utc": "2026-09-12T02:12:00.004884+00:00",
+          "deadline_utc": "2026-09-12T02:11:30.002638+00:00",
+          "dispatched_at_utc": "2026-09-12T02:11:02.690199+00:00",
+          "evidence": "relay-9104921-scheduled-after-suspension",
+          "id": "665e24ead1964433ac339aa931dab7bc",
+          "kind": "SUSPEND",
+          "message_code": null,
+          "reserved_at_utc": "2026-09-12T02:11:00.002638+00:00",
+          "status": "CONFIRMED"
+        },
+        {
+          "confirmed_at_utc": "2026-09-12T07:51:00.003275+00:00",
+          "deadline_utc": "2026-09-12T07:50:30.011308+00:00",
+          "dispatched_at_utc": "2026-09-12T07:50:02.638247+00:00",
+          "evidence": "fresh-home-station",
+          "id": "a8d821b86a944ee5aa6e91da7db45b89",
+          "kind": "PARK",
+          "message_code": null,
+          "reserved_at_utc": "2026-09-12T07:50:00.011308+00:00",
+          "status": "CONFIRMED"
+        }
+      ],
+      "unresolvedDeviceSendCount": 0
+    },
+    "manualSessionStatus": "ENDED",
+    "operatorRequestStatus": "COMPLETED",
+    "pendingFingerprint": null,
+    "proof": null,
+    "proofToken": null,
+    "reasons": [
+      "START_PENDING_MISSING_OR_INVALID",
+      "START_PRE_SEND_PROOF_MISSING",
+      "UNKNOWN_START_HOLD_MISSING",
+      "AUTOMATION_RESTART_ALREADY_ALLOWED",
+      "UNKNOWN_START_DECISION_MISSING"
+    ],
+    "stateRevision": 46043
+  }
+}
