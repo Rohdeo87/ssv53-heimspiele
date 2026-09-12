@@ -69,3 +69,7 @@ Rückfall umfasst mehr als das Ausschalten des Schalters: laufende bzw. möglich
 | Live | Nur die separate konkrete Fehleranzeige veröffentlicht; Stationsbestätigung und Cleanup nicht neu aktiviert |
 
 Der nächste Einführungsschritt ist ein Abgleich des geprüften Installationspakets mit der produktiven Konfiguration, danach ein überwachter Pilot mit bestätigtem Dock, beobachtetem Wasserstart/-ende, STOP-Erhalt und kontrollierter Abbruchsituation. Ein erfolgreicher Build allein ist keine Livefreigabe.
+
+## Artefakt
+
+[artifact.json](artifact.json) enthält den absoluten lokalen Dateipfad, SHA-256 und Quellcommit `5c9feffc5837a7663d7771cbd6e53f3b7797f8d9`. Die ZIP-Datei ist ein **Quellpaket für den Azure-Remote-Build**, kein Nachweis einer installierten oder aktivierten Steuerung. Das ZIP liegt lokal und wird nicht als Binärdatei in Git versioniert. Sein SHA-256 lautet `e4923cd32ad41991d7e6380a7b7232b4c4096eea4cfd96b9005fc655900fc76b`. Die beiden neuen Freigabeoptionen bleiben standardmäßig aus. Der produktive Manifest-Hash aus der Abschlussabfrage gehört weiterhin zum vorherigen Softwarestand.
