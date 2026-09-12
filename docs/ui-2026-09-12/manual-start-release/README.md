@@ -58,7 +58,9 @@ HTTP-Bestätigung allein ersetzt weiterhin keine spätere Zustandsbeobachtung.
 ## Tests und Review
 
 - Vollständige Python-Suite: 1.551 Tests und 482 Teiltests grün; anschließend
-  zwei weitere gezielte Fälle ergänzt, alle 27 neuen Fälle grün.
+  drei weitere gezielte Fälle ergänzt, alle 28 neuen Fälle grün. Der letzte
+  Integrationstest durchläuft den Abgleich aller sieben alten Belege, dessen
+  Persistenz, die manuelle Annahme und den einmaligen simulierten Start.
 - Fälle: altes Dock-Ereignis ohne Wasser, manueller Start, Neustart vor Versand,
   kein Doppelstart, neue Parkanforderung, Datenfehler, unbekanntes/laufendes
   Wasser, Störung/Abfahrt, Fristablauf unmittelbar am Versandcheck,
@@ -94,3 +96,36 @@ Mäher parken und tatsächliche Station bestätigen. Alte Versionen akzeptieren
 `START_READY` nicht als Freigabe. Der schreibende Alt-Recovery-Endpunkt bleibt
 unbenutzt. Installations- und Veröffentlichungsbelege werden nach Ausführung
 separat ergänzt; dieser Entwicklungsnachweis behauptet keinen Geräteerfolg.
+
+## Bereitstellungsstand nach der Freigabeprüfung
+
+- Implementierung: Commit `fecb803451efadaddbb701d01a228f8e41f3659b`.
+- [PR #80](https://github.com/Rohdeo87/ssv53-heimspiele/pull/80), aufbauend auf
+  dem bereits installierten vorherigen Reparaturbranch. Keine automatische Zusammenführung.
+- [CI des exakten Implementierungscommits](https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/34680873647)
+  erfolgreich. Spätere Änderungen betreffen nur ergänzende Tests/Belege.
+- [Paketnachweis](package.json): ZIP `dist/manual-start-release.zip`, SHA-256
+  `f16fd90869b4a79564dc6ab74ee5607554992eba35e592a5a660bb9eebb8a627`,
+  Manifest `cc36ebb779787ee97d0c499da61410cf9810505fb384400e1379c3262760a89c`.
+  71 Einträge; genau sechs geänderte Quelldateien plus Manifest;
+  isolierter Import mit 16 Funktionen und verbotenem Netzwerk bestanden.
+- [Unmittelbarer Versionsabgleich](installed-before.json): alle 71 Dateien
+  des bestehenden Livepakets korrekt, Host Running, Schutzschalter unverändert.
+- [Vorprüfung](pre-deployment/recent-cycles.json): um 09:28 Uhr weiterhin HOME,
+  inaktive frische Wasserzonen, abgeschlossene Trockenfrist und gehaltener
+  Parknachweis. Zu diesem Zeitpunkt ist das verbleibende automatische Mähfenster
+  bereits zu kurz; die Belegung darf nicht pauschal als frei behandelt werden.
+- **Appack veröffentlicht**: CMS meldet Speicherung 09:33 Uhr;
+  [öffentliche Auslieferung](publication.json) um 09:35:58 Uhr aller sechs
+  geänderten UI-Funktionen vollständig mit dem lokalen Stand abgeglichen.
+  Die Backendfreigabe wird dabei nicht vorweggenommen.
+- **Backend noch nicht installiert**: Die automatische Freigabeprüfung hat
+  `config-zip` vor Ausführung abgelehnt. Begründung: für dieses konkrete neue
+  Produktionsdeployment fehlt die gesonderte Live-Bestätigung. Keine Umgehung,
+  kein erneuter Versuch über einen anderen Zugang, keine Änderung der Schalter.
+
+Nächste Freigabe: genau das oben genannte Paket in
+`func-ssv53platzpflege-prod-q7kbw54s` installieren; anschließend Dateien/Schalter,
+die sechs echten Journalbelege und die Steuerungszyklen erneut prüfen. Kein
+Start zu Testzwecken. Der technische Freigabeschritt ermöglicht künftige
+manuelle Bedienung; er beweist noch keine physische Abfahrt.

@@ -21,7 +21,8 @@ ENV = {**BASE_ENV, hold.FLAG: "true"}
 
 
 def held():
-    state = replace(ready(), park_confirmed_observations=2)
+    state = replace(ready(), park_confirmed_observations=2,
+                    last_mower_activity="PARKED_IN_CS", last_mower_state="IN_OPERATION")
     data = details()
     data["mower"].update(mode="HOME", activity="PARKED_IN_CS")
     state, _ = hold.observe(state, data["mower"], now_utc=NOW, event_fresh=True)
@@ -179,6 +180,23 @@ def test_seven_suspensions_are_resolved_across_plan_ids_with_positive_schedule_p
     assert not unresolved_device_sends(resolved)
     assert all("after-suspension" in row["evidence"] for row in load_device_send_journal(resolved))
     assert not unresolved_device_sends(AutomationState.from_mapping(resolved.to_dict()))
+
+
+def test_full_cycle_persists_all_old_receipts_then_manual_start_uses_held_station():
+    state, data, at = held()
+    state = replace(state, irrigation_plan_id="new-plan",
+                    device_send_journal_json=json.dumps([receipt(r) for r in RELAYS]))
+    for zone in data["hydrawise"]["zone_observations"]:
+        zone.update(valid=True, scheduled=True, scheduled_start_utc=(at+timedelta(days=1)).isoformat())
+    assert not manual_context(state, data, ENV, at)[0]["canStart"]
+    output, reconciled, calls = tick(state, data, at+timedelta(seconds=1))
+    assert not calls
+    assert not unresolved_device_sends(reconciled)
+    assert len(output.details["device_write_reconciliation"]["resolved"]) == 7
+    at += timedelta(seconds=2)
+    requested = admit(reconciled, data, at)
+    output, _, calls = tick(requested, data, at+timedelta(seconds=60))
+    assert calls == ["START"], output.decision_code
 
 
 @pytest.mark.parametrize("case", ["unknown_send", "other_kind", "missing_zone", "missing_time", "early_run", "invalid_zone", "stale", "running", "bad_intent"])
