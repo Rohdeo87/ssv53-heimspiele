@@ -110,6 +110,7 @@ class AutomationState:
     irrigation_zone_clear_observed_utc: str | None = None
     irrigation_cancelled_without_run_utc: str | None = None
     irrigation_park_hold_json: str | None = None
+    irrigation_onsite_dock_proof_json: str | None = None
     last_command_fingerprint: str | None = None
     last_command_utc: str | None = None
     maintenance_mode: bool = False
@@ -206,6 +207,7 @@ class AutomationState:
             "device_send_journal_json",
             "manual_control_receipts_json",
             "irrigation_park_hold_json",
+            "irrigation_onsite_dock_proof_json",
         ):
             raw = getattr(self, field_name)
             if raw is None:
@@ -509,6 +511,9 @@ class AutomationState:
             ),
             irrigation_park_hold_json=_normalize_optional_text(
                 values.get("irrigation_park_hold_json")
+            ),
+            irrigation_onsite_dock_proof_json=_normalize_optional_text(
+                values.get("irrigation_onsite_dock_proof_json")
             ),
             operator_request_session_id=_normalize_optional_text(
                 values.get("operator_request_session_id")
@@ -852,6 +857,37 @@ class AutomationState:
             # mehr im Besitz der Automatik, muss die Bestätigung neu beginnen.
             park_confirmed = None
             park_observations = 0
+        onsite_proof_after_cycle = self.irrigation_onsite_dock_proof_json
+        if not success:
+            retained: dict[str, Any] = {}
+            try:
+                prior_proof = json.loads(self.irrigation_onsite_dock_proof_json or "null")
+                if (
+                    isinstance(prior_proof, dict)
+                    and prior_proof.get("version") == 1
+                    and prior_proof.get("status") in {"BOUND", "INVALID"}
+                ):
+                    for key in (
+                        "request_id", "action", "mower_id", "plan_id",
+                        "plan_fingerprint", "program_not_after_utc",
+                        "override_action", "stop_relay_id",
+                    ):
+                        retained[key] = prior_proof.get(key)
+                    if (
+                        prior_proof.get("status") == "BOUND"
+                        and self.irrigation_phase in {"START_RESERVED", "RUNNING", "STOPPING"}
+                        and type(self.irrigation_current_relay_id) is int
+                    ):
+                        retained["stop_relay_id"] = self.irrigation_current_relay_id
+            except (TypeError, ValueError):
+                pass
+            onsite_proof_after_cycle = json.dumps({
+                "version": 1,
+                "status": "INVALID",
+                "invalidated_at_utc": started.isoformat(),
+                "reason": "INPUT_UNAVAILABLE",
+                **retained,
+            }, sort_keys=True, separators=(",", ":"))
         return replace(
             self,
             revision=self.revision + 1,
@@ -860,6 +896,7 @@ class AutomationState:
                 "version": 1, "status": "INVALID", "not_before_utc": started.isoformat(),
                 "reason": "INPUT_UNAVAILABLE",
             }, sort_keys=True, separators=(",", ":"))),
+            irrigation_onsite_dock_proof_json=onsite_proof_after_cycle,
             last_success_utc=(
                 started.isoformat() if success else self.last_success_utc
             ),
@@ -923,8 +960,22 @@ class AutomationState:
             "last_command_utc": sent.isoformat(),
         }
         if normalized_action == "PARK":
+            retained_onsite_proof = None
+            if self.irrigation_phase in {"START_RESERVED", "RUNNING", "STOPPING"}:
+                try:
+                    proof = json.loads(self.irrigation_onsite_dock_proof_json or "null")
+                    if (
+                        isinstance(proof, dict)
+                        and proof.get("version") == 1
+                        and proof.get("status") == "INVALID"
+                        and type(proof.get("stop_relay_id")) is int
+                    ):
+                        retained_onsite_proof = self.irrigation_onsite_dock_proof_json
+                except (TypeError, ValueError):
+                    pass
             changes.update(
                 irrigation_park_hold_json=None,
+                irrigation_onsite_dock_proof_json=retained_onsite_proof,
                 parked_by_automation=True,
                 automation_park_source=normalized_source,
                 automation_restart_allowed=bool(restart_allowed),
@@ -946,6 +997,7 @@ class AutomationState:
             changes.update(
                 parked_by_automation=False,
                 irrigation_park_hold_json=None,
+                irrigation_onsite_dock_proof_json=None,
                 automation_park_source=None,
                 automation_restart_allowed=False,
                 last_start_command_utc=sent.isoformat(),
@@ -979,6 +1031,7 @@ class AutomationState:
             self,
             revision=self.revision + 1,
             irrigation_park_hold_json=None,
+            irrigation_onsite_dock_proof_json=None,
             parked_by_automation=False,
             automation_park_source=None,
             automation_restart_allowed=False,

@@ -1282,6 +1282,16 @@ def _manual_module():
         return None
 
 
+def _onsite_module():
+    # Read-only and mower-only distributions deliberately omit water dispatch.
+    try:
+        return importlib.import_module("mower.onsite_dock_proof")
+    except ModuleNotFoundError as exc:
+        if exc.name != "mower.onsite_dock_proof":
+            raise
+        return None
+
+
 def _manual_status(state, details, environment, now_utc, *, state_available=True, sources_available=True):
     disabled = {"enabled": False, "canStart": False, "canPark": False, "canResume": False}
     if not state_available or not RuntimeSettings.from_mapping(environment).enable_manual_sessions:
@@ -1498,6 +1508,19 @@ def live_status(environment: Mapping[str, str], now_utc: datetime, *,
     )
     manual_control = _manual_status(state, details, environment, now_utc,
                                     state_available=state_available, sources_available=controls_available)
+    onsite_dock_proof = _onsite_module()
+    irrigation_dock_confirmation = (
+        onsite_dock_proof.context(state, mower, environment, now_utc)
+        if onsite_dock_proof is not None and state_available and controls_available
+        else {
+            "enabled": onsite_dock_proof is not None and onsite_dock_proof.enabled(environment),
+            "required": False,
+            "canConfirm": False,
+            "contextToken": None,
+            "expiresInSeconds": onsite_dock_proof.ADMISSION_SECONDS if onsite_dock_proof else None,
+            "reason": "INPUTS_UNAVAILABLE" if onsite_dock_proof else "COMPONENT_NOT_INSTALLED",
+        }
+    )
     action_capabilities["MANUAL_CONTROL"] = {
         "available": manual_control.get("enabled") is True and any(manual_control.get(key) for key in ("canStart", "canPark", "canResume")),
         "reason": "AVAILABLE" if manual_control.get("enabled") else "MANUAL_CONTROL_LOCKED",
@@ -1634,6 +1657,7 @@ def live_status(environment: Mapping[str, str], now_utc: datetime, *,
         "actionCapabilities": action_capabilities,
         "operatorCommands": operator_commands,
         "manualControl": manual_control,
+        "irrigationDockConfirmation": irrigation_dock_confirmation,
         "dataQuality": data_quality,
         "overall": {
             "code": state.last_decision_code if controls_available else data_quality["code"],
@@ -1835,7 +1859,23 @@ def request_action(
         if any(value is not None for value in (zone, run_seconds, cutting_height_mm, irrigation_schedule, winter_training_enabled, training_revision)):
             raise PlatzwartError("MANUAL_CONFIRMATION_INVALID", "Bitte die Bedienaktion neu öffnen.")
         return _request_manual_action(environment, now_utc, request_id, manual_control, state_store_factory)
-    if manual_control is not None:
+    onsite_dock_proof = _onsite_module()
+    if (
+        normalized in {"START_IRRIGATION", "START_IRRIGATION_ZONE"}
+        and str(environment.get("IRRIGATION_ONSITE_DOCK_CONFIRMATION_ENABLED", "false")).strip().lower() == "true"
+        and onsite_dock_proof is None
+    ):
+        raise PlatzwartError(
+            "ONSITE_DOCK_COMPONENT_UNAVAILABLE",
+            "Die Stationsbestätigung ist noch nicht verfügbar. Bitte den Platzwart informieren.",
+            409,
+        )
+    onsite_payload_allowed = (
+        normalized in {"START_IRRIGATION", "START_IRRIGATION_ZONE"}
+        and onsite_dock_proof is not None
+        and onsite_dock_proof.enabled(environment)
+    )
+    if manual_control is not None and not onsite_payload_allowed:
         raise PlatzwartError("MANUAL_CONFIRMATION_INVALID", "Die manuelle Bestätigung gehört zu einer anderen Bedienaktion.")
     if normalized == "SET_WINTER_TRAINING":
         if type(winter_training_enabled) is not bool:
@@ -2009,6 +2049,52 @@ def request_action(
             "Ein Beregnungsablauf oder Sicherheitsnachlauf ist bereits aktiv.",
             409,
         )
+    onsite_proof_json = None
+    if normalized in {"START_IRRIGATION", "START_IRRIGATION_ZONE"} and onsite_dock_proof is not None and onsite_dock_proof.enabled(environment):
+        try:
+            read = run_read_only_cycle(
+                now_utc=now_utc,
+                settings=settings,
+                environment=environment,
+                past_due=False,
+                source="platzwart-onsite-dock-admission",
+                persist_observations=False,
+            )
+            mower = dict(read.details.get("mower") or {})
+            dock_context = onsite_dock_proof.context(original, mower, environment, now_utc)
+        except Exception as exc:
+            raise PlatzwartError(
+                "ONSITE_DOCK_INPUTS_UNAVAILABLE",
+                "Die aktuelle Mähermeldung konnte nicht sicher geprüft werden. Bitte aktualisieren.",
+                409,
+            ) from exc
+        if dock_context["required"]:
+            if type(client_contract_version) is not int or client_contract_version != 4:
+                raise PlatzwartError(
+                    "CLIENT_UPDATE_REQUIRED",
+                    "Bitte die Platzpflegeseite neu öffnen und die Station dort bestätigen.",
+                    409,
+                )
+            try:
+                onsite_proof_json = onsite_dock_proof.admit(
+                    original,
+                    mower,
+                    environment,
+                    now_utc,
+                    request_id=request_id,
+                    action=normalized,
+                    zone=zone,
+                    run_seconds=run_seconds,
+                    payload=manual_control,
+                )
+            except onsite_dock_proof.OnsiteDockProofError as exc:
+                raise PlatzwartError(exc.code, str(exc), 409) from exc
+        elif manual_control is not None:
+            raise PlatzwartError(
+                "ONSITE_DOCK_CONFIRMATION_NOT_APPLICABLE",
+                "Die Mähermeldung passt nicht mehr zur Stationsbestätigung. Bitte aktualisieren.",
+                409,
+            )
     if normalized in SCHEDULE_ACTIONS and original.irrigation_phase is not None:
         raise PlatzwartError(
             "IRRIGATION_SEQUENCE_ACTIVE",
@@ -2041,6 +2127,15 @@ def request_action(
             normalized_override_key or None
         ),
         operator_request_irrigation_schedule_json=schedule_json,
+        # A new operator request revokes consent in the next controller cycle,
+        # but must not erase the exact running zone's protective-stop binding.
+        irrigation_onsite_dock_proof_json=(
+            onsite_proof_json
+            if onsite_proof_json is not None
+            else original.irrigation_onsite_dock_proof_json
+            if original.irrigation_phase in {"START_RESERVED", "RUNNING", "STOPPING"}
+            else None
+        ),
     )
     try:
         store.save(updated, expected_revision=original.revision)

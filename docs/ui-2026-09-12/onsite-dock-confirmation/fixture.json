@@ -1,0 +1,66 @@
+{
+  "generatedAt": "2026-09-12T12:35:00Z",
+  "controlsAvailable": true,
+  "deviceControlsAvailable": true,
+  "overall": {
+    "code": "MANUAL_OR_ERROR_HOLD"
+  },
+  "operationMode": "AUTOMATIC",
+  "mower": {
+    "activity": "NOT_APPLICABLE",
+    "state": "STOPPED",
+    "connected": true,
+    "telemetryFresh": true,
+    "statusAgeSeconds": 12,
+    "errorCode": 0,
+    "batteryPercent": 73,
+    "mode": "HOME",
+    "errorActive": false
+  },
+  "automation": {},
+  "irrigation": {
+    "safety": {
+      "available": true,
+      "fresh": true,
+      "clear_now": true,
+      "active_zone_count": 0,
+      "imminent_zone_count": 0
+    }
+  },
+  "irrigationSchedule": {
+    "available": true,
+    "nextRun": {
+      "start": "2026-09-10T02:00:00Z"
+    }
+  },
+  "occupancy": {
+    "current": null,
+    "safeWindows": [
+      {
+        "start": "2026-09-09T10:00:00Z",
+        "command_deadline": "2026-09-09T14:00:00Z",
+        "minimum_mowing_minutes": 30
+      }
+    ]
+  },
+  "coordination": {
+    "blockers": [
+      {
+        "code": "MANUAL_STOP"
+      }
+    ]
+  },
+  "irrigationDockConfirmation": {
+    "enabled": true,
+    "required": true,
+    "canConfirm": true,
+    "contextToken": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "manualControl": {
+    "enabled": true,
+    "status": "AUTOMATIC",
+    "canPark": false,
+    "canStart": false,
+    "canResume": false
+  }
+}

@@ -19,7 +19,7 @@ Das ist ein Nachweis der gemeldeten Zustände und laufenden Softwarekennung. Es 
 ## Ursachen
 
 1. `AutomationState.record_cycle` verwirft beim Übergang nach `STOPPED/NOT_APPLICABLE` die Parkbestätigung. `irrigation_park_hold` akzeptiert diese Kombination ebenfalls nicht. `HOME` beschreibt den Parkmodus und ersetzt keine Stationsposition.
-2. Die Oberfläche schließt sämtliche Wasserstarts bei STOP aus. Ihre bisherige Aufforderung, den Mäher zuerst freizugeben, war daher zu pauschal und wird in der Entwicklung entfernt.
+2. Die Oberfläche schließt sämtliche Wasserstarts bei STOP aus. Ihre bisherige Aufforderung, den Mäher zuerst freizugeben, war daher zu pauschal. Die pauschale Aufforderung wurde entfernt und am 12.09.2026 um 14:26 Uhr in Appack veröffentlicht.
 3. `COMPLETE_HOLD` blockiert einen weiteren manuellen Bewässerungsauftrag. Dieser Abschlusszustand wird bislang unter anderem beim späteren Mähstart oder beim bestätigten nächsten automatischen Lauf entfernt. Ein physischer STOP kann den Mähstart verhindern und dadurch die unnötige Kopplung sichtbar machen.
 4. Die zentrale Startprüfung ist nicht mit einem Start direkt am Gerät gleichzusetzen. Letzterer läuft nicht durch unseren Startendpunkt.
 
@@ -32,9 +32,9 @@ Das ist ein Nachweis der gemeldeten Zustände und laufenden Softwarekennung. Es 
 - Die Erklärung für fehlende Wasserstartbuttons lautet in der vorbereiteten Oberfläche: „Die Station ist noch nicht bestätigt. Der Mäher darf gestoppt bleiben.“ Bei nachweislich laufender Bewässerung wird diese Start-Erklärung nicht angezeigt.
 - Reproduzierbares Leseskript: `scripts/read_stopped_dock_evidence.py`; es fragt ausschließlich vorhandene Azure-Protokolle ab.
 
-**Nicht umgesetzt oder aktiviert:** neue Freigabe aus STOP ohne Stationsnachweis, Vor-Ort-Bestätigung, automatische Wasserabschaltung bei externer Abfahrt. Keine Änderungen an Produktionskonfiguration, Gerätezeitplänen oder Geräten. Die Wasserstartbuttons werden durch diese Änderung allein noch nicht freigegeben. Die vorbereitete Oberfläche ist nicht veröffentlicht.
+**Stand nach Folgeauftrag:** Die korrigierte Erklärung ist mit der [konkreten Mäherstörung](../concrete-mower-error/README.md) veröffentlicht. Der Nutzer hat die Vor-Ort-Bestätigung ausdrücklich genehmigt. Ihre getrennte Entwicklung und Nachweise stehen unter [Stationsbestätigung](../onsite-dock-confirmation/README.md). Keine neue Backendoption wurde aktiviert, keine Gerätezeitpläne geändert und kein Gerätebefehl gesendet. Cleanup allein gibt die Wasserstartbuttons bei unbewiesenem Dock nicht frei.
 
-## Zielverhalten und noch erforderliche Entscheidung
+## Genehmigtes Zielverhalten
 
 | Situation | Bewässerung | Mäherstart |
 |---|---|---|
@@ -44,17 +44,17 @@ Das ist ein Nachweis der gemeldeten Zustände und laufenden Softwarekennung. Es 
 | Wasser läuft | Kein zusätzlicher Durchlauf; Beenden bleibt erreichbar | Zentrale Steuerung wartet auf bestätigtes Ende; Konfliktentscheidung bleibt erhalten |
 | Wasserstatus unbekannt | Keine automatische Freigabe aus fehlenden Daten | Zentrale Steuerung startet nicht |
 
-Dem Nutzer wurde die gezielte Wahl vorgelegt, ob bei unklarer Stationsmeldung eine App-Bestätigung „Ich sehe den Mäher in der Station“ angeboten werden soll. Die Antwort steht aus. Diese zusätzliche Freigabe wurde nicht durch Zeitablauf angenommen.
+Der Nutzer hat die App-Bestätigung „Ich sehe den Mäher in der Station“ mit „Ja.prüfe ob du den konkreten Fehler anzeigen kannst“ ausdrücklich genehmigt. Die nachfolgende tatsächliche ERROR-Meldung mit Code 9 ist davon getrennt und kann durch diese Bestätigung nicht übergangen werden.
 
-Bei Zustimmung muss die Bestätigung serverseitig berechtigt, protokolliert, kurzlebig und an genau Mäher, Zustandsmeldung und Bewässerungsauftrag gebunden werden. Sie darf die STOP-Sperre nicht löschen und keine allgemeine Mähfreigabe erzeugen. Abfahrt, Startauftrag, widersprüchliche/fehlende Rückmeldungen und ungeklärte Sendebelege widerrufen sie. Ein Neustart darf keine zweite Bewässerung auslösen. Keine alleinige Frontend-Freigabe.
+Die Bestätigung muss serverseitig berechtigt, protokolliert, kurzlebig und an genau Mäher, Zustandsmeldung und Bewässerungsauftrag gebunden werden. Sie darf die STOP-Sperre nicht löschen und keine allgemeine Mähfreigabe erzeugen. Abfahrt, Startauftrag, widersprüchliche/fehlende Rückmeldungen und ungeklärte Sendebelege widerrufen sie. Ein Neustart darf keine zweite Bewässerung auslösen. Keine alleinige Frontend-Freigabe.
 
 Die alternative Fortführung eines bereits vorhandenen automatischen Stationsnachweises braucht einen lückenlos geprüften Übergang. Der aktuell bereits verworfene Nachweis darf nicht nachträglich aus `HOME` rekonstruiert werden.
 
 ## Start direkt am Gerät oder über Husqvarna
 
-Der [Husqvarna-Support](https://www.husqvarna.com/uk/support/husqvarna-self-service/automower-won-t-start-or-keeps-stopping-ka-01503/) beschreibt den physischen STOP als vor Ort aufzuheben; Automower Connect kann diesen STOP nicht selbst aufheben (abgerufen am 12.09.2026). Die lokale Hersteller-API-Referenz nennt `HOME` als Parkmodus und `NOT_APPLICABLE` ohne Stationsaussage.
+Der allgemeine [Husqvarna-Support](https://www.husqvarna.com/uk/support/husqvarna-self-service/automower-won-t-start-or-keeps-stopping-ka-01503/) beschreibt STOP als vor Ort zu prüfen. Daraus wird hier keine pauschale Aussage über sämtliche Fernstartmöglichkeiten des 580 EPOS abgeleitet: Dessen [Herstellerseite](https://www.husqvarna.com/us/robotic-lawn-mowers/automower-580epos/) nennt einen erweiterten Fernstart bei vorübergehenden Fehlern. Modell- und fehlerabhängige Startwege bleiben separat zu prüfen. Unsere STOP-Sperre bleibt erhalten. Die API-Referenz nennt `HOME` als Parkmodus und `NOT_APPLICABLE` ohne Stationsaussage.
 
-`mower/start_dispatch_guard.py` prüft zentrale Starts einschließlich Wasserzustand nochmals an der Sendegrenze. Einen Start am Gerät oder unmittelbar über eine Herstelleranbindung können wir nicht vorab abfangen. Im untersuchten Code ist keine allgemeine sofortige Wasserabschaltung allein bei beobachteter externer Abfahrt vorhanden; eine laufende Zone kann andernfalls ihre Dauer beenden, während spätere Zonenstarts gesperrt werden. Das ist ein offener Punkt, keine bereits geschlossene Absicherung.
+`mower/start_dispatch_guard.py` prüft zentrale Starts einschließlich Wasserzustand nochmals an der Sendegrenze. Einen Start am Gerät oder unmittelbar über eine Herstelleranbindung können wir nicht vorab abfangen. Im zuvor produktiven Code war keine allgemeine sofortige Wasserabschaltung allein bei beobachteter externer Abfahrt vorhanden; eine laufende Zone kann andernfalls ihre Dauer beenden, während spätere Zonenstarts gesperrt werden. Die neue, standardmäßig ausgeschaltete Stationsbestätigung enthält dafür inzwischen einen geprüften Schutzstopppfad; siehe den oben verlinkten Folgebericht. Dieser ist noch nicht live erprobt.
 
 Vor einer erweiterten Bewässerungsfreigabe sind daher nötig: vorhandene Startwege eindeutig abgrenzen, bei beobachteter Abfahrt laufende Relays über das persistente Befehlsjournal stoppen, tatsächliches Ende bestätigen, weitere Zonen sperren, Trockenereignis erhalten und Fehler eskalieren. Mit Cloud-Abfrageverzögerungen bleibt dies eine nachträgliche Reaktion, keine garantierte Verriegelung vor jeder physischen Abfahrt. Bis diese Grenze entschieden und erprobt ist, muss vor dem Start am Gerät die Bewässerung beendet sein.
 
@@ -68,9 +68,9 @@ Vor einer erweiterten Bewässerungsfreigabe sind daher nötig: vorhandene Startw
 
 ## Einführung und Rückfall
 
-1. Entscheidung zur Vor-Ort-Bestätigung und externen Startgrenze klären; danach Stationsfreigabe und Abfahrtsreaktion implementieren und gezielt prüfen.
+1. Die Vor-Ort-Bestätigung ist genehmigt. Stationsfreigabe und Abfahrtsreaktion gemeinsam implementieren und gezielt prüfen; die Cloud-Verzögerung bei externen Starts bleibt eine Grenze.
 2. Gemeinsames Installationsartefakt und Vergleich der aktuellen Produktionskonfiguration erstellen. Die neue Cleanup-Option bleibt bis dahin aus.
 3. Nach Freigabe kontrolliert beobachten: abgeschlossener Lauf wird einmalig entfernt, STOP bleibt bestehen, Start bei laufendem Wasser bleibt gesperrt, kein doppelter Bewässerungslauf. Physischer Stationsnachweis und Wasserende müssen im überwachten Versuch belegt werden.
 4. Rückfall: neue Optionen deaktivieren und vorheriges Artefakt bereitstellen. Bereits bestätigte Abschlussbereinigungen nicht blind zurückschreiben. Laufende/angenommene Gerätebefehle, native Zeitpläne und Trockenzeiten vor jedem Rückfall separat abgleichen; ein Code-Rollback hebt sie nicht auf.
 
-Status: analysiert und Teilkorrektur implementiert/getestet; **kein neuer Parallelbetrieb und kein Live-Nachweis dieser Änderung**.
+Status dieses ursprünglichen Cleanup-Berichts: analysiert und Korrektur implementiert/getestet; nachfolgende Stationsbestätigung separat dokumentiert; **kein neuer Parallelbetrieb und kein Live-Nachweis dieser Änderung**.

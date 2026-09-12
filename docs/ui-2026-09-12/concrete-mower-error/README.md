@@ -17,3 +17,5 @@ Validierung: **223 Appack-Tests bestanden**, einschließlich Code 9/10, unbekann
 Die aktive CMS-Vorlage wurde vor dem Schreiben exakt gegen den vorherigen veröffentlichten Stand abgeglichen und gesichert. Veröffentlichung um **14:26 Uhr Berlin** mit anschließendem Vergleich der betroffenen ausgelieferten Funktionen: [publication.json](publication.json). Ausgelieferter LF-Template-Hash: `c4d50cda346fbfb10aa08543de57dbba066420cc3ebeb2b63b6d1c72bac7d35a`.
 
 Dies ist eine Anzeigekorrektur. Kein Mäherstart, Park- oder Wasserbefehl wurde gesendet; keine Backendsoftware oder Schutzkonfiguration wurde produktiv verändert. Die Vor-Ort-Stationsbestätigung ist separat in Entwicklung und darf diesen aktiven Fehler nicht übergehen.
+
+Abschlussabfrage: [final-observations.json](final-observations.json) zeigt um **15:03 Uhr Berlin** bereits `MOWING`, `IN_OPERATION`, Fehlercode 0 und alle sieben Bewässerungszonen aus. Die Gerätefehleranzeige soll dann verschwinden. Das ist eine Beobachtung der bisherigen produktiven Software mit unverändertem Manifest, kein Live-Nachweis der zusätzlich entwickelten Stationsbestätigung.

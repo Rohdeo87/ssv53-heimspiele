@@ -1,0 +1,46 @@
+- text: SIMULATION · Beispielwerte · Netzwerk gesperrt · keine Gerätebefehle
+- link "Verbindungsausfall zeigen":
+  - /url: "#offline"
+- main:
+  - generic: Aktualisiert um 14:35 Uhr
+  - button "Aktualisieren":
+    - generic: Aktualisieren
+  - button "Zurück":
+    - generic: Zurück
+  - heading "Bewässerung" [level=2]:
+    - generic: Bewässerung
+  - article:
+    - generic: Bewässerung
+    - heading "Aus" [level=2]
+    - generic: Zurzeit wird nicht bewässert.
+    - paragraph: Die Zeitgrenzen 03:30–08:00 Uhr gelten für die Automatik. Manuell ist Bewässerung auch zu anderen Zeiten möglich.
+    - generic: Nächster Start
+    - generic: Noch offen
+  - button "Bewässerungsplan anpassen":
+    - generic: Zeitplan
+  - button "Einzelne Zonen":
+    - strong: Einzelne Zonen
+  - button "Alle Zonen starten":
+    - generic: Alle Zonen starten
+  - button "Bewässerungsstatistiken öffnen":
+    - generic: Statistiken
+  - navigation "Platzpflegebereiche":
+    - button "Übersicht":
+      - strong: Übersicht
+    - button "Heute":
+      - strong: Heute
+    - button "Sonstiges":
+      - strong: Sonstiges
+- dialog:
+  - generic: Bitte bestätigen
+  - heading "Alle Zonen starten" [level=2]:
+    - text: Alle Zonen starten
+  - paragraph: Alle sieben Zonen mit den eingestellten Laufzeiten starten? Zuerst muss der Mäher in der Station sein.
+  - checkbox "Ich sehe den Mäher in der Station."
+  - text: Ich sehe den Mäher in der Station.
+  - paragraph: Vor einem Start direkt am Mäher oder über Husqvarna muss die Bewässerung beendet sein.
+  - alert: Bitte bestätigen, dass du den Mäher in der Station siehst.
+  - button "Abbrechen":
+    - generic: Abbrechen
+  - button "Bestätigen" [active]:
+    - generic: Bestätigen
