@@ -1,0 +1,144 @@
+{
+  "synthetic": true,
+  "deviceCommandsSent": false,
+  "checks": [
+    {
+      "buttons": [
+        {
+          "disabled": false,
+          "id": "refresh",
+          "label": "Aktualisieren"
+        },
+        {
+          "disabled": false,
+          "id": "irrigation-stop",
+          "label": "Bewässerung beenden"
+        },
+        {
+          "disabled": false,
+          "id": "manual-park",
+          "label": "In Station lassen"
+        },
+        {
+          "disabled": false,
+          "id": "",
+          "label": "Bewässerung"
+        },
+        {
+          "disabled": false,
+          "id": "",
+          "label": "Platzbelegung"
+        },
+        {
+          "disabled": false,
+          "id": "",
+          "label": "Übersicht"
+        },
+        {
+          "disabled": false,
+          "id": "",
+          "label": "Heute"
+        },
+        {
+          "disabled": false,
+          "id": "",
+          "label": "Sonstiges"
+        },
+        {
+          "disabled": false,
+          "id": "stop-after-zone",
+          "label": "Nach dieser Zone"
+        },
+        {
+          "disabled": false,
+          "id": "stop-now",
+          "label": "Direkt beenden"
+        },
+        {
+          "disabled": false,
+          "id": "stop-cancel",
+          "label": "Abbrechen"
+        }
+      ],
+      "overflow": false,
+      "scenario": "water-stop-dialog",
+      "width": 390
+    },
+    {
+      "buttons": [
+        {
+          "disabled": false,
+          "id": "stop-now",
+          "label": "Direkt beenden"
+        },
+        {
+          "disabled": false,
+          "id": "stop-cancel",
+          "label": "Abbrechen"
+        }
+      ],
+      "overflow": false,
+      "scenario": "between-zones-stop-dialog",
+      "width": 390
+    },
+    {
+      "buttons": [
+        {
+          "disabled": false,
+          "id": "refresh",
+          "label": "Aktualisieren"
+        },
+        {
+          "disabled": false,
+          "id": "manual-park",
+          "label": "In Station lassen"
+        },
+        {
+          "disabled": false,
+          "id": "",
+          "label": "Bewässerung"
+        },
+        {
+          "disabled": false,
+          "id": "",
+          "label": "Platzbelegung"
+        },
+        {
+          "disabled": false,
+          "id": "",
+          "label": "Übersicht"
+        },
+        {
+          "disabled": false,
+          "id": "",
+          "label": "Heute"
+        },
+        {
+          "disabled": false,
+          "id": "",
+          "label": "Sonstiges"
+        }
+      ],
+      "overflow": false,
+      "scenario": "returning",
+      "width": 390
+    },
+    {
+      "buttons": [
+        {
+          "disabled": false,
+          "id": "manual-start",
+          "label": "Mäher starten"
+        },
+        {
+          "disabled": false,
+          "id": "manual-park",
+          "label": "In Station lassen"
+        }
+      ],
+      "overflow": false,
+      "scenario": "charging-controls-subpage",
+      "width": 390
+    }
+  ]
+}

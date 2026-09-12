@@ -28,11 +28,11 @@ function harness(manualControl) {
     querySelector(selector) { return selector === 'input[name="manual-water"]:checked' ? radios.find(item => item.checked) || null : null; },
     querySelectorAll(selector) { return selector === 'input[name="manual-water"]' ? radios : []; },
   };
-  const state = {status: {manualControl}, pendingAction: null};
+  const state = {status: {...snapshot(), manualControl}, pendingAction: null};
   const requests = [];
   const dialog = {showModal() {}, close() { this.closed = true; }};
   const code = [
-    sourceOf("manualControlView"), sourceOf("manualControlNeedsConfirmation"),
+    ...["manualControlView", "mowerActionContext", "manualMowerActions", "mowerTelemetryFresh", "stationConfirmed", "deviceControlsOpen", "hasActiveMowerError", "operatorActionPending"].map(sourceOf), sourceOf("manualControlNeedsConfirmation"),
     sourceOf("manualControlPayload"), lastSourceOf("manualControlPrepare"),
     lastSourceOf("submitManualControl"),
   ].join("\n");
@@ -42,7 +42,7 @@ function harness(manualControl) {
   )(
     state, document, dialog, {randomUUID: () => "request-1"},
     (url, options) => { requests.push({url, options}); return Promise.resolve({manualControl}); },
-    () => Promise.resolve(manualControl), () => Promise.resolve(manualControl), () => "Fehler", () => {},
+    () => Promise.resolve(manualControl), () => Promise.resolve(manualControl), () => "Fehler", (id,value) => {document.getElementById(id).textContent=value;},
   );
   elements["confirm-go"] = element();
   elements["confirm-go"].onclick = () => view.submitManualControl();
@@ -56,6 +56,22 @@ function manual(status, changes = {}) {
     confirmations: {occupancyRequired: true, dryingRequired: true, waterChoiceRequired: true}, ...changes,
   };
 }
+
+test("Physical STOP removes dialog actions and a STOP received during confirmation sends nothing", async () => {
+  const h=harness(manual("AUTOMATIC"));
+  h.view.manualControlPrepare("PARK","APP");
+  assert.equal(h.elements['confirm-title'].textContent,'In Station lassen');
+  assert.match(h.elements['confirm-question'].textContent,/bis du ihn wieder freigibst/);
+  h.state.status.mower.state='STOPPED';
+  assert.equal(h.view.submitManualControl(),false);assert.equal(h.requests.length,0);
+  for(const operation of ['START','PARK','RESUME'])assert.equal(h.view.manualControlPrepare(operation,'APP'),false);
+});
+
+test("Water conflict has the same plain label in action and confirmation", () => {
+  const h=harness(manual('WAITING_WATER'));h.view.manualControlPrepare('START','APP');
+  assert.equal(h.elements['confirm-title'].textContent,'Mähen oder bewässern');
+  assert.match(h.elements['confirm-question'].textContent,/zwischen Mähen und Bewässern/);
+});
 
 test("START posts the flat action envelope with the frozen nested manual-control contract", async () => {
   const h = harness(manual("READY"));
