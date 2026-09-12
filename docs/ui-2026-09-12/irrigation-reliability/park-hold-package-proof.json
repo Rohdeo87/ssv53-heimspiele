@@ -1,0 +1,29 @@
+{
+  "source_commit": "c0019d1323c6cf85cc49a8896b117e2bcc6eb26c",
+  "base_package_sha256": "27c8a826b12e5b9efd0f6414d0d2efe861cbd42bfd5972546033a3ee944aca9c",
+  "package_sha256": "d374016b808a6171f7fb81f98f5957eef146c96ba8a586001e7c750de3d9ae10",
+  "manifest_sha256": "6cab4b6a096571a3ad2402e31d54ecf9e1758e6b287d0aad2243bf9e55232002",
+  "package_entries": 71,
+  "changed_files": [
+    "mower/full_failsafe.py",
+    "mower/irrigation_park_hold.py",
+    "mower/irrigation_recovery.py",
+    "mower/state.py",
+    "package-manifest.json"
+  ],
+  "changed_source_hashes": {
+    "mower/full_failsafe.py": "20b036a5ab66158a8ab5a17416035f0c579313049392d936949fdf9b1371caf2",
+    "mower/irrigation_park_hold.py": "7adbf5941b9e331a653f02a72844ab5370ddf779555f3e6f881355bb7c901676",
+    "mower/irrigation_recovery.py": "94755d5e291dc7c0ee23ae09671d801eca2c683669900f42aaf954a4761bc727",
+    "mower/state.py": "e0e8726e2a563cf960c350e3fd1f0fd8048dc942f88d1ffcb867ccdabc14d90e"
+  },
+  "unchanged_source_content_verified_against_commit": true,
+  "unchanged_package_bytes_preserved": true,
+  "offline_import": {
+    "functions": 16,
+    "manifest_files_verified": true,
+    "network_allowed": false
+  },
+  "deployed": false,
+  "device_commands_sent": false
+}

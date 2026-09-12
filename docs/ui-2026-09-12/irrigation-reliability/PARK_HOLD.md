@@ -110,6 +110,33 @@ sind zusammen erforderlich.
 
 ## Veröffentlichungsnachweis
 
-Dieser Abschnitt wird nach Installation um das tatsächliche Paket, die
-Installationsprüfung, die einzelne Flagänderung und beobachtete Zyklen ergänzt.
+Codecommit: `c0019d1323c6cf85cc49a8896b117e2bcc6eb26c`.
+[GitHub-Prüfung dieses exakten Quellstands erfolgreich](https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/34678485807).
+[Review-PR 79](https://github.com/Rohdeo87/ssv53-heimspiele/pull/79).
+[Paketnachweis](park-hold-package-proof.json): 71 Einträge, 16 Funktionen,
+Offline-Import und alle Quelldateien geprüft. Gegenüber der Installation ändern
+sich nur drei vorhandene Module, das neue Parkmodul und das Manifest.
+
+Paket `dist/irrigation-park-hold-release.zip`, SHA256
+`d374016b808a6171f7fb81f98f5957eef146c96ba8a586001e7c750de3d9ae10`.
+Manifest SHA256
+`6cab4b6a096571a3ad2402e31d54ecf9e1758e6b287d0aad2243bf9e55232002`.
+
+Die [erneute Installationsprüfung](park-hold-installed-before.json) bestätigt
+alle 70 Dateien des Altpakets und unveränderte Schutzschalter. Die
+[unmittelbare Vorprüfung](park-hold-deployment-preflight.json) zeigt fünf Zyklen
+mit HOME/geparkt, frischen inaktiven Wasserzonen, COMPLETE_HOLD und ohne offenen
+Mäherstart. Der heutige Lauf war zuvor durch Bedienung beendet worden.
+
+**Noch nicht installiert/aktiviert:** Die automatische Freigabeprüfung lehnte
+den produktiven `config-zip`-Aufruf vor dessen Ausführung ab. Begründung: keine
+für diese konkrete Bereitstellung ausreichend eindeutige Produktionsfreigabe.
+Die bisherigen Nutzerzusagen und die bestätigte Betriebsregel wurden von dieser
+Prüfung nicht als konkrete Rolloutfreigabe anerkannt. Es wurde anschließend
+gezielt nach Installation dieses Pakets und Aktivierung dieses Flags gefragt.
+Kein Ersatzweg, keine Geräte-Testbefehle und keine Einstellungsänderung.
+
+Die Vorprüfung zeigt außerdem weiter `MOWER_START_SEND_BLOCKED` mit
+`MOWER_STATUS_STALE`. Dieses Paket lockert die Mäherstartprüfung ausdrücklich
+nicht; ein erfolgreicher Mäherstart ist durch diese Untersuchung nicht belegt.
 Tests und Simulation allein belegen keinen erfolgreichen Livebetrieb.
