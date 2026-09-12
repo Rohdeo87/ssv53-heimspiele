@@ -1,0 +1,25 @@
+{
+  "source_commit": "1b7f8a85454cd390c30ac9ffb1c26251cb6c6812",
+  "base_package_sha256": "27c8a826b12e5b9efd0f6414d0d2efe861cbd42bfd5972546033a3ee944aca9c",
+  "package_sha256": "ac519e857df869837e09ca2ecb643b08f813746c2c3fb27be133d1cfbe3fa073",
+  "manifest_sha256": "88b409ad6a38bca3e608dbf38263483d91ecf9de1456fa844dbdef5a669621e1",
+  "package_entries": 70,
+  "changed_files": [
+    "mower/full_failsafe.py",
+    "mower/irrigation_recovery.py",
+    "package-manifest.json"
+  ],
+  "changed_source_hashes": {
+    "mower/full_failsafe.py": "21ccf465462fc4ad54498b92b6774b5b4d14a590debdd82694e53edc2c822c2d",
+    "mower/irrigation_recovery.py": "23982d6186c132508bae5d5dd3e62cdb8e22138be414df89f3ac45297a638647"
+  },
+  "unchanged_source_content_verified_against_commit": true,
+  "unchanged_package_bytes_preserved": true,
+  "offline_import": {
+    "functions": 16,
+    "manifest_files_verified": true,
+    "network_allowed": false
+  },
+  "deployed": false,
+  "device_commands_sent": false
+}

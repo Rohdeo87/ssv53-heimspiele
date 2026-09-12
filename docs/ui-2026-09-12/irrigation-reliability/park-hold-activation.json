@@ -1,0 +1,15 @@
+{
+  "started_at_utc": "2026-09-12T06:45:42.512457+00:00",
+  "verified_at_utc": "2026-09-12T06:46:05.228733+00:00",
+  "function_app": "func-ssv53platzpflege-prod-q7kbw54s",
+  "setting": "IRRIGATION_CONFIRMED_PARK_HOLD_ENABLED",
+  "before": null,
+  "after": "true",
+  "changed_setting_names": [
+    "IRRIGATION_CONFIRMED_PARK_HOLD_ENABLED"
+  ],
+  "all_other_app_setting_values_unchanged": true,
+  "cli_exit_code": 0,
+  "direct_device_commands_sent": false,
+  "authorization": "User explicitly confirmed installation and activation of this concrete update."
+}

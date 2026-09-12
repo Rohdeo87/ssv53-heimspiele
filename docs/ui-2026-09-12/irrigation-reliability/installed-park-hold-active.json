@@ -1,0 +1,335 @@
+{
+  "at_utc": "2026-09-12T06:46:47.108618+00:00",
+  "read_only": true,
+  "function_app": "func-ssv53platzpflege-prod-q7kbw54s",
+  "host_state": "Running",
+  "functions": [
+    "ssv53_daily_safety_report_timer",
+    "ssv53_irrigation_recover_failed",
+    "ssv53_mower_timer",
+    "ssv53_occupancy",
+    "ssv53_occupancy_admin",
+    "ssv53_occupancy_notification_timer",
+    "ssv53_order_mail",
+    "ssv53_platzwart_action",
+    "ssv53_platzwart_enroll",
+    "ssv53_platzwart_login",
+    "ssv53_platzwart_status",
+    "ssv53_privacy_retention_timer",
+    "ssv53_recover_unsent_start",
+    "ssv53_trainer_occupancies",
+    "ssv53_training_cancellations",
+    "ssv53_training_control_initialize"
+  ],
+  "settings": {
+    "CONTROL_MODE": "FULL_FAILSAFE",
+    "ENABLE_IRRIGATION_COMMANDS": "true",
+    "ENABLE_LIVE_READS": "true",
+    "ENABLE_PARK_COMMANDS": "true",
+    "ENABLE_START_COMMANDS": "true",
+    "FULL_FAILSAFE_CONFIRMATION": "SSV53-MOWER-HYDRAWISE-7-ZONES-150-MINUTES-ADAPTIVE-V1",
+    "FULL_MOWER_CONFIRMATION": "SSV53-TRAINING-MATCH-PARK-START",
+    "MAX_AUTOMATIC_START_MINUTES": "720",
+    "SSV53_SPECIAL_OCCUPANCY_ENABLED": "true",
+    "SHARED_TRAINING_MODE": "ACTIVE",
+    "WINTER_TRAINING_CONTROL_ENABLED": "true",
+    "COORDINATION_EXECUTION_ENABLED": "true",
+    "ENABLE_OPERATOR_CUTTING_HEIGHT_COMMANDS": "true",
+    "OPERATOR_CONTROL_CONFIRMATION": "SSV53-OPERATOR-PARK-HEIGHT-V1",
+    "ENABLE_OPERATOR_SAFETY_GUARD": "true",
+    "ENABLE_MANUAL_SESSIONS": "true",
+    "COORDINATION_EXECUTION_CONFIRMATION": "SSV53-COORDINATED-IRRIGATION-PILOT-V1",
+    "IRRIGATION_CONFIRMED_PARK_HOLD_ENABLED": "true"
+  },
+  "manifest_sha256": "6cab4b6a096571a3ad2402e31d54ecf9e1758e6b287d0aad2243bf9e55232002",
+  "device_execution_tested": false,
+  "settings_unchanged": true,
+  "installed_files": [
+    {
+      "path": "daily_safety_report.py",
+      "sha256": "9df07006ee98b585b93709db3c62cb3a8e3fa8d041809db8b2d197d620967a0c"
+    },
+    {
+      "path": "function_app.py",
+      "sha256": "ed18326c4e4bb01fbbc8331e0c3e437f79ebceda702ea4b9bfe3e3ec60613554"
+    },
+    {
+      "path": "host.json",
+      "sha256": "c6309279f4333adccbc9277d4a856bad9197f7e0325c080c03237ddc73e0dc7a"
+    },
+    {
+      "path": "mower/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "mower/adaptive_planner.py",
+      "sha256": "c44584699bff3e7e4fd68e4faea09b4a2a7369089713caa60a814e31a04b3c04"
+    },
+    {
+      "path": "mower/build_provenance.py",
+      "sha256": "aa7879589b94c6dc956ff19379af9d77b3810b3fdf988de14adb82282bd3f6f9"
+    },
+    {
+      "path": "mower/config.json",
+      "sha256": "e2c508ec00678710dab7640169b4f609f3d1fd8a08b11255d25a72fc3b7acb89"
+    },
+    {
+      "path": "mower/config_source.py",
+      "sha256": "81845e9ce2984f0bd9ea18a3db5a357f32b04f506b03ca5c434da52afcfe9dd5"
+    },
+    {
+      "path": "mower/controller.py",
+      "sha256": "f9731fccad70597f80b349c94a64fa8c269ae4af1eed00c47b25f4e2fc3408bd"
+    },
+    {
+      "path": "mower/coordination_execution.py",
+      "sha256": "a051e64790700c9163763008056263c7b55c2a1ec530d3adf73e83ae15a76772"
+    },
+    {
+      "path": "mower/coordination_inputs.py",
+      "sha256": "397c7838b5bec2e6d371b5bfca9478c6f90f8e2c2cacc76c5abcac31de60f379"
+    },
+    {
+      "path": "mower/coordination_request.py",
+      "sha256": "c6adb915227525cea2ee5d0d01e7fe1a9c090551170caada257cff1e92b90d52"
+    },
+    {
+      "path": "mower/coordination_shadow.py",
+      "sha256": "ed50e5bafe20e84ded5dcf55e75cc0b2ae81b05a3c6efaf724fce040fe0635e4"
+    },
+    {
+      "path": "mower/cutting_height.py",
+      "sha256": "3187066bce16a5f9784ca0319082614caf124eed2814a476de2e01dc7f784344"
+    },
+    {
+      "path": "mower/dashboard_observations.py",
+      "sha256": "6610164d20fa1b9a4d5dcc362b896ce2ba0ebd512a387a630673785c43ca29d8"
+    },
+    {
+      "path": "mower/decision.py",
+      "sha256": "0429f53dd10235f2b65f032dbf94498a267cb61dd3d547a4178f2f9c9168e00a"
+    },
+    {
+      "path": "mower/device_send_guard.py",
+      "sha256": "129b298bf8cf821a100064d0e0bebfeaa92bb8cd5fe5292ab1bf52881b910074"
+    },
+    {
+      "path": "mower/dry_run.py",
+      "sha256": "7ac252fad416b33e4a782f6abbb019aa318f6b61ba3c16e165b06e0376311a88"
+    },
+    {
+      "path": "mower/full_failsafe.py",
+      "sha256": "20b036a5ab66158a8ab5a17416035f0c579313049392d936949fdf9b1371caf2"
+    },
+    {
+      "path": "mower/full_height_control.py",
+      "sha256": "59bffad1d41965772f2f775042544ec9eda0130b49d52ec14b2b3e626d29e146"
+    },
+    {
+      "path": "mower/full_mower.py",
+      "sha256": "c04c819b9caa49368a69b029093f712ffdbd107ee284267211204f592b69179f"
+    },
+    {
+      "path": "mower/husqvarna.py",
+      "sha256": "fe6cd8b611594d5f4f0ea2b6ab0694b4b524b752248e9ef86cefd3156b6f29cf"
+    },
+    {
+      "path": "mower/husqvarna_actions.py",
+      "sha256": "33f4e95d26eca411b3296ca84414342de652f8cfd1206269dd0b120146d0b68e"
+    },
+    {
+      "path": "mower/husqvarna_cutting_height_actions.py",
+      "sha256": "bec7c96bc618b85eb2887d63b756ac3f6d7cb0a20a24d6788ec454c3029191fc"
+    },
+    {
+      "path": "mower/husqvarna_start_actions.py",
+      "sha256": "db46ad751b46e14dbebaa043a1c256105a20de487558e26c685ad46885eed583"
+    },
+    {
+      "path": "mower/husqvarna_statistics_actions.py",
+      "sha256": "ab3f3ac22a25b4789727c2ced1a7622270a505f4b443c5dba7b29aa3483cc70a"
+    },
+    {
+      "path": "mower/hydrawise.py",
+      "sha256": "bf7c9427c0fbe52289053f2839ace22b5af40b2fa6c40c4dd66afee5bdfb75e9"
+    },
+    {
+      "path": "mower/hydrawise_actions.py",
+      "sha256": "f828b61013a8bfd2aee7137b0d5c6be09f062a31d34100b23e5d088998d91c03"
+    },
+    {
+      "path": "mower/input_failure_guard.py",
+      "sha256": "c396cb4b3cf172b87b8e6cd912dc12789739635e699fd5c84fb3ddffbb23ba2d"
+    },
+    {
+      "path": "mower/irrigation_journal.py",
+      "sha256": "6bd6e392b780cc112e4a72f123b401822d47265a7976a798276eefb88eef37f9"
+    },
+    {
+      "path": "mower/irrigation_operating_window.py",
+      "sha256": "cbc5a9c6cea2162bba4aef3c93b88b117271a7f1f62a1ff9dd89328a5253e378"
+    },
+    {
+      "path": "mower/irrigation_park_hold.py",
+      "sha256": "7adbf5941b9e331a653f02a72844ab5370ddf779555f3e6f881355bb7c901676"
+    },
+    {
+      "path": "mower/irrigation_recovery.py",
+      "sha256": "94755d5e291dc7c0ee23ae09671d801eca2c683669900f42aaf954a4761bc727"
+    },
+    {
+      "path": "mower/irrigation_schedule.py",
+      "sha256": "6c47862c211ab3b20d2fad529d019cc22c08172e41e311612cbfa0054980d68f"
+    },
+    {
+      "path": "mower/manual_control_api.py",
+      "sha256": "51cce83e3f77c13194c4379409e48619db16c6a467f3331b73a94fc1d9a63170"
+    },
+    {
+      "path": "mower/manual_session.py",
+      "sha256": "bf0fa43ecd78f7d2303b3babee44d4ffbed3d69ef16284a77ae054dc40dd32f9"
+    },
+    {
+      "path": "mower/manual_water_conflict.py",
+      "sha256": "ef090bacbd42050384e8b9b883681f7e865ffa4921d9925a4eb9bfa690ca04fb"
+    },
+    {
+      "path": "mower/operator_controls.py",
+      "sha256": "39718ecb635c6d2cb5e3ccd81a7a03a976921250554ddba77825a5209be95544"
+    },
+    {
+      "path": "mower/park_only.py",
+      "sha256": "fafcdb7eaa5993513687d4a4ba4d7dc6b57f2341ad2a485db6d176f22b148039"
+    },
+    {
+      "path": "mower/planner.py",
+      "sha256": "cb12c8b999482219b81d548e1d9087830ba9b5d605a052738f45ae7137c9071b"
+    },
+    {
+      "path": "mower/runtime.py",
+      "sha256": "c5315bc3f9d5d8f237a8e35866daebbb4ff9d9a48de0c6c1f26cf0f2c9fba3ec"
+    },
+    {
+      "path": "mower/safety.py",
+      "sha256": "f532fd51a745b72707019acce8ce4ada0c943d30ed29f3cfecad6a4935109631"
+    },
+    {
+      "path": "mower/start_dispatch_guard.py",
+      "sha256": "fe0c4fd3f92bf1405c601f6525ab8655568299965a09e713739161b6ac9fd2c9"
+    },
+    {
+      "path": "mower/start_recovery.py",
+      "sha256": "2a4228c1914bab42ae131330eda4ec8c45cf0144cd97422e0dd859606106d5db"
+    },
+    {
+      "path": "mower/state.py",
+      "sha256": "e0e8726e2a563cf960c350e3fd1f0fd8048dc942f88d1ffcb867ccdabc14d90e"
+    },
+    {
+      "path": "mower/state_store.py",
+      "sha256": "133a302a04297355cc53f1b773ce49eef1cfcbc1e29fa9d99760a09970f51b68"
+    },
+    {
+      "path": "mower/statistics_cache.py",
+      "sha256": "9e14524a38c1ebb746e4f33b30c5142bf5fac47381b7778343b46256ea3ed754"
+    },
+    {
+      "path": "mower/status_cache.py",
+      "sha256": "cbb17b082805d1322b1e098ce36fd32db56d6df38abed64693c7522748227402"
+    },
+    {
+      "path": "mower/status_cache_store.py",
+      "sha256": "1ef4128c186aae8d745e4a755ffdb5ceba4668d5d7dc6423d16ab5eb591ff9b2"
+    },
+    {
+      "path": "mower/weather.py",
+      "sha256": "8562dcbbdd50c94c01e1472c040213b8917f5967979ced40b4f624f46d24760c"
+    },
+    {
+      "path": "mower/weather_service.py",
+      "sha256": "a4f9c84d60f697d0dccb45f9e8dd47aa374e2aa37c92924a88fdbb8a95d2f732"
+    },
+    {
+      "path": "mower/weather_store.py",
+      "sha256": "fd5b05631773b4f2e63540ef287dcbd60c6c6d75420d8908aded1693e0cc3c39"
+    },
+    {
+      "path": "occupancy/__init__.py",
+      "sha256": "933d5cc6e232bdd1b7454aa305459e7f4e1b5555267130063e103b9a2721a81a"
+    },
+    {
+      "path": "occupancy/appack_identity.py",
+      "sha256": "5e8d0c8f308a32ce718225cda17f722c90307d7edb6a522729447261106fb67f"
+    },
+    {
+      "path": "occupancy/config.json",
+      "sha256": "026430ebe970652f5d1b8c556aab813aad862295491d36d1f2e4ca1eba2c9972"
+    },
+    {
+      "path": "occupancy/match_model.py",
+      "sha256": "bd4685e57bbbf4d0fbf9b5e1a6c0e8cdbe9cdd45559cc23468a8bdac18475e99"
+    },
+    {
+      "path": "occupancy/runtime_source.py",
+      "sha256": "68f96e130afc2e7abf60d6d0d6c31cbb53a6be7cb5fa44db5a91365839e6efcf"
+    },
+    {
+      "path": "occupancy/service.py",
+      "sha256": "1a98f58d02e1624f7142e56cf6b3122add9135b66f45406c9109716240091a86"
+    },
+    {
+      "path": "occupancy/training_calendar.py",
+      "sha256": "800239acc7317f0bfcc31d651769abdcb91a9e9f449cea4480655a7c8283f766"
+    },
+    {
+      "path": "occupancy/training_control.py",
+      "sha256": "81dc0fa80f88aff53d527f1c2b23776f3757b5f6099195a56e23ac8d0bb49b8c"
+    },
+    {
+      "path": "occupancy/training_runtime.py",
+      "sha256": "7e9a3d73d94eb16c7ad28059bd0fa9371dc3255f979701c725d65114cafe8bf2"
+    },
+    {
+      "path": "occupancy_notifications.py",
+      "sha256": "fbddc910994d61ba25402822decfcf82fe03e30a46267709993ef11ac2b7f1b4"
+    },
+    {
+      "path": "order_mail.py",
+      "sha256": "2cbcea6f772098af828c5267aefb1a62e650f9cf1dba68d7b3d0a242a7f5d0a7"
+    },
+    {
+      "path": "package-manifest.json",
+      "sha256": "6cab4b6a096571a3ad2402e31d54ecf9e1758e6b287d0aad2243bf9e55232002"
+    },
+    {
+      "path": "platzwart_console.py",
+      "sha256": "8987a24af1357ad4d2604f8863b86cd601bd745a447925e5a96f2dc2b43b5bec"
+    },
+    {
+      "path": "public/kunstrasen.ics",
+      "sha256": "03ea038ebd952d61fd0a82d535741c9ab73c8235dbf6c15e388db66ac13106a6"
+    },
+    {
+      "path": "public/matches.json",
+      "sha256": "9d157b8fb16976afe4a5deb77d9f1e65302ef56dfbbee01340488cf405cc55c3"
+    },
+    {
+      "path": "public/rasen.ics",
+      "sha256": "1ab8e35ca03729877d6785b0a156dcc580eb3c4475d9a69b1b184fbc943f8dc7"
+    },
+    {
+      "path": "requirements.txt",
+      "sha256": "dc2624384f3ed3c210c944191103bb6f364aa97353208a2b0389f05efdf4bcac"
+    },
+    {
+      "path": "special_occupancy.py",
+      "sha256": "4ae497a539e58a5814c069748a5449a2c35068a06f80a737fa5b2f536a03c610"
+    },
+    {
+      "path": "training_cancellations.py",
+      "sha256": "c46ed3b0f53b83cfb6100e74d8ebd4b29f15a15563635124341d8ef05b294e96"
+    }
+  ],
+  "all_package_files_match": true,
+  "package_sha256": "d374016b808a6171f7fb81f98f5957eef146c96ba8a586001e7c750de3d9ae10"
+}

@@ -1,0 +1,1409 @@
+{
+  "retrieved_at_utc": "2026-09-12T05:49:42.436389+00:00",
+  "read_only": true,
+  "source": "Azure Application Insights SSV53_CONTROL_CYCLE",
+  "query_window_utc": [
+    "2026-09-12T01:30:00Z",
+    "2026-09-12T05:49:04.702811Z"
+  ],
+  "reviewed_cycles": 259,
+  "full_extraction_sha256": "b60d707db42db60d43f28ae3e8f83a21e49a132511af1922321b8013020d10c3",
+  "selection": "First park/confirmation, all six plan changes, first invalid schedule, four-cycle renewal loop, operator stop and final observation. No zero-water claim for intervals without a fresh response.",
+  "observations": [
+    {
+      "at": "2026-09-12T01:45:03.2779188Z",
+      "decision": "PARK_COMMAND_SENT",
+      "command_sent": true,
+      "mower": {
+        "activity": "CHARGING",
+        "state": "IN_OPERATION",
+        "mode": "MAIN_AREA",
+        "connected": true,
+        "status_timestamp_ms": 1789177371886,
+        "override_action": "FORCE_MOW",
+        "restricted_reason": "NOT_APPLICABLE",
+        "next_start_timestamp_ms": 1789186070000
+      },
+      "status_gate": {
+        "connected": true,
+        "fresh": true,
+        "max_age_seconds": 180,
+        "status_timestamp_ms": 1789177371886
+      },
+      "park_gate": null,
+      "operating_window": null,
+      "message": "ParkUntilFurtherNotice wurde sicher gesendet.",
+      "source_zones": [
+        {
+          "relay_id": 9104894,
+          "zone": 1,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-12T02:30:00+00:00",
+          "scheduled_end_utc": "2026-09-12T02:50:00+00:00"
+        },
+        {
+          "relay_id": 9104906,
+          "zone": 2,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-12T02:50:00+00:00",
+          "scheduled_end_utc": "2026-09-12T03:10:00+00:00"
+        },
+        {
+          "relay_id": 9104909,
+          "zone": 3,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-12T03:10:00+00:00",
+          "scheduled_end_utc": "2026-09-12T03:30:00+00:00"
+        },
+        {
+          "relay_id": 9104911,
+          "zone": 4,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-12T03:30:00+00:00",
+          "scheduled_end_utc": "2026-09-12T03:50:00+00:00"
+        },
+        {
+          "relay_id": 9104913,
+          "zone": 5,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-12T03:50:00+00:00",
+          "scheduled_end_utc": "2026-09-12T04:10:00+00:00"
+        },
+        {
+          "relay_id": 9104920,
+          "zone": 6,
+          "run_seconds": 1800,
+          "scheduled_start_utc": "2026-09-12T04:10:00+00:00",
+          "scheduled_end_utc": "2026-09-12T04:40:00+00:00"
+        },
+        {
+          "relay_id": 9104921,
+          "zone": 7,
+          "run_seconds": 1800,
+          "scheduled_start_utc": "2026-09-12T04:40:00+00:00",
+          "scheduled_end_utc": "2026-09-12T05:10:00+00:00"
+        }
+      ],
+      "reconciliation": null,
+      "phase": "PLANNED",
+      "park_sent_at": "2026-09-12T01:45:00.007432+00:00",
+      "park_confirmed_at": null,
+      "park_observations": 0,
+      "irrigation_action": null,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "active_zone_count": 0
+      },
+      "manifest": "314afa1f974f3bb9bc682ed8c3ff757dad596fe37f95806e5d7317e98dbeb0fe"
+    },
+    {
+      "at": "2026-09-12T01:46:03.5983816Z",
+      "decision": "IRRIGATION_ZONE_SUSPENDED",
+      "command_sent": true,
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "state": "IN_OPERATION",
+        "mode": "HOME",
+        "connected": true,
+        "status_timestamp_ms": 1789177524024,
+        "override_action": "FORCE_MOW",
+        "restricted_reason": "NOT_APPLICABLE",
+        "next_start_timestamp_ms": null
+      },
+      "status_gate": {
+        "connected": true,
+        "fresh": true,
+        "max_age_seconds": 180,
+        "status_timestamp_ms": 1789177524024
+      },
+      "park_gate": null,
+      "operating_window": null,
+      "message": "Planstart f\u00fcr Zone 1 wurde sicher suspendiert.",
+      "source_zones": [
+        {
+          "relay_id": 9104894,
+          "zone": 1,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-12T02:30:00+00:00",
+          "scheduled_end_utc": "2026-09-12T02:50:00+00:00"
+        },
+        {
+          "relay_id": 9104906,
+          "zone": 2,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-12T02:50:00+00:00",
+          "scheduled_end_utc": "2026-09-12T03:10:00+00:00"
+        },
+        {
+          "relay_id": 9104909,
+          "zone": 3,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-12T03:10:00+00:00",
+          "scheduled_end_utc": "2026-09-12T03:30:00+00:00"
+        },
+        {
+          "relay_id": 9104911,
+          "zone": 4,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-12T03:30:00+00:00",
+          "scheduled_end_utc": "2026-09-12T03:50:00+00:00"
+        },
+        {
+          "relay_id": 9104913,
+          "zone": 5,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-12T03:50:00+00:00",
+          "scheduled_end_utc": "2026-09-12T04:10:00+00:00"
+        },
+        {
+          "relay_id": 9104920,
+          "zone": 6,
+          "run_seconds": 1800,
+          "scheduled_start_utc": "2026-09-12T04:10:00+00:00",
+          "scheduled_end_utc": "2026-09-12T04:40:00+00:00"
+        },
+        {
+          "relay_id": 9104921,
+          "zone": 7,
+          "run_seconds": 1800,
+          "scheduled_start_utc": "2026-09-12T04:40:00+00:00",
+          "scheduled_end_utc": "2026-09-12T05:10:00+00:00"
+        }
+      ],
+      "reconciliation": null,
+      "phase": "SUSPENDING",
+      "park_sent_at": "2026-09-12T01:45:00.007432+00:00",
+      "park_confirmed_at": "2026-09-12T01:46:00.002293+00:00",
+      "park_observations": 1,
+      "irrigation_action": {
+        "relay_id": 9104894,
+        "response": {
+          "message": "Suspending 1 Rechts Tor Eingang till Saturday, 12th of September 2026, 08:10AM (Germany Time)",
+          "message_type": "info"
+        },
+        "suspend_until_utc": "2026-09-12T06:10:00+00:00",
+        "type": "SuspendScheduledZone"
+      },
+      "water": {
+        "available": true,
+        "fresh": true,
+        "active_zone_count": 0
+      },
+      "manifest": "314afa1f974f3bb9bc682ed8c3ff757dad596fe37f95806e5d7317e98dbeb0fe"
+    },
+    {
+      "at": "2026-09-12T01:49:04.0673181Z",
+      "decision": "IRRIGATION_PLAN_UPDATED",
+      "command_sent": false,
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "state": "RESTRICTED",
+        "mode": "HOME",
+        "connected": true,
+        "status_timestamp_ms": 1789177683650,
+        "override_action": "NOT_ACTIVE",
+        "restricted_reason": "WEEK_SCHEDULE",
+        "next_start_timestamp_ms": null
+      },
+      "status_gate": {
+        "connected": true,
+        "fresh": true,
+        "max_age_seconds": 180,
+        "status_timestamp_ms": 1789177683650
+      },
+      "park_gate": null,
+      "operating_window": null,
+      "message": "Die best\u00e4tigten Hydrawise-Start- und Laufzeiten wurden f\u00fcr den noch nicht gestarteten Lauf \u00fcbernommen.",
+      "source_zones": [
+        {
+          "relay_id": 9104906,
+          "zone": 2,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-12T02:30:00+00:00",
+          "scheduled_end_utc": "2026-09-12T02:50:00+00:00"
+        },
+        {
+          "relay_id": 9104909,
+          "zone": 3,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-12T02:50:00+00:00",
+          "scheduled_end_utc": "2026-09-12T03:10:00+00:00"
+        },
+        {
+          "relay_id": 9104911,
+          "zone": 4,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-12T03:10:00+00:00",
+          "scheduled_end_utc": "2026-09-12T03:30:00+00:00"
+        },
+        {
+          "relay_id": 9104913,
+          "zone": 5,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-12T03:30:00+00:00",
+          "scheduled_end_utc": "2026-09-12T03:50:00+00:00"
+        },
+        {
+          "relay_id": 9104920,
+          "zone": 6,
+          "run_seconds": 1800,
+          "scheduled_start_utc": "2026-09-12T03:50:00+00:00",
+          "scheduled_end_utc": "2026-09-12T04:20:00+00:00"
+        },
+        {
+          "relay_id": 9104921,
+          "zone": 7,
+          "run_seconds": 1800,
+          "scheduled_start_utc": "2026-09-12T04:20:00+00:00",
+          "scheduled_end_utc": "2026-09-12T04:50:00+00:00"
+        },
+        {
+          "relay_id": 9104894,
+          "zone": 1,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T02:30:00+00:00",
+          "scheduled_end_utc": "2026-09-13T02:50:00+00:00"
+        }
+      ],
+      "reconciliation": {
+        "confirmed": true,
+        "kind": "UPDATED",
+        "reason": "Hydrawise hat Startzeiten oder Laufzeiten nachvollziehbar ge\u00e4ndert.",
+        "required_minutes": 2,
+        "suspended_relay_ids": [
+          9104894
+        ]
+      },
+      "phase": "SUSPENDING",
+      "park_sent_at": "2026-09-12T01:45:00.007432+00:00",
+      "park_confirmed_at": "2026-09-12T01:46:00.002293+00:00",
+      "park_observations": 4,
+      "irrigation_action": null,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "active_zone_count": 0
+      },
+      "manifest": "314afa1f974f3bb9bc682ed8c3ff757dad596fe37f95806e5d7317e98dbeb0fe"
+    },
+    {
+      "at": "2026-09-12T01:53:02.4931232Z",
+      "decision": "IRRIGATION_PLAN_UPDATED",
+      "command_sent": false,
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "state": "RESTRICTED",
+        "mode": "HOME",
+        "connected": true,
+        "status_timestamp_ms": 1789177834288,
+        "override_action": "NOT_ACTIVE",
+        "restricted_reason": "WEEK_SCHEDULE",
+        "next_start_timestamp_ms": null
+      },
+      "status_gate": {
+        "connected": true,
+        "fresh": true,
+        "max_age_seconds": 180,
+        "status_timestamp_ms": 1789177834288
+      },
+      "park_gate": null,
+      "operating_window": null,
+      "message": "Die best\u00e4tigten Hydrawise-Start- und Laufzeiten wurden f\u00fcr den noch nicht gestarteten Lauf \u00fcbernommen.",
+      "source_zones": [
+        {
+          "relay_id": 9104909,
+          "zone": 3,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-12T02:30:00+00:00",
+          "scheduled_end_utc": "2026-09-12T02:50:00+00:00"
+        },
+        {
+          "relay_id": 9104911,
+          "zone": 4,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-12T02:50:00+00:00",
+          "scheduled_end_utc": "2026-09-12T03:10:00+00:00"
+        },
+        {
+          "relay_id": 9104913,
+          "zone": 5,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-12T03:10:00+00:00",
+          "scheduled_end_utc": "2026-09-12T03:30:00+00:00"
+        },
+        {
+          "relay_id": 9104920,
+          "zone": 6,
+          "run_seconds": 1800,
+          "scheduled_start_utc": "2026-09-12T03:30:00+00:00",
+          "scheduled_end_utc": "2026-09-12T04:00:00+00:00"
+        },
+        {
+          "relay_id": 9104921,
+          "zone": 7,
+          "run_seconds": 1800,
+          "scheduled_start_utc": "2026-09-12T04:00:00+00:00",
+          "scheduled_end_utc": "2026-09-12T04:30:00+00:00"
+        },
+        {
+          "relay_id": 9104894,
+          "zone": 1,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T02:30:00+00:00",
+          "scheduled_end_utc": "2026-09-13T02:50:00+00:00"
+        },
+        {
+          "relay_id": 9104906,
+          "zone": 2,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T02:50:00+00:00",
+          "scheduled_end_utc": "2026-09-13T03:10:00+00:00"
+        }
+      ],
+      "reconciliation": {
+        "confirmed": true,
+        "kind": "UPDATED",
+        "reason": "Hydrawise hat Startzeiten oder Laufzeiten nachvollziehbar ge\u00e4ndert.",
+        "required_minutes": 2,
+        "suspended_relay_ids": [
+          9104894,
+          9104906
+        ]
+      },
+      "phase": "SUSPENDING",
+      "park_sent_at": "2026-09-12T01:45:00.007432+00:00",
+      "park_confirmed_at": "2026-09-12T01:46:00.002293+00:00",
+      "park_observations": 8,
+      "irrigation_action": null,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "active_zone_count": 0
+      },
+      "manifest": "314afa1f974f3bb9bc682ed8c3ff757dad596fe37f95806e5d7317e98dbeb0fe"
+    },
+    {
+      "at": "2026-09-12T01:57:02.8968577Z",
+      "decision": "IRRIGATION_PLAN_UPDATED",
+      "command_sent": false,
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "state": "RESTRICTED",
+        "mode": "HOME",
+        "connected": true,
+        "status_timestamp_ms": 1789178163326,
+        "override_action": "NOT_ACTIVE",
+        "restricted_reason": "WEEK_SCHEDULE",
+        "next_start_timestamp_ms": null
+      },
+      "status_gate": {
+        "connected": true,
+        "fresh": true,
+        "max_age_seconds": 180,
+        "status_timestamp_ms": 1789178163326
+      },
+      "park_gate": null,
+      "operating_window": null,
+      "message": "Die best\u00e4tigten Hydrawise-Start- und Laufzeiten wurden f\u00fcr den noch nicht gestarteten Lauf \u00fcbernommen.",
+      "source_zones": [
+        {
+          "relay_id": 9104911,
+          "zone": 4,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-12T02:30:00+00:00",
+          "scheduled_end_utc": "2026-09-12T02:50:00+00:00"
+        },
+        {
+          "relay_id": 9104913,
+          "zone": 5,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-12T02:50:00+00:00",
+          "scheduled_end_utc": "2026-09-12T03:10:00+00:00"
+        },
+        {
+          "relay_id": 9104920,
+          "zone": 6,
+          "run_seconds": 1800,
+          "scheduled_start_utc": "2026-09-12T03:10:00+00:00",
+          "scheduled_end_utc": "2026-09-12T03:40:00+00:00"
+        },
+        {
+          "relay_id": 9104921,
+          "zone": 7,
+          "run_seconds": 1800,
+          "scheduled_start_utc": "2026-09-12T03:40:00+00:00",
+          "scheduled_end_utc": "2026-09-12T04:10:00+00:00"
+        },
+        {
+          "relay_id": 9104894,
+          "zone": 1,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T02:30:00+00:00",
+          "scheduled_end_utc": "2026-09-13T02:50:00+00:00"
+        },
+        {
+          "relay_id": 9104906,
+          "zone": 2,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T02:50:00+00:00",
+          "scheduled_end_utc": "2026-09-13T03:10:00+00:00"
+        },
+        {
+          "relay_id": 9104909,
+          "zone": 3,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T03:10:00+00:00",
+          "scheduled_end_utc": "2026-09-13T03:30:00+00:00"
+        }
+      ],
+      "reconciliation": {
+        "confirmed": true,
+        "kind": "UPDATED",
+        "reason": "Hydrawise hat Startzeiten oder Laufzeiten nachvollziehbar ge\u00e4ndert.",
+        "required_minutes": 2,
+        "suspended_relay_ids": [
+          9104894,
+          9104906,
+          9104909
+        ]
+      },
+      "phase": "SUSPENDING",
+      "park_sent_at": "2026-09-12T01:45:00.007432+00:00",
+      "park_confirmed_at": "2026-09-12T01:46:00.002293+00:00",
+      "park_observations": 12,
+      "irrigation_action": null,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "active_zone_count": 0
+      },
+      "manifest": "314afa1f974f3bb9bc682ed8c3ff757dad596fe37f95806e5d7317e98dbeb0fe"
+    },
+    {
+      "at": "2026-09-12T02:02:02.6816995Z",
+      "decision": "IRRIGATION_PLAN_UPDATED",
+      "command_sent": false,
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "state": "RESTRICTED",
+        "mode": "HOME",
+        "connected": true,
+        "status_timestamp_ms": 1789178517217,
+        "override_action": "NOT_ACTIVE",
+        "restricted_reason": "WEEK_SCHEDULE",
+        "next_start_timestamp_ms": null
+      },
+      "status_gate": {
+        "connected": true,
+        "fresh": true,
+        "max_age_seconds": 180,
+        "status_timestamp_ms": 1789178517217
+      },
+      "park_gate": null,
+      "operating_window": null,
+      "message": "Die best\u00e4tigten Hydrawise-Start- und Laufzeiten wurden f\u00fcr den noch nicht gestarteten Lauf \u00fcbernommen.",
+      "source_zones": [
+        {
+          "relay_id": 9104913,
+          "zone": 5,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-12T02:30:00+00:00",
+          "scheduled_end_utc": "2026-09-12T02:50:00+00:00"
+        },
+        {
+          "relay_id": 9104920,
+          "zone": 6,
+          "run_seconds": 1800,
+          "scheduled_start_utc": "2026-09-12T02:50:00+00:00",
+          "scheduled_end_utc": "2026-09-12T03:20:00+00:00"
+        },
+        {
+          "relay_id": 9104921,
+          "zone": 7,
+          "run_seconds": 1800,
+          "scheduled_start_utc": "2026-09-12T03:20:00+00:00",
+          "scheduled_end_utc": "2026-09-12T03:50:00+00:00"
+        },
+        {
+          "relay_id": 9104894,
+          "zone": 1,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T02:30:00+00:00",
+          "scheduled_end_utc": "2026-09-13T02:50:00+00:00"
+        },
+        {
+          "relay_id": 9104906,
+          "zone": 2,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T02:50:00+00:00",
+          "scheduled_end_utc": "2026-09-13T03:10:00+00:00"
+        },
+        {
+          "relay_id": 9104909,
+          "zone": 3,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T03:10:00+00:00",
+          "scheduled_end_utc": "2026-09-13T03:30:00+00:00"
+        },
+        {
+          "relay_id": 9104911,
+          "zone": 4,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T03:30:00+00:00",
+          "scheduled_end_utc": "2026-09-13T03:50:00+00:00"
+        }
+      ],
+      "reconciliation": {
+        "confirmed": true,
+        "kind": "UPDATED",
+        "reason": "Hydrawise hat Startzeiten oder Laufzeiten nachvollziehbar ge\u00e4ndert.",
+        "required_minutes": 2,
+        "suspended_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911
+        ]
+      },
+      "phase": "SUSPENDING",
+      "park_sent_at": "2026-09-12T01:45:00.007432+00:00",
+      "park_confirmed_at": "2026-09-12T01:46:00.002293+00:00",
+      "park_observations": 17,
+      "irrigation_action": null,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "active_zone_count": 0
+      },
+      "manifest": "314afa1f974f3bb9bc682ed8c3ff757dad596fe37f95806e5d7317e98dbeb0fe"
+    },
+    {
+      "at": "2026-09-12T02:06:03.3779619Z",
+      "decision": "IRRIGATION_PLAN_UPDATED",
+      "command_sent": false,
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "state": "RESTRICTED",
+        "mode": "HOME",
+        "connected": true,
+        "status_timestamp_ms": 1789178650574,
+        "override_action": "NOT_ACTIVE",
+        "restricted_reason": "WEEK_SCHEDULE",
+        "next_start_timestamp_ms": null
+      },
+      "status_gate": {
+        "connected": true,
+        "fresh": true,
+        "max_age_seconds": 180,
+        "status_timestamp_ms": 1789178650574
+      },
+      "park_gate": null,
+      "operating_window": null,
+      "message": "Die best\u00e4tigten Hydrawise-Start- und Laufzeiten wurden f\u00fcr den noch nicht gestarteten Lauf \u00fcbernommen.",
+      "source_zones": [
+        {
+          "relay_id": 9104920,
+          "zone": 6,
+          "run_seconds": 1800,
+          "scheduled_start_utc": "2026-09-12T02:30:00+00:00",
+          "scheduled_end_utc": "2026-09-12T03:00:00+00:00"
+        },
+        {
+          "relay_id": 9104921,
+          "zone": 7,
+          "run_seconds": 1800,
+          "scheduled_start_utc": "2026-09-12T03:00:00+00:00",
+          "scheduled_end_utc": "2026-09-12T03:30:00+00:00"
+        },
+        {
+          "relay_id": 9104894,
+          "zone": 1,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T02:30:00+00:00",
+          "scheduled_end_utc": "2026-09-13T02:50:00+00:00"
+        },
+        {
+          "relay_id": 9104906,
+          "zone": 2,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T02:50:00+00:00",
+          "scheduled_end_utc": "2026-09-13T03:10:00+00:00"
+        },
+        {
+          "relay_id": 9104909,
+          "zone": 3,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T03:10:00+00:00",
+          "scheduled_end_utc": "2026-09-13T03:30:00+00:00"
+        },
+        {
+          "relay_id": 9104911,
+          "zone": 4,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T03:30:00+00:00",
+          "scheduled_end_utc": "2026-09-13T03:50:00+00:00"
+        },
+        {
+          "relay_id": 9104913,
+          "zone": 5,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T03:50:00+00:00",
+          "scheduled_end_utc": "2026-09-13T04:10:00+00:00"
+        }
+      ],
+      "reconciliation": {
+        "confirmed": true,
+        "kind": "UPDATED",
+        "reason": "Hydrawise hat Startzeiten oder Laufzeiten nachvollziehbar ge\u00e4ndert.",
+        "required_minutes": 2,
+        "suspended_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913
+        ]
+      },
+      "phase": "SUSPENDING",
+      "park_sent_at": "2026-09-12T01:45:00.007432+00:00",
+      "park_confirmed_at": "2026-09-12T01:46:00.002293+00:00",
+      "park_observations": 21,
+      "irrigation_action": null,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "active_zone_count": 0
+      },
+      "manifest": "314afa1f974f3bb9bc682ed8c3ff757dad596fe37f95806e5d7317e98dbeb0fe"
+    },
+    {
+      "at": "2026-09-12T02:10:03.2948992Z",
+      "decision": "IRRIGATION_PLAN_UPDATED",
+      "command_sent": false,
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "state": "RESTRICTED",
+        "mode": "HOME",
+        "connected": true,
+        "status_timestamp_ms": 1789178798905,
+        "override_action": "NOT_ACTIVE",
+        "restricted_reason": "WEEK_SCHEDULE",
+        "next_start_timestamp_ms": null
+      },
+      "status_gate": {
+        "connected": true,
+        "fresh": false,
+        "max_age_seconds": 180,
+        "status_timestamp_ms": 1789178798905
+      },
+      "park_gate": null,
+      "operating_window": null,
+      "message": "Die best\u00e4tigten Hydrawise-Start- und Laufzeiten wurden f\u00fcr den noch nicht gestarteten Lauf \u00fcbernommen.",
+      "source_zones": [
+        {
+          "relay_id": 9104921,
+          "zone": 7,
+          "run_seconds": 1800,
+          "scheduled_start_utc": "2026-09-12T02:30:00+00:00",
+          "scheduled_end_utc": "2026-09-12T03:00:00+00:00"
+        },
+        {
+          "relay_id": 9104894,
+          "zone": 1,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T02:30:00+00:00",
+          "scheduled_end_utc": "2026-09-13T02:50:00+00:00"
+        },
+        {
+          "relay_id": 9104906,
+          "zone": 2,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T02:50:00+00:00",
+          "scheduled_end_utc": "2026-09-13T03:10:00+00:00"
+        },
+        {
+          "relay_id": 9104909,
+          "zone": 3,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T03:10:00+00:00",
+          "scheduled_end_utc": "2026-09-13T03:30:00+00:00"
+        },
+        {
+          "relay_id": 9104911,
+          "zone": 4,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T03:30:00+00:00",
+          "scheduled_end_utc": "2026-09-13T03:50:00+00:00"
+        },
+        {
+          "relay_id": 9104913,
+          "zone": 5,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T03:50:00+00:00",
+          "scheduled_end_utc": "2026-09-13T04:10:00+00:00"
+        },
+        {
+          "relay_id": 9104920,
+          "zone": 6,
+          "run_seconds": 1800,
+          "scheduled_start_utc": "2026-09-13T04:10:00+00:00",
+          "scheduled_end_utc": "2026-09-13T04:40:00+00:00"
+        }
+      ],
+      "reconciliation": {
+        "confirmed": true,
+        "kind": "UPDATED",
+        "reason": "Hydrawise hat Startzeiten oder Laufzeiten nachvollziehbar ge\u00e4ndert.",
+        "required_minutes": 2,
+        "suspended_relay_ids": [
+          9104894,
+          9104906,
+          9104909,
+          9104911,
+          9104913,
+          9104920
+        ]
+      },
+      "phase": "SUSPENDING",
+      "park_sent_at": "2026-09-12T01:45:00.007432+00:00",
+      "park_confirmed_at": "2026-09-12T01:46:00.002293+00:00",
+      "park_observations": 25,
+      "irrigation_action": null,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "active_zone_count": 0
+      },
+      "manifest": "314afa1f974f3bb9bc682ed8c3ff757dad596fe37f95806e5d7317e98dbeb0fe"
+    },
+    {
+      "at": "2026-09-12T02:12:02.5890742Z",
+      "decision": "IRRIGATION_OPERATING_WINDOW",
+      "command_sent": false,
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "state": "RESTRICTED",
+        "mode": "HOME",
+        "connected": true,
+        "status_timestamp_ms": 1789179046928,
+        "override_action": "NOT_ACTIVE",
+        "restricted_reason": "WEEK_SCHEDULE",
+        "next_start_timestamp_ms": null
+      },
+      "status_gate": {
+        "connected": true,
+        "fresh": true,
+        "max_age_seconds": 180,
+        "status_timestamp_ms": 1789179046928
+      },
+      "park_gate": null,
+      "operating_window": {
+        "automatic_window_applies": true,
+        "code": "INVALID",
+        "earliest_start_utc": null,
+        "intent": "AUTOMATIC",
+        "latest_end_utc": null,
+        "latest_start_utc": null,
+        "projected_end_utc": null,
+        "reason": "persisted zones overlap"
+      },
+      "message": "Bew\u00e4sserung ist nur ab 03:30 m\u00f6glich und muss bis 08:00 beendet sein. Bitte fr\u00fcheren Start w\u00e4hlen.",
+      "source_zones": [
+        {
+          "relay_id": 9104894,
+          "zone": 1,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T02:30:00+00:00",
+          "scheduled_end_utc": "2026-09-13T02:50:00+00:00"
+        },
+        {
+          "relay_id": 9104906,
+          "zone": 2,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T02:50:00+00:00",
+          "scheduled_end_utc": "2026-09-13T03:10:00+00:00"
+        },
+        {
+          "relay_id": 9104909,
+          "zone": 3,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T03:10:00+00:00",
+          "scheduled_end_utc": "2026-09-13T03:30:00+00:00"
+        },
+        {
+          "relay_id": 9104911,
+          "zone": 4,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T03:30:00+00:00",
+          "scheduled_end_utc": "2026-09-13T03:50:00+00:00"
+        },
+        {
+          "relay_id": 9104913,
+          "zone": 5,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T03:50:00+00:00",
+          "scheduled_end_utc": "2026-09-13T04:10:00+00:00"
+        },
+        {
+          "relay_id": 9104920,
+          "zone": 6,
+          "run_seconds": 1800,
+          "scheduled_start_utc": "2026-09-13T04:10:00+00:00",
+          "scheduled_end_utc": "2026-09-13T04:40:00+00:00"
+        },
+        {
+          "relay_id": 9104921,
+          "zone": 7,
+          "run_seconds": 1800,
+          "scheduled_start_utc": "2026-09-13T04:40:00+00:00",
+          "scheduled_end_utc": "2026-09-13T05:10:00+00:00"
+        }
+      ],
+      "reconciliation": null,
+      "phase": "READY",
+      "park_sent_at": "2026-09-12T01:45:00.007432+00:00",
+      "park_confirmed_at": "2026-09-12T01:46:00.002293+00:00",
+      "park_observations": 27,
+      "irrigation_action": null,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "active_zone_count": 0
+      },
+      "manifest": "314afa1f974f3bb9bc682ed8c3ff757dad596fe37f95806e5d7317e98dbeb0fe"
+    },
+    {
+      "at": "2026-09-12T04:47:02.5688479Z",
+      "decision": "IRRIGATION_SUSPENSION_REVALIDATING",
+      "command_sent": false,
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "state": "RESTRICTED",
+        "mode": "HOME",
+        "connected": true,
+        "status_timestamp_ms": 1789188368050,
+        "override_action": "NOT_ACTIVE",
+        "restricted_reason": "WEEK_SCHEDULE",
+        "next_start_timestamp_ms": null
+      },
+      "status_gate": {
+        "connected": true,
+        "fresh": true,
+        "max_age_seconds": 180,
+        "status_timestamp_ms": 1789188368050
+      },
+      "park_gate": null,
+      "operating_window": null,
+      "message": "Der weiterhin gesperrte Hydrawise-Plan wird vor einem versp\u00e4teten Wasserstart erneut best\u00e4tigt.",
+      "source_zones": [
+        {
+          "relay_id": 9104894,
+          "zone": 1,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T02:30:00+00:00",
+          "scheduled_end_utc": "2026-09-13T02:50:00+00:00"
+        },
+        {
+          "relay_id": 9104906,
+          "zone": 2,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T02:50:00+00:00",
+          "scheduled_end_utc": "2026-09-13T03:10:00+00:00"
+        },
+        {
+          "relay_id": 9104909,
+          "zone": 3,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T03:10:00+00:00",
+          "scheduled_end_utc": "2026-09-13T03:30:00+00:00"
+        },
+        {
+          "relay_id": 9104911,
+          "zone": 4,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T03:30:00+00:00",
+          "scheduled_end_utc": "2026-09-13T03:50:00+00:00"
+        },
+        {
+          "relay_id": 9104913,
+          "zone": 5,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T03:50:00+00:00",
+          "scheduled_end_utc": "2026-09-13T04:10:00+00:00"
+        },
+        {
+          "relay_id": 9104920,
+          "zone": 6,
+          "run_seconds": 1800,
+          "scheduled_start_utc": "2026-09-13T04:10:00+00:00",
+          "scheduled_end_utc": "2026-09-13T04:40:00+00:00"
+        },
+        {
+          "relay_id": 9104921,
+          "zone": 7,
+          "run_seconds": 1800,
+          "scheduled_start_utc": "2026-09-13T04:40:00+00:00",
+          "scheduled_end_utc": "2026-09-13T05:10:00+00:00"
+        }
+      ],
+      "reconciliation": null,
+      "phase": "READY",
+      "park_sent_at": "2026-09-12T01:45:00.007432+00:00",
+      "park_confirmed_at": "2026-09-12T01:46:00.002293+00:00",
+      "park_observations": 181,
+      "irrigation_action": null,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "active_zone_count": 0
+      },
+      "manifest": "314afa1f974f3bb9bc682ed8c3ff757dad596fe37f95806e5d7317e98dbeb0fe"
+    },
+    {
+      "at": "2026-09-12T04:48:02.5790503Z",
+      "decision": "IRRIGATION_SUSPENSION_REVALIDATED",
+      "command_sent": false,
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "state": "RESTRICTED",
+        "mode": "HOME",
+        "connected": true,
+        "status_timestamp_ms": 1789188368050,
+        "override_action": "NOT_ACTIVE",
+        "restricted_reason": "WEEK_SCHEDULE",
+        "next_start_timestamp_ms": null
+      },
+      "status_gate": {
+        "connected": true,
+        "fresh": true,
+        "max_age_seconds": 180,
+        "status_timestamp_ms": 1789188368050
+      },
+      "park_gate": null,
+      "operating_window": null,
+      "message": "Alle sieben Hydrawise-Zonen sind weiterhin sicher suspendiert; die kurzlebige Startfreigabe wurde erneuert.",
+      "source_zones": [
+        {
+          "relay_id": 9104894,
+          "zone": 1,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T02:30:00+00:00",
+          "scheduled_end_utc": "2026-09-13T02:50:00+00:00"
+        },
+        {
+          "relay_id": 9104906,
+          "zone": 2,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T02:50:00+00:00",
+          "scheduled_end_utc": "2026-09-13T03:10:00+00:00"
+        },
+        {
+          "relay_id": 9104909,
+          "zone": 3,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T03:10:00+00:00",
+          "scheduled_end_utc": "2026-09-13T03:30:00+00:00"
+        },
+        {
+          "relay_id": 9104911,
+          "zone": 4,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T03:30:00+00:00",
+          "scheduled_end_utc": "2026-09-13T03:50:00+00:00"
+        },
+        {
+          "relay_id": 9104913,
+          "zone": 5,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T03:50:00+00:00",
+          "scheduled_end_utc": "2026-09-13T04:10:00+00:00"
+        },
+        {
+          "relay_id": 9104920,
+          "zone": 6,
+          "run_seconds": 1800,
+          "scheduled_start_utc": "2026-09-13T04:10:00+00:00",
+          "scheduled_end_utc": "2026-09-13T04:40:00+00:00"
+        },
+        {
+          "relay_id": 9104921,
+          "zone": 7,
+          "run_seconds": 1800,
+          "scheduled_start_utc": "2026-09-13T04:40:00+00:00",
+          "scheduled_end_utc": "2026-09-13T05:10:00+00:00"
+        }
+      ],
+      "reconciliation": null,
+      "phase": "READY",
+      "park_sent_at": "2026-09-12T01:45:00.007432+00:00",
+      "park_confirmed_at": "2026-09-12T01:46:00.002293+00:00",
+      "park_observations": 182,
+      "irrigation_action": null,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "active_zone_count": 0
+      },
+      "manifest": "314afa1f974f3bb9bc682ed8c3ff757dad596fe37f95806e5d7317e98dbeb0fe"
+    },
+    {
+      "at": "2026-09-12T04:49:02.3976429Z",
+      "decision": "IRRIGATION_SUSPENSION_REVALIDATING",
+      "command_sent": false,
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "state": "RESTRICTED",
+        "mode": "HOME",
+        "connected": true,
+        "status_timestamp_ms": 1789188368050,
+        "override_action": "NOT_ACTIVE",
+        "restricted_reason": "WEEK_SCHEDULE",
+        "next_start_timestamp_ms": null
+      },
+      "status_gate": {
+        "connected": true,
+        "fresh": true,
+        "max_age_seconds": 180,
+        "status_timestamp_ms": 1789188368050
+      },
+      "park_gate": null,
+      "operating_window": null,
+      "message": "Der weiterhin gesperrte Hydrawise-Plan wird vor einem versp\u00e4teten Wasserstart erneut best\u00e4tigt.",
+      "source_zones": [
+        {
+          "relay_id": 9104894,
+          "zone": 1,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T02:30:00+00:00",
+          "scheduled_end_utc": "2026-09-13T02:50:00+00:00"
+        },
+        {
+          "relay_id": 9104906,
+          "zone": 2,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T02:50:00+00:00",
+          "scheduled_end_utc": "2026-09-13T03:10:00+00:00"
+        },
+        {
+          "relay_id": 9104909,
+          "zone": 3,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T03:10:00+00:00",
+          "scheduled_end_utc": "2026-09-13T03:30:00+00:00"
+        },
+        {
+          "relay_id": 9104911,
+          "zone": 4,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T03:30:00+00:00",
+          "scheduled_end_utc": "2026-09-13T03:50:00+00:00"
+        },
+        {
+          "relay_id": 9104913,
+          "zone": 5,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T03:50:00+00:00",
+          "scheduled_end_utc": "2026-09-13T04:10:00+00:00"
+        },
+        {
+          "relay_id": 9104920,
+          "zone": 6,
+          "run_seconds": 1800,
+          "scheduled_start_utc": "2026-09-13T04:10:00+00:00",
+          "scheduled_end_utc": "2026-09-13T04:40:00+00:00"
+        },
+        {
+          "relay_id": 9104921,
+          "zone": 7,
+          "run_seconds": 1800,
+          "scheduled_start_utc": "2026-09-13T04:40:00+00:00",
+          "scheduled_end_utc": "2026-09-13T05:10:00+00:00"
+        }
+      ],
+      "reconciliation": null,
+      "phase": "READY",
+      "park_sent_at": "2026-09-12T01:45:00.007432+00:00",
+      "park_confirmed_at": "2026-09-12T01:46:00.002293+00:00",
+      "park_observations": 183,
+      "irrigation_action": null,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "active_zone_count": 0
+      },
+      "manifest": "314afa1f974f3bb9bc682ed8c3ff757dad596fe37f95806e5d7317e98dbeb0fe"
+    },
+    {
+      "at": "2026-09-12T04:50:04.4047636Z",
+      "decision": "IRRIGATION_WAIT_FOR_CONFIRMED_PARK",
+      "command_sent": false,
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "state": "RESTRICTED",
+        "mode": "HOME",
+        "connected": true,
+        "status_timestamp_ms": 1789188368050,
+        "override_action": "NOT_ACTIVE",
+        "restricted_reason": "WEEK_SCHEDULE",
+        "next_start_timestamp_ms": null
+      },
+      "status_gate": {
+        "connected": true,
+        "fresh": false,
+        "max_age_seconds": 180,
+        "status_timestamp_ms": 1789188368050
+      },
+      "park_gate": {
+        "activity": "PARKED_IN_CS",
+        "confirmed_since_utc": "2026-09-12T01:46:00.002293+00:00",
+        "connected": true,
+        "fresh_event_accepted": false,
+        "fresh_event_required": true,
+        "minimum_minutes": 1,
+        "observations": 184,
+        "required_observations": 2,
+        "status_fresh": false
+      },
+      "operating_window": null,
+      "message": "Der Wasserstart wartet auf die fortlaufend best\u00e4tigte Parkposition.",
+      "source_zones": [
+        {
+          "relay_id": 9104894,
+          "zone": 1,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T02:30:00+00:00",
+          "scheduled_end_utc": "2026-09-13T02:50:00+00:00"
+        },
+        {
+          "relay_id": 9104906,
+          "zone": 2,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T02:50:00+00:00",
+          "scheduled_end_utc": "2026-09-13T03:10:00+00:00"
+        },
+        {
+          "relay_id": 9104909,
+          "zone": 3,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T03:10:00+00:00",
+          "scheduled_end_utc": "2026-09-13T03:30:00+00:00"
+        },
+        {
+          "relay_id": 9104911,
+          "zone": 4,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T03:30:00+00:00",
+          "scheduled_end_utc": "2026-09-13T03:50:00+00:00"
+        },
+        {
+          "relay_id": 9104913,
+          "zone": 5,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T03:50:00+00:00",
+          "scheduled_end_utc": "2026-09-13T04:10:00+00:00"
+        },
+        {
+          "relay_id": 9104920,
+          "zone": 6,
+          "run_seconds": 1800,
+          "scheduled_start_utc": "2026-09-13T04:10:00+00:00",
+          "scheduled_end_utc": "2026-09-13T04:40:00+00:00"
+        },
+        {
+          "relay_id": 9104921,
+          "zone": 7,
+          "run_seconds": 1800,
+          "scheduled_start_utc": "2026-09-13T04:40:00+00:00",
+          "scheduled_end_utc": "2026-09-13T05:10:00+00:00"
+        }
+      ],
+      "reconciliation": null,
+      "phase": "READY",
+      "park_sent_at": "2026-09-12T01:45:00.007432+00:00",
+      "park_confirmed_at": "2026-09-12T01:46:00.002293+00:00",
+      "park_observations": 184,
+      "irrigation_action": null,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "active_zone_count": 0
+      },
+      "manifest": "314afa1f974f3bb9bc682ed8c3ff757dad596fe37f95806e5d7317e98dbeb0fe"
+    },
+    {
+      "at": "2026-09-12T05:33:02.5668119Z",
+      "decision": "IRRIGATION_OPERATOR_STOPPED_BETWEEN_ZONES",
+      "command_sent": false,
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "state": "RESTRICTED",
+        "mode": "HOME",
+        "connected": true,
+        "status_timestamp_ms": 1789191157967,
+        "override_action": "NOT_ACTIVE",
+        "restricted_reason": "WEEK_SCHEDULE",
+        "next_start_timestamp_ms": null
+      },
+      "status_gate": {
+        "connected": true,
+        "fresh": true,
+        "max_age_seconds": 180,
+        "status_timestamp_ms": 1789191157967
+      },
+      "park_gate": null,
+      "operating_window": null,
+      "message": "Keine weitere Zone startet; die konfigurierte Trocknungssperre beginnt.",
+      "source_zones": [
+        {
+          "relay_id": 9104894,
+          "zone": 1,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T02:30:00+00:00",
+          "scheduled_end_utc": "2026-09-13T02:50:00+00:00"
+        },
+        {
+          "relay_id": 9104906,
+          "zone": 2,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T02:50:00+00:00",
+          "scheduled_end_utc": "2026-09-13T03:10:00+00:00"
+        },
+        {
+          "relay_id": 9104909,
+          "zone": 3,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T03:10:00+00:00",
+          "scheduled_end_utc": "2026-09-13T03:30:00+00:00"
+        },
+        {
+          "relay_id": 9104911,
+          "zone": 4,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T03:30:00+00:00",
+          "scheduled_end_utc": "2026-09-13T03:50:00+00:00"
+        },
+        {
+          "relay_id": 9104913,
+          "zone": 5,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T03:50:00+00:00",
+          "scheduled_end_utc": "2026-09-13T04:10:00+00:00"
+        },
+        {
+          "relay_id": 9104920,
+          "zone": 6,
+          "run_seconds": 1800,
+          "scheduled_start_utc": "2026-09-13T04:10:00+00:00",
+          "scheduled_end_utc": "2026-09-13T04:40:00+00:00"
+        },
+        {
+          "relay_id": 9104921,
+          "zone": 7,
+          "run_seconds": 1800,
+          "scheduled_start_utc": "2026-09-13T04:40:00+00:00",
+          "scheduled_end_utc": "2026-09-13T05:10:00+00:00"
+        }
+      ],
+      "reconciliation": null,
+      "phase": "COMPLETE_HOLD",
+      "park_sent_at": "2026-09-12T01:45:00.007432+00:00",
+      "park_confirmed_at": "2026-09-12T01:46:00.002293+00:00",
+      "park_observations": 227,
+      "irrigation_action": null,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "active_zone_count": 0
+      },
+      "manifest": "314afa1f974f3bb9bc682ed8c3ff757dad596fe37f95806e5d7317e98dbeb0fe"
+    },
+    {
+      "at": "2026-09-12T05:49:04.702811Z",
+      "decision": "MOWER_START_SEND_BLOCKED",
+      "command_sent": false,
+      "mower": {
+        "activity": "PARKED_IN_CS",
+        "state": "RESTRICTED",
+        "mode": "HOME",
+        "connected": true,
+        "status_timestamp_ms": 1789192087967,
+        "override_action": "NOT_ACTIVE",
+        "restricted_reason": "WEEK_SCHEDULE",
+        "next_start_timestamp_ms": null
+      },
+      "status_gate": {
+        "connected": true,
+        "fresh": true,
+        "max_age_seconds": 180,
+        "status_timestamp_ms": 1789192087967
+      },
+      "park_gate": null,
+      "operating_window": null,
+      "message": "Der M\u00e4herstart wurde vor dem HTTP-Versand verworfen; die eigene Reservierung wurde sicher freigegeben.",
+      "source_zones": [
+        {
+          "relay_id": 9104894,
+          "zone": 1,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T02:30:00+00:00",
+          "scheduled_end_utc": "2026-09-13T02:50:00+00:00"
+        },
+        {
+          "relay_id": 9104906,
+          "zone": 2,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T02:50:00+00:00",
+          "scheduled_end_utc": "2026-09-13T03:10:00+00:00"
+        },
+        {
+          "relay_id": 9104909,
+          "zone": 3,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T03:10:00+00:00",
+          "scheduled_end_utc": "2026-09-13T03:30:00+00:00"
+        },
+        {
+          "relay_id": 9104911,
+          "zone": 4,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T03:30:00+00:00",
+          "scheduled_end_utc": "2026-09-13T03:50:00+00:00"
+        },
+        {
+          "relay_id": 9104913,
+          "zone": 5,
+          "run_seconds": 1200,
+          "scheduled_start_utc": "2026-09-13T03:50:00+00:00",
+          "scheduled_end_utc": "2026-09-13T04:10:00+00:00"
+        },
+        {
+          "relay_id": 9104920,
+          "zone": 6,
+          "run_seconds": 1800,
+          "scheduled_start_utc": "2026-09-13T04:10:00+00:00",
+          "scheduled_end_utc": "2026-09-13T04:40:00+00:00"
+        },
+        {
+          "relay_id": 9104921,
+          "zone": 7,
+          "run_seconds": 1800,
+          "scheduled_start_utc": "2026-09-13T04:40:00+00:00",
+          "scheduled_end_utc": "2026-09-13T05:10:00+00:00"
+        }
+      ],
+      "reconciliation": null,
+      "phase": "COMPLETE_HOLD",
+      "park_sent_at": "2026-09-12T01:45:00.007432+00:00",
+      "park_confirmed_at": "2026-09-12T01:46:00.002293+00:00",
+      "park_observations": 243,
+      "irrigation_action": null,
+      "water": {
+        "available": true,
+        "fresh": true,
+        "active_zone_count": 0
+      },
+      "manifest": "314afa1f974f3bb9bc682ed8c3ff757dad596fe37f95806e5d7317e98dbeb0fe"
+    }
+  ]
+}
