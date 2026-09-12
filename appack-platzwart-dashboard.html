@@ -329,8 +329,9 @@ body.pflege-design{background:#f3f6fa;color:#172c42;font-family:Arial,Helvetica,
     function mowerStopNotice(s) {
       var m=s.mower||{},st=String(m.state||"").toUpperCase();
       if(["STOPPED","OFF"].indexOf(st)<0||["MOWING","LEAVING","GOING_HOME"].indexOf(m.activity)>=0)return null;
-      var fresh=mowerTelemetryFresh(s),off=st==="OFF",stamp=calendarTime(m.statusTimestamp,s.generatedAt);
-      return {title:fresh?(off?"Mäher ist ausgeschaltet":"Mäher ist gestoppt"):(off?"Zuletzt: Mäher ausgeschaltet":"Zuletzt: Mäher gestoppt"),text:(!fresh?"Letzte Meldung: "+stamp+". ":"")+"Bitte die Meldung direkt am Mäher prüfen. Die Automatik startet ihn nicht.",tone:"warn",icon:"Square"};
+      // A STOP remains a release requirement, not a running-position claim.
+      // Connection, controller failures and conflicting actions retain priority.
+      return {title:st==="OFF"?"Mäher ausgeschaltet":"Manuell gestoppt",text:st==="OFF"?"Zum Fortsetzen bitte den Mäher vor Ort einschalten.":"Zum Fortsetzen bitte den Mäher vor Ort freigeben.",tone:"warn",icon:"Square"};
     }
     function simpleStatus(s) {
       var stop=mowerStopNotice(s);if(stop)return stop.text;
@@ -386,7 +387,7 @@ body.pflege-design{background:#f3f6fa;color:#172c42;font-family:Arial,Helvetica,
       var awaitingBattery=false,awaitingDock=false;
       if(mowerTelemetryFresh(s)&&!hasActiveMowerError(m)&&["MOWING","LEAVING"].indexOf(m.activity)>=0)return {at:null,text:m.activity==="MOWING"?"Mäher läuft bereits":"Fährt zum Platz"};
       if(protection.automaticStartEnabled===false){if(a.pendingAction==="START_MOWING"||a.mowerStartOutcomeUnconfirmed||startPending)return {at:null,text:"Mäherstart angefragt"};return {at:null,text:"Start nur manuell"}}
-      if(mowerStopNotice(s)&&m.connected===true&&!hasActiveMowerError(m)&&!a.mowerStartOutcomeUnconfirmed&&!a.pendingAction&&!startPending)return {at:null,text:"Stopp am Mäher klären"};
+      if(mowerStopNotice(s)&&m.connected===true&&!hasActiveMowerError(m)&&!a.mowerStartOutcomeUnconfirmed&&!a.pendingAction&&!startPending)return {at:null,text:String(m.state).toUpperCase()==="OFF"?"Mäher ausgeschaltet":"Manuell gestoppt",manualStop:true};
       if(coordinationExecutionBlocked(s))return open;
       var waitingForReport=parkedReportPending(s);
       if(!deviceControlsOpen(s)||!mowerTelemetryFresh(s)&&!waitingForReport||m.connected!==true||hasActiveMowerError(m)||!c||isSearching(m))return open;
@@ -888,14 +889,14 @@ SOFTWARE.
         var blocks=(o.upcoming||[]).concat(o.next?[o.next]:[]).filter(function(x){return x&&new Date(x.start)>now}).sort(function(a,b){return new Date(a.start)-new Date(b.start)});
         if(blocks.length){var first=blocks[0],sources=String(first.source||"").toLowerCase().split("+").map(function(x){return x.trim()}),water=sources.indexOf("irrigation")>=0,other=sources.some(function(x){return x&&x!=="irrigation"});return {label:"Spätestens in der Station",at:new Date(first.start),text:"",note:water?(other?"Danach sind Platzbelegung und Bewässerung geplant.":"Danach wird bewässert."):"Vor der nächsten Platzbelegung."}}
       }
-      return {label:info.earliestOnly?"Frühester Mähstart":"Nächster Mähstart",at:info.at,text:info.text,note:info.at?(info.earliestOnly?"Nach der Platzsperre. Akku muss bereit sein.":info.awaitingMowerReport?"Geplant · Neue Mähermeldung erforderlich.":"Voraussichtlich"):""};
+      return {label:info.earliestOnly?"Frühester Mähstart":"Nächster Mähstart",at:info.at,text:info.text,hidden:info.manualStop===true,note:info.at?(info.earliestOnly?"Nach der Platzsperre. Akku muss bereit sein.":info.awaitingMowerReport?"Geplant · Neue Mähermeldung erforderlich.":"Voraussichtlich"):""};
     }
     function pfRenderMoment(s) {
       if(!pfReady)return;var moment=pfNextMoment(s),el=document.getElementById("mower-next-start"),now=new Date(s.generatedAt);
       document.querySelector("#coordination-card .time-label").textContent=moment.label;
       el.classList.toggle("pf-unknown-time",!moment.at);el.textContent=moment.at?new Date(moment.at).toLocaleTimeString("de-DE",{timeZone:EVENT_TIME_ZONE,hour:"2-digit",minute:"2-digit",hourCycle:"h23"})+" Uhr":moment.text;
       document.getElementById("next-start-note").textContent=moment.at?(localDay(moment.at)!==localDay(now)?calendarTime(moment.at,now)+" · ":"")+moment.note:moment.note;
-      document.getElementById("coordination-card").hidden=pfChargingInfo(s).visible&&!moment.at&&moment.text==="Noch offen";
+      document.getElementById("coordination-card").hidden=moment.hidden===true||pfChargingInfo(s).visible&&!moment.at&&moment.text==="Noch offen";
     }
     function pfChargingInfo(s) {
       var m=s.mower||{},value=m.batteryPercent,percent=typeof value==="number"&&Number.isFinite(value)&&value>=0&&value<=100?Math.round(value):null;

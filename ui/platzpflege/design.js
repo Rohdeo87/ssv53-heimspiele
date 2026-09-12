@@ -202,14 +202,14 @@
         var blocks=(o.upcoming||[]).concat(o.next?[o.next]:[]).filter(function(x){return x&&new Date(x.start)>now}).sort(function(a,b){return new Date(a.start)-new Date(b.start)});
         if(blocks.length){var first=blocks[0],sources=String(first.source||"").toLowerCase().split("+").map(function(x){return x.trim()}),water=sources.indexOf("irrigation")>=0,other=sources.some(function(x){return x&&x!=="irrigation"});return {label:"Spätestens in der Station",at:new Date(first.start),text:"",note:water?(other?"Danach sind Platzbelegung und Bewässerung geplant.":"Danach wird bewässert."):"Vor der nächsten Platzbelegung."}}
       }
-      return {label:info.earliestOnly?"Frühester Mähstart":"Nächster Mähstart",at:info.at,text:info.text,note:info.at?(info.earliestOnly?"Nach der Platzsperre. Akku muss bereit sein.":info.awaitingMowerReport?"Geplant · Neue Mähermeldung erforderlich.":"Voraussichtlich"):""};
+      return {label:info.earliestOnly?"Frühester Mähstart":"Nächster Mähstart",at:info.at,text:info.text,hidden:info.manualStop===true,note:info.at?(info.earliestOnly?"Nach der Platzsperre. Akku muss bereit sein.":info.awaitingMowerReport?"Geplant · Neue Mähermeldung erforderlich.":"Voraussichtlich"):""};
     }
     function pfRenderMoment(s) {
       if(!pfReady)return;var moment=pfNextMoment(s),el=document.getElementById("mower-next-start"),now=new Date(s.generatedAt);
       document.querySelector("#coordination-card .time-label").textContent=moment.label;
       el.classList.toggle("pf-unknown-time",!moment.at);el.textContent=moment.at?new Date(moment.at).toLocaleTimeString("de-DE",{timeZone:EVENT_TIME_ZONE,hour:"2-digit",minute:"2-digit",hourCycle:"h23"})+" Uhr":moment.text;
       document.getElementById("next-start-note").textContent=moment.at?(localDay(moment.at)!==localDay(now)?calendarTime(moment.at,now)+" · ":"")+moment.note:moment.note;
-      document.getElementById("coordination-card").hidden=pfChargingInfo(s).visible&&!moment.at&&moment.text==="Noch offen";
+      document.getElementById("coordination-card").hidden=moment.hidden===true||pfChargingInfo(s).visible&&!moment.at&&moment.text==="Noch offen";
     }
     function pfChargingInfo(s) {
       var m=s.mower||{},value=m.batteryPercent,percent=typeof value==="number"&&Number.isFinite(value)&&value>=0&&value<=100?Math.round(value):null;

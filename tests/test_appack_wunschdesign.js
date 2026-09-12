@@ -14,6 +14,23 @@ function status(){
   return s;
 }
 
+test('Manueller Gerätestopp braucht keine zweite Zeitkarte und gibt nach Freigabe die Planung wieder frei',()=>{
+  const s=status(),moment=presentation('pfNextMoment');
+  s.mower={state:'STOPPED',activity:'NOT_APPLICABLE',mode:'HOME',connected:true,errorCode:0,telemetryFresh:false};
+  s.manualControl.canStart=false;s.coordination.blockers=[{code:'MOWER_TELEMETRY'},{code:'MANUAL_STOP'}];
+  assert.equal(moment(s).hidden,true);
+  assert.equal(moment(s).at,null);
+  s.mower.state='RESTRICTED';s.mower.activity='PARKED_IN_CS';s.mower.telemetryFresh=true;
+  s.coordination.blockers=[];
+  assert.equal(moment(s).hidden,false);
+  const card={hidden:false},element={classList:{toggle(){}},textContent:''};
+  const render=new Function('pfReady','pfNextMoment','pfChargingInfo','document','EVENT_TIME_ZONE','localDay','calendarTime',
+    sourceOf('pfRenderMoment')+';return pfRenderMoment')(true,moment,()=>({visible:false}),
+      {getElementById:id=>id==='coordination-card'?card:element,querySelector:()=>element},'Europe/Berlin',()=>'',()=> '');
+  s.mower.state='STOPPED';s.mower.activity='NOT_APPLICABLE';render(s);assert.equal(card.hidden,true);
+  s.mower.state='RESTRICTED';s.mower.activity='PARKED_IN_CS';render(s);assert.equal(card.hidden,false);
+});
+
 test('Ladeuhrzeit nutzt separate Anzeigeprognose ohne eine Startzusage daraus zu machen',()=>{
   const s=status();s.coordination.chargingEndEstimate=null;
   const at=new Date(new Date(s.generatedAt).getTime()+7*60000).toISOString();
