@@ -1173,6 +1173,9 @@ def summarize_irrigation_statistics(
         if previous_end:
             run_start = max(run_start, previous_end)
         minutes, estimated = duration_summary(full_segments, start=run_start, end=completed_at)
+        witnessed_relays = {s[0] for s in full_segments if s[3] > run_start and s[2] < completed_at}
+        expected_completed = set(completed_runs[(plan, completed_at)]["completed"])
+        estimated = estimated or not expected_completed.issubset(witnessed_relays)
         completed_records.append({
             "plan": plan, "completed_at": completed_at,
             "duration_minutes": minutes if minutes else None,
@@ -1419,7 +1422,7 @@ def summarize_irrigation_statistics(
     return {
         "available": True,
         "wateringMinutes7d": duration_summary(segments)[0],
-        "wateringDurationEstimated": duration_summary(segments)[1],
+        "wateringDurationEstimated": duration_summary(segments)[1] or any(record["estimated"] for record in completed_records),
         "lastCompletedDurationEstimated": last_record["estimated"] if last_record else False,
         "durationEstimatedRelayIds": sorted({s[0] for s in segments if s[4]}),
         "completedRuns7d": len(ordered_completed),

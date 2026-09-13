@@ -206,3 +206,12 @@ def test_completed_operator_status_counts_manual_start():
     row = dict(run()[0], operator_request_id="manual-test", operator_request_action="START_IRRIGATION",
                operator_request_status="COMPLETED")
     assert summarize_irrigation_statistics([row])["planChangeBreakdown"]["manualStarted"] == 1
+
+
+def test_missing_entire_zone_never_presents_remaining_duration_as_exact_full_run():
+    rows = run()
+    rows[-1].update(irrigation_completed_utc=rows[-1]["timestamp"], completed_relay_ids=[1, 2])
+    stats = summarize_irrigation_statistics(rows, expected_zone_count=2)
+    assert stats["lastCompletedDurationMinutes"] == 20
+    assert stats["lastCompletedDurationEstimated"] is True
+    assert stats["wateringDurationEstimated"] is True
