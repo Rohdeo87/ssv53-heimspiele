@@ -1,0 +1,10 @@
+{
+  "url": "https://appack.de/rest-api/drender/6a86ab6c4b3c829dd60de9b7",
+  "http_status": 200,
+  "published_functions_match": {
+    "irrigationDuration": true,
+    "renderIrrigationStatistics": true
+  },
+  "source_sha256": "9f0ad9ef68a78624a591551fd70fda2a8fe08c0ab15594652259dd1e0de8c16f",
+  "native_device_render_verified": false
+}

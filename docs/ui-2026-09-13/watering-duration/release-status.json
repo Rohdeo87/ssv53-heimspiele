@@ -23,23 +23,31 @@
   "installed_base_manifest_matches_recent_timer": true,
   "appack_before_sha256": "d325b1dcb3d92987481b9e26543ca907a7de41c706c4be9705b93d69a3bb36c1",
   "appack_prepared_sha256": "9f0ad9ef68a78624a591551fd70fda2a8fe08c0ab15594652259dd1e0de8c16f",
-  "deployed": false,
-  "appack_published": false,
-  "pushed": false,
-  "pr_created": false,
+  "deployed": true,
+  "appack_published": true,
+  "pushed": true,
+  "pr_created": true,
   "device_commands_sent": false,
-  "approval_blockers": [
-    "Automatic review requires explicit authorization to install the statistics-only ZIP on the production Function App (service restart).",
-    "Automatic review requires explicit authorization to publish the new code to the verified public Rohdeo87/ssv53-heimspiele repository."
-  ],
-  "next_steps": [
-    "After approval: deploy with --build-remote true; verify expected manifest in a regular timer cycle and all 16 functions.",
-    "Publish and read back the prepared Appack template.",
-    "Push local commits and create a draft PR against feature/mower-aerial-map-20260912."
-  ],
+  "approval_blockers": [],
+  "next_steps": [],
   "remaining_validation": [
-    "Installed correction and device-app rendering pending approval.",
     "No new physical irrigation run triggered for testing.",
-    "Old direct-journal contents not readable by the currently signed-in Azure CLI identity; replay based on corresponding control-cycle logs."
-  ]
+    "Native app screen and authenticated live statistics response not independently captured; published template and backend installation verified.",
+    "Direct historical journal table read is not authorized for the signed-in Azure CLI identity; replay used the corresponding production control-cycle logs."
+  ],
+  "user_approved_publication": true,
+  "verified_at_utc": "2026-09-13T12:04:40.806870+00:00",
+  "pr_url": "https://github.com/Rohdeo87/ssv53-heimspiele/pull/89",
+  "production_verification": {
+    "manifest_matches_prepared_package": true,
+    "manifest_files_verified": 75,
+    "function_count": 16,
+    "regular_cycles_with_new_manifest": 3,
+    "journal_write_errors_observed": 0,
+    "appack_public_functions_match": true,
+    "query_rows_checked": 9247,
+    "last_completed_minutes_recomputed_from_current_logs": 160,
+    "last_completed_estimated": false,
+    "raw_data_published": false
+  }
 }
