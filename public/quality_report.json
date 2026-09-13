@@ -261,13 +261,13 @@
   },
   "publication": {
     "schemaVersion": 1,
-    "status": "ok",
-    "sourceGeneratedAt": "2026-09-13T06:24:27+00:00",
-    "sourceDigest": "af113067024bfc5dec5cf6cc7c82c663c8b4e344c354a1896a737725e917ce20",
-    "sourceCount": 47,
-    "retainedCount": 0,
+    "status": "additive_pending",
+    "sourceGeneratedAt": "2026-09-13T12:08:55+00:00",
+    "sourceDigest": "fdb8db8d8e5dafc40d8373787f334b77387122ab93d8160cd198d398d1258031",
+    "sourceCount": 39,
+    "retainedCount": 8,
     "effectiveCount": 47,
-    "requiredConsumer": null,
-    "effectiveDigest": "24abea810c5aa902b7eebb2023d232ee2cfd3dcdcac47ca3399920c67ba155c8"
+    "requiredConsumer": "ssv53-additive-retention-v1",
+    "effectiveDigest": "8bb84b4a087ae83be16d0b935fd616e80a35ad3250c956975a7aab0c9161a272"
   }
 }
