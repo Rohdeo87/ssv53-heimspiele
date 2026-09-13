@@ -177,7 +177,7 @@ body.pflege-design{background:#f3f6fa;color:#172c42;font-family:Arial,Helvetica,
     #pf-mower-map{height:clamp(300px,55vh,580px);width:100%;border-radius:20px;border:1px solid var(--line);background:#e4e9ee;isolation:isolate;z-index:0}
     .pflege-design .pf-map-buttons{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}
     .pflege-design .pf-map-buttons .pf-tile{min-height:76px;padding:14px;gap:8px}
-    .pflege-design #pf-map-center{grid-column:1/-1;flex-direction:row;justify-content:center}
+    .pflege-design #pf-map-center,.pflege-design #pf-map-pitch{flex-direction:row;justify-content:center}
     .pflege-design #pf-map-center .pf-label,.pflege-design #pf-map-home .pf-label{width:auto}
     .pflege-design .pf-map-credit{font-size:12px;line-height:1.5;color:var(--muted)}
     .pflege-design .pf-map-credit a{color:inherit;text-decoration:underline}
@@ -774,7 +774,10 @@ SOFTWARE.
     var pfBrowserHistory = false, pfRestoringHistory = false, pfHistoryIndex = 0, pfDialogCloseTimer = null;
     // Map assets load only when its page is opened. No extra device poll,
     // geolocation permission, public tracking endpoint or coordinate history.
-    var pfMap = null, pfMapMarker = null, pfMapAssets = null, pfMapFollow = true, pfMapTiles = null;
+    var pfMap = null, pfMapMarker = null, pfMapAssets = null, pfMapFollow = false, pfMapTiles = null;
+    // Display framing measured from the public LGB aerial image, never a safety boundary.
+    var pfPitchBounds = [[52.5941851,13.1295181],[52.5952119,13.1308979]];
+    var pfMapOverview = true, pfMapNeedsFit = true, pfMapFitting = false, pfMapResizeObserver = null;
     function pfMapPoint(s) {
       var p=s&&s.mower&&s.mower.position;
       if(!p||typeof p.latitude!=="number"||typeof p.longitude!=="number"||!Number.isFinite(p.latitude)||!Number.isFinite(p.longitude)||Math.abs(p.latitude)>90||Math.abs(p.longitude)>180||(p.latitude===0&&p.longitude===0))return null;
@@ -801,7 +804,17 @@ SOFTWARE.
     }
     function pfMapCenter() {
       var p=pfMapPoint(state.status);if(!pfMap||!pfMapCovered(p))return;
-      pfMapFollow=true;pfMap.setView(p,pfMap.getZoom(),{animate:false});
+      pfMapOverview=false;pfMapNeedsFit=false;pfMapFollow=true;pfMap.setView(p,pfMap.getZoom(),{animate:false});
+    }
+    function pfFitPitch() {
+      if(!pfMap||pfView!=="map"||pfMapFitting||!pfMapOverview)return;
+      var box=document.getElementById("pf-mower-map");if(!box||box.hidden||!box.clientWidth||!box.clientHeight)return;
+      pfMapFitting=true;
+      try{pfMap.invalidateSize({pan:false});pfMap.fitBounds(pfPitchBounds,{padding:[12,12],maxZoom:21,animate:false});pfMapNeedsFit=false}
+      finally{pfMapFitting=false}
+    }
+    function pfShowPitch() {
+      pfMapFollow=false;pfMapOverview=true;pfMapNeedsFit=true;pfFitPitch();
     }
     function pfRetryMap() {
       if(pfView==="map"&&pfMapTiles&&!document.getElementById("pf-map-error").hidden)pfMapTiles.redraw();
@@ -816,40 +829,47 @@ SOFTWARE.
       buttons.id="pf-map-buttons";buttons.className="pf-map-buttons";buttons.hidden=true;
       buttons.appendChild(pfButton("Vergrößern","Plus",function(){if(pfMap)pfMap.zoomIn()}));buttons.appendChild(pfButton("Verkleinern","Minus",function(){if(pfMap)pfMap.zoomOut()}));
       var center=pfButton("Mäher zeigen","MapPin",pfMapCenter);center.id="pf-map-center";buttons.appendChild(center);page.appendChild(buttons);
+      var pitch=pfButton("Platz zeigen","Grid2x2",pfShowPitch);pitch.id="pf-map-pitch";buttons.insertBefore(pitch,center);
       credit.className="pf-map-credit";credit.innerHTML='Luftbild: <a href="https://isk.geobasis-bb.de/mapproxy/dop20c/service/wms?SERVICE=WMS&amp;VERSION=1.1.1&amp;REQUEST=GetCapabilities" target="_blank" rel="noopener noreferrer">© GeoBasis-DE/LGB</a>, <a href="https://www.govdata.de/dl-de/by-2-0" target="_blank" rel="noopener noreferrer">dl-de/by-2-0</a>; © Geoportal Berlin, dl-de/by-2-0. Darstellung um Mähersymbol ergänzt. Karte: <a href="https://leafletjs.com" target="_blank" rel="noopener noreferrer">Leaflet</a>.';page.appendChild(credit);
     }
     function pfRenderMap() {
       var point=pfMapPoint(state.status),home=document.getElementById("pf-map-home");if(home)home.hidden=!point;
       if(pfView!=="map"||!pfPages.map)return;
       var box=document.getElementById("pf-mower-map"),note=document.getElementById("pf-map-note"),error=document.getElementById("pf-map-error"),buttons=document.getElementById("pf-map-buttons"),m=state.status&&state.status.mower||{};
-      if(!point||!pfMapCovered(point)){
-        box.hidden=true;buttons.hidden=true;error.hidden=true;
-        note.textContent=point?"Für diese Position ist kein Luftbild verfügbar.":"Die Position ist gerade nicht verfügbar. Bitte später aktualisieren.";
-        if(pfMapMarker){pfMapMarker.remove();pfMapMarker=null}return;
-      }
+      var positionVisible=!!point&&pfMapCovered(point);
+      document.getElementById("pf-map-center").hidden=!positionVisible;
       box.hidden=false;
       var stamp=m.statusTimestamp&&calendarTime(m.statusTimestamp,new Date().toISOString());
       note.textContent="Zuletzt gemeldete Position"+(stamp?" · Gerätemeldung: "+stamp:"")+". Die Position kann verzögert sein.";
       if(m.connected===false)note.textContent="Verbindung zum Mäher unterbrochen. Die Karte zeigt die zuletzt gemeldete Position.";
+      if(!positionVisible){
+        note.textContent=point?"Die Mäherposition liegt außerhalb der verfügbaren Luftbilder. Die Karte zeigt den Platz.":"Die Mäherposition ist gerade nicht verfügbar. Die Karte zeigt den Platz.";
+        if(pfMapMarker){pfMapMarker.remove();pfMapMarker=null}
+      }
       if(!pfMap){
         error.hidden=false;error.textContent="Karte wird geladen …";
         pfLoadMapAssets().then(function(){
-          if(pfView!=="map"||!pfMapCovered(pfMapPoint(state.status)))return;
+          if(pfView!=="map")return;
           if(!pfMap){
-            pfMap=window.L.map(box,{zoomControl:false,attributionControl:false,scrollWheelZoom:false,minZoom:17,maxZoom:21});
-            pfMap.setView(pfMapPoint(state.status),18);
+            pfMap=window.L.map(box,{zoomControl:false,attributionControl:false,scrollWheelZoom:false,minZoom:16,maxZoom:21,zoomSnap:0});
+            pfFitPitch();
             var tiles=window.L.tileLayer.wms("https://isk.geobasis-bb.de/mapproxy/dop20c/service/wms",{layers:"bebb_dop20c",format:"image/jpeg",transparent:false,version:"1.1.1",maxZoom:21,bounds:[[51.3063,11.2291],[53.5726,14.7702]],referrerPolicy:"no-referrer"});
             pfMapTiles=tiles;
             var tileFailed=false;
             tiles.on("loading",function(){tileFailed=false});tiles.on("tileerror",function(){tileFailed=true;error.hidden=false;error.textContent="Das Luftbild konnte nicht vollständig geladen werden. Bitte aktualisieren."});
             tiles.on("load",function(){if(!tileFailed)error.hidden=true});tiles.addTo(pfMap);
-            pfMap.on("dragstart",function(){pfMapFollow=false});
-            pfMap.on("zoomend",function(){var controls=buttons.querySelectorAll("button");controls[0].disabled=pfMap.getZoom()>=21;controls[1].disabled=pfMap.getZoom()<=17});
+            pfMap.on("dragstart",function(){pfMapFollow=false;pfMapOverview=false;pfMapNeedsFit=false});
+            pfMap.on("zoomstart",function(){if(!pfMapFitting){pfMapFollow=false;pfMapOverview=false;pfMapNeedsFit=false}});
+            pfMap.on("zoomend",function(){var controls=buttons.querySelectorAll("button");controls[0].disabled=pfMap.getZoom()>=21;controls[1].disabled=pfMap.getZoom()<=16});
+            pfMap.on("resize",pfFitPitch);
+            if(window.ResizeObserver){pfMapResizeObserver=new ResizeObserver(function(){pfFitPitch()});pfMapResizeObserver.observe(box)}
           }
           pfRenderMap();
         }).catch(function(){error.hidden=false;error.textContent="Die Karte konnte nicht geladen werden. Bitte aktualisieren."});return;
       }
       buttons.hidden=false;pfMap.invalidateSize({pan:false});
+      if(pfMapNeedsFit)pfFitPitch();
+      if(!positionVisible)return;
       if(!pfMapMarker){
         var symbol=pfIcon("Bot");symbol.className="pf-map-bot";
         pfMapMarker=window.L.marker(point,{icon:window.L.divIcon({className:"pf-map-marker",html:symbol.outerHTML,iconSize:[44,44],iconAnchor:[22,22]}),title:"Zuletzt gemeldete Mäherposition",alt:"Mäher",keyboard:true}).addTo(pfMap);
@@ -960,6 +980,7 @@ SOFTWARE.
       document.getElementById("pf-pages").appendChild(page);pfPages[key]=page;return page;
     }
     function pfGo(key,back) {
+      if(key==="map"&&pfView!=="map"){pfMapFollow=false;pfMapOverview=true;pfMapNeedsFit=true}
       if(!pfPages[key])return;if(!back&&key!==pfView){pfHistory.push(pfView);pfPushRoute(key,key==="water-plan"?pfPlanStep():"home")}pfView=key;
       Object.keys(pfPages).forEach(function(name){pfPages[name].hidden=name!==key});
       document.getElementById("dashboard").dataset.pfPage=key;

@@ -1,5 +1,7 @@
 # Mäherposition auf Luftbildkarte
 
+**Darstellung aktualisiert am 13.09.2026:** Die Karte öffnet jetzt mit dem ganzen Rasenplatz und passt sich an die Bildschirmgröße an. [Aktueller Funktionsstand und Prüfungen](../../ui-2026-09-13/pitch-map/README.md). Die nachfolgende Dokumentation beschreibt die ursprüngliche Veröffentlichung vom 12.09.2026.
+
 Die Platzpflege erhält „Mäher auf der Karte“ auf der Übersicht, sobald eine Position geliefert wird. Unter **Sonstiges → Mähroboter → Karte** bleibt die Ansicht auch bei fehlenden Daten erreichbar. Große Schaltflächen vergrößern/verkleinern und führen zurück zum Mäher. Verschieben der Karte beendet das automatische Nachführen; „Mäher zeigen“ schaltet es wieder ein. Die vorhandene Zurück-Navigation einschließlich Browser-Verlauf wird wiederverwendet.
 
 ## Tatsächliche Datenwege

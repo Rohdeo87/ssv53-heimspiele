@@ -1,0 +1,116 @@
+{
+  "synthetic": true,
+  "deviceCommands": false,
+  "records": [
+    {
+      "width": 320,
+      "height": 568,
+      "initial": {
+        "contained": true,
+        "center": {
+          "lat": 52.59469802748703,
+          "lng": 13.130208968468539
+        },
+        "zoom": 17.860189525422204,
+        "size": {
+          "x": 294,
+          "y": 310
+        }
+      },
+      "refreshKeepsFrame": true,
+      "manualZoomPreserved": true,
+      "reopenResets": true,
+      "rotationFits": true,
+      "missingGpsShowsPitch": true,
+      "errors": []
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "initial": {
+        "contained": true,
+        "center": {
+          "lat": 52.59469957311065,
+          "lng": 13.130207023992398
+        },
+        "zoom": 18.36821764670847,
+        "size": {
+          "x": 356,
+          "y": 462
+        }
+      },
+      "refreshKeepsFrame": true,
+      "manualZoomPreserved": true,
+      "reopenResets": true,
+      "rotationFits": true,
+      "missingGpsShowsPitch": true,
+      "errors": []
+    },
+    {
+      "width": 430,
+      "height": 932,
+      "initial": {
+        "contained": true,
+        "center": {
+          "lat": 52.59469850300792,
+          "lng": 13.130207999999993
+        },
+        "zoom": 18.53233702646958,
+        "size": {
+          "x": 396,
+          "y": 511
+        }
+      },
+      "refreshKeepsFrame": true,
+      "manualZoomPreserved": true,
+      "reopenResets": true,
+      "rotationFits": true,
+      "missingGpsShowsPitch": true,
+      "errors": []
+    },
+    {
+      "width": 844,
+      "height": 390,
+      "initial": {
+        "contained": true,
+        "center": {
+          "lat": 52.594697791633884,
+          "lng": 13.130205776041894
+        },
+        "zoom": 17.798350271604342,
+        "size": {
+          "x": 586,
+          "y": 298
+        }
+      },
+      "refreshKeepsFrame": true,
+      "manualZoomPreserved": true,
+      "reopenResets": true,
+      "rotationFits": true,
+      "missingGpsShowsPitch": true,
+      "errors": []
+    },
+    {
+      "width": 768,
+      "height": 1024,
+      "initial": {
+        "contained": true,
+        "center": {
+          "lat": 52.59469911056716,
+          "lng": 13.13020788986549
+        },
+        "zoom": 18.76909646662923,
+        "size": {
+          "x": 586,
+          "y": 561
+        }
+      },
+      "refreshKeepsFrame": true,
+      "manualZoomPreserved": true,
+      "reopenResets": true,
+      "rotationFits": true,
+      "missingGpsShowsPitch": true,
+      "errors": []
+    }
+  ]
+}
