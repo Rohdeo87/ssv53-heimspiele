@@ -1,0 +1,27 @@
+{
+  "source_commit": "9ecab2bd3b3157cd4b8ee15df914f9d82b96af4d",
+  "base_package_sha256": "8c66deec91852654d748a496507ec97f547ec51afbaaebda277ec7a2fe928eed",
+  "package_sha256": "65e9d38969d5ab8fd8bf65aa07c2fa1d9ff7c712d8809baead2c3f584a0699d3",
+  "manifest_sha256": "c5832017b813e744d2c5aac351605fb6d005d9e867a02f5f877b51aed9e12e64",
+  "package_entries": 76,
+  "changed_files": [
+    "daily_safety_report.py",
+    "mower/irrigation_duration.py",
+    "mower/irrigation_journal.py",
+    "package-manifest.json"
+  ],
+  "changed_source_hashes": {
+    "daily_safety_report.py": "b4919ffa744456303471c11c62d30b4c5a7a8c7c538a4bfe50843baa3e270f8f",
+    "mower/irrigation_duration.py": "a41e61949cbdbf700c4ae76c5929bffa246ba96e0d616b8d67559a347e1e157e",
+    "mower/irrigation_journal.py": "fc14a2ca54085205c11c496df9c1614529e1346d67d1cb44e4b9f7b2bfdd6e02"
+  },
+  "unchanged_source_content_verified_against_commit": true,
+  "unchanged_package_bytes_preserved": true,
+  "offline_import": {
+    "functions": 16,
+    "manifest_files_verified": true,
+    "network_allowed": false
+  },
+  "deployed": false,
+  "device_commands_sent": false
+}

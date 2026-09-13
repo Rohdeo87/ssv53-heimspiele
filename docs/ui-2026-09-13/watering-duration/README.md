@@ -27,4 +27,4 @@ Installation **und Rückfall** erfordern `config-zip --build-remote true`, weil 
 
 Abnahme: Paketimport ohne Netzwerk erfolgreich, alle 16 Functions vorhanden, passender Manifest-Hash und regulärer Timerzyklus nach Installation. Appack-Vorlage nach Speichern zurücklesen und gegen die geprüfte Quelle vergleichen. Ein neuer realer Bewässerungszyklus wird nicht zu Testzwecken ausgelöst.
 
-Veröffentlichungsstand und abschließende Testergebnisse: siehe `release-status.json` (wird nach Abschluss ergänzt).
+Veröffentlichungsstand und abschließende Testergebnisse: siehe `release-status.json`. Entwicklung, Tests, Paket und Rückfall sind vorbereitet. Installation und öffentlicher GitHub-Push wurden von der automatischen Freigabeprüfung vor Ausführung angehalten; hierfür ist die konkrete Nutzerfreigabe noch offen. Appack wurde nur gelesen und gesichert. Es gab keine produktive Änderung.
