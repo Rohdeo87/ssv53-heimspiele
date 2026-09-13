@@ -51,6 +51,7 @@ REQUIRED_FILES = (
     "mower/hydrawise.py",
     "mower/irrigation_recovery.py",
     "mower/irrigation_journal.py",
+    "mower/irrigation_duration.py",
     "mower/irrigation_schedule.py",
     "mower/planner.py",
     "mower/runtime.py",

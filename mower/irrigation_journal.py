@@ -52,9 +52,9 @@ def _table_client(
 
 
 def observation_entity(result: CycleResult) -> dict[str, Any]:
-    """Erzeugt einen idempotenten, minutenweisen Hydrawise-Nachweis.
+    """Erzeugt einen idempotenten Hydrawise-Nachweis pro Timer-Zyklus.
 
-    Wiederholungen desselben Timer-Zyklus überschreiben nur dieselbe Minute.
+    Sekundenbruchteile bleiben erhalten: Zwei Zyklen dürfen in dieselbe Minute fallen.
     Die Steuerentscheidung selbst wird nicht beeinflusst.
     """
 
@@ -71,7 +71,11 @@ def observation_entity(result: CycleResult) -> dict[str, Any]:
     selected = _as_dict(adaptive.get("selected"))
     return {
         "PartitionKey": PARTITION_PREFIX + minute.strftime("%Y%m%d"),
-        "RowKey": minute.strftime("%Y%m%dT%H%MZ"),
+        "RowKey": observed.strftime("%Y%m%dT%H%M%S%fZ"),
+        "command_sent": bool(result.command_sent),
+        "irrigation_action": json.dumps(_as_dict(details.get("irrigation_action")), separators=(",", ":")),
+        "zone_observations": json.dumps(hydrawise.get("zone_observations") or [], separators=(",", ":")),
+        "hydrawise_observed_at_utc": str(safety.get("observed_at_utc") or ""),
         "observed_utc": observed.isoformat(),
         "decision_code": str(result.decision_code or ""),
         "active_relay_ids": json.dumps(
@@ -127,7 +131,7 @@ def observation_entity(result: CycleResult) -> dict[str, Any]:
             selected.get("drying_extension_minutes") or 0
         ),
         "adaptive_expected_rain_mm": float(selected.get("expected_rain_mm") or 0.0),
-        "schema_version": 2,
+        "schema_version": 3,
     }
 
 
@@ -171,6 +175,10 @@ def read_irrigation_observations(
                 rows.append(
                     {
                         "timestamp": timestamp.isoformat(),
+                        "command_sent": entity.get("command_sent"),
+                        "irrigation_action": entity.get("irrigation_action"),
+                        "zone_observations": entity.get("zone_observations"),
+                        "hydrawise_observed_at_utc": entity.get("hydrawise_observed_at_utc"),
                         "decision_code": entity.get("decision_code"),
                         "active_relay_ids": entity.get("active_relay_ids"),
                         "irrigation_plan_id": entity.get("irrigation_plan_id"),

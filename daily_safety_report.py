@@ -29,6 +29,7 @@ from order_mail import (
     _open_authenticated_smtp,
 )
 from mower.irrigation_journal import read_irrigation_observations
+from mower.irrigation_duration import normalize_rows, runtime_segments, duration_summary, decoded
 from mower.weather import WeatherSnapshot
 from mower.weather_store import (
     forecast_rain_validation,
@@ -1067,7 +1068,13 @@ traces
 | where timestamp between (datetime({start}) .. datetime({end}))
 | where message startswith "SSV53_CONTROL_CYCLE "
 | extend p=parse_json(replace_string(message, "SSV53_CONTROL_CYCLE ", ""))
-| project timestamp,
+| project timestamp=coalesce(todatetime(p.executed_at_utc), timestamp),
+    command_sent=tobool(p.command_sent),
+    irrigation_action=tostring(p.details.irrigation_action),
+    zone_observations=tostring(p.details.hydrawise.zone_observations),
+    hydrawise_observed_at_utc=tostring(p.details.hydrawise.safety.observed_at_utc),
+    hydrawise_available=tobool(p.details.hydrawise.safety.available),
+    hydrawise_fresh=tobool(p.details.hydrawise.safety.fresh),
     decision_code=tostring(p.decision_code),
     active_relay_ids=tostring(p.details.hydrawise.safety.active_relay_ids),
     irrigation_plan_id=tostring(p.details.automation_state.irrigation_plan_id),
@@ -1105,8 +1112,10 @@ def summarize_irrigation_statistics(
     *,
     expected_zone_count: int = 7,
     expected_relay_ids: frozenset[int] | None = None,
+    period_start_utc: datetime | None = None,
+    period_end_utc: datetime | None = None,
 ) -> dict[str, Any]:
-    """Verdichtet reale Minutenbeobachtungen statt Soll-Laufzeiten.
+    """Verdichtet beobachtete Laufzeiten statt Soll-Laufzeiten.
 
     Application Insights kann durch parallele Function-Instanzen doppelte
     Zeilen für dieselbe Minute enthalten. Je Minute gewinnt deshalb die
@@ -1114,6 +1123,12 @@ def summarize_irrigation_statistics(
     alle erwarteten Relais im persistenten Abschlussnachweis enthalten sind.
     """
 
+    evidence_rows = normalize_rows(rows)
+    full_segments = runtime_segments(evidence_rows, period_end=period_end_utc)
+    segments = runtime_segments(evidence_rows, period_start=period_start_utc, period_end=period_end_utc)
+    rows = [row for row in evidence_rows
+            if (period_start_utc is None or _parse_utc(row["timestamp"]) >= period_start_utc)
+            and (period_end_utc is None or _parse_utc(row["timestamp"]) <= period_end_utc)]
     by_minute: dict[datetime, dict[str, Any]] = {}
     for row in rows:
         timestamp = _parse_utc(row.get("timestamp"))
@@ -1132,36 +1147,41 @@ def summarize_irrigation_statistics(
             "request_status": str(row.get("operator_request_status") or "").upper(),
         }
     observations = [by_minute[key] for key in sorted(by_minute)]
-    zone_minutes: dict[int, int] = defaultdict(int)
-    plan_active_minutes: dict[str, int] = defaultdict(int)
-    for item in observations:
-        active = item["active"]
-        if active:
-            for relay_id in active:
-                zone_minutes[relay_id] += 1
-            if item["plan"]:
-                # Parallelbetrieb ist verboten; dennoch zählt die Dauer des
-                # Laufs nur einmal je beobachteter Minute.
-                plan_active_minutes[item["plan"]] += 1
-
     completed_runs: dict[tuple[str, datetime], dict[str, Any]] = {}
     for item in observations:
         completed_at = item["completed_at"]
         if (
             completed_at is not None
             and item["plan"]
+            and (period_start_utc is None or completed_at >= period_start_utc)
+            and (period_end_utc is None or completed_at <= period_end_utc)
             and len(item["completed"]) >= expected_zone_count
         ):
             completed_runs[(item["plan"], completed_at)] = item
-    completed_records = [
-        {
-            "plan": key[0],
-            "completed_at": key[1],
-            "duration_minutes": plan_active_minutes.get(key[0], 0),
-            "observed_only": False,
-        }
-        for key in completed_runs
-    ]
+    completed_records = []
+    previous_end = None
+    for plan, completed_at in sorted(completed_runs, key=lambda key: key[1]):
+        plan_start = min((_parse_utc(row["timestamp"]) for row in evidence_rows
+                          if row.get("irrigation_plan_id") == plan), default=completed_at)
+        starts = [_parse_utc(row["timestamp"]) for row in evidence_rows
+                  if row.get("decision_code") == "IRRIGATION_ZONE_START_SENT"
+                  and decoded(row.get("irrigation_action"), {}).get("type") == "StartZone"
+                  and not _json_int_list(row.get("completed_relay_ids"))
+                  and (previous_end is None or _parse_utc(row["timestamp"]) > previous_end)
+                  and _parse_utc(row["timestamp"]) <= completed_at]
+        run_start = max(starts) if starts else plan_start
+        if previous_end:
+            run_start = max(run_start, previous_end)
+        minutes, estimated = duration_summary(full_segments, start=run_start, end=completed_at)
+        witnessed_relays = {s[0] for s in full_segments if s[3] > run_start and s[2] < completed_at}
+        expected_completed = set(completed_runs[(plan, completed_at)]["completed"])
+        estimated = estimated or not expected_completed.issubset(witnessed_relays)
+        completed_records.append({
+            "plan": plan, "completed_at": completed_at,
+            "duration_minutes": minutes if minutes else None,
+            "estimated": estimated or not minutes, "observed_only": False,
+        })
+        previous_end = completed_at
 
     # Auch ein direkt in Hydrawise gestarteter Lauf ist ein realer Lauf. Er
     # besitzt jedoch keinen von unserer Automatik erzeugten Planabschluss.
@@ -1265,7 +1285,8 @@ def summarize_irrigation_statistics(
             {
                 "plan": "",
                 "completed_at": completed_at,
-                "duration_minutes": int(observed["active_minutes"]),
+                "duration_minutes": duration_summary(segments, start=observed["started_at"], end=completed_at)[0],
+                "estimated": True,
                 "observed_only": True,
             }
         )
@@ -1395,12 +1416,15 @@ def summarize_irrigation_statistics(
         for item in observations
         if item["request_id"]
         and item["request_action"] in {"START_IRRIGATION", "START_IRRIGATION_ZONE"}
-        and item["request_status"] == "SUCCESS"
+        and item["request_status"] in {"SUCCESS", "COMPLETED"}
     }
     manual_started = len(manual_request_ids)
     return {
         "available": True,
-        "wateringMinutes7d": sum(1 for item in observations if item["active"]),
+        "wateringMinutes7d": duration_summary(segments)[0],
+        "wateringDurationEstimated": duration_summary(segments)[1] or any(record["estimated"] for record in completed_records),
+        "lastCompletedDurationEstimated": last_record["estimated"] if last_record else False,
+        "durationEstimatedRelayIds": sorted({s[0] for s in segments if s[4]}),
         "completedRuns7d": len(ordered_completed),
         "lastCompletedAt": (
             last_record["completed_at"].isoformat() if last_record else None
@@ -1410,7 +1434,8 @@ def summarize_irrigation_statistics(
         ),
         "zoneMinutes7d": [
             {"relayId": relay_id, "minutes": minutes}
-            for relay_id, minutes in sorted(zone_minutes.items())
+            for relay_id, minutes in ((relay, duration_summary([s for s in segments if s[0] == relay])[0])
+                                      for relay in sorted({s[0] for s in segments}))
         ],
         "planChanges7d": updated + cancelled + manual_started,
         "planChangeBreakdown": {
@@ -1440,7 +1465,7 @@ def dashboard_irrigation_statistics(
         rows.extend(
             client.execute(
                 _irrigation_cycle_query(
-                    period_start_local.astimezone(timezone.utc), now_utc
+                    period_start_local.astimezone(timezone.utc) - timedelta(hours=2), now_utc
                 ),
                 timespan="P8D",
             )
@@ -1449,7 +1474,8 @@ def dashboard_irrigation_statistics(
         insights_failed = True
     # Das Azure-Table-Journal ist die dauerhafte Quelle. Application Insights
     # bleibt als Rückwärtskompatibilität und zur Erkennung älterer Lücken
-    # erhalten. Journalzeilen gewinnen bei identischer Minute.
+    # erhalten. Beide Quellen verwenden die Ausführungszeit desselben Zyklus;
+    # ältere Journalzeilen löschen keine reichhaltigeren Log-Nachweise.
     reader = journal_reader
     if reader is None and query_client is None:
         reader = read_irrigation_observations
@@ -1459,7 +1485,7 @@ def dashboard_irrigation_statistics(
             rows.extend(
                 reader(
                     values,
-                    period_start_local.astimezone(timezone.utc),
+                    period_start_local.astimezone(timezone.utc) - timedelta(hours=2),
                     now_utc,
                 )
             )
@@ -1488,6 +1514,8 @@ def dashboard_irrigation_statistics(
         rows,
         expected_zone_count=expected_zone_count,
         expected_relay_ids=expected_relay_ids,
+        period_start_utc=period_start_local.astimezone(timezone.utc),
+        period_end_utc=now_utc,
     )
     if journal_failed:
         attention = result.get("attention") or {
