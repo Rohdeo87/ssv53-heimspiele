@@ -68,6 +68,7 @@ REQUIRED_FILES = (
     "mower/irrigation_park_hold.py",
     "mower/onsite_dock_proof.py",
     "mower/irrigation_journal.py",
+    "mower/irrigation_duration.py",
     "mower/hydrawise_actions.py",
     "mower/irrigation_schedule.py",
     "mower/park_only.py",

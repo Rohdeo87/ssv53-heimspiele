@@ -1,0 +1,4 @@
+*-local.*
+pytest*.txt
+node-tests.txt
+appack-before.tpl

@@ -50,20 +50,20 @@ def cycle() -> CycleResult:
     )
 
 
-def test_observation_entity_is_idempotent_per_minute():
+def test_observation_entity_is_idempotent_per_cycle():
     entity = observation_entity(cycle())
     assert entity["PartitionKey"] == "ssv53-irrigation-20260821"
-    assert entity["RowKey"] == "20260821T0415Z"
+    assert entity["RowKey"] == "20260821T041542000000Z"
     assert entity["active_relay_ids"] == "[22]"
     assert entity["completed_relay_ids"] == "[11]"
     assert entity["park_confirmed_observations"] == 2
     assert entity["weather_provider"] == "OPEN_METEO"
     assert entity["adaptive_plan_id"] == "adaptive-1"
     assert entity["adaptive_earliest_mow_resume_utc"] == "2026-08-21T09:40:00+00:00"
-    assert entity["schema_version"] == 2
+    assert entity["schema_version"] == 3
 
 
-def test_record_replaces_same_minute_without_append_duplicates():
+def test_record_replaces_same_cycle_without_append_duplicates():
     class Client:
         def __init__(self):
             self.calls = []
@@ -74,7 +74,7 @@ def test_record_replaces_same_minute_without_append_duplicates():
     client = Client()
     record_irrigation_observation(cycle(), {}, table_client=client)
     assert len(client.calls) == 1
-    assert client.calls[0]["entity"]["RowKey"] == "20260821T0415Z"
+    assert client.calls[0]["entity"]["RowKey"] == "20260821T041542000000Z"
     assert client.calls[0]["timeout"] == 5
 
 
