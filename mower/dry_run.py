@@ -21,6 +21,7 @@ from mower.husqvarna import (
     HusqvarnaError,
     fetch_mowers,
     parse_snapshot,
+    parse_display_position,
     select_mower,
 )
 from mower.hydrawise import (
@@ -739,6 +740,10 @@ def run_read_only_cycle(
         )
 
     mower_details = snapshot.to_dict()
+    # Reuse this GET only in the authenticated display response; GPS never
+    # enters the controller or its persistent observation/charging journals.
+    if source in {"platzwart-status", "platzwart-status-display-only"} and not persist_observations:
+        mower_details["position"] = parse_display_position(mower_item)
     mower_details["automation_owned_park"] = automation_owned_park
     mower_details["target_work_area"] = _target_work_area(
         snapshot.work_areas

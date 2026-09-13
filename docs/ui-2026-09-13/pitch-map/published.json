@@ -1,0 +1,19 @@
+{
+  "at_utc": "2026-09-13T09:15:40.781786+00:00",
+  "template_sha256_lf": "d325b1dcb3d92987481b9e26543ca907a7de41c706c4be9705b93d69a3bb36c1",
+  "cms_saved_local_time": "13.09.26, 11:14",
+  "public_functions_match": [
+    "pfMapPoint",
+    "pfMapCovered",
+    "pfMapCenter",
+    "pfFitPitch",
+    "pfShowPitch",
+    "pfMountMap",
+    "pfRenderMap",
+    "pfGo"
+  ],
+  "fixed_pitch_bounds_match": true,
+  "backend_changed": false,
+  "device_commands_sent": false,
+  "real_phone_acceptance": false
+}

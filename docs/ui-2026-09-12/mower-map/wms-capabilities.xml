@@ -1,0 +1,156 @@
+<?xml version="1.0"?>
+<!DOCTYPE WMT_MS_Capabilities SYSTEM "http://schemas.opengis.net/wms/1.1.1/WMS_MS_Capabilities.dtd"
+ [
+ <!ELEMENT VendorSpecificCapabilities EMPTY>
+ ]>  <!-- end of DOCTYPE declaration -->
+<WMT_MS_Capabilities version="1.1.1">
+<Service>
+  <Name>OGC:WMS</Name>
+  <Title>WMS BB-BE DOP20c Cache</Title>
+  <Abstract>Dieser Web Map Service ist ein gekachelter Kartendienst zur schnelleren Anzeige, welcher als Datengrundlage die digitalen farbigen Orthophotos (Luftbilder) mit der Bodenauflösung von 20cm vom Gebiet Brandenburg mit Berlin hat.</Abstract>
+  <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="https://geobasis-bb.de"/>
+  <ContactInformation>
+      <ContactPersonPrimary>
+        <ContactPerson>Kundenservice</ContactPerson>
+        <ContactOrganization>Landesvermessung und Geobasisinformation Brandenburg</ContactOrganization>
+      </ContactPersonPrimary>
+      <ContactPosition>Kundenservice</ContactPosition>
+      <ContactAddress>
+        <AddressType>postal</AddressType>
+        <Address>Heinrich-Mann-Allee 104 B</Address>
+        <City>Potsdam</City>
+        <StateOrProvince></StateOrProvince>
+        <PostCode>14473</PostCode>
+        <Country>Germany</Country>
+      </ContactAddress>
+      <ContactVoiceTelephone>+49 331 8844-123</ContactVoiceTelephone>
+      <ContactFacsimileTelephone>+49 331 8844-16123</ContactFacsimileTelephone>
+      <ContactElectronicMailAddress>kundenservice@geobasis-bb.de</ContactElectronicMailAddress>
+  </ContactInformation>
+  <Fees>kostenfrei, unter Beachtung der Lizenzbedingungen</Fees>
+  <AccessConstraints>Die Daten können gemäß der „Datenlizenz Deutschland - Namensnennung - Version 2.0“ (https://www.govdata.de/dl-de/by-2-0) genutzt werden. Namensnennung: "GeoBasis-DE/LGB“, Beispiel: „© GeoBasis-DE/LGB, dl-de/by-2-0, (Daten geändert)“, (Klammer = optional) Hinweis: werden auch Daten des Bundeslandes Berlin genutzt, ist der Copyright-Vermerk um den Hinweis “© Geoportal Berlin, dl-de/by-2-0“ zu ergänzen. Beispiel: „© GeoBasis-DE/LGB, dl-de/by-2-0; © Geoportal Berlin, dl-de/by-2-0 (Daten geändert)“, (Klammer = optional)</AccessConstraints>
+</Service>
+<Capability>
+  <Request>
+    <GetCapabilities>
+      <Format>application/vnd.ogc.wms_xml</Format>
+      <DCPType>
+        <HTTP>
+          <Get><OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="https://isk.geobasis-bb.de/mapproxy/dop20c/service/wms?"/></Get>
+        </HTTP>
+      </DCPType>
+    </GetCapabilities>
+    <GetMap>
+        <Format>image/png</Format>
+        <Format>image/jpeg</Format>
+        <Format>image/gif</Format>
+      <DCPType>
+        <HTTP>
+          <Get><OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="https://isk.geobasis-bb.de/mapproxy/dop20c/service/wms?"/></Get>
+        </HTTP>
+      </DCPType>
+    </GetMap>
+    <GetFeatureInfo>
+      <Format>text/plain</Format>
+      <Format>text/html</Format>
+      <Format>application/vnd.ogc.gml</Format>
+      <DCPType>
+        <HTTP>
+          <Get><OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="https://isk.geobasis-bb.de/mapproxy/dop20c/service/wms?"/></Get>
+        </HTTP>
+      </DCPType>
+    </GetFeatureInfo>
+    <GetLegendGraphic>
+        <Format>image/png</Format>
+        <Format>image/jpeg</Format>
+        <Format>image/gif</Format>
+        <DCPType>
+            <HTTP>
+                <Get><OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="https://isk.geobasis-bb.de/mapproxy/dop20c/service/wms?"/></Get>
+            </HTTP>
+        </DCPType>
+    </GetLegendGraphic>
+  </Request>
+  <Exception>
+    <Format>application/vnd.ogc.se_xml</Format>
+    <Format>application/vnd.ogc.se_inimage</Format>
+    <Format>application/vnd.ogc.se_blank</Format>
+  </Exception>
+  <Layer queryable="1">
+    <Title>WMS BB-BE DOP20c</Title>
+    <SRS>EPSG:25833</SRS>
+    <SRS>EPSG:25832</SRS>
+    <SRS>EPSG:4326</SRS>
+    <SRS>EPSG:4258</SRS>
+    <SRS>EPSG:3034</SRS>
+    <SRS>EPSG:3035</SRS>
+    <SRS>EPSG:3045</SRS>
+    <SRS>EPSG:3857</SRS>
+    <SRS>EPSG:4839</SRS>
+    <SRS>EPSG:5650</SRS>
+    <SRS>CRS:84</SRS>
+    <LatLonBoundingBox minx="11.152768795679583" miny="51.2635170116316" maxx="15.009068839315324" maxy="53.61004915755329" />
+    <BoundingBox SRS="EPSG:25833" minx="231617.06716170372" miny="5679129.678514039" maxx="500632.7454091169" maxy="5947019.057438403" />
+    <BoundingBox SRS="EPSG:25832" minx="642418.6106519803" miny="5681331.051487141" maxx="919093.7462550554" maxy="5956936.625976584" />
+    <BoundingBox SRS="EPSG:4326" minx="11.152768795679583" miny="51.2635170116316" maxx="15.009068839315324" maxy="53.61004915755329" />
+    <BoundingBox SRS="EPSG:4258" minx="11.152768795679583" miny="51.2635170116316" maxx="15.009068839315324" maxy="53.61004915755329" />
+    <BoundingBox SRS="EPSG:3034" minx="4073760.249283313" miny="2721473.505993611" maxx="4337360.807321172" maxy="2983979.447701236" />
+    <BoundingBox SRS="EPSG:3035" minx="4397304.546571642" miny="3128693.250023093" maxx="4670315.837317322" maxy="3400613.7862468534" />
+    <BoundingBox SRS="EPSG:3045" minx="231617.06716170372" miny="5679129.678514039" maxx="500632.7454091169" maxy="5947019.057438403" />
+    <BoundingBox SRS="EPSG:3857" minx="1241520.543270162" miny="6668039.871535957" maxx="1670801.9004737714" maxy="7096647.469995236" />
+    <BoundingBox SRS="EPSG:4839" minx="43202.427813255155" miny="29490.732832349982" maxx="314234.2025644235" maxy="299380.95007209026" />
+    <BoundingBox SRS="EPSG:5650" minx="33231617.0671617" miny="5679129.678514039" maxx="33500632.745409116" maxy="5947019.057438403" />
+    <BoundingBox SRS="CRS:84" minx="11.152768795679583" miny="51.2635170116316" maxx="15.009068839315324" maxy="53.61004915755329" />
+    <Layer>
+      <Name>bebb_dop20c</Name>
+      <Title>DOP20c BB-BE (WMS)</Title>
+      <Abstract>Dieser Layer stellt digitale Orthophotos mit der Bodenauflösung von 20cm in Farbe dar.</Abstract>
+      <LatLonBoundingBox minx="11.229125808835244" miny="51.30630972960727" maxx="14.770192820721777" maxy="53.572619943188016" />
+      <BoundingBox SRS="EPSG:25833" minx="250000.0" miny="5690000.0" maxx="484000.0" maxy="5936000.0" />
+      <BoundingBox SRS="EPSG:25832" minx="647806.0773504403" miny="5686653.6457109" maxx="901591.8018403733" maxy="5951404.9970400585" />
+      <BoundingBox SRS="EPSG:4326" minx="11.229125808835244" miny="51.30630972960727" maxx="14.770192820721777" maxy="53.572619943188016" />
+      <BoundingBox SRS="EPSG:4258" minx="11.229125808835244" miny="51.30630972960727" maxx="14.770192820721777" maxy="53.572619943188016" />
+      <BoundingBox SRS="EPSG:3034" minx="4078818.5495101754" miny="2726374.522421359" maxx="4320619.549858414" maxy="2978901.092804303" />
+      <BoundingBox SRS="EPSG:3035" minx="4402542.880718199" miny="3133772.2118569044" maxx="4652979.609776785" maxy="3395338.9902025308" />
+      <BoundingBox SRS="EPSG:3045" minx="250000.0" miny="5690000.0" maxx="484000.0" maxy="5936000.0" />
+      <BoundingBox SRS="EPSG:3857" minx="1250020.5670931456" miny="6675656.272952992" maxx="1644210.343721213" maxy="7089627.560417035" />
+      <BoundingBox SRS="EPSG:4839" minx="48362.51776875577" miny="34439.93335395753" maxx="296977.18647176947" maxy="294233.80469926796" />
+      <BoundingBox SRS="EPSG:5650" minx="33250000.0" miny="5690000.0" maxx="33484000.0" maxy="5936000.0" />
+      <BoundingBox SRS="CRS:84" minx="11.229125808835244" miny="51.30630972960727" maxx="14.770192820721777" maxy="53.572619943188016" />
+      <MetadataURL type="TC211">
+        <Format>application/vnd.ogc.csw.GetRecordByIdResponse_xml</Format>
+        <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="https://geoportal.brandenburg.de/csw-gdi-bb/service?REQUEST=GetRecordById&amp;service=CSW&amp;version=2.0.2&amp;resultType=results&amp;typeNames=csw:Record&amp;elementSetName=full&amp;ID=253b7d3d-6b42-47dc-b127-682de078b7ae"/>
+      </MetadataURL>
+    </Layer>
+    <Layer queryable="1">
+      <Name>bb_dop_info</Name>
+      <Title>DOP - Aktualitätsübersicht</Title>
+      <Abstract>Dieser Layer stellt die Aktualitäten des LGB-Produktes DOP grafisch visualisiert dar.</Abstract>
+      <LatLonBoundingBox minx="11.152768795679583" miny="51.2635170116316" maxx="15.009068839315324" maxy="53.61004915755329" />
+      <BoundingBox SRS="EPSG:25833" minx="245149" miny="5685471" maxx="500600" maxy="5940137" />
+      <BoundingBox SRS="EPSG:25832" minx="642626.8767866946" miny="5681745.857423198" maxx="918541.5556555509" maxy="5956936.625976584" />
+      <BoundingBox SRS="EPSG:4326" minx="11.152768795679583" miny="51.2635170116316" maxx="15.009068839315324" maxy="53.61004915755329" />
+      <BoundingBox SRS="EPSG:4258" minx="11.152768795679583" miny="51.2635170116316" maxx="15.009068839315324" maxy="53.61004915755329" />
+      <BoundingBox SRS="EPSG:3034" minx="4073864.1483476083" miny="2721694.6946876696" maxx="4336915.055099915" maxy="2983979.447701236" />
+      <BoundingBox SRS="EPSG:3035" minx="4397415.436861829" miny="3128924.8631290444" maxx="4669850.6947008595" maxy="3400613.7862468534" />
+      <BoundingBox SRS="EPSG:3045" minx="245149.0" miny="5685471.0" maxx="500600.0" maxy="5940137.0" />
+      <BoundingBox SRS="EPSG:3857" minx="1241520.543270162" miny="6668039.871535957" maxx="1670801.9004737714" maxy="7096647.469995236" />
+      <BoundingBox SRS="EPSG:4839" minx="43263.58471161367" miny="29628.705521748598" maxx="313813.90298550064" maxy="299380.95007209026" />
+      <BoundingBox SRS="EPSG:5650" minx="33245149.0" miny="5685470.999999999" maxx="33500600.0" maxy="5940137.0" />
+      <BoundingBox SRS="CRS:84" minx="11.152768795679583" miny="51.2635170116316" maxx="15.009068839315324" maxy="53.61004915755329" />
+      <MetadataURL type="TC211">
+        <Format>application/vnd.ogc.csw.GetRecordByIdResponse_xml</Format>
+        <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="https://geoportal.brandenburg.de/csw-gdi-bb/service?REQUEST=GetRecordById&amp;service=CSW&amp;version=2.0.2&amp;resultType=results&amp;typeNames=csw:Record&amp;elementSetName=full&amp;ID=253b7d3d-6b42-47dc-b127-682de078b7ae"/>
+      </MetadataURL>
+      <Style>
+          <Name>default</Name>
+          <Title>default</Title>
+          <LegendURL width="229" height="245">
+              <Format>image/png</Format>
+              <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="https://isk.geobasis-bb.de/mapproxy/dop20c/service/wms?format=image%2Fpng&amp;layer=bb_dop_info&amp;sld_version=1.1.0&amp;request=GetLegendGraphic&amp;service=WMS&amp;version=1.1.1&amp;styles="/>
+          </LegendURL>
+      </Style>
+    </Layer>
+  </Layer>
+</Capability>
+</WMT_MS_Capabilities>

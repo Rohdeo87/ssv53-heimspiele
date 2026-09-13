@@ -1,0 +1,20 @@
+{
+  "at_utc": "2026-09-12T21:02:43.370186+00:00",
+  "read_only": true,
+  "template_sha256_lf": "6574c9ce46abd248d3bc82ff699172bcfe1f185555bafb92791b5400ed1ef6a9",
+  "public_map_functions_match": [
+    "pfMapPoint",
+    "pfMapCovered",
+    "pfLoadMapAssets",
+    "pfMapCenter",
+    "pfRetryMap",
+    "pfMountMap",
+    "pfRenderMap"
+  ],
+  "license_attribution_verified": true,
+  "authenticated_map_response_tested": false,
+  "physical_position_accuracy_tested": false,
+  "runtime_function_count": 16,
+  "existing_timer_observed_after_deployment": true,
+  "publication_scope": "Verification summary only; detailed configuration and operational records retained locally."
+}

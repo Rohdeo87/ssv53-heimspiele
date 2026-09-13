@@ -1,0 +1,26 @@
+{
+  "synthetic": true,
+  "deviceCommands": false,
+  "records": [
+    {
+      "width": 390,
+      "lazy": true,
+      "imageryLoaded": true,
+      "zoom": true,
+      "backForward": true,
+      "missingPosition": true,
+      "noOverflow": true,
+      "errors": []
+    },
+    {
+      "width": 320,
+      "lazy": true,
+      "imageryLoaded": true,
+      "zoom": true,
+      "backForward": true,
+      "missingPosition": true,
+      "noOverflow": true,
+      "errors": []
+    }
+  ]
+}

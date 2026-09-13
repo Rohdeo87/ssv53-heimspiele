@@ -1,0 +1,9 @@
+{
+  "at_utc": "2026-09-12T20:48:18.033229+00:00",
+  "read_only": true,
+  "host_state": "Running",
+  "manifest_sha256": "799fc6f2afb5c8f7e1770f9d99d15bdd66ffb4391400edcbdb8e4c32d017d619",
+  "device_execution_tested": false,
+  "function_count": 16,
+  "publication_scope": "Verification summary only; detailed configuration and operational records retained locally."
+}
