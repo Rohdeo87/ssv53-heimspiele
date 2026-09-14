@@ -31,7 +31,7 @@
     {
       "date_from": "2026-07-01",
       "date_to": "2026-09-30",
-      "competition_rows": 41
+      "competition_rows": 42
     },
     {
       "date_from": "2026-10-01",
@@ -56,10 +56,10 @@
       "depth": 0,
       "source_url": "https://www.fussball.de/ajax.club.matchplan/-/id/00ES8GNBL0000049VV0AG08LVUPGND5I/mode/PAGE/show-filter/false/show-venues/true/mime-type/HTML/datum-von/2026-07-01/datum-bis/2026-09-30/max/50",
       "source_scope": "all club teams; inclusion decided only by venue",
-      "competition_rows": 41,
+      "competition_rows": 42,
       "source_detail_ids": 33,
-      "parsed_matches_before_duplicate_merge": 41,
-      "parsed_matches": 41,
+      "parsed_matches_before_duplicate_merge": 42,
+      "parsed_matches": 42,
       "parsed_detail_ids": 33,
       "missing_detail_ids": [],
       "source_festival_groups": 3,
@@ -156,6 +156,7 @@
       "031DB8NS8C000000VS5489BUVUR5FS5A",
       "031DP96C58000000VS5489BUVUR5FS5A",
       "031DP96F8G000000VS5489BUVUR5FS5A",
+      "031HB5B9C8000000VS5489BTVVG7L386",
       "031MFGE2PG000000VS5489BUVVKNMR0J"
     ],
     "duplicate_resolutions": [
@@ -212,6 +213,24 @@
           "resolved": true
         },
         "merged_external_id": "031DP96F8G000000VS5489BUVUR5FS5A"
+      },
+      {
+        "detail_id": "031HB5B9C8000000VS5489BTVVG7L386",
+        "occurrences": 2,
+        "conflicts": {},
+        "resolved": true,
+        "resolution_attempt": {
+          "method": "explicit_postponement_chain",
+          "relocations": [
+            {
+              "from": "2026-09-18T19:30+02:00",
+              "to": "2026-09-19T19:00+02:00"
+            }
+          ],
+          "selected_kickoff": "2026-09-19T19:00+02:00",
+          "resolved": true
+        },
+        "merged_external_id": "031HB5B9C8000000VS5489BTVVG7L386"
       },
       {
         "detail_id": "031MFGE2PG000000VS5489BUVVKNMR0J",

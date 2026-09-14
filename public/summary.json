@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-13T16:33:25+00:00",
+  "generated_at": "2026-09-14T06:32:12+00:00",
   "selection_mode": "club-wide venue",
   "event_timing": {
     "before_minutes": 60,
@@ -118,7 +118,7 @@
     {
       "date_from": "2026-07-01",
       "date_to": "2026-09-30",
-      "competition_rows": 41
+      "competition_rows": 42
     },
     {
       "date_from": "2026-10-01",
@@ -139,8 +139,8 @@
   "publication": {
     "schemaVersion": 1,
     "status": "ok",
-    "sourceGeneratedAt": "2026-09-13T16:33:25+00:00",
-    "sourceDigest": "3f6ee9a613357e6b2598f7b1886f1bd86a332941a50ca7918eb3064ba0c572d1",
+    "sourceGeneratedAt": "2026-09-14T06:32:12+00:00",
+    "sourceDigest": "8a8a6fd62bbf636e40a526a69f0a94b1620d5b61dbdb45271811625a6dc22396",
     "sourceCount": 39,
     "retainedCount": 0,
     "effectiveCount": 39,
