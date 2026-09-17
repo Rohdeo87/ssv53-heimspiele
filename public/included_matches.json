@@ -29,7 +29,8 @@
     "home_team_id": "02T7TD5NLG000000VS5489BSVU9LEHLB",
     "away_team_id": "02I9L45A5K000000VS5489B1VTAQ4EE6",
     "postponed_to": "",
-    "publication_retention": {}
+    "publication_retention": {},
+    "venue_assignment": {}
   },
   {
     "external_id": "031C84AB5K000000VS5489BUVUR5FS5A",
@@ -61,7 +62,8 @@
     "home_team_id": "02PKVQDTEK000000VS5489B2VT4FEOV2",
     "away_team_id": "01H7LGR4GO000000VV0AG80NVU1T6GD1",
     "postponed_to": "",
-    "publication_retention": {}
+    "publication_retention": {},
+    "venue_assignment": {}
   },
   {
     "external_id": "031HB5BAAS000000VS5489BTVVG7L386",
@@ -93,7 +95,8 @@
     "home_team_id": "02T7TD5NLG000000VS5489BSVU9LEHLB",
     "away_team_id": "01KQKN6M8K000000VV0AG811VSVU41QE",
     "postponed_to": "",
-    "publication_retention": {}
+    "publication_retention": {},
+    "venue_assignment": {}
   },
   {
     "external_id": "031DB86VLC000000VS5489BUVUR5FS5A",
@@ -125,7 +128,8 @@
     "home_team_id": "02PKVQDTEK000000VS5489B2VT4FEOV2",
     "away_team_id": "02I8BG3NRC000000VS5489B1VTAQ4EE6",
     "postponed_to": "",
-    "publication_retention": {}
+    "publication_retention": {},
+    "venue_assignment": {}
   },
   {
     "external_id": "031DP96C58000000VS5489BUVUR5FS5A",
@@ -159,7 +163,8 @@
     "home_team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
     "away_team_id": "011MI9UBJO000000VTVG0001VTR8C1K7",
     "postponed_to": "",
-    "publication_retention": {}
+    "publication_retention": {},
+    "venue_assignment": {}
   },
   {
     "external_id": "031MFGE2K8000000VS5489BUVVKNMR0J",
@@ -191,7 +196,8 @@
     "home_team_id": "031A57Q7PG000000VS5489BSVU0ORN69",
     "away_team_id": "02PM07AVVS000000VS5489B1VS5DN01P",
     "postponed_to": "",
-    "publication_retention": {}
+    "publication_retention": {},
+    "venue_assignment": {}
   },
   {
     "external_id": "031MGSR39C000000VS5489BUVVKNMR0J",
@@ -223,7 +229,8 @@
     "home_team_id": "01S69BH0IK000000VS548985VUL18RL3",
     "away_team_id": "02TBBEAU8S000000VS5489BRVTHNGU03",
     "postponed_to": "",
-    "publication_retention": {}
+    "publication_retention": {},
+    "venue_assignment": {}
   },
   {
     "external_id": "031HB5B9Q0000000VS5489BTVVG7L386",
@@ -255,7 +262,8 @@
     "home_team_id": "02T7TD5NLG000000VS5489BSVU9LEHLB",
     "away_team_id": "011MIEH5CS000000VTVG0001VTR8C1K7",
     "postponed_to": "",
-    "publication_retention": {}
+    "publication_retention": {},
+    "venue_assignment": {}
   },
   {
     "external_id": "031MFGE2RO000000VS5489BUVVKNMR0J",
@@ -287,7 +295,8 @@
     "home_team_id": "031A57Q7PG000000VS5489BSVU0ORN69",
     "away_team_id": "02TB103KFC000000VS5489BSVV9JRPRB",
     "postponed_to": "",
-    "publication_retention": {}
+    "publication_retention": {},
+    "venue_assignment": {}
   },
   {
     "external_id": "031MGSR2UC000000VS5489BUVVKNMR0J",
@@ -319,7 +328,8 @@
     "home_team_id": "01S69BH0IK000000VS548985VUL18RL3",
     "away_team_id": "011MIBNPPG000000VTVG0001VTR8C1K7",
     "postponed_to": "",
-    "publication_retention": {}
+    "publication_retention": {},
+    "venue_assignment": {}
   },
   {
     "external_id": "610015371",
@@ -351,7 +361,51 @@
     "home_team_id": "",
     "away_team_id": "011KGG85I0000000VTVG0001VSK3M9SE",
     "postponed_to": "",
-    "publication_retention": {}
+    "publication_retention": {},
+    "venue_assignment": {}
+  },
+  {
+    "external_id": "0323TKOBKG000000VS5489BTVT7QHFUC",
+    "match_number": "810045027",
+    "team_id": "01S69BH0IK000000VS548985VUL18RL3",
+    "team_name": "Schönwalder SV",
+    "team_category": "D-Junioren | Kreisfreundschaftsspiele",
+    "team_role": "home",
+    "kickoff": "2026-09-23T18:00+02:00",
+    "home_team": "Schönwalder SV",
+    "away_team": "SC Oberhavel Velten I (U13)",
+    "competition": "Mi, | D-Junioren | Kreisfreundschaftsspiele",
+    "match_type": "FS",
+    "status": "",
+    "venue_raw": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1",
+    "detail_url": "https://www.fussball.de/spiel/schoenwalder-sv-sc-oberhavel-velten-i-u13/-/spiel/0323TKOBKG000000VS5489BTVT7QHFUC",
+    "source_url": "https://www.fussball.de/ajax.club.matchplan/-/id/00ES8GNBL0000049VV0AG08LVUPGND5I/mode/PAGE/show-filter/false/show-venues/true/mime-type/HTML/datum-von/2026-07-01/datum-bis/2026-09-30/max/50",
+    "decision": "include",
+    "calendar": "Rasen",
+    "venue_rule": "Rasen Schönwalde (bestätigte Vereinszuordnung)",
+    "event_start": "2026-09-23T17:00+02:00",
+    "event_end": "2026-09-23T20:15+02:00",
+    "match_end": "2026-09-23T19:15+02:00",
+    "match_duration_minutes": 75,
+    "duration_rule": "flb-jugendordnung-2025-12-13-d-2x30+halftime-15",
+    "competition_format": "friendly",
+    "checksum": "f82a3b9fe78b5b744db1a30f35e6cf70d03ab7c1536dbc746ea335909230fee7",
+    "warnings": [],
+    "home_team_id": "01S69BH0IK000000VS548985VUL18RL3",
+    "away_team_id": "011MI9A0UC000000VTVG0001VTR8C1K7",
+    "postponed_to": "",
+    "publication_retention": {},
+    "venue_assignment": {
+      "kickoff": "2026-09-23T18:00+02:00",
+      "home_team_id": "01S69BH0IK000000VS548985VUL18RL3",
+      "away_team_id": "011MI9A0UC000000VTVG0001VTR8C1K7",
+      "venue": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1",
+      "calendar": "Rasen",
+      "confirmed_on": "2026-09-17",
+      "reason": "Ausdrückliche Vereinsfreigabe im Projektchat: auf Rasen ansetzen; bei FUSSBALL.DE ist kein Platz hinterlegt.",
+      "source": "club-confirmation",
+      "source_venue_raw": ""
+    }
   },
   {
     "external_id": "031MFGE2VC000000VS5489BUVVKNMR0J",
@@ -383,7 +437,8 @@
     "home_team_id": "031A57Q7PG000000VS5489BSVU0ORN69",
     "away_team_id": "0311QE12MC000000VS5489BRVV9R0K3A",
     "postponed_to": "",
-    "publication_retention": {}
+    "publication_retention": {},
+    "venue_assignment": {}
   },
   {
     "external_id": "031O4JQIM4000000VS5489BUVT2M8LCU",
@@ -415,7 +470,8 @@
     "home_team_id": "02T7TD5NLG000000VS5489BSVU9LEHLB",
     "away_team_id": "023I6E2EDS000000VS548985VU14N0BQ",
     "postponed_to": "",
-    "publication_retention": {}
+    "publication_retention": {},
+    "venue_assignment": {}
   },
   {
     "external_id": "610018461",
@@ -447,7 +503,8 @@
     "home_team_id": "",
     "away_team_id": "01OFNF8544000000VV0AG80NVUUTMIT0",
     "postponed_to": "",
-    "publication_retention": {}
+    "publication_retention": {},
+    "venue_assignment": {}
   },
   {
     "external_id": "610018452",
@@ -479,7 +536,8 @@
     "home_team_id": "",
     "away_team_id": "01KPKBA8F8000000VV0AG811VSVU41QE",
     "postponed_to": "",
-    "publication_retention": {}
+    "publication_retention": {},
+    "venue_assignment": {}
   },
   {
     "external_id": "031DB86VDS000000VS5489BUVUR5FS5A",
@@ -511,7 +569,8 @@
     "home_team_id": "02PKVQDTEK000000VS5489B2VT4FEOV2",
     "away_team_id": "02PKTPROMG000000VS5489B1VS5DN01P",
     "postponed_to": "",
-    "publication_retention": {}
+    "publication_retention": {},
+    "venue_assignment": {}
   },
   {
     "external_id": "031MGSR2LC000000VS5489BUVVKNMR0J",
@@ -543,7 +602,8 @@
     "home_team_id": "01S69BH0IK000000VS548985VUL18RL3",
     "away_team_id": "02IAM2DL7S000000VS5489B2VSVC88K8",
     "postponed_to": "",
-    "publication_retention": {}
+    "publication_retention": {},
+    "venue_assignment": {}
   },
   {
     "external_id": "0320RDKT9S000000VS5489BTVT7QHFUC",
@@ -575,7 +635,8 @@
     "home_team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
     "away_team_id": "011MIBRREG000000VTVG0001VTR8C1K7",
     "postponed_to": "",
-    "publication_retention": {}
+    "publication_retention": {},
+    "venue_assignment": {}
   },
   {
     "external_id": "031MFGE2PG000000VS5489BUVVKNMR0J",
@@ -609,7 +670,8 @@
     "home_team_id": "031A57Q7PG000000VS5489BSVU0ORN69",
     "away_team_id": "011MIA3TTO000000VTVG0001VTR8C1K7",
     "postponed_to": "",
-    "publication_retention": {}
+    "publication_retention": {},
+    "venue_assignment": {}
   },
   {
     "external_id": "031HB5B99O000000VS5489BTVVG7L386",
@@ -641,7 +703,8 @@
     "home_team_id": "02T7TD5NLG000000VS5489BSVU9LEHLB",
     "away_team_id": "0318S4RIF0000000VS5489BSVU0ORN69",
     "postponed_to": "",
-    "publication_retention": {}
+    "publication_retention": {},
+    "venue_assignment": {}
   },
   {
     "external_id": "031DB86V6S000000VS5489BUVUR5FS5A",
@@ -673,7 +736,8 @@
     "home_team_id": "02PKVQDTEK000000VS5489B2VT4FEOV2",
     "away_team_id": "02EIA4DI38000000VS5489B2VS183IS6",
     "postponed_to": "",
-    "publication_retention": {}
+    "publication_retention": {},
+    "venue_assignment": {}
   },
   {
     "external_id": "031HB5B8QK000000VS5489BTVVG7L386",
@@ -705,7 +769,8 @@
     "home_team_id": "02T7TD5NLG000000VS5489BSVU9LEHLB",
     "away_team_id": "01D8SC7DKK000000VV0AG80NVUGKJV47",
     "postponed_to": "",
-    "publication_retention": {}
+    "publication_retention": {},
+    "venue_assignment": {}
   },
   {
     "external_id": "031DP96D60000000VS5489BUVUR5FS5A",
@@ -737,7 +802,8 @@
     "home_team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
     "away_team_id": "011MIEQFSS000000VTVG0001VTR8C1K7",
     "postponed_to": "",
-    "publication_retention": {}
+    "publication_retention": {},
+    "venue_assignment": {}
   },
   {
     "external_id": "031MGSR294000000VS5489BUVVKNMR0J",
@@ -769,7 +835,8 @@
     "home_team_id": "01S69BH0IK000000VS548985VUL18RL3",
     "away_team_id": "011MICTOLO000000VTVG0001VTR8C1K7",
     "postponed_to": "",
-    "publication_retention": {}
+    "publication_retention": {},
+    "venue_assignment": {}
   },
   {
     "external_id": "031HB5BAJS000000VS5489BTVVG7L386",
@@ -801,7 +868,8 @@
     "home_team_id": "02T7TD5NLG000000VS5489BSVU9LEHLB",
     "away_team_id": "030OTLPKMO000000VS5489BRVTOJ9IF5",
     "postponed_to": "",
-    "publication_retention": {}
+    "publication_retention": {},
+    "venue_assignment": {}
   },
   {
     "external_id": "031HB5B8DG000000VS5489BTVVG7L386",
@@ -833,7 +901,8 @@
     "home_team_id": "02T7TD5NLG000000VS5489BSVU9LEHLB",
     "away_team_id": "0277CFCJJ4000000VS5489B1VSBHJ1NS",
     "postponed_to": "",
-    "publication_retention": {}
+    "publication_retention": {},
+    "venue_assignment": {}
   },
   {
     "external_id": "031HB5BEJS000000VS5489BTVVG7L386",
@@ -865,7 +934,8 @@
     "home_team_id": "02T7TD5NLG000000VS5489BSVU9LEHLB",
     "away_team_id": "02754JV4N0000000VS5489B2VVRTHQ8E",
     "postponed_to": "",
-    "publication_retention": {}
+    "publication_retention": {},
+    "venue_assignment": {}
   },
   {
     "external_id": "031HB5BDEG000000VS5489BTVVG7L386",
@@ -897,7 +967,8 @@
     "home_team_id": "02T7TD5NLG000000VS5489BSVU9LEHLB",
     "away_team_id": "011MIBO66O000000VTVG0001VTR8C1K7",
     "postponed_to": "",
-    "publication_retention": {}
+    "publication_retention": {},
+    "venue_assignment": {}
   },
   {
     "external_id": "031DB870D4000000VS5489BUVUR5FS5A",
@@ -929,7 +1000,8 @@
     "home_team_id": "02PKVQDTEK000000VS5489B2VT4FEOV2",
     "away_team_id": "02AU1A03O4000000VS5489B1VTFE8486",
     "postponed_to": "",
-    "publication_retention": {}
+    "publication_retention": {},
+    "venue_assignment": {}
   },
   {
     "external_id": "031DB8NT0S000000VS5489BUVUR5FS5A",
@@ -961,7 +1033,8 @@
     "home_team_id": "02PKT2MAOC000000VS5489B2VT4FEOV2",
     "away_team_id": "02PJD5K8O8000000VS5489B1VUI2QQ8R",
     "postponed_to": "",
-    "publication_retention": {}
+    "publication_retention": {},
+    "venue_assignment": {}
   },
   {
     "external_id": "031HB5BCK8000000VS5489BTVVG7L386",
@@ -993,7 +1066,8 @@
     "home_team_id": "02T7TD5NLG000000VS5489BSVU9LEHLB",
     "away_team_id": "02T94BGV6C000000VS5489BRVTHNGU03",
     "postponed_to": "",
-    "publication_retention": {}
+    "publication_retention": {},
+    "venue_assignment": {}
   },
   {
     "external_id": "031DP96M1K000000VS5489BUVUR5FS5A",
@@ -1025,7 +1099,8 @@
     "home_team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
     "away_team_id": "011MIAT5FC000000VTVG0001VTR8C1K7",
     "postponed_to": "",
-    "publication_retention": {}
+    "publication_retention": {},
+    "venue_assignment": {}
   },
   {
     "external_id": "031DB87058000000VS5489BUVUR5FS5A",
@@ -1057,7 +1132,8 @@
     "home_team_id": "02PKVQDTEK000000VS5489B2VT4FEOV2",
     "away_team_id": "02TINQ61UC000000VS5489BSVUALD4UK",
     "postponed_to": "",
-    "publication_retention": {}
+    "publication_retention": {},
+    "venue_assignment": {}
   },
   {
     "external_id": "031DB8NSPC000000VS5489BUVUR5FS5A",
@@ -1089,7 +1165,8 @@
     "home_team_id": "02PKT2MAOC000000VS5489B2VT4FEOV2",
     "away_team_id": "02Q16G28BO000000VS5489B2VT450JFN",
     "postponed_to": "",
-    "publication_retention": {}
+    "publication_retention": {},
+    "venue_assignment": {}
   },
   {
     "external_id": "031HB5BC5G000000VS5489BTVVG7L386",
@@ -1121,7 +1198,8 @@
     "home_team_id": "02T7TD5NLG000000VS5489BSVU9LEHLB",
     "away_team_id": "02TKDISEO0000000VS5489BSVSKABKDB",
     "postponed_to": "",
-    "publication_retention": {}
+    "publication_retention": {},
+    "venue_assignment": {}
   },
   {
     "external_id": "031DB86VQ4000000VS5489BUVUR5FS5A",
@@ -1153,7 +1231,8 @@
     "home_team_id": "02PKVQDTEK000000VS5489B2VT4FEOV2",
     "away_team_id": "0279GSGFB8000000VS5489B2VVB7EFSC",
     "postponed_to": "",
-    "publication_retention": {}
+    "publication_retention": {},
+    "venue_assignment": {}
   },
   {
     "external_id": "031DB8NSH4000000VS5489BUVUR5FS5A",
@@ -1185,7 +1264,8 @@
     "home_team_id": "02PKT2MAOC000000VS5489B2VT4FEOV2",
     "away_team_id": "02PGDVHS1O000000VS5489B1VSCT0UPQ",
     "postponed_to": "",
-    "publication_retention": {}
+    "publication_retention": {},
+    "venue_assignment": {}
   },
   {
     "external_id": "031HB5BBC0000000VS5489BTVVG7L386",
@@ -1217,7 +1297,8 @@
     "home_team_id": "02T7TD5NLG000000VS5489BSVU9LEHLB",
     "away_team_id": "01DAR93834000000VV0AG811VVO7G072",
     "postponed_to": "",
-    "publication_retention": {}
+    "publication_retention": {},
+    "venue_assignment": {}
   },
   {
     "external_id": "031DP96HKG000000VS5489BUVUR5FS5A",
@@ -1249,6 +1330,7 @@
     "home_team_id": "011MIARJNS000000VTVG0001VTR8C1K7",
     "away_team_id": "011MIEVFVC000000VTVG0001VTR8C1K7",
     "postponed_to": "",
-    "publication_retention": {}
+    "publication_retention": {},
+    "venue_assignment": {}
   }
 ]

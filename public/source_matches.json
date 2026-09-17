@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-16T06:16:56+00:00",
+  "generatedAt": "2026-09-17T14:35:57+00:00",
   "status": "ok",
   "matches": [
     {
@@ -27,6 +27,7 @@
       "status": "",
       "detailLink": "https://www.fussball.de/spiel/schoenwalder-sv-sg-gruen-weiss-golm/-/spiel/031NC93R54000000VS5489BUVT2M8LCU",
       "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+      "locationSource": "fussball.de",
       "source": "fussball.de",
       "checksum": "95c8a0b856df25e77cc0eb1438dd7898fb8016cd394aab5854c8be9012e24792"
     },
@@ -54,6 +55,7 @@
       "status": "",
       "detailLink": "https://www.fussball.de/spiel/schoenwalder-sv-ue40-sg-bornim-ue40/-/spiel/031C84AB5K000000VS5489BUVUR5FS5A",
       "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+      "locationSource": "fussball.de",
       "source": "fussball.de",
       "checksum": "7d81fb32ac0b24e46865469f6cf8154aade30e4ab28c7f9022e37bd36e8983d8"
     },
@@ -81,6 +83,7 @@
       "status": "",
       "detailLink": "https://www.fussball.de/spiel/schoenwalder-sv-fc-schwedt-02-a-junioren/-/spiel/031HB5BAAS000000VS5489BTVVG7L386",
       "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+      "locationSource": "fussball.de",
       "source": "fussball.de",
       "checksum": "93107c551087d318a39a2f654be7129310ee2db605f301825b19fe4067b8290a"
     },
@@ -108,6 +111,7 @@
       "status": "",
       "detailLink": "https://www.fussball.de/spiel/schoenwalder-sv-ue40-sv-gruen-weiss-brieselang-ue40/-/spiel/031DB86VLC000000VS5489BUVUR5FS5A",
       "location": "Kunstrasenplatz, Sportplatz Schönwalde Strandbad, Platz 2, KR, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+      "locationSource": "fussball.de",
       "source": "fussball.de",
       "checksum": "4e840bad7307fda917381407cb0a633433e6e5cf8fce278b0e48baaca8a21d67"
     },
@@ -135,6 +139,7 @@
       "status": "",
       "detailLink": "https://www.fussball.de/spiel/spielgemeinschaft-schoenwalde-perwenitz-paaren-vfl-nauen-ii/-/spiel/031DP96C58000000VS5489BUVUR5FS5A",
       "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+      "locationSource": "fussball.de",
       "source": "fussball.de",
       "checksum": "7b2a449d8c6311dbe642ebaef7e383d7adb6846bc9391a0cf6cf79780bfc7816"
     },
@@ -162,6 +167,7 @@
       "status": "",
       "detailLink": "https://www.fussball.de/spiel/schoenwalder-sv-9er-potsdamer-kickers-94-9er-ii/-/spiel/031MFGE2K8000000VS5489BUVVKNMR0J",
       "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+      "locationSource": "fussball.de",
       "source": "fussball.de",
       "checksum": "d192c726227752a8fc18622158d8e62c3f25a09498f64f1b6be3016be89c9374"
     },
@@ -189,6 +195,7 @@
       "status": "",
       "detailLink": "https://www.fussball.de/spiel/schoenwalder-sv-sg-blau-weiss-pessin/-/spiel/031MGSR39C000000VS5489BUVVKNMR0J",
       "location": "Kunstrasenplatz, Sportplatz Schönwalde Strandbad, Platz 2, KR, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+      "locationSource": "fussball.de",
       "source": "fussball.de",
       "checksum": "5811297c5dc136718ee9cee318b6b71370f77c6d384d8104231fc6b78f6c36d9"
     },
@@ -216,6 +223,7 @@
       "status": "",
       "detailLink": "https://www.fussball.de/spiel/schoenwalder-sv-oranienburger-fc-eintracht-u19/-/spiel/031HB5B9Q0000000VS5489BTVVG7L386",
       "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+      "locationSource": "fussball.de",
       "source": "fussball.de",
       "checksum": "11f884087aeb3e6ec7b2882530a6a85d9c48368eeb8cf113a4b5ba04725a8443"
     },
@@ -243,6 +251,7 @@
       "status": "",
       "detailLink": "https://www.fussball.de/spiel/schoenwalder-sv-9er-tsv-perwenitz-9er/-/spiel/031MFGE2RO000000VS5489BUVVKNMR0J",
       "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+      "locationSource": "fussball.de",
       "source": "fussball.de",
       "checksum": "330f1b0f98be1687c186a3bc5e9822e201fa9b35e0e4bbacff434a8d6f9605a2"
     },
@@ -270,6 +279,7 @@
       "status": "",
       "detailLink": "https://www.fussball.de/spiel/schoenwalder-sv-esv-lok-elstal-i/-/spiel/031MGSR2UC000000VS5489BUVVKNMR0J",
       "location": "Kunstrasenplatz, Sportplatz Schönwalde Strandbad, Platz 2, KR, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+      "locationSource": "fussball.de",
       "source": "fussball.de",
       "checksum": "49e254f0f43e0858edc56f12824e9b20de0e84ddaf2f1ac3716b55dc566f7373"
     },
@@ -297,8 +307,37 @@
       "status": "",
       "detailLink": "https://www.fussball.de/spieltag/schoenwalder-sv-53-i-fussball-3-2019/-/staffel/031LO5V9MC00000CVS5489BTVSRD0UH9-G",
       "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+      "locationSource": "fussball.de",
       "source": "fussball.de",
       "checksum": "c16578b08c830ef265a314f1360dc7d7dfe8454d992b3ccc242c169565aa50ba"
+    },
+    {
+      "id": "dfb:0323TKOBKG000000VS5489BTVT7QHFUC",
+      "title": "Schönwalder SV – SC Oberhavel Velten I (U13)",
+      "start": "2026-09-23T18:00+02:00",
+      "end": "2026-09-23T19:15+02:00",
+      "occupancyStart": "2026-09-23T17:00+02:00",
+      "occupancyEnd": "2026-09-23T20:15+02:00",
+      "kickoff": "2026-09-23T18:00+02:00",
+      "matchDurationMinutes": 75,
+      "durationRule": "flb-jugendordnung-2025-12-13-d-2x30+halftime-15",
+      "competitionFormat": "friendly",
+      "matchType": "FS",
+      "place": "rasen",
+      "calendar": "Rasen",
+      "team": "Schönwalder SV",
+      "teamCategory": "D-Junioren | Kreisfreundschaftsspiele",
+      "teamRole": "home",
+      "homeTeam": "Schönwalder SV",
+      "awayTeam": "SC Oberhavel Velten I (U13)",
+      "competition": "Mi, | D-Junioren | Kreisfreundschaftsspiele",
+      "description": "D-Junioren · Kreisfreundschaftsspiele",
+      "status": "",
+      "detailLink": "https://www.fussball.de/spiel/schoenwalder-sv-sc-oberhavel-velten-i-u13/-/spiel/0323TKOBKG000000VS5489BTVT7QHFUC",
+      "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1",
+      "locationSource": "club-confirmation",
+      "source": "fussball.de",
+      "checksum": "f82a3b9fe78b5b744db1a30f35e6cf70d03ab7c1536dbc746ea335909230fee7"
     },
     {
       "id": "dfb:031MFGE2VC000000VS5489BUVVKNMR0J",
@@ -324,6 +363,7 @@
       "status": "",
       "detailLink": "https://www.fussball.de/spiel/schoenwalder-sv-9er-eintracht-falkensee-ii-9er/-/spiel/031MFGE2VC000000VS5489BUVVKNMR0J",
       "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+      "locationSource": "fussball.de",
       "source": "fussball.de",
       "checksum": "5501b7b8d3ea8f099d07492b46e075b8c9230a4b9b65610f8c93d01aede10324"
     },
@@ -351,6 +391,7 @@
       "status": "",
       "detailLink": "https://www.fussball.de/spiel/schoenwalder-sv-sv-concordia-nowawes-06/-/spiel/031O4JQIM4000000VS5489BUVT2M8LCU",
       "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+      "locationSource": "fussball.de",
       "source": "fussball.de",
       "checksum": "4348e536dde00717a5f6d50d910af6621b634e78d0752909e133f7bc60cb7db4"
     },
@@ -378,6 +419,7 @@
       "status": "",
       "detailLink": "https://www.fussball.de/spieltag/schoenwalder-sv-53-ii-fussball-5-2017/-/staffel/031LOV8CUC00000KVS5489BTVSRD0UH9-G",
       "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+      "locationSource": "fussball.de",
       "source": "fussball.de",
       "checksum": "76ce43c9327c781fbee88111ed0c85a0ad6375d1ada2f5071640a29fa7ff5c4a"
     },
@@ -405,6 +447,7 @@
       "status": "",
       "detailLink": "https://www.fussball.de/spieltag/schoenwalder-sv-53-i-fussball-5-2016/-/staffel/031LOV8CUC00000JVS5489BTVSRD0UH9-G",
       "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+      "locationSource": "fussball.de",
       "source": "fussball.de",
       "checksum": "1254907c7f8c4761478f0e2786a3e8f11a1077a0481ec87eaf292e46fcc904f3"
     },
@@ -432,6 +475,7 @@
       "status": "",
       "detailLink": "https://www.fussball.de/spiel/schoenwalder-sv-ue40-sv-dallgow-47/-/spiel/031DB86VDS000000VS5489BUVUR5FS5A",
       "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+      "locationSource": "fussball.de",
       "source": "fussball.de",
       "checksum": "385ca86307671191236f8c17dcfbe88f6eb7d1fd2e2fbb54425a8340dfa3816d"
     },
@@ -459,6 +503,7 @@
       "status": "",
       "detailLink": "https://www.fussball.de/spiel/schoenwalder-sv-spg-bsc-rathenow-sv-grosswudicke/-/spiel/031MGSR2LC000000VS5489BUVVKNMR0J",
       "location": "Kunstrasenplatz, Sportplatz Schönwalde Strandbad, Platz 2, KR, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+      "locationSource": "fussball.de",
       "source": "fussball.de",
       "checksum": "79b87566f30374ef8e458e028d66f7584b2c95d30a41fa3101ffce8f8e00508d"
     },
@@ -486,6 +531,7 @@
       "status": "",
       "detailLink": "https://www.fussball.de/spiel/spielgemeinschaft-schoenwalde-perwenitz-paaren-rsv-eintracht-1949-u23/-/spiel/0320RDKT9S000000VS5489BTVT7QHFUC",
       "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+      "locationSource": "fussball.de",
       "source": "fussball.de",
       "checksum": "cb5cb5d08dfd7926c9e378212e58bcf30423ff6cdb99aa4c078c5d30df565654"
     },
@@ -513,6 +559,7 @@
       "status": "",
       "detailLink": "https://www.fussball.de/spiel/schoenwalder-sv-9er-sv-dallgow-47-i-9er/-/spiel/031MFGE2PG000000VS5489BUVVKNMR0J",
       "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+      "locationSource": "fussball.de",
       "source": "fussball.de",
       "checksum": "2647880e2b05caee0f911a42c57dbb892396bfff8f2633fbf92cb84010ac736c"
     },
@@ -540,6 +587,7 @@
       "status": "",
       "detailLink": "https://www.fussball.de/spiel/schoenwalder-sv-sg-gruen-weiss-rehfelde/-/spiel/031HB5B99O000000VS5489BTVVG7L386",
       "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+      "locationSource": "fussball.de",
       "source": "fussball.de",
       "checksum": "266ce99a2cc2be462d78396139e6f065f643115e147f121829600c40aadb5013"
     },
@@ -567,6 +615,7 @@
       "status": "",
       "detailLink": "https://www.fussball.de/spiel/schoenwalder-sv-ue40-sv-falkensee-finkenkrug/-/spiel/031DB86V6S000000VS5489BUVUR5FS5A",
       "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+      "locationSource": "fussball.de",
       "source": "fussball.de",
       "checksum": "f6ffd7ab5f12ab282b141af118a408037fda6137c3c9b3207e33419246a2392f"
     },
@@ -594,6 +643,7 @@
       "status": "",
       "detailLink": "https://www.fussball.de/spiel/schoenwalder-sv-fv-erkner-1920/-/spiel/031HB5B8QK000000VS5489BTVVG7L386",
       "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+      "locationSource": "fussball.de",
       "source": "fussball.de",
       "checksum": "af0abc8f3ab3831dc91b06568e620637f199c9d073b2d26c1e2f8a11958a57f9"
     },
@@ -621,6 +671,7 @@
       "status": "",
       "detailLink": "https://www.fussball.de/spiel/spielgemeinschaft-schoenwalde-perwenitz-paaren-fc-borussia-brandenburg-ii/-/spiel/031DP96D60000000VS5489BUVUR5FS5A",
       "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+      "locationSource": "fussball.de",
       "source": "fussball.de",
       "checksum": "05a685dd7e81d16b9dab4791e705b4316bd3d959f515193706f1d5461cbfe5e4"
     },
@@ -648,6 +699,7 @@
       "status": "",
       "detailLink": "https://www.fussball.de/spiel/schoenwalder-sv-sv-falkensee-finkenkrug-iii/-/spiel/031MGSR294000000VS5489BUVVKNMR0J",
       "location": "Kunstrasenplatz, Sportplatz Schönwalde Strandbad, Platz 2, KR, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+      "locationSource": "fussball.de",
       "source": "fussball.de",
       "checksum": "e1f6cb788c10d3f24aec6df9a1a99c94b286463ce0b9c0315431a5348ac421b1"
     },
@@ -675,6 +727,7 @@
       "status": "",
       "detailLink": "https://www.fussball.de/spiel/schoenwalder-sv-msv-1919-neuruppin-u19/-/spiel/031HB5BAJS000000VS5489BTVVG7L386",
       "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+      "locationSource": "fussball.de",
       "source": "fussball.de",
       "checksum": "3448fc25b1eadf29841fefc2dab56499f922e1131a1b5c34970baab751869bad"
     },
@@ -702,6 +755,7 @@
       "status": "",
       "detailLink": "https://www.fussball.de/spiel/schoenwalder-sv-vfl-nauen-sv-gruen-weiss-brieselang/-/spiel/031HB5B8DG000000VS5489BTVVG7L386",
       "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+      "locationSource": "fussball.de",
       "source": "fussball.de",
       "checksum": "d036aba6780fbd18b65c51d215af24239287d7bc3af3b5cc60ddcc403b95d938"
     },
@@ -729,6 +783,7 @@
       "status": "",
       "detailLink": "https://www.fussball.de/spiel/schoenwalder-sv-sc-victoria-1914-templin/-/spiel/031HB5BEJS000000VS5489BTVVG7L386",
       "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+      "locationSource": "fussball.de",
       "source": "fussball.de",
       "checksum": "c2b548cb45fa425dd6e9a24b033a10a1cfb8c17cf3c18d7fdcaf3edc71a43060"
     },
@@ -756,6 +811,7 @@
       "status": "",
       "detailLink": "https://www.fussball.de/spiel/schoenwalder-sv-fc-strausberg/-/spiel/031HB5BDEG000000VS5489BTVVG7L386",
       "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+      "locationSource": "fussball.de",
       "source": "fussball.de",
       "checksum": "cad84402e41dbc707633699fdd44396604bddfd66028213017d4ceefd0ab1f16"
     },
@@ -783,6 +839,7 @@
       "status": "",
       "detailLink": "https://www.fussball.de/spiel/schoenwalder-sv-ue40-eintracht-falkensee-ue40/-/spiel/031DB870D4000000VS5489BUVUR5FS5A",
       "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+      "locationSource": "fussball.de",
       "source": "fussball.de",
       "checksum": "e642739c6dffeca75bdb0249c574af2af4a2b5c1432df057f723ff1b9724d23d"
     },
@@ -810,6 +867,7 @@
       "status": "",
       "detailLink": "https://www.fussball.de/spiel/spg-perwenitz-schoenwalde-ue50-sv-falkensee-finkenkrug/-/spiel/031DB8NT0S000000VS5489BUVUR5FS5A",
       "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+      "locationSource": "fussball.de",
       "source": "fussball.de",
       "checksum": "ee427b8b6a8621a6d2ee05e6e5b6d0ae97128f4483feb1e43a06c72364bb4a4b"
     },
@@ -837,6 +895,7 @@
       "status": "",
       "detailLink": "https://www.fussball.de/spiel/schoenwalder-sv-spg-klosterfelde-wandlitz-basdorf/-/spiel/031HB5BCK8000000VS5489BTVVG7L386",
       "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+      "locationSource": "fussball.de",
       "source": "fussball.de",
       "checksum": "7dbaaebfeb1e895300975b4f7193e657cda3bd789c68540fbc0ed2a31832a8c7"
     },
@@ -864,6 +923,7 @@
       "status": "",
       "detailLink": "https://www.fussball.de/spiel/spielgemeinschaft-schoenwalde-perwenitz-paaren-sv-roskow/-/spiel/031DP96M1K000000VS5489BUVUR5FS5A",
       "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+      "locationSource": "fussball.de",
       "source": "fussball.de",
       "checksum": "4770254f84cbd8f30ccff0443d838e74adcc2e983a756984645b6c4bd2d6ba94"
     },
@@ -891,6 +951,7 @@
       "status": "",
       "detailLink": "https://www.fussball.de/spiel/schoenwalder-sv-ue40-sg-eintracht-friesack-ue40/-/spiel/031DB87058000000VS5489BUVUR5FS5A",
       "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+      "locationSource": "fussball.de",
       "source": "fussball.de",
       "checksum": "64fb657cd6543421d85e6c8b1f100a8c8721c43546035ec201a1eaa6c02969ac"
     },
@@ -918,6 +979,7 @@
       "status": "",
       "detailLink": "https://www.fussball.de/spiel/spg-perwenitz-schoenwalde-ue50-spg-empor-schenkenberg-eintracht-glindow/-/spiel/031DB8NSPC000000VS5489BUVUR5FS5A",
       "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+      "locationSource": "fussball.de",
       "source": "fussball.de",
       "checksum": "4bcdde36473591d5d6aa1915082c7a7f7714dd23c108d0ba3d274beaa9b94fd7"
     },
@@ -945,6 +1007,7 @@
       "status": "",
       "detailLink": "https://www.fussball.de/spiel/schoenwalder-sv-fsv-schorfheide-joachimsthal/-/spiel/031HB5BC5G000000VS5489BTVVG7L386",
       "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+      "locationSource": "fussball.de",
       "source": "fussball.de",
       "checksum": "448d8adad2b8fe5f88e35437465ec6cf91b2ea6e5ab05c7b0386e80c2e3a57f4"
     },
@@ -972,6 +1035,7 @@
       "status": "",
       "detailLink": "https://www.fussball.de/spiel/schoenwalder-sv-ue40-fsv-95-ketzin-falkenrehde-ue40/-/spiel/031DB86VQ4000000VS5489BUVUR5FS5A",
       "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+      "locationSource": "fussball.de",
       "source": "fussball.de",
       "checksum": "e61b82a773862ab70ef4571303a01c7d68cbd714e3e3a68f0ecbd84d3cf5b595"
     },
@@ -999,6 +1063,7 @@
       "status": "",
       "detailLink": "https://www.fussball.de/spiel/spg-perwenitz-schoenwalde-ue50-sv-blau-gelb-falkensee/-/spiel/031DB8NSH4000000VS5489BUVUR5FS5A",
       "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+      "locationSource": "fussball.de",
       "source": "fussball.de",
       "checksum": "9919fd05e48bfa74a8be9df608450483b3a3815b6272cfed5891b824b6554516"
     },
@@ -1026,6 +1091,7 @@
       "status": "",
       "detailLink": "https://www.fussball.de/spiel/schoenwalder-sv-fv-preussen-eberswalde/-/spiel/031HB5BBC0000000VS5489BTVVG7L386",
       "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+      "locationSource": "fussball.de",
       "source": "fussball.de",
       "checksum": "d2b5b50e199e20e690344ea8f4e96cbc16e68532d428f47d6302097fb36cd0a3"
     },
@@ -1053,6 +1119,7 @@
       "status": "",
       "detailLink": "https://www.fussball.de/spiel/spielgemeinschaft-schoenwalde-perwenitz-paaren-sv-kloster-lehnin/-/spiel/031DP96HKG000000VS5489BUVUR5FS5A",
       "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+      "locationSource": "fussball.de",
       "source": "fussball.de",
       "checksum": "5abcaaa49910de363b1dbf087914173b178207950dd688f832b9a1e34bbd4fef"
     }

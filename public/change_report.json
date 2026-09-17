@@ -1,14 +1,14 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-16T06:16:56.538537+00:00",
+  "generatedAt": "2026-09-17T14:35:57.490034+00:00",
   "status": "ok",
   "counts": {
     "before": 39,
-    "after": 39,
-    "added": 0,
+    "after": 40,
+    "added": 1,
     "changed": 0,
     "removed": 0,
-    "effectiveAfter": 39,
+    "effectiveAfter": 40,
     "retained": 0,
     "released": 0
   },
@@ -21,7 +21,36 @@
       "confirmed": true
     }
   },
-  "added": [],
+  "added": [
+    {
+      "id": "dfb:0323TKOBKG000000VS5489BTVT7QHFUC",
+      "title": "Schönwalder SV – SC Oberhavel Velten I (U13)",
+      "start": "2026-09-23T18:00+02:00",
+      "end": "2026-09-23T19:15+02:00",
+      "occupancyStart": "2026-09-23T17:00+02:00",
+      "occupancyEnd": "2026-09-23T20:15+02:00",
+      "kickoff": "2026-09-23T18:00+02:00",
+      "matchDurationMinutes": 75,
+      "durationRule": "flb-jugendordnung-2025-12-13-d-2x30+halftime-15",
+      "competitionFormat": "friendly",
+      "matchType": "FS",
+      "place": "rasen",
+      "calendar": "Rasen",
+      "team": "Schönwalder SV",
+      "teamCategory": "D-Junioren | Kreisfreundschaftsspiele",
+      "teamRole": "home",
+      "homeTeam": "Schönwalder SV",
+      "awayTeam": "SC Oberhavel Velten I (U13)",
+      "competition": "Mi, | D-Junioren | Kreisfreundschaftsspiele",
+      "description": "D-Junioren · Kreisfreundschaftsspiele",
+      "status": "",
+      "detailLink": "https://www.fussball.de/spiel/schoenwalder-sv-sc-oberhavel-velten-i-u13/-/spiel/0323TKOBKG000000VS5489BTVT7QHFUC",
+      "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1",
+      "locationSource": "club-confirmation",
+      "source": "fussball.de",
+      "checksum": "f82a3b9fe78b5b744db1a30f35e6cf70d03ab7c1536dbc746ea335909230fee7"
+    }
+  ],
   "changed": [],
   "removed": [],
   "retained": [],
@@ -29,12 +58,12 @@
   "publication": {
     "schemaVersion": 1,
     "status": "ok",
-    "sourceGeneratedAt": "2026-09-16T06:16:56+00:00",
-    "sourceDigest": "b246aa534fc7a49d3e83198185f4e7b57fadc9ca903250e2ce199df631c8df5d",
-    "sourceCount": 39,
+    "sourceGeneratedAt": "2026-09-17T14:35:57+00:00",
+    "sourceDigest": "7c2a50b0d144b833da18c9f8389b2478f45d3bbaa98892ad261ff4bebf7c09cf",
+    "sourceCount": 40,
     "retainedCount": 0,
-    "effectiveCount": 39,
+    "effectiveCount": 40,
     "requiredConsumer": null,
-    "effectiveDigest": "23f55815f8695eed02fd8b7965f6723c684b5b474c833d3be39af2a729bb37ac"
+    "effectiveDigest": "3bbdabedf082cf1e75870e0c44218b3334268f9a8f01965ff1b77cbc7d1e14f9"
   }
 }
