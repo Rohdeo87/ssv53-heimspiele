@@ -128,6 +128,7 @@ def main() -> int:
             "status": item.get("status", ""),
             "detailLink": item.get("detail_url", ""),
             "location": item.get("venue_raw", ""),
+            "locationSource": "club-confirmation" if item.get("venue_assignment") else "fussball.de",
             "source": "fussball.de",
             "checksum": item.get("checksum", ""),
         })
