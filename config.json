@@ -143,6 +143,17 @@
       "calendar": ""
     }
   ],
+  "confirmed_venue_assignments": {
+    "0323TKOBKG000000VS5489BTVT7QHFUC": {
+      "kickoff": "2026-09-23T18:00+02:00",
+      "home_team_id": "01S69BH0IK000000VS548985VUL18RL3",
+      "away_team_id": "011MI9A0UC000000VTVG0001VTR8C1K7",
+      "venue": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1",
+      "calendar": "Rasen",
+      "confirmed_on": "2026-09-17",
+      "reason": "Ausdrückliche Vereinsfreigabe im Projektchat: auf Rasen ansetzen; bei FUSSBALL.DE ist kein Platz hinterlegt."
+    }
+  },
   "schedule_protection": {
     "timezone": "Europe/Berlin",
     "window_start": "06:00",

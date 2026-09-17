@@ -146,6 +146,8 @@ class Match:
     postponed_to: str = ""
     # Populated only by the publication guard, never by the source parser.
     publication_retention: dict[str, Any] = field(default_factory=dict)
+    # A club confirmation can fill an absent source venue, never replace one.
+    venue_assignment: dict[str, Any] = field(default_factory=dict)
 
 
 def validate_fussball_url(url: str) -> str:
@@ -1842,6 +1844,41 @@ def parse_club_matchplan(
     return merged_matches
 
 
+def apply_confirmed_venue(
+    match: Match,
+    assignments: dict[str, Any],
+    rules: list[VenueRule],
+) -> None:
+    """Fill only the exact, explicitly confirmed fixture's missing venue."""
+    if match.venue_raw or is_non_occupancy_status(match.status):
+        return
+    assignment = assignments.get(match.external_id)
+    if assignment is None:
+        return
+    if not isinstance(assignment, dict):
+        raise ScrapeError("Manuelle Platzfreigabe muss ein Objekt sein.")
+    required = ("kickoff", "home_team_id", "away_team_id", "venue", "calendar", "confirmed_on", "reason")
+    if any(not isinstance(assignment.get(key), str) or not assignment[key].strip() for key in required):
+        raise ScrapeError("Manuelle Platzfreigabe ist unvollständig.")
+    if any(getattr(match, key) != assignment[key] for key in ("kickoff", "home_team_id", "away_team_id")):
+        match.warnings.append("Manuelle Platzfreigabe passt nicht mehr zu Termin oder Mannschaften")
+        return
+    venue = normalize_space(assignment["venue"])
+    rule = next((rule for rule in rules if rule.compiled().search(venue)), None)
+    if rule is None or rule.decision != "include" or rule.calendar != assignment["calendar"]:
+        raise ScrapeError("Manuelle Platzfreigabe widerspricht den bestätigten Platzregeln.")
+    parse_iso_date(assignment["confirmed_on"], "confirmed_on")
+    match.venue_assignment = {
+        **{key: assignment[key] for key in required},
+        "source": "club-confirmation",
+        "source_venue_raw": match.venue_raw,
+    }
+    match.venue_raw = venue
+    match.warnings = [warning for warning in match.warnings if warning not in {
+        "Spielstätte fehlt", "Keine automatische Platzzuordnung möglich",
+    }]
+
+
 def apply_venue_rules(
     match: Match,
     rules: list[VenueRule],
@@ -1873,6 +1910,8 @@ def apply_venue_rules(
                 match.decision = rule.decision
                 match.calendar = rule.calendar
                 match.venue_rule = rule.name
+                if match.venue_assignment:
+                    match.venue_rule += " (bestätigte Vereinszuordnung)"
                 break
         else:
             if not match.venue_raw and match.team_role == "away":
@@ -2188,9 +2227,20 @@ def evaluate_quality(
         errors.append(f"{len(invalid_included)} aufzunehmende Spiele sind unvollständig.")
 
     if bool(guard.get("require_no_review", True)):
-        review_count = sum(1 for match in matches if match.decision == "review")
-        if review_count:
-            errors.append(f"{review_count} Spiele benötigen noch eine Platzprüfung.")
+        review_matches = [match for match in matches if match.decision == "review"]
+        if review_matches:
+            count = len(review_matches)
+            errors.append("1 Spiel benötigt noch eine Platzprüfung." if count == 1
+                          else f"{count} Spiele benötigen noch eine Platzprüfung.")
+            for match in review_matches:
+                errors.append(
+                    "Platzprüfung: " + normalize_space(
+                        f"{match.kickoff} | {match.team_category} | "
+                        f"{match.home_team} – {match.away_team} | "
+                        f"{match.venue_rule or 'Platzzuordnung unklar'} | "
+                        f"Spielstätte: {match.venue_raw or 'nicht angegeben'} | {match.detail_url}"
+                    )
+                )
 
     for audit in window_audits:
         label = f"{audit.get('date_from')}–{audit.get('date_to')}"
@@ -2355,7 +2405,11 @@ def run(
             merged_matches, config
         )
         matches = deduplicate(merged_matches)
+        assignments = config.get("confirmed_venue_assignments", {})
+        if not isinstance(assignments, dict):
+            raise ScrapeError("Manuelle Platzfreigaben müssen nach Spiel-ID zugeordnet sein.")
         for match in matches:
+            apply_confirmed_venue(match, assignments, rules)
             apply_venue_rules(match, rules, default_decision, local_venue_pattern)
         previous_registry = load_previous_registry(registry_path)
         registry = build_team_registry(matches, previous_registry, extract_club_id(config))
