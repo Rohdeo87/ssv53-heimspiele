@@ -1,11 +1,11 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-17T14:35:57.490034+00:00",
+  "generatedAt": "2026-09-18T06:09:54.956454+00:00",
   "status": "ok",
   "counts": {
-    "before": 39,
+    "before": 40,
     "after": 40,
-    "added": 1,
+    "added": 0,
     "changed": 0,
     "removed": 0,
     "effectiveAfter": 40,
@@ -21,36 +21,7 @@
       "confirmed": true
     }
   },
-  "added": [
-    {
-      "id": "dfb:0323TKOBKG000000VS5489BTVT7QHFUC",
-      "title": "Schönwalder SV – SC Oberhavel Velten I (U13)",
-      "start": "2026-09-23T18:00+02:00",
-      "end": "2026-09-23T19:15+02:00",
-      "occupancyStart": "2026-09-23T17:00+02:00",
-      "occupancyEnd": "2026-09-23T20:15+02:00",
-      "kickoff": "2026-09-23T18:00+02:00",
-      "matchDurationMinutes": 75,
-      "durationRule": "flb-jugendordnung-2025-12-13-d-2x30+halftime-15",
-      "competitionFormat": "friendly",
-      "matchType": "FS",
-      "place": "rasen",
-      "calendar": "Rasen",
-      "team": "Schönwalder SV",
-      "teamCategory": "D-Junioren | Kreisfreundschaftsspiele",
-      "teamRole": "home",
-      "homeTeam": "Schönwalder SV",
-      "awayTeam": "SC Oberhavel Velten I (U13)",
-      "competition": "Mi, | D-Junioren | Kreisfreundschaftsspiele",
-      "description": "D-Junioren · Kreisfreundschaftsspiele",
-      "status": "",
-      "detailLink": "https://www.fussball.de/spiel/schoenwalder-sv-sc-oberhavel-velten-i-u13/-/spiel/0323TKOBKG000000VS5489BTVT7QHFUC",
-      "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1",
-      "locationSource": "club-confirmation",
-      "source": "fussball.de",
-      "checksum": "f82a3b9fe78b5b744db1a30f35e6cf70d03ab7c1536dbc746ea335909230fee7"
-    }
-  ],
+  "added": [],
   "changed": [],
   "removed": [],
   "retained": [],
@@ -58,8 +29,8 @@
   "publication": {
     "schemaVersion": 1,
     "status": "ok",
-    "sourceGeneratedAt": "2026-09-17T14:35:57+00:00",
-    "sourceDigest": "7c2a50b0d144b833da18c9f8389b2478f45d3bbaa98892ad261ff4bebf7c09cf",
+    "sourceGeneratedAt": "2026-09-18T06:09:54+00:00",
+    "sourceDigest": "58dad87c74a5f77d0fc88c5a62ec6bd970b2a21da79d56a380b981b9ae750e16",
     "sourceCount": 40,
     "retainedCount": 0,
     "effectiveCount": 40,
