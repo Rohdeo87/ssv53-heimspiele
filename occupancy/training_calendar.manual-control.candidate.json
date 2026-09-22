@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "calendar_id": "ssv53-training",
-  "revision": 2,
+  "revision": 3,
   "enabled": true,
   "timezone": "Europe/Berlin",
   "coverage": {
@@ -56,15 +56,6 @@
         "start": "18:30",
         "end": "20:00",
         "team": "A",
-        "resource_id": "rasen",
-        "area": "vorne & hinten"
-      },
-      {
-        "id": "som-ras-herren-do",
-        "weekday": "Donnerstag",
-        "start": "20:00",
-        "end": "21:30",
-        "team": "Herren",
         "resource_id": "rasen",
         "area": "vorne & hinten"
       },
@@ -292,15 +283,6 @@
         "start": "18:30",
         "end": "20:00",
         "team": "A",
-        "resource_id": "kunstrasen",
-        "area": "vorne & hinten"
-      },
-      {
-        "id": "win-kr-herren-do",
-        "weekday": "Donnerstag",
-        "start": "20:00",
-        "end": "21:30",
-        "team": "Herren",
         "resource_id": "kunstrasen",
         "area": "vorne & hinten"
       },
