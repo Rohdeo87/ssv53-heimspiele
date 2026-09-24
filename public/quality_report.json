@@ -3,7 +3,7 @@
   "errors": [],
   "invalid_included": [],
   "by_calendar": {
-    "Rasen": 35,
+    "Rasen": 36,
     "Kunstrasen": 5
   },
   "event_timing": {
@@ -36,7 +36,7 @@
     {
       "date_from": "2026-10-01",
       "date_to": "2026-12-31",
-      "competition_rows": 38
+      "competition_rows": 40
     },
     {
       "date_from": "2027-01-01",
@@ -81,11 +81,11 @@
       "depth": 0,
       "source_url": "https://www.fussball.de/ajax.club.matchplan/-/id/00ES8GNBL0000049VV0AG08LVUPGND5I/mode/PAGE/show-filter/false/show-venues/true/mime-type/HTML/datum-von/2026-10-01/datum-bis/2026-12-31/max/50",
       "source_scope": "all club teams; inclusion decided only by venue",
-      "competition_rows": 38,
-      "source_detail_ids": 34,
-      "parsed_matches_before_duplicate_merge": 38,
-      "parsed_matches": 38,
-      "parsed_detail_ids": 34,
+      "competition_rows": 40,
+      "source_detail_ids": 36,
+      "parsed_matches_before_duplicate_merge": 40,
+      "parsed_matches": 40,
+      "parsed_detail_ids": 36,
       "missing_detail_ids": [],
       "source_festival_groups": 0,
       "missing_festival_groups": [],
@@ -158,6 +158,8 @@
       "031DP96F8G000000VS5489BUVUR5FS5A",
       "031HB5B9C8000000VS5489BTVVG7L386",
       "031MFGE2PG000000VS5489BUVVKNMR0J",
+      "031MFGE2VC000000VS5489BUVVKNMR0J",
+      "031TA4CB7G000000VS5489BUVSORQI22",
       "031TA58SV8000000VS5489BUVSORQI22"
     ],
     "duplicate_resolutions": [
@@ -252,6 +254,42 @@
         "merged_external_id": "031MFGE2PG000000VS5489BUVVKNMR0J"
       },
       {
+        "detail_id": "031MFGE2VC000000VS5489BUVVKNMR0J",
+        "occurrences": 2,
+        "conflicts": {},
+        "resolved": true,
+        "resolution_attempt": {
+          "method": "explicit_postponement_chain",
+          "relocations": [
+            {
+              "from": "2026-09-26T10:00+02:00",
+              "to": "2026-10-18T10:00+02:00"
+            }
+          ],
+          "selected_kickoff": "2026-10-18T10:00+02:00",
+          "resolved": true
+        },
+        "merged_external_id": "031MFGE2VC000000VS5489BUVVKNMR0J"
+      },
+      {
+        "detail_id": "031TA4CB7G000000VS5489BUVSORQI22",
+        "occurrences": 2,
+        "conflicts": {},
+        "resolved": true,
+        "resolution_attempt": {
+          "method": "explicit_postponement_chain",
+          "relocations": [
+            {
+              "from": "2026-09-25T20:00+02:00",
+              "to": "2026-10-05T20:00+02:00"
+            }
+          ],
+          "selected_kickoff": "2026-10-05T20:00+02:00",
+          "resolved": true
+        },
+        "merged_external_id": "031TA4CB7G000000VS5489BUVSORQI22"
+      },
+      {
         "detail_id": "031TA58SV8000000VS5489BUVSORQI22",
         "occurrences": 2,
         "conflicts": {},
@@ -299,13 +337,13 @@
   },
   "publication": {
     "schemaVersion": 1,
-    "status": "ok",
-    "sourceGeneratedAt": "2026-09-24T10:17:05+00:00",
-    "sourceDigest": "318b58a9d6fb234967c684dd900238a93e9093ef06f4a44220b4ae1b78206582",
+    "status": "additive_pending",
+    "sourceGeneratedAt": "2026-09-24T15:15:28+00:00",
+    "sourceDigest": "03e44b1e62bdd51abaf8c1c7cb3b1f1404bafda13aea52edca065d7010bc13a0",
     "sourceCount": 40,
-    "retainedCount": 0,
-    "effectiveCount": 40,
-    "requiredConsumer": null,
-    "effectiveDigest": "3bbdabedf082cf1e75870e0c44218b3334268f9a8f01965ff1b77cbc7d1e14f9"
+    "retainedCount": 1,
+    "effectiveCount": 41,
+    "requiredConsumer": "ssv53-additive-retention-v1",
+    "effectiveDigest": "20c68556a6ebc4c8472aa2f589305cc91dab7087f13d3ca3bfbede88aa195f45"
   }
 }

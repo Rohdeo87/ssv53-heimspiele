@@ -1,40 +1,157 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-24T10:17:05.264387+00:00",
-  "status": "ok",
+  "generatedAt": "2026-09-24T15:15:28.356977+00:00",
+  "status": "additive_pending",
   "counts": {
     "before": 40,
     "after": 40,
     "added": 0,
-    "changed": 0,
+    "changed": 1,
     "removed": 0,
-    "effectiveAfter": 40,
-    "retained": 0,
+    "effectiveAfter": 41,
+    "retained": 1,
     "released": 0
   },
   "guard": {
-    "triggered": false,
+    "triggered": true,
     "overrideUsed": false,
-    "reasons": [],
+    "reasons": [
+      "1 bisherige Sperre(n) bleiben bis zur bestätigten Rücknahme bestehen; neue Sperren sind enthalten."
+    ],
     "safetyConfirmation": {
-      "required": false,
-      "confirmed": true
+      "required": true,
+      "confirmed": false
     }
   },
   "added": [],
-  "changed": [],
+  "changed": [
+    {
+      "id": "dfb:031MFGE2VC000000VS5489BUVVKNMR0J",
+      "label": "Schönwalder SV (9er) · Schönwalder SV (9er) – Eintracht Falkensee II (9er) · 18.10.2026 10:00 · Rasen",
+      "before": {
+        "id": "dfb:031MFGE2VC000000VS5489BUVVKNMR0J",
+        "title": "Schönwalder SV (9er) – Eintracht Falkensee II (9er)",
+        "start": "2026-09-26T10:00+02:00",
+        "end": "2026-09-26T11:25+02:00",
+        "occupancyStart": "2026-09-26T09:00+02:00",
+        "occupancyEnd": "2026-09-26T12:25+02:00",
+        "kickoff": "2026-09-26T10:00+02:00",
+        "matchDurationMinutes": 85,
+        "durationRule": "flb-jugendordnung-2025-12-13-c-2x35+halftime-15",
+        "competitionFormat": "league",
+        "matchType": "ME",
+        "place": "rasen",
+        "calendar": "Rasen",
+        "team": "Schönwalder SV (9er)",
+        "teamCategory": "C-Junioren | 2.Kreisklasse",
+        "teamRole": "home",
+        "homeTeam": "Schönwalder SV (9er)",
+        "awayTeam": "Eintracht Falkensee II (9er)",
+        "competition": "Sa, | C-Junioren | 2.Kreisklasse",
+        "description": "C-Junioren · 2.Kreisklasse",
+        "status": "",
+        "detailLink": "https://www.fussball.de/spiel/schoenwalder-sv-9er-eintracht-falkensee-ii-9er/-/spiel/031MFGE2VC000000VS5489BUVVKNMR0J",
+        "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+        "locationSource": "fussball.de",
+        "source": "fussball.de",
+        "checksum": "5501b7b8d3ea8f099d07492b46e075b8c9230a4b9b65610f8c93d01aede10324"
+      },
+      "after": {
+        "id": "dfb:031MFGE2VC000000VS5489BUVVKNMR0J",
+        "title": "Schönwalder SV (9er) – Eintracht Falkensee II (9er)",
+        "start": "2026-10-18T10:00+02:00",
+        "end": "2026-10-18T11:25+02:00",
+        "occupancyStart": "2026-10-18T09:00+02:00",
+        "occupancyEnd": "2026-10-18T12:25+02:00",
+        "kickoff": "2026-10-18T10:00+02:00",
+        "matchDurationMinutes": 85,
+        "durationRule": "flb-jugendordnung-2025-12-13-c-2x35+halftime-15",
+        "competitionFormat": "league",
+        "matchType": "ME",
+        "place": "rasen",
+        "calendar": "Rasen",
+        "team": "Schönwalder SV (9er)",
+        "teamCategory": "C-Junioren | 2.Kreisklasse",
+        "teamRole": "home",
+        "homeTeam": "Schönwalder SV (9er)",
+        "awayTeam": "Eintracht Falkensee II (9er)",
+        "competition": "So, | C-Junioren | 2.Kreisklasse",
+        "description": "C-Junioren · 2.Kreisklasse",
+        "status": "",
+        "detailLink": "https://www.fussball.de/spiel/schoenwalder-sv-9er-eintracht-falkensee-ii-9er/-/spiel/031MFGE2VC000000VS5489BUVVKNMR0J",
+        "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+        "locationSource": "fussball.de",
+        "source": "fussball.de",
+        "checksum": "5dbe12a90f417e4e594fe462e54475da9414763fc6eb5395057d368eca69bc9f"
+      },
+      "changes": [
+        {
+          "field": "kickoff",
+          "label": "Anstoß",
+          "before": "2026-09-26T10:00+02:00",
+          "after": "2026-10-18T10:00+02:00"
+        },
+        {
+          "field": "start",
+          "label": "Belegungsbeginn",
+          "before": "2026-09-26T10:00+02:00",
+          "after": "2026-10-18T10:00+02:00"
+        },
+        {
+          "field": "end",
+          "label": "Belegungsende",
+          "before": "2026-09-26T11:25+02:00",
+          "after": "2026-10-18T11:25+02:00"
+        },
+        {
+          "field": "occupancyStart",
+          "label": "Sperrbeginn",
+          "before": "2026-09-26T09:00+02:00",
+          "after": "2026-10-18T09:00+02:00"
+        },
+        {
+          "field": "occupancyEnd",
+          "label": "Sperrende",
+          "before": "2026-09-26T12:25+02:00",
+          "after": "2026-10-18T12:25+02:00"
+        },
+        {
+          "field": "competition",
+          "label": "Wettbewerb",
+          "before": "Sa, | C-Junioren | 2.Kreisklasse",
+          "after": "So, | C-Junioren | 2.Kreisklasse"
+        }
+      ]
+    }
+  ],
   "removed": [],
-  "retained": [],
+  "retained": [
+    {
+      "id": "dfb:held-42b1896c4b0e44184ffe713ce24700edcd5ff74043400b2d435af4f1c4532e8b",
+      "schemaVersion": 1,
+      "sourceId": "dfb:031MFGE2VC000000VS5489BUVVKNMR0J",
+      "status": "pending",
+      "reason": "moved_or_shortened",
+      "sourceObservedAt": "2026-09-24T10:17:05+00:00",
+      "requiresManual": false,
+      "requiredConfirmations": 2,
+      "minimumIntervalMinutes": 60,
+      "fingerprint": "26bd1780b587807bceba5f7fd468675c918eef21eecb8dc8f513f865b24c4337",
+      "confirmations": 1,
+      "firstSeenAt": "2026-09-24T15:15:28+00:00",
+      "lastCountedAt": "2026-09-24T15:15:28+00:00"
+    }
+  ],
   "released": [],
   "publication": {
     "schemaVersion": 1,
-    "status": "ok",
-    "sourceGeneratedAt": "2026-09-24T10:17:05+00:00",
-    "sourceDigest": "318b58a9d6fb234967c684dd900238a93e9093ef06f4a44220b4ae1b78206582",
+    "status": "additive_pending",
+    "sourceGeneratedAt": "2026-09-24T15:15:28+00:00",
+    "sourceDigest": "03e44b1e62bdd51abaf8c1c7cb3b1f1404bafda13aea52edca065d7010bc13a0",
     "sourceCount": 40,
-    "retainedCount": 0,
-    "effectiveCount": 40,
-    "requiredConsumer": null,
-    "effectiveDigest": "3bbdabedf082cf1e75870e0c44218b3334268f9a8f01965ff1b77cbc7d1e14f9"
+    "retainedCount": 1,
+    "effectiveCount": 41,
+    "requiredConsumer": "ssv53-additive-retention-v1",
+    "effectiveDigest": "20c68556a6ebc4c8472aa2f589305cc91dab7087f13d3ca3bfbede88aa195f45"
   }
 }
