@@ -48,7 +48,7 @@ jobs:
         run: python integrations/results/prepare_integration.py --repo . --output dist/results-review
       - name: Prove no tracked existing source changed
         run: git diff --exit-code
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: ssv53-results-review
@@ -73,7 +73,7 @@ jobs:
       - name: Fetch public sources once (no activation or deployment)
         working-directory: integrations/results
         run: python -m ssv_results --output .test-output/live
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: ssv53-results-source-check
