@@ -9,6 +9,7 @@ local.settings.json
 .python_packages/
 .azure/
 .pytest_cache/
+.test-output/
 .coverage
 htmlcov/
 dist/

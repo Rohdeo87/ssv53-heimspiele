@@ -71,6 +71,11 @@ from platzwart_console import (
 
 
 app = func.FunctionApp()
+
+# SSV53 results: additive blueprint registration
+from integrations.results.results_blueprint import bp as ssv_results_blueprint
+app.register_functions(ssv_results_blueprint)
+
 LOGGER = logging.getLogger("ssv53.azure.platzpflege")
 TRAINING_INITIALIZATION_CONFIRMATION = "INITIALIZE_WINTER_TRAINING_CONTROL"
 

@@ -1,0 +1,80 @@
+name: SSV53 Results - isolated checks
+on:
+  push:
+    branches: ['feature/ssv53-results-integration-20260923']
+    paths: ['integrations/results/**', '.github/workflows/ssv53-results-check.yml']
+  pull_request:
+    branches: ['feature/azure-mower-migration']
+    paths: ['integrations/results/**', '.github/workflows/ssv53-results-check.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ssv-results-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  offline-checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Install results-only dependencies
+        run: python -m pip install -r integrations/results/requirements.txt 'pytest>=8,<10' 'playwright>=1.50,<2'
+      - name: Parser and integration tests
+        working-directory: integrations/results
+        run: python -m pytest -q tests
+      - name: Register results blueprint in isolated test application
+        run: |
+          python - <<'PY'
+          import azure.functions as func
+          from integrations.results.results_blueprint import bp
+          app = func.FunctionApp()
+          app.register_functions(bp)
+          names = [f.get_function_name() for f in app.get_functions()]
+          assert len(names) == 2, names
+          assert set(names) == {'ssv53_results_read', 'ssv53_results_update'}, names
+          print(names)
+          PY
+      - name: Install browser
+        run: python -m playwright install --with-deps chromium
+      - name: Mobile UI regression (synthetic data)
+        working-directory: integrations/results
+        run: python tests/browser_check.py
+      - name: Build review overlay without changing existing application
+        run: python integrations/results/prepare_integration.py --repo . --output dist/results-review
+      - name: Prove no tracked existing source changed
+        run: git diff --exit-code
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: ssv53-results-review
+          path: |
+            dist/results-review/
+            integrations/results/.test-output/
+          if-no-files-found: warn
+          retention-days: 14
+  live-source-check:
+    # One bounded read-only check on an explicit workflow run. Never on every
+    # commit, and never on the schedule of any existing hardware workflow.
+    if: github.event_name == 'workflow_dispatch'
+    needs: offline-checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r integrations/results/requirements.txt
+      - name: Fetch public sources once (no activation or deployment)
+        working-directory: integrations/results
+        run: python -m ssv_results --output .test-output/live
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: ssv53-results-source-check
+          path: integrations/results/.test-output/live/
+          retention-days: 7
