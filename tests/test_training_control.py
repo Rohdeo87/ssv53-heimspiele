@@ -949,7 +949,10 @@ def test_admin_initialization_route_binding_and_function_count():
     import function_app
 
     functions = function_app.app.get_functions()
-    assert len(functions) == 16
+    result_names = {"ssv53_results_read", "ssv53_results_update"}
+    assert result_names.issubset({f.get_function_name() for f in functions})
+    assert len([f for f in functions if f.get_function_name() not in result_names]) == 16
+    assert len(functions) == 18
     route = next(
         item
         for item in functions

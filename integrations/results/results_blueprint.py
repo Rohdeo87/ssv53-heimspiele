@@ -18,7 +18,7 @@ from azure.core.exceptions import ResourceNotFoundError
 from azure.identity import DefaultAzureCredential
 from azure.storage.blob import BlobServiceClient, ContentSettings
 
-from ssv_results.collector import Fetcher, SPORTS, collect
+from .ssv_results.collector import Fetcher, SPORTS, collect
 
 bp = func.Blueprint()
 logger = logging.getLogger("ssv53.results")

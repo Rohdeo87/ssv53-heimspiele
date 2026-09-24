@@ -18,7 +18,7 @@ from urllib.parse import urlsplit
 
 HERE = Path(__file__).resolve().parent
 MARKER = "# SSV53 results: additive blueprint registration"
-REGISTRATION = ("\n" + MARKER + "\nfrom results_blueprint import bp as ssv_results_blueprint\n"
+REGISTRATION = ("\n" + MARKER + "\nfrom integrations.results.results_blueprint import bp as ssv_results_blueprint\n"
                 "app.register_functions(ssv_results_blueprint)\n")
 
 
@@ -43,7 +43,7 @@ def patch_function(source: str) -> str:
     changed = "".join(lines[:at]) + REGISTRATION + "".join(lines[at:])
     parsed = ast.parse(changed)
     filtered = [n for n in parsed.body if not (
-        isinstance(n, ast.ImportFrom) and n.module == "results_blueprint"
+        isinstance(n, ast.ImportFrom) and n.module == "integrations.results.results_blueprint"
     ) and not (
         isinstance(n, ast.Expr) and isinstance(n.value, ast.Call)
         and isinstance(n.value.func, ast.Attribute) and n.value.func.attr == "register_functions"
@@ -85,8 +85,10 @@ def prepare(repo: Path, output: Path, api_url: str | None = None) -> dict:
     overlay = output / "source-overlay"
     overlay.mkdir()
     (overlay / "function_app.py").write_text(patched, "utf-8")
-    shutil.copy2(HERE / "results_blueprint.py", overlay / "results_blueprint.py")
-    shutil.copytree(HERE / "ssv_results", overlay / "ssv_results", ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+    results_overlay = overlay / "integrations" / "results"
+    results_overlay.mkdir(parents=True)
+    shutil.copy2(HERE / "results_blueprint.py", results_overlay / "results_blueprint.py")
+    shutil.copytree(HERE / "ssv_results", results_overlay / "ssv_results", ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
     (output / "function_app.patch").write_text("".join(difflib.unified_diff(original.splitlines(True), patched.splitlines(True), fromfile="a/function_app.py", tofile="b/function_app.py")), "utf-8")
     (output / "Ergebnisse_Tabellen.tpl").write_text(html, "utf-8")
     (output / "Ergebnisse_Tabellen.html").write_text(html, "utf-8")

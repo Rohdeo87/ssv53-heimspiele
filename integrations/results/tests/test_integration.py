@@ -35,7 +35,7 @@ def test_overlay_does_not_change_original_files(tmp_path):
     assert not manifest['deployed'] and not manifest['existing_source_modified']
     assert (repo/'function_app.py').read_text('utf-8') == SOURCE
     assert not (repo/'results_blueprint.py').exists()
-    assert (output/'source-overlay/ssv_results/parsers.py').is_file()
+    assert (output/'source-overlay/integrations/results/ssv_results/parsers.py').is_file()
     assert 'register_functions' in (output/'function_app.patch').read_text('utf-8')
     with pytest.raises(ValueError): prepare(repo, output)
 

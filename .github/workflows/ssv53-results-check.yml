@@ -27,11 +27,10 @@ jobs:
         working-directory: integrations/results
         run: python -m pytest -q tests
       - name: Register results blueprint in isolated test application
-        working-directory: integrations/results
         run: |
           python - <<'PY'
           import azure.functions as func
-          from results_blueprint import bp
+          from integrations.results.results_blueprint import bp
           app = func.FunctionApp()
           app.register_functions(bp)
           names = [f.get_function_name() for f in app.get_functions()]

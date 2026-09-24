@@ -9,6 +9,11 @@ from pathlib import Path, PurePosixPath
 
 
 REQUIRED_FILES = (
+    "integrations/results/results_blueprint.py",
+    "integrations/results/ssv_results/__init__.py",
+    "integrations/results/ssv_results/__main__.py",
+    "integrations/results/ssv_results/collector.py",
+    "integrations/results/ssv_results/parsers.py",
     "daily_safety_report.py",
     "function_app.py",
     "host.json",

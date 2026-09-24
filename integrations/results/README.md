@@ -2,6 +2,11 @@
 
 **Implementiert im Arbeitszweig, nicht produktiv veröffentlicht.** Fußball bleibt ein normaler Link auf FUSSBALL.DE. Keine Funktionen für Mäher, Beregnung oder Platzbelegung werden verändert.
 
+Aktueller Nachweis vom 24.09.2026: [Implementierungsstand und Live-Gates](IMPLEMENTATION_STATUS.md).
+Blueprint und vollständige Paketierung sind integriert; echte Quellen geprüft.
+Azure-Container angelegt, aber Cache-Uploadrechte, produktive Quellbasis und
+Quellenfreigaben blockieren die Veröffentlichung. Keine Aktivierung behauptet.
+
 ## Enthalten
 
 - `ssv_results`: begrenzte, robots-konforme Quellenabrufe, dynamische Mannschafts-/Staffelzuordnung, Saisonprüfung und Erhalt letzter erfolgreicher Daten.
@@ -48,7 +53,7 @@ Erst nach geprüftem Gesamtpaket, Quellenbedingungen/Anbieterfreigabe und Azure-
 
 ## Appack-Veröffentlichung
 
-Die existierende Ergebnisvorlage im CMS zuerst sichern. Die generierte `.tpl` erst veröffentlichen, wenn beide Endpoint-Aufrufe echte Daten liefern; auf Android und iOS prüfen. Die Vorlage wird nicht durch einen GitHub-Merge automatisch im Appack-CMS veröffentlicht. Es liegt hier kein angemeldeter Appack-Schreibzugang vor.
+Die existierende Ergebnisvorlage im CMS zuerst sichern. Die generierte `.tpl` erst veröffentlichen, wenn beide Endpoint-Aufrufe echte Daten liefern; auf Android und iOS prüfen. Die Vorlage wird nicht durch einen GitHub-Merge automatisch im Appack-CMS veröffentlicht. Der angemeldete CMS-Zugang wurde am 24.09.2026 bestätigt; wegen der dokumentierten Gates wurde nichts gespeichert.
 
 ## Datenqualität / Grenzen
 
