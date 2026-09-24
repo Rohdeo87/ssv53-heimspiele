@@ -72,8 +72,6 @@ Gemäß Übergabe bleibt die regelmäßige Übernahme bis zur Klärung gesperrt.
    Die geerbten Rechte der Function-Identity sind kein erfolgreicher Laufzeitnachweis.
 3. **Quellenfreigabe offen**, insbesondere KSV-Originalgrafik (siehe oben).
 
-## Appack und Betriebszustand
-
 ## Lokale Prüfungen
 
 - Vollständige Repository-Regression: **1460 Tests und 490 Subtests bestanden**.
@@ -82,6 +80,11 @@ Gemäß Übergabe bleibt die regelmäßige Übernahme bis zur Klärung gesperrt.
 - Mobile Chromium-Regressionssuite: **23 Checks bestanden**, 320 bis 1440 px,
   einschließlich Auswahl, fehlender Ergebnisse, Offline-Rückfall, Zoom und Fokus.
 - Platzpflege-Design/CMS-Kopierfassung weiterhin synchron.
+- Exaktes Gesamtpaket aus Commit `63351dd3e29058c4c638fb3a5b41c276d5100a81`:
+  74 kanonische Git-Dateien bytegleich geprüft, 18 Funktionen im vollständig
+  netzwerkgesperrten Import registriert, Manifestprüfung erfolgreich.
+  Paket-SHA-256: `caa4403e6fcc60e7cafcfe157e88addb2c9c5a377228f09a517c3880fe9773b8`.
+  Das ist ausdrücklich **kein** Nachweis für ein produktives Deployment.
 - Diese Browserprüfungen arbeiten mit synthetischen Daten und ersetzen weder
   produktives Appack-Rendering noch echte Android-/iOS-Geräteprüfung.
 
