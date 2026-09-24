@@ -1,11 +1,13 @@
 # SSV53 Ergebnisse: Handball + Volleyball
 
-**Implementiert im Arbeitszweig, nicht produktiv veröffentlicht.** Fußball bleibt ein normaler Link auf FUSSBALL.DE. Keine Funktionen für Mäher, Beregnung oder Platzbelegung werden verändert.
+**In Azure bereitgestellt und in Appack veröffentlicht (24.09.2026).** Fußball bleibt ein normaler Link auf FUSSBALL.DE. Mäh-, Beregnungs- und Belegungslogik bleiben unverändert. Echte Geräteabnahme steht aus.
 
 Aktueller Nachweis vom 24.09.2026: [Implementierungsstand und Live-Gates](IMPLEMENTATION_STATUS.md).
 Blueprint und vollständige Paketierung sind integriert; echte Quellen geprüft.
-Azure-Container angelegt, aber Cache-Uploadrechte, produktive Quellbasis und
-Quellenfreigaben blockieren die Veröffentlichung. Keine Aktivierung behauptet.
+Privater Cache und stündlicher Timer sind aktiv; ein gezielter Azure-Lauf hat
+beide Sportarten erfolgreich aktualisiert. Quellenfreigabe telefonisch durch
+den Auftraggeber bestätigt; kein schriftlicher Nachweis vorliegend. Paketierungs-
+Fehler, Rückrollnachweis und verbleibende Geräteprüfung sind im Status dokumentiert.
 
 ## Enthalten
 
@@ -14,6 +16,10 @@ Quellenfreigaben blockieren die Veröffentlichung. Keine Aktivierung behauptet.
 - `appack/Ergebnisse_Tabellen.tpl`: selbstständiges Appack-HTML im SSV-Design, Mannschaftsauswahl, Spielkarten, Handballtabellen, Original-Volleyballgrafik, mobile Bedienung und lokale Rückfallkopie. Keine Demoergebnisse in der Produktivvorlage.
 - `prepare_integration.py`: erstellt einen prüfbaren Quellcode-Overlay und einen minimalen Patch für den **existierenden** FunctionApp-Einstieg. Verändert die Originaldateien nicht; prüft per AST, dass die vorhandene Programmlogik unverändert bleibt.
 - Tests mit synthetischen HTML-Quellen; ein echter Quellencheck ist getrennt von Offline-Tests.
+- `prepare_verified_release.py`: erweitert ein explizit per SHA-256 gepinntes,
+  zuvor gegen Produktion geprüftes vollständiges Paket. Bestehende Dateien und
+  ZIP-Dateirechte bleiben erhalten; Importprüfung ohne Netzwerk. Nicht blind ein
+  abweichendes Git-Paket über den laufenden Betrieb deployen.
 
 ## Prüfen
 
@@ -53,7 +59,7 @@ Erst nach geprüftem Gesamtpaket, Quellenbedingungen/Anbieterfreigabe und Azure-
 
 ## Appack-Veröffentlichung
 
-Die existierende Ergebnisvorlage im CMS zuerst sichern. Die generierte `.tpl` erst veröffentlichen, wenn beide Endpoint-Aufrufe echte Daten liefern; auf Android und iOS prüfen. Die Vorlage wird nicht durch einen GitHub-Merge automatisch im Appack-CMS veröffentlicht. Der angemeldete CMS-Zugang wurde am 24.09.2026 bestätigt; wegen der dokumentierten Gates wurde nichts gespeichert.
+Die existierende Ergebnisvorlage im CMS zuerst sichern. Die generierte `.tpl` erst veröffentlichen, wenn beide Endpoint-Aufrufe echte Daten liefern; auf Android und iOS prüfen. Die Vorlage wird nicht durch einen GitHub-Merge automatisch im Appack-CMS veröffentlicht. Am 24.09.2026 wurde ausschließlich die bestehende Ergebnisse-/Tabellenseite nach Sicherung und exaktem Editorvergleich gespeichert und die öffentliche Auslieferung geprüft. Browserprüfung ist keine echte Android-/iOS-WebView-Abnahme.
 
 ## Datenqualität / Grenzen
 
