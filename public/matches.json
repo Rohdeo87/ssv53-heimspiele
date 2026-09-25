@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-24T15:15:28+00:00",
+  "generatedAt": "2026-09-25T08:00:23+00:00",
   "status": "ok",
   "matches": [
     {
@@ -338,48 +338,6 @@
       "locationSource": "club-confirmation",
       "source": "fussball.de",
       "checksum": "f82a3b9fe78b5b744db1a30f35e6cf70d03ab7c1536dbc746ea335909230fee7"
-    },
-    {
-      "id": "dfb:held-42b1896c4b0e44184ffe713ce24700edcd5ff74043400b2d435af4f1c4532e8b",
-      "title": "Sperre bis Klärung: Schönwalder SV (9er) – Eintracht Falkensee II (9er)",
-      "start": "2026-09-26T10:00+02:00",
-      "end": "2026-09-26T11:25+02:00",
-      "occupancyStart": "2026-09-26T09:00+02:00",
-      "occupancyEnd": "2026-09-26T12:25+02:00",
-      "kickoff": "2026-09-26T10:00+02:00",
-      "matchDurationMinutes": 85,
-      "durationRule": "flb-jugendordnung-2025-12-13-c-2x35+halftime-15",
-      "competitionFormat": "league",
-      "matchType": "ME",
-      "place": "rasen",
-      "calendar": "Rasen",
-      "team": "Schönwalder SV (9er)",
-      "teamCategory": "C-Junioren | 2.Kreisklasse",
-      "teamRole": "home",
-      "homeTeam": "Schönwalder SV (9er)",
-      "awayTeam": "Eintracht Falkensee II (9er)",
-      "competition": "Sa, | C-Junioren | 2.Kreisklasse",
-      "description": "C-Junioren · 2.Kreisklasse · Bisherige Belegung bleibt bis zur bestätigten Rücknahme gesperrt.",
-      "status": "",
-      "detailLink": "https://www.fussball.de/spiel/schoenwalder-sv-9er-eintracht-falkensee-ii-9er/-/spiel/031MFGE2VC000000VS5489BUVVKNMR0J",
-      "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
-      "locationSource": "fussball.de",
-      "source": "fussball.de",
-      "checksum": "5501b7b8d3ea8f099d07492b46e075b8c9230a4b9b65610f8c93d01aede10324",
-      "publicationRetention": {
-        "schemaVersion": 1,
-        "sourceId": "dfb:031MFGE2VC000000VS5489BUVVKNMR0J",
-        "status": "pending",
-        "reason": "moved_or_shortened",
-        "sourceObservedAt": "2026-09-24T10:17:05+00:00",
-        "requiresManual": false,
-        "requiredConfirmations": 2,
-        "minimumIntervalMinutes": 60,
-        "fingerprint": "26bd1780b587807bceba5f7fd468675c918eef21eecb8dc8f513f865b24c4337",
-        "confirmations": 1,
-        "firstSeenAt": "2026-09-24T15:15:28+00:00",
-        "lastCountedAt": "2026-09-24T15:15:28+00:00"
-      }
     },
     {
       "id": "dfb:031O4JQIM4000000VS5489BUVT2M8LCU",
@@ -1168,13 +1126,13 @@
   ],
   "publication": {
     "schemaVersion": 1,
-    "status": "additive_pending",
-    "sourceGeneratedAt": "2026-09-24T15:15:28+00:00",
-    "sourceDigest": "03e44b1e62bdd51abaf8c1c7cb3b1f1404bafda13aea52edca065d7010bc13a0",
+    "status": "ok",
+    "sourceGeneratedAt": "2026-09-25T08:00:23+00:00",
+    "sourceDigest": "5e33060d194d3ee089099f884f8ac0a86506b7d884d238a3195566ed40d47003",
     "sourceCount": 40,
-    "retainedCount": 1,
-    "effectiveCount": 41,
-    "requiredConsumer": "ssv53-additive-retention-v1",
-    "effectiveDigest": "20c68556a6ebc4c8472aa2f589305cc91dab7087f13d3ca3bfbede88aa195f45"
+    "retainedCount": 0,
+    "effectiveCount": 40,
+    "requiredConsumer": null,
+    "effectiveDigest": "6bd126bbaf5bdb7c60f75f8aea480417b3c608a9fbf7f38b15ec4b0d921161d4"
   }
 }
