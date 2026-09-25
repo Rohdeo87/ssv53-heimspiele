@@ -36,7 +36,7 @@
     {
       "date_from": "2026-10-01",
       "date_to": "2026-12-31",
-      "competition_rows": 40
+      "competition_rows": 41
     },
     {
       "date_from": "2027-01-01",
@@ -81,11 +81,11 @@
       "depth": 0,
       "source_url": "https://www.fussball.de/ajax.club.matchplan/-/id/00ES8GNBL0000049VV0AG08LVUPGND5I/mode/PAGE/show-filter/false/show-venues/true/mime-type/HTML/datum-von/2026-10-01/datum-bis/2026-12-31/max/50",
       "source_scope": "all club teams; inclusion decided only by venue",
-      "competition_rows": 40,
-      "source_detail_ids": 36,
-      "parsed_matches_before_duplicate_merge": 40,
-      "parsed_matches": 40,
-      "parsed_detail_ids": 36,
+      "competition_rows": 41,
+      "source_detail_ids": 37,
+      "parsed_matches_before_duplicate_merge": 41,
+      "parsed_matches": 41,
+      "parsed_detail_ids": 37,
       "missing_detail_ids": [],
       "source_festival_groups": 0,
       "missing_festival_groups": [],
@@ -154,6 +154,7 @@
   "cross_window_resolution": {
     "collapsed_duplicate_detail_ids": [
       "031DB8NS8C000000VS5489BUVUR5FS5A",
+      "031DB8NSCO000000VS5489BUVUR5FS5A",
       "031DP96C58000000VS5489BUVUR5FS5A",
       "031DP96F8G000000VS5489BUVUR5FS5A",
       "031HB5B9C8000000VS5489BTVVG7L386",
@@ -180,6 +181,24 @@
           "resolved": true
         },
         "merged_external_id": "031DB8NS8C000000VS5489BUVUR5FS5A"
+      },
+      {
+        "detail_id": "031DB8NSCO000000VS5489BUVUR5FS5A",
+        "occurrences": 2,
+        "conflicts": {},
+        "resolved": true,
+        "resolution_attempt": {
+          "method": "explicit_postponement_chain",
+          "relocations": [
+            {
+              "from": "2026-09-04T20:00+02:00",
+              "to": "2026-10-20T19:45+02:00"
+            }
+          ],
+          "selected_kickoff": "2026-10-20T19:45+02:00",
+          "resolved": true
+        },
+        "merged_external_id": "031DB8NSCO000000VS5489BUVUR5FS5A"
       },
       {
         "detail_id": "031DP96C58000000VS5489BUVUR5FS5A",
@@ -338,8 +357,8 @@
   "publication": {
     "schemaVersion": 1,
     "status": "ok",
-    "sourceGeneratedAt": "2026-09-25T14:03:10+00:00",
-    "sourceDigest": "1f7bb2c3a1b720d2ebe077026a04cf8afa1cffb85fce70e047b138a8e32e73bf",
+    "sourceGeneratedAt": "2026-09-25T18:48:34+00:00",
+    "sourceDigest": "0da8712da68e70bb43a1098c452303fd631703bf3d1d085d5ebf1f028c7f42f0",
     "sourceCount": 40,
     "retainedCount": 0,
     "effectiveCount": 40,
