@@ -1,0 +1,126 @@
+{
+  "exceptions": [
+    {
+      "timestamp": "2026-09-11T12:43:29.4478919Z",
+      "operation_Name": "",
+      "type": "System.Exception",
+      "outerMessage": "python exited with code 143 (0x8F)",
+      "problemId": "System.Exception at Microsoft.Azure.WebJobs.Script.Workers.WorkerProcess.ThrowIfExitError"
+    },
+    {
+      "timestamp": "2026-09-11T12:40:43.4387915Z",
+      "operation_Name": "",
+      "type": "System.Exception",
+      "outerMessage": "python exited with code 143 (0x8F)",
+      "problemId": "System.Exception at Microsoft.Azure.WebJobs.Script.Workers.WorkerProcess.ThrowIfExitError"
+    },
+    {
+      "timestamp": "2026-09-11T12:42:41.8586427Z",
+      "operation_Name": "",
+      "type": "System.Exception",
+      "outerMessage": "python exited with code 143 (0x8F)",
+      "problemId": "System.Exception at Microsoft.Azure.WebJobs.Script.Workers.WorkerProcess.ThrowIfExitError"
+    },
+    {
+      "timestamp": "2026-09-11T12:43:50.6686078Z",
+      "operation_Name": "",
+      "type": "System.Exception",
+      "outerMessage": "python exited with code 143 (0x8F)",
+      "problemId": "System.Exception at Microsoft.Azure.WebJobs.Script.Workers.WorkerProcess.ThrowIfExitError"
+    },
+    {
+      "timestamp": "2026-09-11T12:43:36.4392067Z",
+      "operation_Name": "",
+      "type": "System.Exception",
+      "outerMessage": "python exited with code 143 (0x8F)",
+      "problemId": "System.Exception at Microsoft.Azure.WebJobs.Script.Workers.WorkerProcess.ThrowIfExitError"
+    },
+    {
+      "timestamp": "2026-09-11T12:43:58.5347478Z",
+      "operation_Name": "",
+      "type": "System.Exception",
+      "outerMessage": "python exited with code 143 (0x8F)",
+      "problemId": "System.Exception at Microsoft.Azure.WebJobs.Script.Workers.WorkerProcess.ThrowIfExitError"
+    },
+    {
+      "timestamp": "2026-09-11T12:43:51.0396245Z",
+      "operation_Name": "",
+      "type": "System.Exception",
+      "outerMessage": "python exited with code 143 (0x8F)",
+      "problemId": "System.Exception at Microsoft.Azure.WebJobs.Script.Workers.WorkerProcess.ThrowIfExitError"
+    },
+    {
+      "timestamp": "2026-09-11T12:43:55.064604Z",
+      "operation_Name": "",
+      "type": "System.Exception",
+      "outerMessage": "python exited with code 143 (0x8F)",
+      "problemId": "System.Exception at Microsoft.Azure.WebJobs.Script.Workers.WorkerProcess.ThrowIfExitError"
+    },
+    {
+      "timestamp": "2026-09-11T12:43:56.506396Z",
+      "operation_Name": "",
+      "type": "System.Exception",
+      "outerMessage": "python exited with code 143 (0x8F)",
+      "problemId": "System.Exception at Microsoft.Azure.WebJobs.Script.Workers.WorkerProcess.ThrowIfExitError"
+    },
+    {
+      "timestamp": "2026-09-11T12:43:56.2807712Z",
+      "operation_Name": "",
+      "type": "System.Exception",
+      "outerMessage": "python exited with code 143 (0x8F)",
+      "problemId": "System.Exception at Microsoft.Azure.WebJobs.Script.Workers.WorkerProcess.ThrowIfExitError"
+    }
+  ],
+  "error_traces": [
+    {
+      "timestamp": "2026-09-11T12:43:50.6687059Z",
+      "operation_Name": "",
+      "message": "Language Worker Process exited. Pid=65."
+    },
+    {
+      "timestamp": "2026-09-11T12:43:55.0647254Z",
+      "operation_Name": "",
+      "message": "Language Worker Process exited. Pid=64."
+    },
+    {
+      "timestamp": "2026-09-11T12:40:43.4391507Z",
+      "operation_Name": "",
+      "message": "Language Worker Process exited. Pid=64."
+    },
+    {
+      "timestamp": "2026-09-11T12:42:41.8587474Z",
+      "operation_Name": "",
+      "message": "Language Worker Process exited. Pid=63."
+    },
+    {
+      "timestamp": "2026-09-11T12:43:29.447945Z",
+      "operation_Name": "",
+      "message": "Language Worker Process exited. Pid=64."
+    },
+    {
+      "timestamp": "2026-09-11T12:43:51.0397111Z",
+      "operation_Name": "",
+      "message": "Language Worker Process exited. Pid=64."
+    },
+    {
+      "timestamp": "2026-09-11T12:43:36.4392862Z",
+      "operation_Name": "",
+      "message": "Language Worker Process exited. Pid=64."
+    },
+    {
+      "timestamp": "2026-09-11T12:43:56.2808378Z",
+      "operation_Name": "",
+      "message": "Language Worker Process exited. Pid=64."
+    },
+    {
+      "timestamp": "2026-09-11T12:43:56.5064856Z",
+      "operation_Name": "",
+      "message": "Language Worker Process exited. Pid=64."
+    },
+    {
+      "timestamp": "2026-09-11T12:44:01.4300922Z",
+      "operation_Name": "",
+      "message": "Language Worker Process exited. Pid=64."
+    }
+  ]
+}
