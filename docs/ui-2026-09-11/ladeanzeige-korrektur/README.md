@@ -1,7 +1,9 @@
 # Ladeanzeige und Bedienflächen korrigieren
 
-Stand 11.09.2026: entwickelt, offline geprüft und unabhängig geprüft.
-Veröffentlichungsnachweise werden nach Durchführung unten ergänzt.
+Stand 11.09.2026, 13:30 Uhr (Berlin): entwickelt, offline und unabhängig
+geprüft, in Appack veröffentlicht und nach Neuladen vollständig zurückgelesen.
+Auch die tatsächlich ausgelieferten Designblöcke stimmen mit der geprüften
+Version überein. Die native App-Sitzung auf dem Nutzerhandy wurde nicht geprüft.
 
 ## Nachgewiesene Ursachen und Änderung
 
@@ -64,7 +66,32 @@ für `python -m scripts.build_wunschdesign_preview` und
 `node scripts/capture_wunschdesign.cjs` setzen. Die vorhandenen bisherigen
 Releaseaufnahmen werden dadurch nicht überschrieben.
 
-Für die Veröffentlichung wird nur `Platzpflege.tpl` nach Sicherung und
-Inhaltsvergleich ersetzt. Keine Azure-Neuveröffentlichung erforderlich.
-Anschließend gespeicherten Quelltext und ausgelieferte Designblöcke erneut
-vergleichen. Rückfall: vorherige gesicherte Vorlage wiederherstellen.
+## Veröffentlichung und Rückfall
+
+- [PR 73](https://github.com/Rohdeo87/ssv53-heimspiele/pull/73) wurde nach
+  erfolgreichen Prüfungen des exakten Quellstands
+  `872254f06a69ef18742dfedbdff23b91786657d1` zusammengeführt.
+  Merge: `053fd09964b9c39192a7a82216474e6b5c0d6f07`.
+- [Code-Prüfung](https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/34594179746)
+  und [Paket-Prüfung](https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/34594179791)
+  erfolgreich. Der zusammengeführte Quelltext entspricht dem geprüften Stand.
+- Ausschließlich `Platzpflege.tpl`, ID `6a86ab6c4b3c829dd60de9b7`, ersetzt.
+  Appack zeigt als letzte Änderung 11.09.26, 13:30 Uhr. Keine Azure-Veröffentlichung,
+  keine Geräte-Testbefehle und keine Änderung der Steuerungsregeln.
+- Nach vollständigem CMS-Neuladen den gesamten Editorinhalt erneut kopiert:
+  exakt gleich, normalisierter SHA-256
+  `79395caf9dd98b6ec910d15a49cc01fbf30c6cc310f9e6c70cc25c20a05b554d`.
+- Den tatsächlichen Render-Endpunkt in einem neuen Browser-Tab geöffnet:
+  CSS (14.998 Zeichen) und JavaScript (38.149 Zeichen) entsprechen der Vorlage.
+  Vier Informationsansichten sind `SECTION`, nur Bestätigung und Stoppentscheidung
+  bleiben `DIALOG`. Zusätzlicher Header fehlt; keine JavaScript-Konsolenfehler.
+- Details: [maschinenlesbarer Veröffentlichungsnachweis](publication-proof.json).
+  Im nicht aktivierten Browser war die Einrichtungsansicht sichtbar. Die
+  Prüfungen mit Ladestatus, Unterseiten und Aktionen erfolgten mit synthetischen
+  Daten; dies ist kein Nachweis einer neuen Gerätemeldung oder Geräteaktion.
+
+Rückfall: die [vorherige gesicherte Vorlage](appack-before.tpl) im selben
+Appack-Template wiederherstellen und gespeichert sowie ausgeliefert vergleichen.
+Ihr normalisierter SHA-256 ist
+`3bbb6f41276b3954909250e19d981eee115c69e243c5903bb26765fda68b143c`.
+Für diese Darstellungsänderung ist kein Rücksetzen der Gerätesteuerung erforderlich.
