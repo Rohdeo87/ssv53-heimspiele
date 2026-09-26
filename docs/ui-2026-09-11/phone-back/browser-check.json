@@ -1,0 +1,151 @@
+{
+  "synthetic": true,
+  "networkBlocked": true,
+  "deviceCommands": false,
+  "records": [
+    {
+      "width": 320,
+      "scenario": "charging",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "scenario": "charging-unknown",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "scenario": "charging-display",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "scenario": "parked",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "scenario": "mowing",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "scenario": "stale",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "scenario": "watering",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "scenario": "unconfirmed",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "charging",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "charging-unknown",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "charging-display",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "parked",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "mowing",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "stale",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "watering",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "scenario": "unconfirmed",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 768,
+      "scenario": "charging",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 768,
+      "scenario": "charging-unknown",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 768,
+      "scenario": "charging-display",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 768,
+      "scenario": "parked",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 768,
+      "scenario": "mowing",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 768,
+      "scenario": "stale",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 768,
+      "scenario": "watering",
+      "errors": [],
+      "overflow": false
+    },
+    {
+      "width": 768,
+      "scenario": "unconfirmed",
+      "errors": [],
+      "overflow": false
+    }
+  ]
+}
