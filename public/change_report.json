@@ -1,11 +1,11 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-30T12:50:56.591778+00:00",
+  "generatedAt": "2026-09-30T19:30:44.739118+00:00",
   "status": "ok",
   "counts": {
-    "before": 40,
+    "before": 41,
     "after": 41,
-    "added": 1,
+    "added": 0,
     "changed": 0,
     "removed": 0,
     "effectiveAfter": 41,
@@ -21,36 +21,7 @@
       "confirmed": true
     }
   },
-  "added": [
-    {
-      "id": "dfb:031DB8NS70000000VS5489BUVUR5FS5A",
-      "title": "SpG Perwenitz/​Schönwalde Ü50 – SG Bornim Ü50",
-      "start": "2026-10-30T19:45+01:00",
-      "end": "2026-10-30T21:30+01:00",
-      "occupancyStart": "2026-10-30T18:45+01:00",
-      "occupancyEnd": "2026-10-30T22:30+01:00",
-      "kickoff": "2026-10-30T19:45+01:00",
-      "matchDurationMinutes": 105,
-      "durationRule": "fk-havelland-ue50-2026-27-dfb-standard+halftime-15",
-      "competitionFormat": "league",
-      "matchType": "ME",
-      "place": "kunstrasen",
-      "calendar": "Kunstrasen",
-      "team": "SpG Perwenitz/​Schönwalde Ü50",
-      "teamCategory": "Herren Ü50 | Kreisliga",
-      "teamRole": "home",
-      "homeTeam": "SpG Perwenitz/​Schönwalde Ü50",
-      "awayTeam": "SG Bornim Ü50",
-      "competition": "Fr, | Herren Ü50 | Kreisliga",
-      "description": "Herren Ü50 · Kreisliga",
-      "status": "",
-      "detailLink": "https://www.fussball.de/spiel/spg-perwenitz-schoenwalde-ue50-sg-bornim-ue50/-/spiel/031DB8NS70000000VS5489BUVUR5FS5A",
-      "location": "Kunstrasenplatz, Sportplatz Schönwalde Strandbad, Platz 2, KR, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
-      "locationSource": "fussball.de",
-      "source": "fussball.de",
-      "checksum": "3deb457c46d7c1cdc8083dd07872d34502b66480a47d3af1b0173662e7aa5bd1"
-    }
-  ],
+  "added": [],
   "changed": [],
   "removed": [],
   "retained": [],
@@ -58,8 +29,8 @@
   "publication": {
     "schemaVersion": 1,
     "status": "ok",
-    "sourceGeneratedAt": "2026-09-30T12:50:56+00:00",
-    "sourceDigest": "4310d853bcd80f9ce0e71496f283b97c14d8a60c1982535e03d325c86da574d6",
+    "sourceGeneratedAt": "2026-09-30T19:30:44+00:00",
+    "sourceDigest": "e91845c797beeda377d291445a5e76caf199b8343f9517aeb6551cfa43368f76",
     "sourceCount": 41,
     "retainedCount": 0,
     "effectiveCount": 41,
