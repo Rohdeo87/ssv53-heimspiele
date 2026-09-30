@@ -4,7 +4,7 @@
   "invalid_included": [],
   "by_calendar": {
     "Rasen": 35,
-    "Kunstrasen": 5
+    "Kunstrasen": 6
   },
   "event_timing": {
     "before_minutes": 60,
@@ -36,7 +36,7 @@
     {
       "date_from": "2026-10-01",
       "date_to": "2026-12-31",
-      "competition_rows": 41
+      "competition_rows": 42
     },
     {
       "date_from": "2027-01-01",
@@ -81,10 +81,10 @@
       "depth": 0,
       "source_url": "https://www.fussball.de/ajax.club.matchplan/-/id/00ES8GNBL0000049VV0AG08LVUPGND5I/mode/PAGE/show-filter/false/show-venues/true/mime-type/HTML/datum-von/2026-10-01/datum-bis/2026-12-31/max/50",
       "source_scope": "all club teams; inclusion decided only by venue",
-      "competition_rows": 41,
+      "competition_rows": 42,
       "source_detail_ids": 37,
-      "parsed_matches_before_duplicate_merge": 41,
-      "parsed_matches": 41,
+      "parsed_matches_before_duplicate_merge": 42,
+      "parsed_matches": 42,
       "parsed_detail_ids": 37,
       "missing_detail_ids": [],
       "source_festival_groups": 0,
@@ -153,6 +153,7 @@
   ],
   "cross_window_resolution": {
     "collapsed_duplicate_detail_ids": [
+      "031DB8NS70000000VS5489BUVUR5FS5A",
       "031DB8NS8C000000VS5489BUVUR5FS5A",
       "031DB8NSCO000000VS5489BUVUR5FS5A",
       "031DP96C58000000VS5489BUVUR5FS5A",
@@ -164,6 +165,24 @@
       "031TA58SV8000000VS5489BUVSORQI22"
     ],
     "duplicate_resolutions": [
+      {
+        "detail_id": "031DB8NS70000000VS5489BUVUR5FS5A",
+        "occurrences": 2,
+        "conflicts": {},
+        "resolved": true,
+        "resolution_attempt": {
+          "method": "explicit_postponement_chain",
+          "relocations": [
+            {
+              "from": "2026-10-02T20:00+02:00",
+              "to": "2026-10-30T19:45+01:00"
+            }
+          ],
+          "selected_kickoff": "2026-10-30T19:45+01:00",
+          "resolved": true
+        },
+        "merged_external_id": "031DB8NS70000000VS5489BUVUR5FS5A"
+      },
       {
         "detail_id": "031DB8NS8C000000VS5489BUVUR5FS5A",
         "occurrences": 2,
@@ -357,12 +376,12 @@
   "publication": {
     "schemaVersion": 1,
     "status": "ok",
-    "sourceGeneratedAt": "2026-09-29T07:54:45+00:00",
-    "sourceDigest": "24787d66aa0fd40ed74257d7b062758fbce7f886a2da70929b564ff8e4fe2ebe",
-    "sourceCount": 40,
+    "sourceGeneratedAt": "2026-09-30T12:50:56+00:00",
+    "sourceDigest": "4310d853bcd80f9ce0e71496f283b97c14d8a60c1982535e03d325c86da574d6",
+    "sourceCount": 41,
     "retainedCount": 0,
-    "effectiveCount": 40,
+    "effectiveCount": 41,
     "requiredConsumer": null,
-    "effectiveDigest": "6bd126bbaf5bdb7c60f75f8aea480417b3c608a9fbf7f38b15ec4b0d921161d4"
+    "effectiveDigest": "6a8e110aa76365765b4360b5fd038b3105cdc552e20f86420719e484b3b1938d"
   }
 }

@@ -1,14 +1,14 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-29T07:54:45.349413+00:00",
+  "generatedAt": "2026-09-30T12:50:56.591778+00:00",
   "status": "ok",
   "counts": {
     "before": 40,
-    "after": 40,
-    "added": 0,
+    "after": 41,
+    "added": 1,
     "changed": 0,
     "removed": 0,
-    "effectiveAfter": 40,
+    "effectiveAfter": 41,
     "retained": 0,
     "released": 0
   },
@@ -21,7 +21,36 @@
       "confirmed": true
     }
   },
-  "added": [],
+  "added": [
+    {
+      "id": "dfb:031DB8NS70000000VS5489BUVUR5FS5A",
+      "title": "SpG Perwenitz/​Schönwalde Ü50 – SG Bornim Ü50",
+      "start": "2026-10-30T19:45+01:00",
+      "end": "2026-10-30T21:30+01:00",
+      "occupancyStart": "2026-10-30T18:45+01:00",
+      "occupancyEnd": "2026-10-30T22:30+01:00",
+      "kickoff": "2026-10-30T19:45+01:00",
+      "matchDurationMinutes": 105,
+      "durationRule": "fk-havelland-ue50-2026-27-dfb-standard+halftime-15",
+      "competitionFormat": "league",
+      "matchType": "ME",
+      "place": "kunstrasen",
+      "calendar": "Kunstrasen",
+      "team": "SpG Perwenitz/​Schönwalde Ü50",
+      "teamCategory": "Herren Ü50 | Kreisliga",
+      "teamRole": "home",
+      "homeTeam": "SpG Perwenitz/​Schönwalde Ü50",
+      "awayTeam": "SG Bornim Ü50",
+      "competition": "Fr, | Herren Ü50 | Kreisliga",
+      "description": "Herren Ü50 · Kreisliga",
+      "status": "",
+      "detailLink": "https://www.fussball.de/spiel/spg-perwenitz-schoenwalde-ue50-sg-bornim-ue50/-/spiel/031DB8NS70000000VS5489BUVUR5FS5A",
+      "location": "Kunstrasenplatz, Sportplatz Schönwalde Strandbad, Platz 2, KR, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+      "locationSource": "fussball.de",
+      "source": "fussball.de",
+      "checksum": "3deb457c46d7c1cdc8083dd07872d34502b66480a47d3af1b0173662e7aa5bd1"
+    }
+  ],
   "changed": [],
   "removed": [],
   "retained": [],
@@ -29,12 +58,12 @@
   "publication": {
     "schemaVersion": 1,
     "status": "ok",
-    "sourceGeneratedAt": "2026-09-29T07:54:45+00:00",
-    "sourceDigest": "24787d66aa0fd40ed74257d7b062758fbce7f886a2da70929b564ff8e4fe2ebe",
-    "sourceCount": 40,
+    "sourceGeneratedAt": "2026-09-30T12:50:56+00:00",
+    "sourceDigest": "4310d853bcd80f9ce0e71496f283b97c14d8a60c1982535e03d325c86da574d6",
+    "sourceCount": 41,
     "retainedCount": 0,
-    "effectiveCount": 40,
+    "effectiveCount": 41,
     "requiredConsumer": null,
-    "effectiveDigest": "6bd126bbaf5bdb7c60f75f8aea480417b3c608a9fbf7f38b15ec4b0d921161d4"
+    "effectiveDigest": "6a8e110aa76365765b4360b5fd038b3105cdc552e20f86420719e484b3b1938d"
   }
 }

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-29T07:54:45+00:00",
+  "generatedAt": "2026-09-30T12:50:56+00:00",
   "status": "ok",
   "matches": [
     {
@@ -590,6 +590,34 @@
       "locationSource": "fussball.de",
       "source": "fussball.de",
       "checksum": "5dbe12a90f417e4e594fe462e54475da9414763fc6eb5395057d368eca69bc9f"
+    },
+    {
+      "id": "dfb:031DB8NS70000000VS5489BUVUR5FS5A",
+      "title": "SpG Perwenitz/​Schönwalde Ü50 – SG Bornim Ü50",
+      "start": "2026-10-30T19:45+01:00",
+      "end": "2026-10-30T21:30+01:00",
+      "occupancyStart": "2026-10-30T18:45+01:00",
+      "occupancyEnd": "2026-10-30T22:30+01:00",
+      "kickoff": "2026-10-30T19:45+01:00",
+      "matchDurationMinutes": 105,
+      "durationRule": "fk-havelland-ue50-2026-27-dfb-standard+halftime-15",
+      "competitionFormat": "league",
+      "matchType": "ME",
+      "place": "kunstrasen",
+      "calendar": "Kunstrasen",
+      "team": "SpG Perwenitz/​Schönwalde Ü50",
+      "teamCategory": "Herren Ü50 | Kreisliga",
+      "teamRole": "home",
+      "homeTeam": "SpG Perwenitz/​Schönwalde Ü50",
+      "awayTeam": "SG Bornim Ü50",
+      "competition": "Fr, | Herren Ü50 | Kreisliga",
+      "description": "Herren Ü50 · Kreisliga",
+      "status": "",
+      "detailLink": "https://www.fussball.de/spiel/spg-perwenitz-schoenwalde-ue50-sg-bornim-ue50/-/spiel/031DB8NS70000000VS5489BUVUR5FS5A",
+      "location": "Kunstrasenplatz, Sportplatz Schönwalde Strandbad, Platz 2, KR, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+      "locationSource": "fussball.de",
+      "source": "fussball.de",
+      "checksum": "3deb457c46d7c1cdc8083dd07872d34502b66480a47d3af1b0173662e7aa5bd1"
     },
     {
       "id": "dfb:031DB86V6S000000VS5489BUVUR5FS5A",
