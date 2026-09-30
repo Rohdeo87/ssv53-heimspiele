@@ -4,6 +4,13 @@ on:
   pull_request:
     branches:
       - main
+  push:
+    branches: [main]
+    paths:
+      - "**.py"
+      - "tests/**"
+      - ".github/workflows/**"
+      - "requirements*.txt"
   workflow_dispatch:
 
 permissions:

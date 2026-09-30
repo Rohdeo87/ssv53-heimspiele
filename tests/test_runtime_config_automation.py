@@ -12,13 +12,20 @@ NODE = shutil.which("node")
 NODE_HARNESS = r"""
 const fs = require("fs");
 const payload = JSON.parse(fs.readFileSync(0, "utf8"));
+const RealDate = Date;
+const now = RealDate.parse("2026-09-30T10:00:00Z");
+global.Date = class extends RealDate { constructor(...args){super(...(args.length ? args : [now]));} static now(){return now;} };
 const outputs = {};
 const dispatches = [];
+let serial = 0;
+let stamp = new Date(Date.now() - (payload.age || 60)*60000).toISOString();
 const github = {
   rest: {
+    repos: {getContent: async () => ({data:{content:Buffer.from(JSON.stringify({generated_at:stamp})).toString("base64")}})},
     actions: {
+      listWorkflowRuns: async () => ({data:{workflow_runs:serial ? [{id:serial,status:"completed",conclusion:payload.fail ? "failure" : "success",html_url:"test-run"}] : []}}),
       listJobsForWorkflowRun: async () => ({ data: payload.jobsResponse }),
-      createWorkflowDispatch: async (request) => { dispatches.push(request); },
+      createWorkflowDispatch: async (request) => { dispatches.push(request); serial++; if(request.workflow_id === "update-matches.yml") stamp=new Date().toISOString(); },
     },
   },
 };
@@ -35,10 +42,10 @@ process.env.SOURCE_SHA = "";
 (async () => {
   try {
     const run = new Function(
-      "github", "context", "core", "process",
+      "github", "context", "core", "process", "fetch", "setTimeout",
       `return (async () => {\n${payload.script}\n})()`
     );
-    await run(github, context, core, process);
+    await run(github, context, core, process, async () => ({ok:!payload.neverHealthy && (payload.healthy || dispatches.some(r=>r.workflow_id === "azure-runtime-config-rollout.yml")),json:async()=>({match_source_fresh:true,training_calendar:{fail_closed:false},match_source_generated_at_utc:stamp})}), cb=>cb());
     process.stdout.write(JSON.stringify({ outputs, dispatches }));
   } catch (error) {
     process.stderr.write(error.stack || String(error));
@@ -74,11 +81,11 @@ class RuntimeConfigAutomationTests(unittest.TestCase):
             body.append(line)
         return textwrap.dedent("\n".join(body)).strip()
 
-    def _run_workflow_dispatch(self, jobs_response: object) -> dict[str, object]:
+    def _run_workflow_dispatch(self, jobs_response: object, **scenario) -> dict[str, object]:
         self.assertIsNotNone(NODE, "Node.js ist für den github-script-Vertrag erforderlich.")
         completed = subprocess.run(
             [str(NODE), "-e", NODE_HARNESS],
-            input=json.dumps({"script": self.dispatch_script, "jobsResponse": jobs_response}),
+            input=json.dumps({"script": self.dispatch_script, "jobsResponse": jobs_response, **scenario}),
             text=True,
             capture_output=True,
             check=False,
@@ -116,7 +123,7 @@ class RuntimeConfigAutomationTests(unittest.TestCase):
         )
         self.assertIn("github.event_name == 'push' && github.sha || ''", self.dispatcher)
         self.assertNotIn("source_sha: context.payload.workflow_run.head_sha", self.dispatcher)
-        self.assertIn("source_sha: process.env.SOURCE_SHA", self.dispatcher)
+        self.assertIn('source_sha:""', self.dispatcher)
 
     def test_dispatch_script_requires_proven_import_and_persist_steps(self) -> None:
         cases = {
@@ -136,11 +143,29 @@ class RuntimeConfigAutomationTests(unittest.TestCase):
                     self.assertEqual(request["workflow_id"], "azure-runtime-config-rollout.yml")
                     self.assertEqual(request["inputs"]["source_sha"], "")
 
+    def test_healthy_calendar_does_not_republish(self):
+        result = self._run_workflow_dispatch(self._jobs(scrape="success", persist="success"), healthy=True)
+        self.assertEqual(result["dispatches"], [])
+        self.assertEqual(result["outputs"]["dispatched"], "false")
+
+    def test_failed_rollout_is_not_reported_as_success(self):
+        with self.assertRaisesRegex(AssertionError, "fehlgeschlagen"):
+            self._run_workflow_dispatch(self._jobs(scrape="success", persist="success"), fail=True)
+
+    def test_old_source_is_refreshed_before_publication(self):
+        result = self._run_workflow_dispatch(self._jobs(scrape="success", persist="success"), age=400)
+        self.assertEqual([r["workflow_id"] for r in result["dispatches"]], ["update-matches.yml", "azure-runtime-config-rollout.yml"])
+        self.assertEqual(result["dispatches"][0]["inputs"]["allow_destructive_change"], "false")
+
+    def test_unhealthy_public_calendar_cannot_report_success(self):
+        with self.assertRaisesRegex(AssertionError, "weiterhin nicht fehlerfrei"):
+            self._run_workflow_dispatch(self._jobs(scrape="success", persist="success"), neverHealthy=True)
+
     def test_existing_manual_push_and_scheduled_dispatches_remain_available(self) -> None:
         self.assertIn("workflow_dispatch:", self.dispatcher)
         self.assertIn("push:", self.dispatcher)
-        self.assertIn('cron: "47 1,7,13,19 * * *"', self.dispatcher)
-        self.assertIn('ref: "feature/azure-mower-migration"', self.dispatcher)
+        self.assertIn('cron: "17 * * * *"', self.dispatcher)
+        self.assertIn('"azure-runtime-config-rollout.yml","feature/azure-mower-migration"', self.dispatcher)
 
 
 if __name__ == "__main__":
