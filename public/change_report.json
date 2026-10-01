@@ -1,116 +1,50 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-01T13:38:39.018647+00:00",
-  "status": "additive_pending",
+  "generatedAt": "2026-10-01T19:48:05.434882+00:00",
+  "status": "ok",
   "counts": {
     "before": 41,
     "after": 41,
-    "added": 1,
+    "added": 0,
     "changed": 0,
-    "removed": 1,
-    "effectiveAfter": 42,
-    "retained": 1,
-    "released": 0
+    "removed": 0,
+    "effectiveAfter": 41,
+    "retained": 0,
+    "released": 1
   },
   "guard": {
-    "triggered": true,
+    "triggered": false,
     "overrideUsed": false,
-    "reasons": [
-      "1 bisherige Sperre(n) bleiben bis zur bestätigten Rücknahme bestehen; neue Sperren sind enthalten."
-    ],
+    "reasons": [],
     "safetyConfirmation": {
-      "required": true,
-      "confirmed": false
+      "required": false,
+      "confirmed": true
     }
   },
-  "added": [
-    {
-      "id": "dfb:031HB5BCFO000000VS5489BTVVG7L386",
-      "title": "Schönwalder SV – SG Grün-Weiß Rehfelde",
-      "start": "2027-05-08T11:00+02:00",
-      "end": "2027-05-08T12:45+02:00",
-      "occupancyStart": "2027-05-08T10:00+02:00",
-      "occupancyEnd": "2027-05-08T13:45+02:00",
-      "kickoff": "2027-05-08T11:00+02:00",
-      "matchDurationMinutes": 105,
-      "durationRule": "flb-jugendordnung-2025-12-13-a-2x45+halftime-15",
-      "competitionFormat": "league",
-      "matchType": "ME",
-      "place": "rasen",
-      "calendar": "Rasen",
-      "team": "Schönwalder SV",
-      "teamCategory": "A-Junioren | Landesklasse",
-      "teamRole": "home",
-      "homeTeam": "Schönwalder SV",
-      "awayTeam": "SG Grün-Weiß Rehfelde",
-      "competition": "Sa, | A-Junioren | Landesklasse",
-      "description": "A-Junioren · Landesklasse",
-      "status": "",
-      "detailLink": "https://www.fussball.de/spiel/schoenwalder-sv-sg-gruen-weiss-rehfelde/-/spiel/031HB5BCFO000000VS5489BTVVG7L386",
-      "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
-      "locationSource": "fussball.de",
-      "source": "fussball.de",
-      "checksum": "fb0c09882f6e29f3fc24d1b2e098541548fe68928b06e205aac83be41291aee2"
-    }
-  ],
+  "added": [],
   "changed": [],
-  "removed": [
-    {
-      "id": "dfb:031HB5B99O000000VS5489BTVVG7L386",
-      "title": "Schönwalder SV – SG Grün-Weiß Rehfelde",
-      "start": "2026-10-10T11:00+02:00",
-      "end": "2026-10-10T12:45+02:00",
-      "occupancyStart": "2026-10-10T10:00+02:00",
-      "occupancyEnd": "2026-10-10T13:45+02:00",
-      "kickoff": "2026-10-10T11:00+02:00",
-      "matchDurationMinutes": 105,
-      "durationRule": "flb-jugendordnung-2025-12-13-a-2x45+halftime-15",
-      "competitionFormat": "league",
-      "matchType": "ME",
-      "place": "rasen",
-      "calendar": "Rasen",
-      "team": "Schönwalder SV",
-      "teamCategory": "A-Junioren | Landesklasse",
-      "teamRole": "home",
-      "homeTeam": "Schönwalder SV",
-      "awayTeam": "SG Grün-Weiß Rehfelde",
-      "competition": "A-Junioren | Landesklasse",
-      "description": "A-Junioren · Landesklasse",
-      "status": "",
-      "detailLink": "https://www.fussball.de/spiel/schoenwalder-sv-sg-gruen-weiss-rehfelde/-/spiel/031HB5B99O000000VS5489BTVVG7L386",
-      "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
-      "locationSource": "fussball.de",
-      "source": "fussball.de",
-      "checksum": "266ce99a2cc2be462d78396139e6f065f643115e147f121829600c40aadb5013"
-    }
-  ],
-  "retained": [
+  "removed": [],
+  "retained": [],
+  "released": [
     {
       "id": "dfb:held-67843e93ffc9327213a559c16058ed325f1de5b4f99c24f36224f375061cd5ab",
-      "schemaVersion": 1,
       "sourceId": "dfb:031HB5B99O000000VS5489BTVVG7L386",
-      "status": "pending",
-      "reason": "removed",
-      "sourceObservedAt": "2026-10-01T06:16:33+00:00",
-      "requiresManual": false,
-      "requiredConfirmations": 2,
-      "minimumIntervalMinutes": 60,
+      "reason": "confirmed",
       "fingerprint": "3619eeb76bbf1d37ee735e6fd17e13f7c05b0e85ca868ae1a08523675caeeaa9",
-      "confirmations": 1,
+      "confirmations": 2,
       "firstSeenAt": "2026-10-01T13:38:38+00:00",
-      "lastCountedAt": "2026-10-01T13:38:38+00:00"
+      "lastCountedAt": "2026-10-01T19:48:05+00:00"
     }
   ],
-  "released": [],
   "publication": {
     "schemaVersion": 1,
-    "status": "additive_pending",
-    "sourceGeneratedAt": "2026-10-01T13:38:38+00:00",
-    "sourceDigest": "24a13ee22af05dd01f5ae7e5b6bd0b7754bcaa159d991194f61973850d7946c8",
+    "status": "ok",
+    "sourceGeneratedAt": "2026-10-01T19:48:05+00:00",
+    "sourceDigest": "566a895f329b2b566e75cbb7aff2a0fbe8298e6ddd427dfcbdddc1421fcb5a68",
     "sourceCount": 41,
-    "retainedCount": 1,
-    "effectiveCount": 42,
-    "requiredConsumer": "ssv53-additive-retention-v1",
-    "effectiveDigest": "1eac1989c8b4d7c9363cd3dd56a23109be9a29866b924de84d6953e2ba22e798"
+    "retainedCount": 0,
+    "effectiveCount": 41,
+    "requiredConsumer": null,
+    "effectiveDigest": "42b674f1bbe7526a7def139415b34487d5bd22334713f76677d77d579d228b8c"
   }
 }
