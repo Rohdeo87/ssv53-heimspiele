@@ -17,15 +17,35 @@ const now = RealDate.parse("2026-09-30T10:00:00Z");
 global.Date = class extends RealDate { constructor(...args){super(...(args.length ? args : [now]));} static now(){return now;} };
 const outputs = {};
 const dispatches = [];
-let serial = 0;
+let serial = 100;
+const runs = [];
+const polls = {};
+const waited = [];
 let stamp = new Date(Date.now() - (payload.age || 60)*60000).toISOString();
+if (payload.activeImport) runs.push({id:50,workflow_id:"update-matches.yml",event:payload.activeEvent || "schedule",status:"in_progress",created_at:new Date(now-600000).toISOString(),html_url:"active-import"});
 const github = {
   rest: {
     repos: {getContent: async () => ({data:{content:Buffer.from(JSON.stringify({generated_at:stamp})).toString("base64")}})},
     actions: {
-      listWorkflowRuns: async () => ({data:{workflow_runs:serial ? [{id:serial,status:"completed",conclusion:payload.fail ? "failure" : "success",html_url:"test-run"}] : []}}),
+      listWorkflowRuns: async (request) => {
+        if (payload.finishedDuringLookup && request.workflow_id === "update-matches.yml" && !request.event) stamp=new Date().toISOString();
+        const selected=runs.filter(r=>r.workflow_id === request.workflow_id && (!request.event || r.event === request.event));
+        // Model an older run appearing late in the list API, with a higher ID
+        // than those visible in the pre-dispatch lookup.
+        if(payload.lateOldRun && request.per_page === 10) selected.push({id:99,status:"completed",conclusion:"success",created_at:new Date(now-600000).toISOString(),html_url:"old-run"});
+        return {data:{workflow_runs:selected}};
+      },
+      getWorkflowRun: async ({run_id}) => {
+        waited.push(run_id); polls[run_id]=(polls[run_id] || 0)+1;
+        const run=runs.find(r=>r.id === run_id);
+        if (!run) throw new Error("Wrong run selected: "+run_id);
+        const status=payload.neverCompletes || polls[run_id] < (payload.completeAfter || 3) ? "in_progress" : "completed";
+        const conclusion=payload.fail ? "failure" : "success";
+        if(status === "completed" && conclusion === "success" && run.workflow_id === "update-matches.yml") stamp=new Date().toISOString();
+        return {data:{...run,status,conclusion}};
+      },
       listJobsForWorkflowRun: async () => ({ data: payload.jobsResponse }),
-      createWorkflowDispatch: async (request) => { dispatches.push(request); serial++; if(request.workflow_id === "update-matches.yml") stamp=new Date().toISOString(); },
+      createWorkflowDispatch: async (request) => { dispatches.push(request); runs.push({id:++serial,workflow_id:request.workflow_id,event:"workflow_dispatch",status:"queued",created_at:new Date().toISOString(),html_url:"test-run-"+serial}); },
     },
   },
 };
@@ -46,7 +66,7 @@ process.env.SOURCE_SHA = "";
       `return (async () => {\n${payload.script}\n})()`
     );
     await run(github, context, core, process, async () => ({ok:!payload.neverHealthy && (payload.healthy || dispatches.some(r=>r.workflow_id === "azure-runtime-config-rollout.yml")),json:async()=>({match_source_fresh:true,training_calendar:{fail_closed:false},match_source_generated_at_utc:stamp})}), cb=>cb());
-    process.stdout.write(JSON.stringify({ outputs, dispatches }));
+    process.stdout.write(JSON.stringify({ outputs, dispatches, polls, waited }));
   } catch (error) {
     process.stderr.write(error.stack || String(error));
     process.exit(1);
@@ -160,6 +180,42 @@ class RuntimeConfigAutomationTests(unittest.TestCase):
     def test_unhealthy_public_calendar_cannot_report_success(self):
         with self.assertRaisesRegex(AssertionError, "weiterhin nicht fehlerfrei"):
             self._run_workflow_dispatch(self._jobs(scrape="success", persist="success"), neverHealthy=True)
+
+    def test_existing_import_is_awaited_without_a_second_scrape(self):
+        for event in ("schedule", "workflow_dispatch", "push"):
+            with self.subTest(event=event):
+                result = self._run_workflow_dispatch(self._jobs(scrape="success", persist="success"), age=700,
+                                                     activeImport=True, activeEvent=event, completeAfter=40)
+                self.assertEqual([r["workflow_id"] for r in result["dispatches"]], ["azure-runtime-config-rollout.yml"])
+                self.assertEqual(result["polls"]["50"], 40)
+                self.assertEqual(result["waited"][:40], [50] * 40)
+
+    def test_import_completed_during_lookup_is_not_repeated(self):
+        result = self._run_workflow_dispatch(self._jobs(scrape="success", persist="success"),
+                                            age=400, finishedDuringLookup=True)
+        self.assertEqual([r["workflow_id"] for r in result["dispatches"]], ["azure-runtime-config-rollout.yml"])
+
+    def test_completed_old_run_cannot_confirm_new_publication(self):
+        result = self._run_workflow_dispatch(self._jobs(scrape="success", persist="success"), lateOldRun=True)
+        self.assertEqual(result["waited"], [101, 101, 101])
+
+    def test_failed_existing_import_remains_a_failure(self):
+        with self.assertRaisesRegex(AssertionError, "active-import"):
+            self._run_workflow_dispatch(self._jobs(scrape="success", persist="success"), age=400, activeImport=True, fail=True)
+
+    def test_import_wait_is_bounded_and_reports_the_run_link(self):
+        with self.assertRaisesRegex(AssertionError, "Abschluss nicht best.*active-import"):
+            self._run_workflow_dispatch(self._jobs(scrape="success", persist="success"), age=400, activeImport=True, neverCompletes=True)
+
+    def test_all_main_import_triggers_reload_after_queue_without_changing_test_refs(self):
+        workflow = (ROOT / ".github/workflows/update-matches.yml").read_text(encoding="utf-8")
+        refresh = workflow.split("- name: Nach der Warteschlange den neuesten main-Stand verwenden", 1)[1].split("- name:", 1)[0]
+        self.assertIn("github.ref == format('refs/heads/{0}', github.event.repository.default_branch)", refresh)
+        self.assertIn('git fetch origin "${{ github.event.repository.default_branch }}"', refresh)
+        self.assertIn('git reset --hard "origin/${{ github.event.repository.default_branch }}"', refresh)
+        self.assertIn("group: ssv53-match-update", workflow)
+        self.assertIn("cancel-in-progress: false", workflow)
+        self.assertIn("Der veröffentlichte Bestand wurde parallel geändert", workflow)
 
     def test_existing_manual_push_and_scheduled_dispatches_remain_available(self) -> None:
         self.assertIn("workflow_dispatch:", self.dispatcher)

@@ -29,7 +29,7 @@ jobs:
   dispatch:
     name: Quellfrische und Kalender automatisch wiederherstellen
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 65
     # Commits made by the importer's GITHUB_TOKEN deliberately do not cause a
     # push-triggered workflow. A completed successful own-repository main
     # import is therefore an explicit, source-SHA-neutral hand-off. The
@@ -84,20 +84,43 @@ jobs:
               if (!Number.isFinite(age) || age < -5) throw new Error("Ungültiger Abrufzeitpunkt");
               return {value,age};
             }
-            async function runAndWait(workflow_id,ref,inputs) {
-              const prior = await github.rest.actions.listWorkflowRuns({owner,repo,workflow_id,branch:ref,event:"workflow_dispatch",per_page:1});
-              const before = prior.data.workflow_runs[0]?.id || 0;
-              await github.rest.actions.createWorkflowDispatch({owner,repo,workflow_id,ref,inputs});
-              for (let i=0;i<45;i++) {
-                await new Promise(resolve=>setTimeout(resolve,20000));
-                const {data} = await github.rest.actions.listWorkflowRuns({owner,repo,workflow_id,branch:ref,event:"workflow_dispatch",per_page:10});
-                const run = data.workflow_runs.filter(r=>r.id>before).sort((a,b)=>a.id-b.id)[0];
-                if (run?.status === "completed") {
-                  if (run.conclusion !== "success") throw new Error(`${workflow_id} fehlgeschlagen: ${run.html_url}`);
+            async function waitForRun(workflow_id,run,attempts) {
+              core.info(`${workflow_id}: Lauf abwarten: ${run.html_url}`);
+              for (let i=0;i<attempts;i++) {
+                // Once identified, follow this exact run; a concurrent dispatch
+                // must never be mistaken for completion of our selected run.
+                const {data} = await github.rest.actions.getWorkflowRun({owner,repo,run_id:run.id});
+                if (data.status === "completed") {
+                  if (data.conclusion !== "success") throw new Error(`${workflow_id} fehlgeschlagen: ${data.html_url}`);
                   return;
                 }
+                await new Promise(resolve=>setTimeout(resolve,20000));
               }
-              throw new Error(`${workflow_id}: Abschluss nicht bestätigt`);
+              throw new Error(`${workflow_id}: Abschluss nicht bestätigt: ${run.html_url}`);
+            }
+            async function runAndWait(workflow_id,ref,inputs,attempts=45) {
+              const prior = await github.rest.actions.listWorkflowRuns({owner,repo,workflow_id,branch:ref,event:"workflow_dispatch",per_page:100});
+              const before = Math.max(0,...prior.data.workflow_runs.map(r=>r.id));
+              const requestedAt = Date.now();
+              await github.rest.actions.createWorkflowDispatch({owner,repo,workflow_id,ref,inputs});
+              for (let i=0;i<15;i++) {
+                await new Promise(resolve=>setTimeout(resolve,20000));
+                const {data} = await github.rest.actions.listWorkflowRuns({owner,repo,workflow_id,branch:ref,event:"workflow_dispatch",per_page:10});
+                const run = data.workflow_runs.filter(r=>r.id>before && Date.parse(r.created_at)>=requestedAt-1000).sort((a,b)=>a.id-b.id)[0];
+                if (run) return await waitForRun(workflow_id,run,attempts);
+              }
+              throw new Error(`${workflow_id}: gestarteter Lauf nicht gefunden`);
+            }
+            async function refreshSource() {
+              // A scheduled import may already be sleeping, scraping or queued.
+              // Reuse it instead of creating a forced second scrape.
+              const {data} = await github.rest.actions.listWorkflowRuns({owner,repo,workflow_id:"update-matches.yml",branch:"main",per_page:100});
+              const active = data.workflow_runs.filter(r=>r.status!=="completed" && ["schedule","workflow_dispatch","push"].includes(r.event)).sort((a,b)=>a.id-b.id)[0];
+              if (active) return await waitForRun("update-matches.yml",active,105);
+              // Close the race where the import finished during the run lookup.
+              const latest = await summary();
+              if (latest.age < 360) return;
+              await runAndWait("update-matches.yml","main",{skip_start_delay:"true",allow_destructive_change:"false",persist_test_results:"false"},105);
             }
             // Verify the public read-only calendar instead of treating a queued
             // dispatch as proof of a successful publication.
@@ -114,8 +137,8 @@ jobs:
             const hour = Number(new Intl.DateTimeFormat("en-GB",{timeZone:"Europe/Berlin",hour:"2-digit",hourCycle:"h23"}).format(new Date()));
             const decision = recoveryDecision(current.age,hour);
             if (decision === "refresh") {
-              core.info("Quellbestand mindestens sechs Stunden alt: geprüften Import vorziehen.");
-              await runAndWait("update-matches.yml","main",{skip_start_delay:"true",allow_destructive_change:"false",persist_test_results:"false"});
+              core.info("Quellbestand mindestens sechs Stunden alt: laufenden Import abwarten oder geprüften Import vorziehen.");
+              await refreshSource();
               current = await summary();
             }
             if (current.age > 720) throw new Error("Quellbestand weiterhin älter als 12 Stunden; keine Freigabe alter Daten.");
