@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-01T06:16:33+00:00",
+  "generated_at": "2026-10-01T13:38:38+00:00",
   "selection_mode": "club-wide venue",
   "event_timing": {
     "before_minutes": 60,
@@ -21,18 +21,18 @@
       "ssv53-festival-unclear-duration-90-20260831"
     ]
   },
-  "total": 115,
-  "included": 41,
+  "total": 116,
+  "included": 42,
   "review": 0,
   "excluded": 74,
   "by_calendar": {
-    "Rasen": 35,
+    "Rasen": 36,
     "Kunstrasen": 6
   },
   "by_team": {
     "Schönwalder SV": {
-      "total": 36,
-      "included": 17,
+      "total": 37,
+      "included": 18,
       "excluded": 19,
       "review": 0
     },
@@ -123,7 +123,7 @@
     {
       "date_from": "2026-10-01",
       "date_to": "2026-12-31",
-      "competition_rows": 42
+      "competition_rows": 43
     },
     {
       "date_from": "2027-01-01",
@@ -138,13 +138,13 @@
   ],
   "publication": {
     "schemaVersion": 1,
-    "status": "ok",
-    "sourceGeneratedAt": "2026-10-01T06:16:33+00:00",
-    "sourceDigest": "6699314be9729bd8f845e58209757a0cd6ab386331dc9e296deccbe4d4d02f75",
+    "status": "additive_pending",
+    "sourceGeneratedAt": "2026-10-01T13:38:38+00:00",
+    "sourceDigest": "24a13ee22af05dd01f5ae7e5b6bd0b7754bcaa159d991194f61973850d7946c8",
     "sourceCount": 41,
-    "retainedCount": 0,
-    "effectiveCount": 41,
-    "requiredConsumer": null,
-    "effectiveDigest": "6a8e110aa76365765b4360b5fd038b3105cdc552e20f86420719e484b3b1938d"
+    "retainedCount": 1,
+    "effectiveCount": 42,
+    "requiredConsumer": "ssv53-additive-retention-v1",
+    "effectiveDigest": "1eac1989c8b4d7c9363cd3dd56a23109be9a29866b924de84d6953e2ba22e798"
   }
 }
