@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-01T19:48:05.434882+00:00",
+  "generatedAt": "2026-10-02T05:54:32.054161+00:00",
   "status": "ok",
   "counts": {
     "before": 41,
@@ -10,7 +10,7 @@
     "removed": 0,
     "effectiveAfter": 41,
     "retained": 0,
-    "released": 1
+    "released": 0
   },
   "guard": {
     "triggered": false,
@@ -25,22 +25,12 @@
   "changed": [],
   "removed": [],
   "retained": [],
-  "released": [
-    {
-      "id": "dfb:held-67843e93ffc9327213a559c16058ed325f1de5b4f99c24f36224f375061cd5ab",
-      "sourceId": "dfb:031HB5B99O000000VS5489BTVVG7L386",
-      "reason": "confirmed",
-      "fingerprint": "3619eeb76bbf1d37ee735e6fd17e13f7c05b0e85ca868ae1a08523675caeeaa9",
-      "confirmations": 2,
-      "firstSeenAt": "2026-10-01T13:38:38+00:00",
-      "lastCountedAt": "2026-10-01T19:48:05+00:00"
-    }
-  ],
+  "released": [],
   "publication": {
     "schemaVersion": 1,
     "status": "ok",
-    "sourceGeneratedAt": "2026-10-01T19:48:05+00:00",
-    "sourceDigest": "566a895f329b2b566e75cbb7aff2a0fbe8298e6ddd427dfcbdddc1421fcb5a68",
+    "sourceGeneratedAt": "2026-10-02T05:54:31+00:00",
+    "sourceDigest": "58053650f80acc7405e823ee2d61ab3e5b82a547f973cde2d6db6498b23ac3da",
     "sourceCount": 41,
     "retainedCount": 0,
     "effectiveCount": 41,
