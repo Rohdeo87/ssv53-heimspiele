@@ -1,11 +1,11 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-08T07:01:20.537703+00:00",
+  "generatedAt": "2026-10-08T16:43:04.078764+00:00",
   "status": "ok",
   "counts": {
-    "before": 41,
+    "before": 42,
     "after": 42,
-    "added": 1,
+    "added": 0,
     "changed": 0,
     "removed": 0,
     "effectiveAfter": 42,
@@ -21,36 +21,7 @@
       "confirmed": true
     }
   },
-  "added": [
-    {
-      "id": "dfb:032AQFHU2S000000VS5489BTVU989P58",
-      "title": "Schönwalder SV 53 – FC Strausberg",
-      "start": "2026-11-01T10:30+01:00",
-      "end": "2026-11-01T12:45+01:00",
-      "occupancyStart": "2026-11-01T09:30+01:00",
-      "occupancyEnd": "2026-11-01T13:45+01:00",
-      "kickoff": "2026-11-01T10:30+01:00",
-      "matchDurationMinutes": 135,
-      "durationRule": "flb-jugendordnung-2025-12-13-a-2x45+halftime-15+cup-max-30",
-      "competitionFormat": "cup",
-      "matchType": "PO",
-      "place": "rasen",
-      "calendar": "Rasen",
-      "team": "Schönwalder SV 53",
-      "teamCategory": "A-Junioren | Brandenburg-Pokal",
-      "teamRole": "home",
-      "homeTeam": "Schönwalder SV 53",
-      "awayTeam": "FC Strausberg",
-      "competition": "So, | A-Junioren | Brandenburg-Pokal",
-      "description": "A-Junioren · Brandenburg-Pokal",
-      "status": "",
-      "detailLink": "https://www.fussball.de/spiel/schoenwalder-sv-fc-strausberg/-/spiel/032AQFHU2S000000VS5489BTVU989P58",
-      "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
-      "locationSource": "fussball.de",
-      "source": "fussball.de",
-      "checksum": "a84a91c8e4773bb2688152c6786711b7b4d6b03823d8934882c9b4739b8c2b29"
-    }
-  ],
+  "added": [],
   "changed": [],
   "removed": [],
   "retained": [],
@@ -58,8 +29,8 @@
   "publication": {
     "schemaVersion": 1,
     "status": "ok",
-    "sourceGeneratedAt": "2026-10-08T07:01:20+00:00",
-    "sourceDigest": "5d4fb943045a3aa28f2c73ff67a898ede76f981644307cde0949cfa97dd03c07",
+    "sourceGeneratedAt": "2026-10-08T16:43:03+00:00",
+    "sourceDigest": "422afd1d649634b2f9744080c90b668f56208beff2d3ab1d4b6e9a7953e521c5",
     "sourceCount": 42,
     "retainedCount": 0,
     "effectiveCount": 42,
