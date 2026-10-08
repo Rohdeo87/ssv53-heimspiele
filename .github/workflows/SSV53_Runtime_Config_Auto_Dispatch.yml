@@ -72,9 +72,9 @@ jobs:
                 return;
               }
             }
-            function recoveryDecision(age,hour) {
-              if (!Number.isFinite(age) || age < -5 || !Number.isInteger(hour) || hour < 0 || hour > 23) throw new Error("Invalid freshness inputs");
-              return age >= 360 && hour >= 6 && hour < 22 ? "refresh" : "verify";
+            function recoveryDecision(age) {
+              if (!Number.isFinite(age) || age < -5) throw new Error("Invalid freshness inputs");
+              return age >= 360 ? "refresh" : "verify";
             }
             const owner = context.repo.owner, repo = context.repo.repo;
             async function summary() {
@@ -134,8 +134,7 @@ jobs:
               } catch (_) { return false; }
             }
             let current = await summary();
-            const hour = Number(new Intl.DateTimeFormat("en-GB",{timeZone:"Europe/Berlin",hour:"2-digit",hourCycle:"h23"}).format(new Date()));
-            const decision = recoveryDecision(current.age,hour);
+            const decision = recoveryDecision(current.age);
             if (decision === "refresh") {
               core.info("Quellbestand mindestens sechs Stunden alt: laufenden Import abwarten oder geprüften Import vorziehen.");
               await refreshSource();

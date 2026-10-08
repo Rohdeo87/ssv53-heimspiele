@@ -13,7 +13,7 @@ NODE_HARNESS = r"""
 const fs = require("fs");
 const payload = JSON.parse(fs.readFileSync(0, "utf8"));
 const RealDate = Date;
-const now = RealDate.parse("2026-09-30T10:00:00Z");
+const now = RealDate.parse(payload.now || "2026-09-30T10:00:00Z");
 global.Date = class extends RealDate { constructor(...args){super(...(args.length ? args : [now]));} static now(){return now;} };
 const outputs = {};
 const dispatches = [];
@@ -176,6 +176,37 @@ class RuntimeConfigAutomationTests(unittest.TestCase):
         result = self._run_workflow_dispatch(self._jobs(scrape="success", persist="success"), age=400)
         self.assertEqual([r["workflow_id"] for r in result["dispatches"]], ["update-matches.yml", "azure-runtime-config-rollout.yml"])
         self.assertEqual(result["dispatches"][0]["inputs"]["allow_destructive_change"], "false")
+
+    def test_nighttime_recovery_prevents_the_october_8_morning_gap(self):
+        cases = [
+            # Last genuine source refresh: Oct 7 16:40 UTC.
+            ("2026-10-07T22:03:00Z", 323, []),
+            ("2026-10-08T02:02:00Z", 562, ["update-matches.yml"]),
+            # With the source refreshed at 02:02 UTC, morning stays healthy.
+            ("2026-10-08T06:47:00Z", 285, []),
+        ]
+        for now, age, expected in cases:
+            with self.subTest(now=now):
+                result = self._run_workflow_dispatch(
+                    self._jobs(scrape="success", persist="success"),
+                    now=now, age=age, healthy=True,
+                )
+                self.assertEqual([r["workflow_id"] for r in result["dispatches"]], expected)
+
+    def test_nighttime_six_hour_threshold_and_existing_import_reuse(self):
+        for age, expected in ((359, []), (360, ["update-matches.yml"]), (721, ["update-matches.yml"])):
+            with self.subTest(age=age):
+                result = self._run_workflow_dispatch(
+                    self._jobs(scrape="success", persist="success"),
+                    now="2026-10-08T01:00:00Z", age=age, healthy=True,
+                )
+                self.assertEqual([r["workflow_id"] for r in result["dispatches"]], expected)
+        result = self._run_workflow_dispatch(
+            self._jobs(scrape="success", persist="success"),
+            now="2026-10-08T02:02:00Z", age=562, healthy=True, activeImport=True,
+        )
+        self.assertEqual(result["dispatches"], [])
+        self.assertEqual(result["waited"], [50, 50, 50])
 
     def test_unhealthy_public_calendar_cannot_report_success(self):
         with self.assertRaisesRegex(AssertionError, "weiterhin nicht fehlerfrei"):

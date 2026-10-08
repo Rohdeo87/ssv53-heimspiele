@@ -23,6 +23,7 @@ class ScheduleSettings:
     random_delay_max_seconds: int = 720
     closing_margin_seconds: int = 60
     minimum_source_refresh_interval_minutes: int = 240
+    outside_window_recovery_after_minutes: int = 360
     source_summary_path: str = "public/summary.json"
 
 
@@ -51,6 +52,9 @@ def load_settings(path: Path) -> ScheduleSettings:
         minimum_source_refresh_interval_minutes=int(
             raw.get("minimum_source_refresh_interval_minutes", 240)
         ),
+        outside_window_recovery_after_minutes=int(
+            raw.get("outside_window_recovery_after_minutes", 360)
+        ),
         source_summary_path=str(raw.get("source_summary_path", "public/summary.json")),
     )
     if settings.random_delay_min_seconds < 0:
@@ -65,6 +69,12 @@ def load_settings(path: Path) -> ScheduleSettings:
         )
     if not settings.source_summary_path.strip():
         raise ValueError("source_summary_path darf nicht leer sein")
+    if settings.outside_window_recovery_after_minutes < max(
+        1, settings.minimum_source_refresh_interval_minutes
+    ):
+        raise ValueError(
+            "outside_window_recovery_after_minutes darf das Mindestintervall nicht unterschreiten"
+        )
     parse_clock(settings.window_start)
     parse_clock(settings.window_end)
     ZoneInfo(settings.timezone)
@@ -106,14 +116,15 @@ def choose_delay_seconds(
     now: datetime,
     settings: ScheduleSettings,
     rng: random.Random | random.SystemRandom | None = None,
+    *,
+    allow_outside_window_recovery: bool = False,
 ) -> int | None:
-    if not is_inside_window(now, settings):
+    if not is_inside_window(now, settings) and not allow_outside_window_recovery:
         return None
     remaining = seconds_until_window_end(now, settings)
-    maximum = min(
-        settings.random_delay_max_seconds,
-        remaining - settings.closing_margin_seconds,
-    )
+    maximum = settings.random_delay_max_seconds
+    if not allow_outside_window_recovery:
+        maximum = min(maximum, remaining - settings.closing_margin_seconds)
     if maximum < settings.random_delay_min_seconds:
         return None
     generator = rng or random.SystemRandom()
@@ -150,9 +161,18 @@ def source_refresh_decision(
     *,
     force_refresh: bool = False,
 ) -> tuple[bool, float | None, str]:
-    if force_refresh:
-        return True, read_source_age_minutes(now, summary_path), "FORCED"
     age_minutes = read_source_age_minutes(now, summary_path)
+    # Delayed GitHub cron runs can all arrive at night. Recover an aging
+    # publication then instead of knowingly letting it exceed the 12 h gate.
+    # A manual dispatch still cannot turn a fresh nighttime source into a scrape.
+    if not is_inside_window(now, settings):
+        if age_minutes is None:
+            return True, None, "SOURCE_MISSING_OR_INVALID"
+        if age_minutes >= settings.outside_window_recovery_after_minutes:
+            return True, age_minutes, "SOURCE_RECOVERY_DUE"
+        return False, age_minutes, "OUTSIDE_WINDOW"
+    if force_refresh:
+        return True, age_minutes, "FORCED"
     if age_minutes is None:
         return True, None, "SOURCE_MISSING_OR_INVALID"
     if age_minutes < settings.minimum_source_refresh_interval_minutes:
@@ -189,20 +209,6 @@ def main() -> int:
     if not summary_path.is_absolute():
         summary_path = config_path.resolve().parent / summary_path
 
-    if not is_inside_window(now, settings):
-        write_outputs({
-            "should_run": "false",
-            "delay_seconds": "0",
-            "local_time": local_text,
-            "skip_reason": "OUTSIDE_WINDOW",
-            "source_age_minutes": "",
-        })
-        print(
-            f"Kein Abruf: außerhalb des erlaubten Fensters "
-            f"{settings.window_start}–{settings.window_end} Uhr."
-        )
-        return 0
-
     refresh_due, source_age, reason = source_refresh_decision(
         now,
         settings,
@@ -218,14 +224,24 @@ def main() -> int:
             "skip_reason": reason,
             "source_age_minutes": source_age_output,
         })
-        print(
-            "Kein Abruf: Der letzte echte Spielplan-Abruf ist erst "
-            f"{source_age_output} Minuten alt."
-        )
+        if reason == "OUTSIDE_WINDOW":
+            print("Kein Abruf: außerhalb des Abruffensters; Aktualisierung noch nicht fällig.")
+        else:
+            print(
+                "Kein Abruf: Der letzte echte Spielplan-Abruf ist erst "
+                f"{source_age_output} Minuten alt."
+            )
         return 0
 
     if args.mode == "prepare":
-        delay = choose_delay_seconds(now, settings)
+        delay = choose_delay_seconds(
+            now,
+            settings,
+            allow_outside_window_recovery=(
+                source_age is None
+                or source_age >= settings.outside_window_recovery_after_minutes
+            ),
+        )
         if delay is None:
             write_outputs({
                 "should_run": "false",

@@ -162,6 +162,7 @@
     "random_delay_max_seconds": 720,
     "closing_margin_seconds": 60,
     "minimum_source_refresh_interval_minutes": 240,
+    "outside_window_recovery_after_minutes": 360,
     "source_summary_path": "public/summary.json"
   },
   "quality_guard": {

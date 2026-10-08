@@ -65,6 +65,18 @@ Falls FUSSBALL.DE trotzdem eine gekürzte Antwort oder einen sichtbaren Hinweis 
 
 Kann die Saison innerhalb von 10 Requests nicht vollständig und lückenlos erfasst werden, wird nichts veröffentlicht.
 
+Die regulären automatischen Abrufe bleiben auf 06:00–22:00 Uhr Berliner Zeit und
+mindestens vier Stunden Abstand begrenzt, mit zufälliger Startverschiebung.
+GitHub kann geplante Läufe erheblich verzögern. Deshalb darf ein mindestens sechs
+Stunden alter oder fehlender/ungültiger Quellbestand auch nachts erneuert werden;
+ein frischer nächtlicher Bestand wird auch bei manuellem Workflow-Start nicht
+erneut abgerufen. Die Runtime-Automatik wartet auf bereits laufende Importe,
+anstatt einen zweiten Abruf zu starten. Die Grenze von zwölf Stunden für
+verlässliche Quelldaten und sämtliche Prüfungen vor einer Veröffentlichung
+bleiben bestehen. Die Ausnahme verhindert bewusst ausgelassene Nachtläufe;
+eine ausbleibende GitHub-Ausführung oder eine unerreichbare Quelle kann sie
+nicht garantieren zu beheben.
+
 
 ## Terminverschiebungen und doppelte Darstellungen
 
