@@ -291,7 +291,7 @@ test("Trainingsabsage übermittelt ausschließlich eine aktuelle angemeldete Ses
 
 test("Belegungsänderungen wählen Appack-JWT, Platzwart-Fallback oder melden fehlende Auth", () => {
   const source = ["normalizeAppackJwt", "readAppackJwtFromSource", "occupancyWriteTokenCandidateFromUrl", "occupancyWriteHeaders"].map(extractFunction).join("\n");
-  const readHeaders = (value, cookie = "", query = "") => new Function("sessionStorage", "document", "window", source + "\nreturn occupancyWriteHeaders;")({getItem: () => value}, {cookie}, {location: {search: query}})();
+  const readHeaders = (value, cookie = "", query = "") => new Function("sessionStorage", "document", "window", "const state = {calendarReadOnly: false};\n" + source + "\nreturn occupancyWriteHeaders;")({getItem: () => value}, {cookie}, {location: {search: query}})();
   for (const value of [null, "broken", "{}", JSON.stringify({token:"example",expiresAt:"invalid"}), JSON.stringify({token:"example",expiresAt:"2000-01-01T00:00:00Z"})]) {
     assert.throws(() => readHeaders(value), /angemeldeten SSV53-App/);
   }

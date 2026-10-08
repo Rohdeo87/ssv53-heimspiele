@@ -331,7 +331,8 @@ def _occupancy_matches_path() -> tuple[str, str]:
 
 def _shared_training_for_app(*, config_path, start: str, end: str, now_utc: datetime,
                              match_source=None, cancellations=(), control_snapshot=None,
-                             unavailable_ranges: list[dict[str, str]] | None = None) -> RuntimeTraining:
+                             unavailable_ranges: list[dict[str, str]] | None = None,
+                             allow_stale_display: bool = False) -> RuntimeTraining:
     if (
         training_mode(os.environ) == "OFF"
         and str(os.environ.get("WINTER_TRAINING_CONTROL_ENABLED", "false")).strip().casefold()
@@ -340,6 +341,12 @@ def _shared_training_for_app(*, config_path, start: str, end: str, now_utc: date
         return RuntimeTraining("OFF")
     if match_source is None:
         match_source = _occupancy_match_source(now_utc=now_utc)
+    # Dynamic source resolution has already checked the current manifest hash
+    # and its hard display-age bound. Never extend this to an unbounded package
+    # fallback, conflict checks, or trainer mutation paths.
+    display_grace = allow_stale_display and match_source.source_kind in {
+        "azure_blob", "azure_blob_cache",
+    }
     config = json.loads(Path(config_path).read_text(encoding="utf-8"))
     first, last = parse_range(start, end, ZoneInfo("Europe/Berlin"))
     if control_snapshot is None:
@@ -351,6 +358,7 @@ def _shared_training_for_app(*, config_path, start: str, end: str, now_utc: date
         legacy_config=config, range_start=first, range_end=last, now_utc=now_utc,
         cancellations=cancellations,
         source_fresh=match_source.fresh and not match_source.fallback_used,
+        allow_stale_display=display_grace,
         control_snapshot=control_snapshot,
     )
     if (
@@ -387,6 +395,7 @@ def _shared_training_for_app(*, config_path, start: str, end: str, now_utc: date
                 legacy_config=config, range_start=known_start, range_end=last, now_utc=now_utc,
                 cancellations=cancellations,
                 source_fresh=match_source.fresh and not match_source.fallback_used,
+                allow_stale_display=display_grace,
                 control_snapshot=control_snapshot,
             )
             if known.batch is not None and not known.blocking_required:
@@ -560,6 +569,7 @@ def ssv53_occupancy(req: func.HttpRequest) -> func.HttpResponse:
             config_path=config_path, start=start, end=end, now_utc=now_utc,
             match_source=match_source, cancellations=cancellations,
             unavailable_ranges=training_unavailable_ranges,
+            allow_stale_display=True,
         )
         payload = build_occupancy_payload(
             config_path=config_path, matches_path=matches_path, start=start, end=end,

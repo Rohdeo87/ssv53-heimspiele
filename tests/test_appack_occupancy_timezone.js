@@ -75,6 +75,7 @@ async function loadTrainerContacts() {}
 function mergeCreatorContact(value) { return value; }
 function findCurrentCreatorWorkbookContact() { return null; }
 function closeEventDetails() {}
+function refreshCalendarEditingDialogs() {}
 function closeTrainerOccupancyDialog() { state.trainerOccupancyMoveEvent = null; }
 function normalizeCssColor(value, fallback) { return value || fallback; }
 function getContrastColor() { return "#fff"; }

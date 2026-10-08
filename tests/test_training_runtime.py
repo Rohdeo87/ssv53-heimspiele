@@ -128,3 +128,43 @@ def test_resolver_accepts_64_local_days_across_autumn_dst():
     document["approval"] = {"status": "approved", "reference": "TEST ONLY", "approved_at_utc": "2026-01-01T00:00:00Z", "content_sha256": calendar_digest(document)}
     result = resolve_training_calendar(document, range_start=datetime.fromisoformat("2026-10-01T00:00:00+02:00"), range_end=datetime.fromisoformat("2026-12-04T00:00:00+01:00"), now_utc=NOW, occupancy_config=occupancy, mower_config=mower)
     assert result.batch is not None
+
+
+def test_display_grace_is_explicit_and_never_available_to_mower():
+    holder = {ENVELOPE_KEY: envelope()}
+    display = resolve(holder, source_fresh=False, allow_stale_display=True)
+    assert display.batch is not None and display.display_only
+    assert display.metadata()["display_only"] is True
+    for consumer in ("occupancy", "mower"):
+        strict = resolve(holder, consumer=consumer, source_fresh=False)
+        assert strict.blockers == ("TRAINING_PUBLICATION_STALE",)
+        assert strict.batch is None and not strict.display_only
+    mower = resolve(holder, consumer="mower", source_fresh=False, allow_stale_display=True)
+    assert mower.blockers == ("TRAINING_PUBLICATION_STALE",)
+    assert mower.batch is None
+
+
+@pytest.mark.parametrize("mutate", [
+    lambda h: h.pop(ENVELOPE_KEY),
+    lambda h: h[ENVELOPE_KEY].update(sha256="0" * 64),
+    lambda h: h[ENVELOPE_KEY].update(calendar={}),
+    lambda h: h[ENVELOPE_KEY].update(mower_baseline={}),
+    lambda h: h[ENVELOPE_KEY].update(schema_version=2),
+])
+def test_display_grace_still_rejects_missing_or_manipulated_envelope(mutate):
+    holder = {ENVELOPE_KEY: envelope()}
+    mutate(holder)
+    result = resolve(holder, source_fresh=False, allow_stale_display=True)
+    assert result.batch is None and result.blockers
+    assert "TRAINING_PUBLICATION_STALE" not in result.blockers
+
+
+def test_display_grace_still_checks_consumer_baseline_and_holidays():
+    holder = {ENVELOPE_KEY: envelope()}
+    changed = copy.deepcopy(fixture()[1])
+    changed["timezone"] = "UTC"
+    result = resolve(holder, source_fresh=False, allow_stale_display=True, legacy_config=changed)
+    assert result.blockers == ("TRAINING_CONSUMER_BASELINE_CHANGED",)
+    result = resolve(holder, source_fresh=False, allow_stale_display=True,
+                     statutory_holiday_predicate=None)
+    assert result.blockers == ("BRANDENBURG_HOLIDAY_SOURCE_UNAVAILABLE",)

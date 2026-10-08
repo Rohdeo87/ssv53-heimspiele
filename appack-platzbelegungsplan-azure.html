@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- SSV53 Belegungsplan – Azure-Occupancy mit kompaktem 30-Minuten-Kalender v21 -->
+<!-- SSV53 Belegungsplan – Azure-Occupancy mit kompaktem 30-Minuten-Kalender v22 -->
 <html lang="de">
 
 <head>
@@ -356,6 +356,16 @@ display: none;
 border-color: rgba(192, 13, 13, 0.24);
 background: #fff4f4;
 color: #8f1111;
+}
+
+#calendar-status[data-state="info"] {
+min-height: 32px;
+padding: 6px 10px;
+border: 0;
+background: var(--surface);
+font-size: 0.8rem;
+font-weight: 500;
+text-align: left;
 }
 
 #calendar-status[data-state="warning"] {
@@ -1752,6 +1762,86 @@ animation-iteration-count: 1 !important;
 transition-duration: 0.01ms !important;
 }
 }
+/* SSV53 calendar polish: retain the resource/time grid and event semantics. */
+:root {
+--page: #f4f6f9;
+--surface-soft: #f4f6fa;
+--line: #e1e7ef;
+--text: #213044;
+--muted: #596b80;
+--fc-today-bg-color: #f0f5fc;
+}
+#booking-controls {
+grid-template-areas: "view" "place";
+grid-template-columns: minmax(0, 1fr);
+gap: 6px;
+padding: 6px;
+border-color: var(--line);
+border-radius: 12px;
+background: var(--surface);
+box-shadow: none;
+}
+#booking-controls.ssv-season-choice {
+grid-template-areas: "season view" "place place";
+grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+}
+#booking-controls .ssv-segmented-control {
+background: var(--surface-soft);
+box-shadow: none;
+border-radius: 9px;
+padding: 3px;
+gap: 3px;
+}
+#booking-controls .ssv-segment-button {
+min-height: 40px;
+border: 0;
+border-radius: 7px !important;
+color: var(--muted);
+font-weight: 600 !important;
+}
+#booking-controls .ssv-segment-button[aria-pressed="true"] {
+background: var(--brand);
+color: #fff;
+box-shadow: none;
+}
+#calendar-wrapper {border-radius: 12px 12px 0 0;box-shadow: none;}
+#calendar {padding: 5px 5px 0;}
+#calendar-status[data-state="loading"] {
+min-height: 32px;
+padding: 6px 10px;
+margin: 0;
+border: 0;
+border-radius: 0;
+background: var(--surface);
+font-size: 0.8rem;
+font-weight: 500;
+}
+#calendar-status[data-state="loading"] .status-spinner {width: 15px;height: 15px;border-width: 2px;}
+.fc .fc-col-header-cell,.fc .fc-timegrid-axis,.fc .fc-timegrid-slot-label {background: #f7f9fc;}
+.fc .fc-col-header-cell-cushion {padding: 8px 5px;color: var(--text);font-weight: 600;}
+.fc .fc-col-header-cell.fc-day-today {background: #eaf2fd;}
+.fc .fc-col-header-cell.fc-day-today .fc-col-header-cell-cushion {color: var(--brand);}
+.fc .fc-timegrid-slot-minor {border-top-color: #edf0f5;border-top-style: solid;}
+.fc .fc-v-event {border-radius: 6px;box-shadow: none;}
+.fc .fc-v-event.ssv-official-match {box-shadow: none;}
+.event-title {font-weight: 650;}
+#calendar-navigation {background: var(--surface);padding-top: 4px;padding-bottom: max(4px, env(safe-area-inset-bottom, 0px));}
+.calendar-navigation-button {width: 40px;height: 40px;border-radius: 10px;box-shadow: none;background: var(--surface);border-color: var(--line);}
+#calendar-date-primary {font-weight: 650;}
+#calendar-date-secondary {font-weight: 500;}
+#calendar-today-button {min-height: 40px;border-radius: 10px;box-shadow: none;font-weight: 600;}
+.event-dialog,.action-confirmation-dialog {border-top: 0;border-radius: 16px;}
+.dialog-button,.trainer-contact-retry {min-height: 44px;border-radius: 10px;box-shadow: none;font-weight: 600;}
+@media (min-width: 700px) {
+#booking-controls {grid-template-areas: "place view";grid-template-columns: minmax(0, 2fr) minmax(150px, 1fr);}
+#booking-controls.ssv-season-choice {grid-template-areas: "season place view";grid-template-columns: minmax(0, 1fr) minmax(0, 1.8fr) minmax(140px, 0.8fr);}
+}
+@media (max-width: 300px) {
+#booking-controls.ssv-season-choice {grid-template-areas: "season" "view" "place";grid-template-columns: minmax(0, 1fr);}
+}
+html.ssv-large-text #booking-controls {grid-template-areas: "view" "place";grid-template-columns: minmax(0, 1fr);}
+html.ssv-large-text #booking-controls.ssv-season-choice {grid-template-areas: "season" "view" "place";}
+/* End SSV53 calendar polish. */
 </style>
 
 <script>
@@ -1920,6 +2010,7 @@ return "";
 }
 
 function occupancyWriteHeaders() {
+if (state.calendarReadOnly === true) throw new Error("Bitte zuerst aktuelle Belegungsdaten laden. Der gespeicherte Kalender ist nur zur Ansicht verfügbar.");
 const queryToken = occupancyWriteTokenCandidateFromUrl();
 let cookieToken = "";
 try { cookieToken = decodeURIComponent((document.cookie.match(/(?:^|;\s*)jwt=([^;]+)/) || [])[1] || ""); } catch (error) { cookieToken = ""; }
@@ -1976,6 +2067,10 @@ direction: "asc"
 };
 
 const state = {
+calendarReadOnly: true,
+calendarLoading: false,
+calendarLoadPromise: null,
+calendarLoadKey: "",
 settings: DEFAULT_SETTINGS,
 module: DEFAULT_SETTINGS.module,
 calendars: {},
@@ -2073,6 +2168,7 @@ trainerOccupancyClose: document.getElementById("trainer-occupancy-close"),
 trainerOccupancyCancel: document.getElementById("trainer-occupancy-cancel"),
 trainerOccupancySubmit: document.getElementById("trainer-occupancy-submit"),
 trainerOccupancyStatus: document.getElementById("trainer-occupancy-status"),
+trainerOccupancyRetry: document.getElementById("trainer-occupancy-retry"),
 trainerOccupancyDelete: document.getElementById("trainer-occupancy-delete"),
 trainerOccupancyMove: document.getElementById("trainer-occupancy-move"),
 actionConfirmationLayer: document.getElementById("action-confirmation-layer"),
@@ -4469,6 +4565,7 @@ const group = document.querySelector(".ssv-control-group--season");
 if (group) {
 group.hidden = shared;
 group.style.display = shared ? "none" : "";
+if (group.parentElement) group.parentElement.classList.toggle("ssv-season-choice", !shared);
 }
 if (!changed) return;
 // A previously selected winter view must not hide confirmed grass training.
@@ -5139,14 +5236,94 @@ const day = lastUnknownInstant.toLocaleDateString("de-DE", {timeZone: "Europe/Be
 return "Frühere Trainings bis "+day+" sind hier nicht verfügbar. Aktuelle Termine werden angezeigt.";
 }
 
-async function loadRangeEvents(rangeStart, rangeEnd) {
-const token = ++state.fetchToken;
-setStatus("loading", "Daten werden geladen", false);
-
+// Last successful public calendar snapshots. Never used by control APIs.
+function calendarSnapshotKey() {
+return storageKey("occupancy-snapshots-v1:" + OCCUPANCY_API_URL);
+}
+function readCalendarSnapshots() {
+if (state.calendarSnapshots) return state.calendarSnapshots;
 try {
-const payload = await fetchOccupancyPayload(rangeStart, rangeEnd);
-if (token !== state.fetchToken) return;
-
+const saved = JSON.parse(storageGet(calendarSnapshotKey()) || "[]");
+state.calendarSnapshots = Array.isArray(saved) ? saved.filter(function (item) {
+return item && item.version === 1 && Number.isFinite(item.savedAt) &&
+item.savedAt <= Date.now() && Number.isFinite(item.start) && Number.isFinite(item.end) &&
+item.end > item.start && item.payload && item.payload.data_source === "azure" &&
+Array.isArray(item.payload.events) && Array.isArray(item.payload.resources);
+}).slice(0, 8) : [];
+} catch (error) { state.calendarSnapshots = []; }
+return state.calendarSnapshots;
+}
+function findCalendarSnapshot(start, end) {
+return readCalendarSnapshots().find(function (item) {
+return (item.season === state.activeSeason || item.shared === true) && item.start <= +start && item.end >= +end;
+}) || null;
+}
+function rememberCalendarSnapshot(payload, start, end) {
+const item = {version: 1, season: state.activeSeason, shared: sharedTrainingSeason(payload) !== null, start: +start, end: +end,
+savedAt: Date.now(), payload: JSON.parse(JSON.stringify(payload))};
+state.calendarSnapshots = [item].concat(readCalendarSnapshots().filter(function (previous) {
+return !(previous.season === item.season && previous.start === item.start && previous.end === item.end);
+})).slice(0, 8);
+storageSet(calendarSnapshotKey(), JSON.stringify(state.calendarSnapshots));
+}
+function setCalendarReadOnly(readOnly) {
+state.calendarReadOnly = readOnly;
+["trainerOccupancySubmit", "trainerOccupancyDelete",
+"trainerOccupancyMove", "trainingCancellationAction"].forEach(function (key) {
+if (elements[key]) elements[key].disabled = readOnly;
+});
+// Opening a draft is harmless. Saving always requires current verified data.
+if (elements.trainerAddOccupancy) elements.trainerAddOccupancy.disabled = false;
+refreshCalendarEditingDialogs();
+}
+function calendarEditingAvailabilityMessage() {
+return state.calendarLoading
+? "Termine werden aktualisiert …"
+: "Änderungen sind gerade nicht möglich. Bitte erneut versuchen.";
+}
+function refreshCalendarEditingDialogs() {
+if (elements.trainerOccupancyDialogLayer && !elements.trainerOccupancyDialogLayer.hidden) {
+const status = elements.trainerOccupancyStatus;
+if (state.calendarReadOnly) {
+status.textContent = calendarEditingAvailabilityMessage();
+status.setAttribute("data-calendar-availability", "true");
+status.removeAttribute("data-error");
+status.hidden = false;
+} else if (status.hasAttribute("data-calendar-availability")) {
+status.hidden = true;
+status.removeAttribute("data-calendar-availability");
+}
+if (elements.trainerOccupancyRetry) {
+elements.trainerOccupancyRetry.hidden = !state.calendarReadOnly || state.calendarLoading;
+}
+}
+if (!state.currentDialogEvent || !elements.dialogLayer || elements.dialogLayer.hidden) return;
+let event = state.currentDialogEvent;
+let missing = false;
+if (!state.calendarReadOnly && state.calendar && typeof state.calendar.getEventById === "function") {
+const refreshed = state.calendar.getEventById(event.id);
+if (refreshed) {
+event = refreshed;
+state.currentDialogEvent = refreshed;
+state.currentDialogEventKey = getDialogEventKey(refreshed);
+elements.popupTitle.textContent = refreshed.title || "Belegung";
+elements.popupTime.textContent = getPopupTimeText(refreshed);
+elements.popupDescription.innerHTML = sanitizePopupDescription((refreshed.extendedProps || {}).description);
+} else { missing = true; }
+}
+renderTrainingCancellationAction(missing ? null : event);
+renderTrainerOccupancyDeleteAction(missing ? null : event);
+renderTrainerOccupancyMoveAction(missing ? null : event);
+if ((state.calendarReadOnly && (state.canManageTrainings || state.canManageTrainingCancellations)) || missing) {
+elements.trainingCancellationStatus.textContent = missing
+? "Dieser Termin wurde inzwischen geändert. Bitte die aktuellen Termine im Kalender auswählen."
+: calendarEditingAvailabilityMessage();
+elements.trainingCancellationStatus.hidden = false;
+}
+elements.dialogFooter.hidden = [elements.trainerOccupancyMove, elements.trainerOccupancyDelete,
+elements.trainingCancellationAction, elements.popupLink].every(function (action) { return action.hidden; });
+}
+function renderCalendarPayload(payload, rangeStart, rangeEnd) {
 updateAzureResourceMetadata(payload.resources);
 applySharedTrainingCalendar(payload);
 const events = payload.events.map(mapAzureOccupancyEvent);
@@ -5167,32 +5344,89 @@ return event.extendedProps
 
 updateMatchResourceVisibility(matchResourceIds);
 renderEvents(visibleEvents);
-const warnings = [];
-if (payload.match_source_fresh === false && visibleEvents.length > 0) {
-warnings.push("Die Spieldaten werden gerade aktualisiert. Der letzte bestätigte Stand und bekannte Trainings bleiben sichtbar.");
 }
+function showCalendarSnapshot(snapshot, start, end, loading) {
+renderCalendarPayload(snapshot.payload, start, end);
+// A routine background refresh is not an error, even when using a snapshot.
+if (loading) {
+setStatus(null);
+return;
+}
+const age = Math.max(0, Date.now() - snapshot.savedAt);
+if (age <= 24 * 60 * 60 * 1000) {
+setStatus(null);
+return;
+}
+const stamp = new Date(snapshot.savedAt).toLocaleString("de-DE", {
+timeZone: "Europe/Berlin", dateStyle: "short", timeStyle: "short"
+});
+setStatus("warning", "Aktualisierung gerade nicht möglich. Stand: " + stamp + " Uhr.", true);
+}
+
+function loadRangeEvents(rangeStart, rangeEnd, forceRefresh) {
+const key = [+rangeStart, +rangeEnd, state.activeSeason].join("|");
+if (!forceRefresh && state.calendarLoadPromise && state.calendarLoadKey === key) {
+return state.calendarLoadPromise;
+}
+const request = loadRangeEventsRequest(rangeStart, rangeEnd);
+state.calendarLoadKey = key;
+state.calendarLoadPromise = request;
+request.finally(function () {
+if (state.calendarLoadPromise === request) {
+state.calendarLoadPromise = null;
+state.calendarLoadKey = "";
+}
+});
+return request;
+}
+async function loadRangeEventsRequest(rangeStart, rangeEnd) {
+const token = ++state.fetchToken;
+state.calendarLoading = true;
+setCalendarReadOnly(true);
+const snapshot = findCalendarSnapshot(rangeStart, rangeEnd);
+let displayedSnapshot = false;
+if (snapshot) {
+try { showCalendarSnapshot(snapshot, rangeStart, rangeEnd, true); displayedSnapshot = true; }
+catch (error) { /* Ignore damaged cached entries and request live data. */ }
+}
+if (!displayedSnapshot) {
+if (state.calendar) state.calendar.removeAllEvents();
+setStatus("loading", "Daten werden geladen", false);
+}
+try {
+const payload = await fetchOccupancyPayload(rangeStart, rangeEnd);
+if (token !== state.fetchToken) return;
+renderCalendarPayload(payload, rangeStart, rangeEnd);
+const training = payload.training_calendar || {};
+const complete = payload.match_source_fresh !== false && payload.match_source_fallback !== true && training.display_only !== true && training.partial !== true &&
+training.fail_closed !== true && (payload.training_cancellations || {}).available !== false &&
+(payload.special_occupancy || {}).available !== false;
+if (complete) rememberCalendarSnapshot(payload, rangeStart, rangeEnd);
+setCalendarReadOnly(!complete);
+const warnings = [];
+if (payload.match_source_fresh === false) warnings.push("Die Spieldaten werden gerade aktualisiert. Der letzte bestätigte Stand und bekannte Trainings bleiben sichtbar.");
 const historyWarning = trainingHistoryWarning(payload);
 if (historyWarning) warnings.push(historyWarning);
-if (warnings.length) {
-setStatus(
-"warning",
-warnings.join(" "),
-false
-);
-}
+if (!complete) warnings.push("Nur Ansicht – aktuelle Belegungsdaten fehlen.");
+if (warnings.length) setStatus("warning", warnings.join(" "), true);
 } catch (error) {
 if (token !== state.fetchToken) return;
-
+setCalendarReadOnly(true);
+if (displayedSnapshot) {
+showCalendarSnapshot(snapshot, rangeStart, rangeEnd, false);
+} else {
 updateMatchResourceVisibility(new Set());
 if (state.calendar) state.calendar.removeAllEvents();
-setStatus(
-"error",
-getOccupancyFailureText(error),
-true
-);
-
+setStatus("error", "Für diesen Zeitraum ist kein gespeicherter Kalender verfügbar. " +
+getOccupancyFailureText(error) + " Eine leere Ansicht bedeutet nicht, dass der Platz frei ist.", true);
+}
 if (window.console && typeof window.console.error === "function") {
 console.error("[SSV53] Azure-Belegungsdaten nicht verfügbar:", error);
+}
+} finally {
+if (token === state.fetchToken) {
+state.calendarLoading = false;
+refreshCalendarEditingDialogs();
 }
 }
 }
@@ -5200,7 +5434,7 @@ console.error("[SSV53] Azure-Belegungsdaten nicht verfügbar:", error);
 function loadCurrentRange(forceRefresh) {
 const range = getCurrentRange();
 if (!range) return;
-loadRangeEvents(range.start, range.end, Boolean(forceRefresh));
+return loadRangeEvents(range.start, range.end, Boolean(forceRefresh));
 }
 
 function applyFiltersAndReload() {
@@ -6423,6 +6657,7 @@ elements.popupLink
 
 renderTrainerContactsForEvent(event);
 elements.dialogLayer.hidden = false;
+refreshCalendarEditingDialogs();
 document.body.classList.add("dialog-open");
 window.requestAnimationFrame(function () {
 elements.closeDialogTop.focus();
@@ -6446,6 +6681,7 @@ action.disabled = false;
 action.removeAttribute("data-cancelled");
 status.hidden = true;
 status.textContent = "";
+if (state.calendarReadOnly === true) return;
 if (
 !state.canManageTrainingCancellations ||
 !isTrainingCancellationEvent(event)
@@ -6476,6 +6712,7 @@ function renderTrainerOccupancyDeleteAction(event) {
 const action = elements.trainerOccupancyDelete;
 action.hidden = true;
 action.disabled = false;
+if (state.calendarReadOnly === true) return;
 const label = action.querySelector("span");
 const props = event && event.extendedProps || {};
 label.textContent = "Termin absagen";
@@ -6490,6 +6727,7 @@ function renderTrainerOccupancyMoveAction(event) {
 const action = elements.trainerOccupancyMove;
 action.hidden = true;
 action.disabled = false;
+if (state.calendarReadOnly === true) return;
 if (!state.canManageTrainings || !event) return;
 const props = event.extendedProps || {};
 const recurringTraining = props.eventKind === "training" &&
@@ -6517,6 +6755,7 @@ conflictStart.toLocaleString("de-DE", {dateStyle: "short", timeStyle: "short", t
 }
 
 function openTrainerOccupancyMoveDialog() {
+if (state.calendarReadOnly === true) return;
 const selectedEvent = state.currentDialogEvent;
 if (!selectedEvent || elements.trainerOccupancyMove.hidden) return;
 const props = selectedEvent.extendedProps || {};
@@ -6552,6 +6791,7 @@ form.elements.belegungStartDatum.focus();
 }
 
 async function moveTrainerOccupancy(start, end, targetResource) {
+if (state.calendarReadOnly === true) return;
 const event = state.trainerOccupancyMoveEvent;
 if (!event) return;
 const props = event.extendedProps || {};
@@ -6640,6 +6880,7 @@ elements.trainerOccupancyStatus.hidden = false;
 }
 
 async function deleteTrainerOccupancy() {
+if (state.calendarReadOnly === true) return;
 const event = state.currentDialogEvent;
 if (!event || elements.trainerOccupancyDelete.hidden) return;
 const relocatedTraining = Boolean(
@@ -6683,6 +6924,7 @@ elements.trainingCancellationStatus.hidden = false;
 }
 
 async function changeTrainingCancellation() {
+if (state.calendarReadOnly === true) return;
 const event = state.currentDialogEvent;
 if (
 !state.canManageTrainingCancellations ||
@@ -6898,7 +7140,11 @@ setTrainerOccupancyDateTime(form, "belegungStart", start);
 setTrainerOccupancyDateTime(form, "belegungEnde", end);
 elements.trainerOccupancyStatus.hidden = true;
 elements.trainerOccupancyStatus.removeAttribute("data-error");
+
 elements.trainerOccupancyDialogLayer.hidden = false;
+elements.trainerOccupancySubmit.disabled = state.calendarReadOnly === true;
+refreshCalendarEditingDialogs();
+if (state.calendarReadOnly === true) loadCurrentRange(false);
 document.body.classList.add("dialog-open");
 window.requestAnimationFrame(function () {
 form.elements.belegungTitel.focus();
@@ -6916,6 +7162,7 @@ elements.trainerAddOccupancy.focus();
 
 async function saveTrainerOccupancy(event) {
 event.preventDefault();
+if (state.calendarReadOnly === true) return;
 if (
 !state.canCreateTrainerOccupancies
 ) return;
@@ -7091,6 +7338,7 @@ closeTrainerOccupancyDialog();
 }
 });
 elements.trainerOccupancyForm.addEventListener("submit", saveTrainerOccupancy);
+elements.trainerOccupancyRetry.addEventListener("click", function () { loadCurrentRange(true); });
 ["belegungStartDatum", "belegungStartZeit"].forEach(function (name) {
 elements.trainerOccupancyForm.elements[name].addEventListener(
 "change", suggestTrainerOccupancyEnd
@@ -7250,7 +7498,7 @@ initialize();
 
 <body>
 <section id="booking-controls" aria-label="Belegungsplan filtern">
-<div class="ssv-control-group ssv-control-group--season">
+<div class="ssv-control-group ssv-control-group--season" hidden>
 <span class="ssv-control-label" id="season-label">Saison</span>
 <div class="ssv-segmented-control" role="group" aria-labelledby="season-label">
 <button
@@ -7461,6 +7709,7 @@ class="trainer-occupancy-status"
 role="status"
 aria-live="polite"
 hidden></p>
+<button id="trainer-occupancy-retry" type="button" class="dialog-button" hidden>Erneut versuchen</button>
 <footer class="dialog-footer">
 <button id="trainer-occupancy-cancel" type="button" class="dialog-button">
 Abbrechen

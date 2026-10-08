@@ -68,7 +68,9 @@ function wallClock(date) {
 }
 
 test("Verbindlicher Trainingskalender zeigt beide Plätze ohne Saisonwahl", () => {
-  const group = {hidden: false, style: {}};
+  assert.match(html, /<div class="ssv-control-group ssv-control-group--season" hidden>/, 'Saisonwahl ist schon vor dem Laden von JavaScript verborgen');
+  const classes = new Map();
+  const group = {hidden: true, style: {}, parentElement: {classList: {toggle: (key,value)=>classes.set(key,value)}}};
   const state = {activeSeason: "Winter", activeCalendarId: "kunstrasen", resources: []};
   const persisted = [];
   const ui = new Function("state", "document", "storageSet", [
@@ -83,6 +85,7 @@ test("Verbindlicher Trainingskalender zeigt beide Plätze ohne Saisonwahl", () =
   assert.equal(state.activeCalendarId, "all");
   assert.equal(group.hidden, true);
   assert.equal(group.style.display, "none");
+  assert.equal(classes.get('ssv-season-choice'), false);
   ui.setSeason("Sommer");
   assert.equal(state.activeSeason, "Winter");
   state.activeCalendarId = "rasen";
@@ -92,6 +95,7 @@ test("Verbindlicher Trainingskalender zeigt beide Plätze ohne Saisonwahl", () =
   ui.applySharedTrainingCalendar({training_calendar: {active: false}});
   assert.equal(group.hidden, false);
   assert.equal(group.style.display, "");
+  assert.equal(classes.get('ssv-season-choice'), true);
   assert.deepEqual(ui.getAllowedCalendarIds(), ["kunstrasen"]);
 });
 

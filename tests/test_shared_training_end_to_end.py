@@ -1,5 +1,6 @@
 """Synthetic calendars and in-memory stores; every vendor call is replaced."""
 import json
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
@@ -270,3 +271,49 @@ def test_public_history_split_never_bypasses_a_mixed_runtime_blocker(runtime, mo
         )
     assert calls == [True]
     assert unavailable == []
+
+
+@pytest.mark.parametrize("fresh,fallback,age", [(False, False, 780), (True, True, 30), (False, True, 900)])
+def test_active_training_display_grace_retains_events_but_never_enables_mutations(
+    runtime, monkeypatch, fresh, fallback, age
+):
+    expected = json.loads(function_app.ssv53_occupancy(app_request()).get_body())["events"]
+    source_stamp = (NOW - timedelta(minutes=age)).isoformat()
+    source = replace(runtime["source"], source_kind="azure_blob_cache" if fallback else "azure_blob",
+                     fresh=fresh, fallback_used=fallback, age_minutes=age,
+                     source_generated_at_utc=source_stamp)
+    monkeypatch.setattr(function_app, "_occupancy_match_source", lambda **_kwargs: source)
+
+    response = function_app.ssv53_occupancy(app_request())
+    assert response.status_code == 200, response.get_body()
+    payload = json.loads(response.get_body())
+    assert payload["events"] == expected
+    assert payload["training_calendar"]["active"]
+    assert payload["training_calendar"]["display_only"]
+    assert not payload["training_calendar"]["fail_closed"]
+    assert payload["match_source_fresh"] is fresh
+    assert payload["match_source_fallback"] is fallback
+    assert payload["match_source_generated_at_utc"] == source_stamp
+    assert payload["match_source_age_minutes"] == age
+
+    # No write/lookup path receives the GET-only display permission.
+    with pytest.raises(TrainingSourceUnavailable):
+        function_app._trainer_training_occurrence(EVENT_ID)
+    with pytest.raises(TrainingSourceUnavailable):
+        function_app._trainer_occupancy_conflicts(
+            start=NOW, end=NOW + timedelta(minutes=25), resource_id="rasen",
+            store=InMemorySpecialOccupancyStore())
+    monkeypatch.setattr(function_app, "_authorize_occupancy_write", lambda *_args: {"requesterId": "test"})
+    request = func.HttpRequest(method="POST", url="https://example.test/api/training-cancellations",
+        headers={}, params={}, body=json.dumps({"eventId": EVENT_ID, "action": "cancel",
+        "confirmation": "TRAINING_FAELLT_AUS"}).encode())
+    assert function_app.ssv53_training_cancellations(request).status_code == 503
+    assert runtime["store"].list_active(NOW.date(), NOW.date()) == []
+
+
+def test_public_training_grace_never_accepts_an_unbounded_packaged_source(runtime, monkeypatch):
+    source = replace(runtime["source"], source_kind="package", fresh=False)
+    monkeypatch.setattr(function_app, "_occupancy_match_source", lambda **_kwargs: source)
+    response = function_app.ssv53_occupancy(app_request())
+    assert response.status_code == 503
+    assert json.loads(response.get_body())["code"] == "TRAINING_SOURCE_UNAVAILABLE"

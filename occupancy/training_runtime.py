@@ -74,6 +74,7 @@ class RuntimeTraining:
     blockers: tuple[str, ...] = ()
     envelope_sha256: str | None = None
     control_snapshot: TrainingControlSnapshot | None = None
+    display_only: bool = False
 
     @property
     def blocking_required(self) -> bool:
@@ -89,6 +90,7 @@ class RuntimeTraining:
             "mode": self.mode, "active": self.batch is not None,
             "candidate_available": self.candidate is not None,
             "fail_closed": self.blocking_required, "blockers": list(self.blockers),
+            "display_only": self.display_only,
             "envelope_sha256": self.envelope_sha256,
             "calendar_revision": selected.revision if selected else None,
             "calendar_sha256": selected.content_sha256 if selected else None,
@@ -106,6 +108,7 @@ def resolve_runtime_training(
     now_utc: datetime, cancellations: Iterable[Any] = (),
     relocated_keys: Iterable[tuple[str, str]] = (), source_fresh: bool = True,
     control_snapshot: TrainingControlSnapshot | None = None,
+    allow_stale_display: bool = False,
     statutory_holiday_predicate=is_brandenburg_statutory_holiday,
 ) -> RuntimeTraining:
     mode = training_mode(environment)
@@ -132,7 +135,11 @@ def resolve_runtime_training(
                 )
         if statutory_holiday_predicate is None:
             raise ValueError("BRANDENBURG_HOLIDAY_SOURCE_UNAVAILABLE")
-        if not source_fresh:
+        # Only the public read-only calendar may use the bounded, hash-checked
+        # display grace granted by its source resolver. Control and mutation
+        # callers remain strict, even if a mower caller passes this flag.
+        display_only = not source_fresh and consumer == "occupancy" and allow_stale_display is True
+        if not source_fresh and not display_only:
             raise ValueError("TRAINING_PUBLICATION_STALE")
         envelope = holder.get(ENVELOPE_KEY)
         if not isinstance(envelope, dict) or set(envelope) != {"schema_version", "calendar", "occupancy_baseline", "mower_baseline", "sha256"}:
@@ -177,7 +184,8 @@ def resolve_runtime_training(
         validate_batch_for_range(batch, range_start, range_end)
         return RuntimeTraining(mode, batch=batch if mode == "ACTIVE" else None,
                                candidate=batch, envelope_sha256=digest,
-                               control_snapshot=control_snapshot)
+                               control_snapshot=control_snapshot,
+                               display_only=display_only)
     except (ValueError, TypeError, KeyError, AttributeError, OverflowError) as exc:
         return RuntimeTraining(mode, blockers=(str(exc),), envelope_sha256=digest,
                                control_snapshot=control_snapshot)
