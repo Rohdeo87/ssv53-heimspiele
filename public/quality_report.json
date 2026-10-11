@@ -3,7 +3,7 @@
   "errors": [],
   "invalid_included": [],
   "by_calendar": {
-    "Rasen": 37,
+    "Rasen": 36,
     "Kunstrasen": 6
   },
   "event_timing": {
@@ -394,13 +394,13 @@
   },
   "publication": {
     "schemaVersion": 1,
-    "status": "additive_pending",
-    "sourceGeneratedAt": "2026-10-11T15:58:39+00:00",
-    "sourceDigest": "e8453bce4c75f9361d70fe3e2355cac4099f1998590020e18f4b3635c8c74651",
+    "status": "ok",
+    "sourceGeneratedAt": "2026-10-11T22:07:05+00:00",
+    "sourceDigest": "6d836461a2b6fe09b46e6a17f26b932453716fa5a61808b94b0fc616b4b59685",
     "sourceCount": 42,
-    "retainedCount": 1,
-    "effectiveCount": 43,
-    "requiredConsumer": "ssv53-additive-retention-v1",
-    "effectiveDigest": "141586f056b30ad8601ff77a09f22b212a687d8669c8cd2ab8c39f0031c9373e"
+    "retainedCount": 0,
+    "effectiveCount": 42,
+    "requiredConsumer": null,
+    "effectiveDigest": "488fce38704cc408104d4946cfa2ae6f05d3b69cb07e7f16295ec900ce5dcf7c"
   }
 }
