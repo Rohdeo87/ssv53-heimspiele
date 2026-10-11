@@ -320,10 +320,10 @@
           "relocations": [
             {
               "from": "2026-09-26T10:00+02:00",
-              "to": "2026-10-18T10:00+02:00"
+              "to": "2026-11-04T18:00+01:00"
             }
           ],
-          "selected_kickoff": "2026-10-18T10:00+02:00",
+          "selected_kickoff": "2026-11-04T18:00+01:00",
           "resolved": true
         },
         "merged_external_id": "031MFGE2VC000000VS5489BUVVKNMR0J"

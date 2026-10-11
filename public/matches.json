@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-11T09:04:11+00:00",
+  "generatedAt": "2026-10-11T15:58:39+00:00",
   "status": "ok",
   "matches": [
     {
@@ -536,8 +536,8 @@
       "checksum": "2647880e2b05caee0f911a42c57dbb892396bfff8f2633fbf92cb84010ac736c"
     },
     {
-      "id": "dfb:031MFGE2VC000000VS5489BUVVKNMR0J",
-      "title": "Schönwalder SV (9er) – Eintracht Falkensee II (9er)",
+      "id": "dfb:held-b17a8038566aad90467c18448418146eee0a456e2f3372e7bda0d635d3c35329",
+      "title": "Sperre bis Klärung: Schönwalder SV (9er) – Eintracht Falkensee II (9er)",
       "start": "2026-10-18T10:00+02:00",
       "end": "2026-10-18T11:25+02:00",
       "occupancyStart": "2026-10-18T09:00+02:00",
@@ -555,13 +555,27 @@
       "homeTeam": "Schönwalder SV (9er)",
       "awayTeam": "Eintracht Falkensee II (9er)",
       "competition": "So, | C-Junioren | 2.Kreisklasse",
-      "description": "C-Junioren · 2.Kreisklasse",
+      "description": "C-Junioren · 2.Kreisklasse · Bisherige Belegung bleibt bis zur bestätigten Rücknahme gesperrt.",
       "status": "",
       "detailLink": "https://www.fussball.de/spiel/schoenwalder-sv-9er-eintracht-falkensee-ii-9er/-/spiel/031MFGE2VC000000VS5489BUVVKNMR0J",
       "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
       "locationSource": "fussball.de",
       "source": "fussball.de",
-      "checksum": "5dbe12a90f417e4e594fe462e54475da9414763fc6eb5395057d368eca69bc9f"
+      "checksum": "5dbe12a90f417e4e594fe462e54475da9414763fc6eb5395057d368eca69bc9f",
+      "publicationRetention": {
+        "schemaVersion": 1,
+        "sourceId": "dfb:031MFGE2VC000000VS5489BUVVKNMR0J",
+        "status": "pending",
+        "reason": "moved_or_shortened",
+        "sourceObservedAt": "2026-10-11T09:04:11+00:00",
+        "requiresManual": false,
+        "requiredConfirmations": 2,
+        "minimumIntervalMinutes": 60,
+        "fingerprint": "8aea2602bdc2ee7ada252b3f60cb49640403a7e7779dc9592468511ba91eff1a",
+        "confirmations": 1,
+        "firstSeenAt": "2026-10-11T15:58:39+00:00",
+        "lastCountedAt": "2026-10-11T15:58:39+00:00"
+      }
     },
     {
       "id": "dfb:031DB8NS70000000VS5489BUVUR5FS5A",
@@ -618,6 +632,34 @@
       "locationSource": "fussball.de",
       "source": "fussball.de",
       "checksum": "a84a91c8e4773bb2688152c6786711b7b4d6b03823d8934882c9b4739b8c2b29"
+    },
+    {
+      "id": "dfb:031MFGE2VC000000VS5489BUVVKNMR0J",
+      "title": "Schönwalder SV (9er) – Eintracht Falkensee II (9er)",
+      "start": "2026-11-04T18:00+01:00",
+      "end": "2026-11-04T19:25+01:00",
+      "occupancyStart": "2026-11-04T17:00+01:00",
+      "occupancyEnd": "2026-11-04T20:25+01:00",
+      "kickoff": "2026-11-04T18:00+01:00",
+      "matchDurationMinutes": 85,
+      "durationRule": "flb-jugendordnung-2025-12-13-c-2x35+halftime-15",
+      "competitionFormat": "league",
+      "matchType": "ME",
+      "place": "rasen",
+      "calendar": "Rasen",
+      "team": "Schönwalder SV (9er)",
+      "teamCategory": "C-Junioren | 2.Kreisklasse",
+      "teamRole": "home",
+      "homeTeam": "Schönwalder SV (9er)",
+      "awayTeam": "Eintracht Falkensee II (9er)",
+      "competition": "Mi, | C-Junioren | 2.Kreisklasse",
+      "description": "C-Junioren · 2.Kreisklasse",
+      "status": "",
+      "detailLink": "https://www.fussball.de/spiel/schoenwalder-sv-9er-eintracht-falkensee-ii-9er/-/spiel/031MFGE2VC000000VS5489BUVVKNMR0J",
+      "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+      "locationSource": "fussball.de",
+      "source": "fussball.de",
+      "checksum": "b0ce72ee8693bd96bdbe29c1c05a7c9517742d62a9bc68d1627ce6d9bba69aca"
     },
     {
       "id": "dfb:031DB86V6S000000VS5489BUVUR5FS5A",
@@ -1182,13 +1224,13 @@
   ],
   "publication": {
     "schemaVersion": 1,
-    "status": "ok",
-    "sourceGeneratedAt": "2026-10-11T09:04:11+00:00",
-    "sourceDigest": "89b583e9bbb00c28b04d862c43f42dc1a3aa42641fbf569e15e2288e76045f7e",
+    "status": "additive_pending",
+    "sourceGeneratedAt": "2026-10-11T15:58:39+00:00",
+    "sourceDigest": "e8453bce4c75f9361d70fe3e2355cac4099f1998590020e18f4b3635c8c74651",
     "sourceCount": 42,
-    "retainedCount": 0,
-    "effectiveCount": 42,
-    "requiredConsumer": null,
-    "effectiveDigest": "d4c7b35e5ef8c8855c5dd0124be5be6940987c37ecf086545c3111d272d73cb0"
+    "retainedCount": 1,
+    "effectiveCount": 43,
+    "requiredConsumer": "ssv53-additive-retention-v1",
+    "effectiveDigest": "141586f056b30ad8601ff77a09f22b212a687d8669c8cd2ab8c39f0031c9373e"
   }
 }

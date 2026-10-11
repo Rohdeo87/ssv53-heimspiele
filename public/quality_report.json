@@ -3,7 +3,7 @@
   "errors": [],
   "invalid_included": [],
   "by_calendar": {
-    "Rasen": 36,
+    "Rasen": 37,
     "Kunstrasen": 6
   },
   "event_timing": {
@@ -320,10 +320,10 @@
           "relocations": [
             {
               "from": "2026-09-26T10:00+02:00",
-              "to": "2026-10-18T10:00+02:00"
+              "to": "2026-11-04T18:00+01:00"
             }
           ],
-          "selected_kickoff": "2026-10-18T10:00+02:00",
+          "selected_kickoff": "2026-11-04T18:00+01:00",
           "resolved": true
         },
         "merged_external_id": "031MFGE2VC000000VS5489BUVVKNMR0J"
@@ -394,13 +394,13 @@
   },
   "publication": {
     "schemaVersion": 1,
-    "status": "ok",
-    "sourceGeneratedAt": "2026-10-11T09:04:11+00:00",
-    "sourceDigest": "89b583e9bbb00c28b04d862c43f42dc1a3aa42641fbf569e15e2288e76045f7e",
+    "status": "additive_pending",
+    "sourceGeneratedAt": "2026-10-11T15:58:39+00:00",
+    "sourceDigest": "e8453bce4c75f9361d70fe3e2355cac4099f1998590020e18f4b3635c8c74651",
     "sourceCount": 42,
-    "retainedCount": 0,
-    "effectiveCount": 42,
-    "requiredConsumer": null,
-    "effectiveDigest": "d4c7b35e5ef8c8855c5dd0124be5be6940987c37ecf086545c3111d272d73cb0"
+    "retainedCount": 1,
+    "effectiveCount": 43,
+    "requiredConsumer": "ssv53-additive-retention-v1",
+    "effectiveDigest": "141586f056b30ad8601ff77a09f22b212a687d8669c8cd2ab8c39f0031c9373e"
   }
 }

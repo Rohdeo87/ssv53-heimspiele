@@ -1,5 +1,12 @@
 {
   "schemaVersion": 2,
-  "sourceGeneratedAt": "2026-10-11T09:04:11+00:00",
-  "pending": {}
+  "sourceGeneratedAt": "2026-10-11T15:58:39+00:00",
+  "pending": {
+    "dfb:held-b17a8038566aad90467c18448418146eee0a456e2f3372e7bda0d635d3c35329": {
+      "fingerprint": "8aea2602bdc2ee7ada252b3f60cb49640403a7e7779dc9592468511ba91eff1a",
+      "confirmations": 1,
+      "firstSeenAt": "2026-10-11T15:58:39+00:00",
+      "lastCountedAt": "2026-10-11T15:58:39+00:00"
+    }
+  }
 }
