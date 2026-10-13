@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-13T07:56:38+00:00",
+  "generatedAt": "2026-10-13T16:14:03+00:00",
   "status": "ok",
   "matches": [
     {
@@ -674,34 +674,6 @@
       "locationSource": "fussball.de",
       "source": "fussball.de",
       "checksum": "af0abc8f3ab3831dc91b06568e620637f199c9d073b2d26c1e2f8a11958a57f9"
-    },
-    {
-      "id": "dfb:031DP96D60000000VS5489BUVUR5FS5A",
-      "title": "Spielgemeinschaft Schönwalde-Perwenitz-Paaren – FC Borussia Brandenburg II",
-      "start": "2026-11-15T14:00+01:00",
-      "end": "2026-11-15T15:45+01:00",
-      "occupancyStart": "2026-11-15T13:00+01:00",
-      "occupancyEnd": "2026-11-15T16:45+01:00",
-      "kickoff": "2026-11-15T14:00+01:00",
-      "matchDurationMinutes": 105,
-      "durationRule": "dfb-regel-7-herren-2x45+halftime-15",
-      "competitionFormat": "league",
-      "matchType": "ME",
-      "place": "rasen",
-      "calendar": "Rasen",
-      "team": "Spielgemeinschaft Schönwalde-Perwenitz-Paaren",
-      "teamCategory": "Herren | Kreisliga",
-      "teamRole": "home",
-      "homeTeam": "Spielgemeinschaft Schönwalde-Perwenitz-Paaren",
-      "awayTeam": "FC Borussia Brandenburg II",
-      "competition": "So, | Herren | Kreisliga",
-      "description": "Herren · Kreisliga",
-      "status": "",
-      "detailLink": "https://www.fussball.de/spiel/spielgemeinschaft-schoenwalde-perwenitz-paaren-fc-borussia-brandenburg-ii/-/spiel/031DP96D60000000VS5489BUVUR5FS5A",
-      "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
-      "locationSource": "fussball.de",
-      "source": "fussball.de",
-      "checksum": "05a685dd7e81d16b9dab4791e705b4316bd3d959f515193706f1d5461cbfe5e4"
     },
     {
       "id": "dfb:031MGSR294000000VS5489BUVVKNMR0J",

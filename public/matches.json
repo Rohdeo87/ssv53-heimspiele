@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-13T07:56:38+00:00",
+  "generatedAt": "2026-10-13T16:14:03+00:00",
   "status": "ok",
   "matches": [
     {
@@ -676,8 +676,8 @@
       "checksum": "af0abc8f3ab3831dc91b06568e620637f199c9d073b2d26c1e2f8a11958a57f9"
     },
     {
-      "id": "dfb:031DP96D60000000VS5489BUVUR5FS5A",
-      "title": "Spielgemeinschaft Schönwalde-Perwenitz-Paaren – FC Borussia Brandenburg II",
+      "id": "dfb:held-91d7537d8aa54557fbacd043f5f71107da5a57bb29a3a12c9ae13b4f289c18f2",
+      "title": "Sperre bis Klärung: Spielgemeinschaft Schönwalde-Perwenitz-Paaren – FC Borussia Brandenburg II",
       "start": "2026-11-15T14:00+01:00",
       "end": "2026-11-15T15:45+01:00",
       "occupancyStart": "2026-11-15T13:00+01:00",
@@ -695,13 +695,27 @@
       "homeTeam": "Spielgemeinschaft Schönwalde-Perwenitz-Paaren",
       "awayTeam": "FC Borussia Brandenburg II",
       "competition": "So, | Herren | Kreisliga",
-      "description": "Herren · Kreisliga",
+      "description": "Herren · Kreisliga · Bisherige Belegung bleibt bis zur bestätigten Rücknahme gesperrt.",
       "status": "",
       "detailLink": "https://www.fussball.de/spiel/spielgemeinschaft-schoenwalde-perwenitz-paaren-fc-borussia-brandenburg-ii/-/spiel/031DP96D60000000VS5489BUVUR5FS5A",
       "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
       "locationSource": "fussball.de",
       "source": "fussball.de",
-      "checksum": "05a685dd7e81d16b9dab4791e705b4316bd3d959f515193706f1d5461cbfe5e4"
+      "checksum": "05a685dd7e81d16b9dab4791e705b4316bd3d959f515193706f1d5461cbfe5e4",
+      "publicationRetention": {
+        "schemaVersion": 1,
+        "sourceId": "dfb:031DP96D60000000VS5489BUVUR5FS5A",
+        "status": "pending",
+        "reason": "removed",
+        "sourceObservedAt": "2026-10-13T07:56:38+00:00",
+        "requiresManual": false,
+        "requiredConfirmations": 2,
+        "minimumIntervalMinutes": 60,
+        "fingerprint": "1effed0a8111543e83c917c9845ea6c94be3a7e4667c64eed7260aa229d3cbcb",
+        "confirmations": 1,
+        "firstSeenAt": "2026-10-13T16:14:03+00:00",
+        "lastCountedAt": "2026-10-13T16:14:03+00:00"
+      }
     },
     {
       "id": "dfb:031MGSR294000000VS5489BUVVKNMR0J",
@@ -1182,13 +1196,13 @@
   ],
   "publication": {
     "schemaVersion": 1,
-    "status": "ok",
-    "sourceGeneratedAt": "2026-10-13T07:56:38+00:00",
-    "sourceDigest": "91b2c610db233b11cea7f041723b382fb6306a6c9d91085425ac9b802e4878fc",
-    "sourceCount": 42,
-    "retainedCount": 0,
+    "status": "additive_pending",
+    "sourceGeneratedAt": "2026-10-13T16:14:03+00:00",
+    "sourceDigest": "2a03a5876b2acfee9940ca2f4e7c6b50b4fb24be586c883dc99877e2727ecee1",
+    "sourceCount": 41,
+    "retainedCount": 1,
     "effectiveCount": 42,
-    "requiredConsumer": null,
-    "effectiveDigest": "488fce38704cc408104d4946cfa2ae6f05d3b69cb07e7f16295ec900ce5dcf7c"
+    "requiredConsumer": "ssv53-additive-retention-v1",
+    "effectiveDigest": "bfdc0f1ee9aa3b8875ac30fcca57865f779d2c6cbf6df7dbf3d838fae95202ac"
   }
 }
