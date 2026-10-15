@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-15T13:32:01+00:00",
+  "generatedAt": "2026-10-15T19:20:31+00:00",
   "status": "ok",
   "matches": [
     {
@@ -1155,8 +1155,8 @@
   "publication": {
     "schemaVersion": 1,
     "status": "ok",
-    "sourceGeneratedAt": "2026-10-15T13:32:01+00:00",
-    "sourceDigest": "c26cfdc454a403415a50ff3df45a4df3e112c41ea17eb1ebafb7a081ab0af796",
+    "sourceGeneratedAt": "2026-10-15T19:20:31+00:00",
+    "sourceDigest": "73c7fea2d84c6fcb3930cb36f9d20d494c860d18789fc0e7687338afd43d9ebe",
     "sourceCount": 41,
     "retainedCount": 0,
     "effectiveCount": 41,
