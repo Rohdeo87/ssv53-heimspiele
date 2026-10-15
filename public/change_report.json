@@ -1,116 +1,50 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-15T06:46:20.717532+00:00",
-  "status": "additive_pending",
+  "generatedAt": "2026-10-15T13:32:02.153672+00:00",
+  "status": "ok",
   "counts": {
     "before": 41,
     "after": 41,
-    "added": 1,
+    "added": 0,
     "changed": 0,
-    "removed": 1,
-    "effectiveAfter": 42,
-    "retained": 1,
-    "released": 0
+    "removed": 0,
+    "effectiveAfter": 41,
+    "retained": 0,
+    "released": 1
   },
   "guard": {
-    "triggered": true,
+    "triggered": false,
     "overrideUsed": false,
-    "reasons": [
-      "1 bisherige Sperre(n) bleiben bis zur bestätigten Rücknahme bestehen; neue Sperren sind enthalten."
-    ],
+    "reasons": [],
     "safetyConfirmation": {
-      "required": true,
-      "confirmed": false
+      "required": false,
+      "confirmed": true
     }
   },
-  "added": [
-    {
-      "id": "dfb:031DB8NSUS000000VS5489BUVUR5FS5A",
-      "title": "SpG Perwenitz/​Schönwalde Ü50 – SG Bornim Ü50",
-      "start": "2027-04-16T20:00+02:00",
-      "end": "2027-04-16T21:45+02:00",
-      "occupancyStart": "2027-04-16T19:00+02:00",
-      "occupancyEnd": "2027-04-16T22:45+02:00",
-      "kickoff": "2027-04-16T20:00+02:00",
-      "matchDurationMinutes": 105,
-      "durationRule": "fk-havelland-ue50-2026-27-dfb-standard+halftime-15",
-      "competitionFormat": "league",
-      "matchType": "ME",
-      "place": "rasen",
-      "calendar": "Rasen",
-      "team": "SpG Perwenitz/​Schönwalde Ü50",
-      "teamCategory": "Herren Ü50 | Kreisliga",
-      "teamRole": "home",
-      "homeTeam": "SpG Perwenitz/​Schönwalde Ü50",
-      "awayTeam": "SG Bornim Ü50",
-      "competition": "Fr, | Herren Ü50 | Kreisliga",
-      "description": "Herren Ü50 · Kreisliga",
-      "status": "",
-      "detailLink": "https://www.fussball.de/spiel/spg-perwenitz-schoenwalde-ue50-sg-bornim-ue50/-/spiel/031DB8NSUS000000VS5489BUVUR5FS5A",
-      "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
-      "locationSource": "fussball.de",
-      "source": "fussball.de",
-      "checksum": "333bf9f049c0160ead4710fa19aa7a4e33aec76380e71a9a1acc259749dbb1dc"
-    }
-  ],
+  "added": [],
   "changed": [],
-  "removed": [
-    {
-      "id": "dfb:031DB8NS70000000VS5489BUVUR5FS5A",
-      "title": "SpG Perwenitz/​Schönwalde Ü50 – SG Bornim Ü50",
-      "start": "2026-10-30T19:45+01:00",
-      "end": "2026-10-30T21:30+01:00",
-      "occupancyStart": "2026-10-30T18:45+01:00",
-      "occupancyEnd": "2026-10-30T22:30+01:00",
-      "kickoff": "2026-10-30T19:45+01:00",
-      "matchDurationMinutes": 105,
-      "durationRule": "fk-havelland-ue50-2026-27-dfb-standard+halftime-15",
-      "competitionFormat": "league",
-      "matchType": "ME",
-      "place": "kunstrasen",
-      "calendar": "Kunstrasen",
-      "team": "SpG Perwenitz/​Schönwalde Ü50",
-      "teamCategory": "Herren Ü50 | Kreisliga",
-      "teamRole": "home",
-      "homeTeam": "SpG Perwenitz/​Schönwalde Ü50",
-      "awayTeam": "SG Bornim Ü50",
-      "competition": "Fr, | Herren Ü50 | Kreisliga",
-      "description": "Herren Ü50 · Kreisliga",
-      "status": "",
-      "detailLink": "https://www.fussball.de/spiel/spg-perwenitz-schoenwalde-ue50-sg-bornim-ue50/-/spiel/031DB8NS70000000VS5489BUVUR5FS5A",
-      "location": "Kunstrasenplatz, Sportplatz Schönwalde Strandbad, Platz 2, KR, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
-      "locationSource": "fussball.de",
-      "source": "fussball.de",
-      "checksum": "3deb457c46d7c1cdc8083dd07872d34502b66480a47d3af1b0173662e7aa5bd1"
-    }
-  ],
-  "retained": [
+  "removed": [],
+  "retained": [],
+  "released": [
     {
       "id": "dfb:held-df7c1ee11d2efec3a84e8a6b5a6540c100863f77e26a3e5467a97cb771465d6a",
-      "schemaVersion": 1,
       "sourceId": "dfb:031DB8NS70000000VS5489BUVUR5FS5A",
-      "status": "pending",
-      "reason": "removed",
-      "sourceObservedAt": "2026-10-14T12:06:22+00:00",
-      "requiresManual": false,
-      "requiredConfirmations": 2,
-      "minimumIntervalMinutes": 60,
+      "reason": "confirmed",
       "fingerprint": "160807d9fba7d841c390f105a60c992559c5784a053dc7b44d5fdc51326308be",
-      "confirmations": 1,
+      "confirmations": 2,
       "firstSeenAt": "2026-10-15T06:46:20+00:00",
-      "lastCountedAt": "2026-10-15T06:46:20+00:00"
+      "lastCountedAt": "2026-10-15T13:32:01+00:00"
     }
   ],
-  "released": [],
   "publication": {
     "schemaVersion": 1,
-    "status": "additive_pending",
-    "sourceGeneratedAt": "2026-10-15T06:46:20+00:00",
-    "sourceDigest": "bbcfd563879575a497d83ab3c66b3a0681c7af6b0dde18143a773a170d4feaa7",
+    "status": "ok",
+    "sourceGeneratedAt": "2026-10-15T13:32:01+00:00",
+    "sourceDigest": "c26cfdc454a403415a50ff3df45a4df3e112c41ea17eb1ebafb7a081ab0af796",
     "sourceCount": 41,
-    "retainedCount": 1,
-    "effectiveCount": 42,
-    "requiredConsumer": "ssv53-additive-retention-v1",
-    "effectiveDigest": "2d0a3af32087ff9cd1c2ab6658b5596d9855b3135301ac9e5c238b9a58ad3363"
+    "retainedCount": 0,
+    "effectiveCount": 41,
+    "requiredConsumer": null,
+    "effectiveDigest": "5953eb7b0ac1b373f11292d35f9606ab6284d81541efd63025bbc98229021a9d"
   }
 }

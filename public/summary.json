@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-15T06:46:20+00:00",
+  "generated_at": "2026-10-15T13:32:01+00:00",
   "selection_mode": "club-wide venue",
   "event_timing": {
     "before_minutes": 60,
@@ -21,13 +21,13 @@
       "ssv53-festival-unclear-duration-90-20260831"
     ]
   },
-  "total": 118,
-  "included": 42,
+  "total": 117,
+  "included": 41,
   "review": 0,
   "excluded": 76,
   "by_calendar": {
     "Rasen": 36,
-    "Kunstrasen": 6
+    "Kunstrasen": 5
   },
   "by_team": {
     "Schönwalder SV": {
@@ -73,8 +73,8 @@
       "review": 0
     },
     "SpG Perwenitz/​Schönwalde Ü50": {
-      "total": 16,
-      "included": 5,
+      "total": 15,
+      "included": 4,
       "excluded": 11,
       "review": 0
     },
@@ -138,13 +138,13 @@
   ],
   "publication": {
     "schemaVersion": 1,
-    "status": "additive_pending",
-    "sourceGeneratedAt": "2026-10-15T06:46:20+00:00",
-    "sourceDigest": "bbcfd563879575a497d83ab3c66b3a0681c7af6b0dde18143a773a170d4feaa7",
+    "status": "ok",
+    "sourceGeneratedAt": "2026-10-15T13:32:01+00:00",
+    "sourceDigest": "c26cfdc454a403415a50ff3df45a4df3e112c41ea17eb1ebafb7a081ab0af796",
     "sourceCount": 41,
-    "retainedCount": 1,
-    "effectiveCount": 42,
-    "requiredConsumer": "ssv53-additive-retention-v1",
-    "effectiveDigest": "2d0a3af32087ff9cd1c2ab6658b5596d9855b3135301ac9e5c238b9a58ad3363"
+    "retainedCount": 0,
+    "effectiveCount": 41,
+    "requiredConsumer": null,
+    "effectiveDigest": "5953eb7b0ac1b373f11292d35f9606ab6284d81541efd63025bbc98229021a9d"
   }
 }
