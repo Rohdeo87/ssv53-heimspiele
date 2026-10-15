@@ -38,7 +38,8 @@ def inspect_installed_package(root: Path) -> dict[str, Any]:
         # cannot legitimize a symlink that was already followed while hashing.
         entrypoint = _checked_path(root, "function_app.py")
         manifest_path = _checked_path(root, "package-manifest.json")
-        result["entrypoint_sha256"] = hashlib.sha256(entrypoint.read_bytes()).hexdigest()
+        entrypoint_content = entrypoint.read_bytes()
+        result["entrypoint_sha256"] = hashlib.sha256(entrypoint_content).hexdigest()
         raw = manifest_path.read_bytes()
         result["package_manifest_sha256"] = hashlib.sha256(raw).hexdigest()
         manifest = json.loads(raw)
@@ -66,10 +67,18 @@ def inspect_installed_package(root: Path) -> dict[str, Any]:
             result["verified_file_count"] += 1
         if not {"function_app.py", "host.json", "requirements.txt", "mower/controller.py"}.issubset(names):
             raise ValueError("INCOMPLETE_MANIFEST")
+        if b"app.register_functions(ssv_results_blueprint)" in entrypoint_content and not {
+            "integrations/results/results_blueprint.py",
+            "integrations/results/ssv_results/__init__.py",
+            "integrations/results/ssv_results/__main__.py",
+            "integrations/results/ssv_results/collector.py",
+            "integrations/results/ssv_results/parsers.py",
+        }.issubset(names):
+            raise ValueError("INCOMPLETE_MANIFEST")
         # Check only application source locations, never site-packages or their
         # data. Unexpected application modules can otherwise hide an old sender.
         installed = {path.relative_to(root).as_posix() for path in root.glob("*.py")}
-        for folder in ("mower", "occupancy"):
+        for folder in ("mower", "occupancy", "integrations/results"):
             installed.update(path.relative_to(root).as_posix() for path in (root / folder).rglob("*.py")
                              if "__pycache__" not in path.parts)
         if installed - names:
