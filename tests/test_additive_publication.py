@@ -118,6 +118,38 @@ def assert_coherent(directory):
     assert summary["total"] == len(read(directory / "all_matches.json"))
 
 
+def test_relocated_away_fixture_keeps_previous_local_block_until_confirmed(factory, config):
+    from poc_scraper import VenueRule, apply_venue_rules, parse_club_matchplan
+
+    key = "031DB8NS70000000VS5489BUVUR5FS5A"
+    now = datetime(2026, 10, 15, 6, tzinfo=UTC)
+    old = game(config, key, kickoff="2026-10-30T19:45+01:00", calendar="Kunstrasen")
+    keep = game(config, "KEEP", kickoff="2026-10-31T12:00+01:00")
+    before = factory.candidate([old, keep], now - timedelta(hours=4))
+    fixture = (ROOT / "tests/fixture_relocation_missing_away_venue_20261015.html").read_text(encoding="utf-8")
+    [away] = parse_club_matchplan(fixture, "fixture://20261015", config)
+    apply_venue_rules(away, [VenueRule(**rule) for rule in config["venue_rules"]],
+                      config["default_decision"], config["local_venue_pattern"])
+    assert away.decision == "exclude"
+    first, report = factory.publish(before, factory.candidate([away, keep], now), now=now)
+    [held] = holds(first)
+    assert held["publicationRetention"]["sourceId"] == "dfb:" + key
+    assert held["publicationRetention"]["confirmations"] == 1
+    assert held["kickoff"] == old.kickoff
+    assert held["calendar"] == "Kunstrasen"
+    assert report["released"] == []
+    assert_coherent(first)
+
+    # A repeated bundle is not a second independent source confirmation.
+    replay, _ = factory.publish(first, factory.candidate([away, keep], now), now=now)
+    assert holds(replay)[0]["publicationRetention"]["confirmations"] == 1
+    later = now + timedelta(hours=1)
+    second, report = factory.publish(replay, factory.candidate([away, keep], later), now=later)
+    assert holds(second) == []
+    assert report["released"][0]["reason"] == "confirmed"
+    assert_coherent(second)
+
+
 @pytest.mark.parametrize("change", ["time", "place", "new_id"])
 def test_new_and_relocated_blocks_publish_immediately_but_old_block_stays(factory, config, change):
     old = game(config)

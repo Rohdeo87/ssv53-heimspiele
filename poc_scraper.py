@@ -1475,7 +1475,14 @@ def resolve_postponement_chain(
         raise ScrapeError(f"Verlegung {detail_id}: mehrere gültige Zieltermine")
     final_time = next(iter(terminal_times))
     final_rows = by_kickoff[final_time]
-    if not any(item.venue_raw for item in final_rows):
+    # The venue classifier already permits a confirmed away fixture without a
+    # published venue. A relocation can also exchange home/away roles; check
+    # the final rows' linked club identity, never inherit the obsolete venue.
+    verified_away_target = all(
+        item.team_role == "away" and item.team_id == item.away_team_id
+        for item in final_rows
+    )
+    if not any(item.venue_raw for item in final_rows) and not verified_away_target:
         raise ScrapeError(f"Verlegung {detail_id}: Spielstätte am Zieltermin fehlt")
     provenance = [
         {"from": item.kickoff, "to": item.postponed_to}
