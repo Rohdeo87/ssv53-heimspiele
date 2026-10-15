@@ -5379,6 +5379,22 @@ state.calendarLoadKey = "";
 });
 return request;
 }
+function calendarSourceUpdateWarning(payload) {
+// Response generation time is not proof that the underlying source is fresh.
+const sourceTime = Date.parse(payload.match_source_generated_at_utc || "");
+const sourceAgeMinutes = payload.match_source_age_minutes;
+const age = Number.isFinite(sourceTime) ? Date.now() - sourceTime
+: typeof sourceAgeMinutes === "number" && Number.isFinite(sourceAgeMinutes)
+? sourceAgeMinutes * 60 * 1000 : NaN;
+if (!Number.isFinite(age) || age <= 24 * 60 * 60 * 1000) return "";
+if (!Number.isFinite(sourceTime)) {
+return "Aktualisierung gerade nicht möglich. Der Datenstand ist älter als 24 Stunden.";
+}
+const stamp = new Date(sourceTime).toLocaleString("de-DE", {
+timeZone: "Europe/Berlin", dateStyle: "short", timeStyle: "short"
+});
+return "Aktualisierung gerade nicht möglich. Stand: " + stamp + " Uhr.";
+}
 async function loadRangeEventsRequest(rangeStart, rangeEnd) {
 const token = ++state.fetchToken;
 state.calendarLoading = true;
@@ -5404,11 +5420,12 @@ training.fail_closed !== true && (payload.training_cancellations || {}).availabl
 if (complete) rememberCalendarSnapshot(payload, rangeStart, rangeEnd);
 setCalendarReadOnly(!complete);
 const warnings = [];
-if (payload.match_source_fresh === false) warnings.push("Die Spieldaten werden gerade aktualisiert. Der letzte bestätigte Stand und bekannte Trainings bleiben sichtbar.");
+const sourceWarning = !complete ? calendarSourceUpdateWarning(payload) : "";
+if (sourceWarning) warnings.push(sourceWarning);
 const historyWarning = trainingHistoryWarning(payload);
 if (historyWarning) warnings.push(historyWarning);
-if (!complete) warnings.push("Nur Ansicht – aktuelle Belegungsdaten fehlen.");
 if (warnings.length) setStatus("warning", warnings.join(" "), true);
+else setStatus(null);
 } catch (error) {
 if (token !== state.fetchToken) return;
 setCalendarReadOnly(true);

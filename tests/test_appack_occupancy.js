@@ -188,9 +188,10 @@ test("Bedienelemente wechseln nur bei echtem Überlauf in den Großtextmodus", (
   assert.equal(overflow({...element, scrollHeight: 48}), true);
 });
 
-test("kurz verzögerte Spieldaten lassen den Kalender sichtbar", () => {
-  assert.match(html, /payload\.match_source_fresh === false/);
-  assert.match(html, /Der letzte bestätigte Stand und bekannte Trainings bleiben sichtbar/);
+test("kurz verzögerte Spieldaten erzeugen keine globale Warnung", () => {
+  const warning = new Function(extractFunction("calendarSourceUpdateWarning") + "; return calendarSourceUpdateWarning;")();
+  assert.equal(warning({match_source_age_minutes: 18 * 60}), "");
+  assert.match(warning({match_source_age_minutes: 25 * 60}), /älter als 24 Stunden/);
   assert.match(html, /#calendar-status\[data-state="warning"\]/);
 });
 
