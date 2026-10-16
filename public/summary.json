@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-16T12:35:20+00:00",
+  "generated_at": "2026-10-16T17:34:51+00:00",
   "selection_mode": "club-wide venue",
   "event_timing": {
     "before_minutes": 60,
@@ -139,8 +139,8 @@
   "publication": {
     "schemaVersion": 1,
     "status": "ok",
-    "sourceGeneratedAt": "2026-10-16T12:35:20+00:00",
-    "sourceDigest": "d80a21e61d559d37b3a7fb78b2815bbe7989a61a405bd289b7e9321bda297dae",
+    "sourceGeneratedAt": "2026-10-16T17:34:51+00:00",
+    "sourceDigest": "2daa6f2c8da330335cb7a93ccf1303abce9d84ffe52bf0069a7b8b6dcc015b04",
     "sourceCount": 41,
     "retainedCount": 0,
     "effectiveCount": 41,
