@@ -14,6 +14,8 @@ const assert=require('node:assert/strict');
    await page.route('**/*',r=>r.request().url().startsWith('file:')?r.continue():r.abort());
    for(const scenario of ['charging','charging-unknown','charging-display','parked','mowing','stale','watering','unconfirmed']){
     await page.goto(pathToFileURL(path.join(out,'appack-preview.html')).href+'#'+scenario);
+    // Each visual scenario starts at the overview; ordinary reloads now preserve the subpage.
+    await page.evaluate(()=>history.replaceState(null,''));
     await page.reload();
     await page.locator('#pf-page-home').waitFor({state:'visible'});
     await page.waitForFunction(()=>!document.getElementById('overall-title').textContent.includes('geladen'));

@@ -1,6 +1,84 @@
     // Presentation only. Existing authenticated handlers and backend permits remain authoritative.
     var pfIconNodes = __PF_ICON_DATA__;
     var pfView = "home", pfHistory = [], pfPages = {}, pfReady = false;
+    var pfBrowserHistory = false, pfRestoringHistory = false, pfHistoryIndex = 0, pfDialogCloseTimer = null;
+    function pfPlanStep() {
+      return !document.getElementById("plan-custom").classList.contains("hidden")?"custom":!document.getElementById("plan-pause-step").classList.contains("hidden")?"pause":"home";
+    }
+    function pfHistoryRoute(value) {
+      var r=value&&value.ssv53Platzpflege;
+      return r&&r.version===1&&pfPages[r.page]&&Number.isInteger(r.index)&&r.index>=0&&["home","pause","custom"].indexOf(r.plan)>=0?r:null;
+    }
+    function pfRoute(dialogId) {
+      // Only navigation data belongs in browser history, never approvals or device commands.
+      return {version:1,index:pfHistoryIndex,page:pfView,plan:pfPlanStep(),dialog:dialogId||null,scrollY:window.scrollY};
+    }
+    function pfWriteHistory(route,replace) {
+      if(!pfBrowserHistory||pfRestoringHistory)return;
+      try {
+        var entry=Object.assign({},window.history.state||{});entry.ssv53Platzpflege=route;
+        // Keep the URL, including Appack identity parameters and any existing fragment.
+        window.history[replace?"replaceState":"pushState"](entry,"");pfHistoryIndex=route.index;
+      } catch(error) {pfBrowserHistory=false}
+    }
+    function pfRememberScroll() {
+      var r=pfHistoryRoute(window.history.state);if(r){r.scrollY=window.scrollY;pfWriteHistory(r,true)}
+    }
+    function pfPushRoute(page,plan,dialogId) {
+      pfRememberScroll();var r=pfRoute(dialogId);r.index=pfHistoryIndex+1;r.page=page;r.plan=plan;r.scrollY=0;pfWriteHistory(r,false);
+    }
+    function pfCancelDialog(dialog) {
+      if(dialog.id==="confirm-dialog"){
+        state.pendingAction=null;state.pendingPayload=null;state.pendingRequestId=null;
+        state.manualControlDialog=null;state.manualControlOperation=null;state.manualControlSource=null;
+      }
+      dialog.close();
+    }
+    function pfRestoreRoute(route) {
+      pfRestoringHistory=true;
+      try {
+        clearTimeout(pfDialogCloseTimer);pfDialogCloseTimer=null;
+        document.querySelectorAll("dialog[open]").forEach(pfCancelDialog);
+        pfHistoryIndex=route.index;pfGo(route.page,true);showPlanView(route.plan);
+        // Forward/reload may revisit a dialog marker, but must never replay a confirmation.
+        var clean=Object.assign({},route,{dialog:null});
+        var entry=Object.assign({},window.history.state||{},{ssv53Platzpflege:clean});
+        window.history.replaceState(entry,"");
+        requestAnimationFrame(function(){window.scrollTo(0,Number.isFinite(route.scrollY)?route.scrollY:0)});
+      } finally {pfRestoringHistory=false}
+    }
+    function pfBindDialogHistory(dialog) {
+      var show=dialog.showModal.bind(dialog),close=dialog.close.bind(dialog);
+      dialog.showModal=function(){
+        var alreadyOpen=dialog.open;show();if(alreadyOpen||!pfBrowserHistory||pfRestoringHistory)return;
+        if(pfDialogCloseTimer!==null){
+          // "How to stop" -> confirmation replaces the same dialog step.
+          clearTimeout(pfDialogCloseTimer);pfDialogCloseTimer=null;pfWriteHistory(pfRoute(dialog.id),true);
+        }else pfPushRoute(pfView,pfPlanStep(),dialog.id);
+      };
+      dialog.close=function(){
+        var wasOpen=dialog.open;close();if(!wasOpen||!pfBrowserHistory||pfRestoringHistory)return;
+        clearTimeout(pfDialogCloseTimer);
+        pfDialogCloseTimer=setTimeout(function(){
+          pfDialogCloseTimer=null;var r=pfHistoryRoute(window.history.state);
+          if(r&&r.dialog&&r.index>0&&!document.querySelector("dialog[open]"))window.history.back();
+        },0);
+      };
+      dialog.addEventListener("cancel",function(event){event.preventDefault();pfCancelDialog(dialog)});
+    }
+    function pfInitHistory() {
+      var saved=pfHistoryRoute(window.history.state);
+      pfBrowserHistory=!!(window.history&&window.history.pushState&&window.history.replaceState);
+      if(!pfBrowserHistory)return;
+      if(saved)pfRestoreRoute(saved);else pfWriteHistory(pfRoute(),true);
+      window.addEventListener("popstate",function(event){var route=pfHistoryRoute(event.state);if(route)pfRestoreRoute(route)});
+      var planView=showPlanView;
+      showPlanView=function(view){
+        if(pfView==="water-plan"&&view!==pfPlanStep()&&!pfRestoringHistory)pfPushRoute(pfView,view);
+        return planView(view);
+      };
+      document.querySelectorAll("dialog").forEach(pfBindDialogHistory);
+    }
     function pfIcon(name) {
       var wrap=document.createElement("span"),svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
       wrap.className="pf-symbol";wrap.dataset.pfIcon=name;wrap.setAttribute("aria-hidden","true");
@@ -28,7 +106,7 @@
       document.getElementById("pf-pages").appendChild(page);pfPages[key]=page;return page;
     }
     function pfGo(key,back) {
-      if(!pfPages[key])return;if(!back&&key!==pfView)pfHistory.push(pfView);pfView=key;
+      if(!pfPages[key])return;if(!back&&key!==pfView){pfHistory.push(pfView);pfPushRoute(key,key==="water-plan"?pfPlanStep():"home")}pfView=key;
       Object.keys(pfPages).forEach(function(name){pfPages[name].hidden=name!==key});
       document.getElementById("dashboard").dataset.pfPage=key;
       document.getElementById("pf-back").hidden=key==="home";
@@ -36,7 +114,7 @@
       var actions=document.getElementById("pf-mower-actions");(key==="controls"?pfPages.controls:pfPages.home).appendChild(actions);
       if(key==="home")pfPages.home.insertBefore(actions,document.getElementById("pf-home-links"));
       document.querySelectorAll("[data-pf-nav]").forEach(function(b){var active=b.dataset.pfNav===(key==="home"?"home":["today","training","grounds"].indexOf(key)>=0?"today":"more");b.classList.toggle("pf-current",active);if(active)b.setAttribute("aria-current","page");else b.removeAttribute("aria-current")});
-      if(pfReady){var focus=pfPages[key].querySelector("h2")||document.getElementById("pf-back");focus.setAttribute("tabindex","-1");focus.focus({preventScroll:true});document.getElementById("dashboard").scrollIntoView({block:"start",behavior:"auto"})}
+      if(pfReady){var focus=pfPages[key].querySelector("h2")||document.getElementById(key==="home"?"overall":"pf-back");focus.setAttribute("tabindex","-1");focus.focus({preventScroll:true});document.getElementById("dashboard").scrollIntoView({block:"start",behavior:"auto"})}
     }
     function pfNavigationButton(parent,key,label,icon,description) {var b=pfButton(label,icon,function(){pfGo(key)},description);b.dataset.pfTarget=key;parent.appendChild(b);return b}
     function pfCalendarLink(parent,label,icon) {
@@ -55,6 +133,7 @@
       return panel;
     }
     function pfBack() {
+      if(pfBrowserHistory&&pfHistoryIndex>0){window.history.back();return}
       if(pfView==="water-plan"&&document.getElementById("plan-home").classList.contains("hidden")){showPlanView("home");return}
       pfGo(pfHistory.pop()||"home",true);
     }
@@ -88,12 +167,12 @@
       var groundsGrid=document.createElement("div");groundsGrid.className="pf-grid";pfPages.grounds.appendChild(groundsGrid);pfNavigationButton(groundsGrid,"today","Platzbelegung","CalendarDays");pfNavigationButton(groundsGrid,"training","Trainingsplan","Snowflake");
       pfCalendarLink(groundsGrid,"Training verschieben","CalendarClock");pfCalendarLink(groundsGrid,"Termine & Sperren","CalendarDays");pfCalendarLink(pfPages.today,"Vollständigen Kalender öffnen","CalendarDays");
       var history=document.createElement("div");history.id="pf-command-history";history.className="pf-command-history";pfPages.history.appendChild(history);
-      var footer=document.createElement("nav");footer.className="pf-nav";footer.setAttribute("aria-label","Platzpflegebereiche");[["home","Übersicht","House"],["today","Heute","CalendarDays"],["more","Sonstiges","Ellipsis"]].forEach(function(item){var b=pfButton(item[1],item[2],function(){pfHistory=[];pfGo(item[0],true)});b.dataset.pfNav=item[0];footer.appendChild(b)});dashboard.appendChild(footer);
+      var footer=document.createElement("nav");footer.className="pf-nav";footer.setAttribute("aria-label","Platzpflegebereiche");[["home","Übersicht","House"],["today","Heute","CalendarDays"],["more","Sonstiges","Ellipsis"]].forEach(function(item){var b=pfButton(item[1],item[2],function(){pfGo(item[0])});b.dataset.pfNav=item[0];footer.appendChild(b)});dashboard.appendChild(footer);
       statsDialog=pfInformationPage("stats-dialog","mower-stats","ChartNoAxesColumn");
       planDialog=pfInformationPage("water-plan-dialog","water-plan","CalendarClock");
       pfInformationPage("water-stats-dialog","water-stats","ChartNoAxesColumn");
       pfInformationPage("water-attention-dialog","water-attention","TriangleAlert");
-      pfMove("action-error",safety);pfStyleStatic();pfGo("home",true);pfReady=true;
+      pfMove("action-error",safety);pfStyleStatic();pfGo("home",true);pfReady=true;pfInitHistory();
     }
     function pfStyleStatic() {
       var map={"stats-open":["ChartNoAxesColumn","Statistiken"],"water-plan-open":["CalendarClock","Zeitplan"],"water-stats-open":["ChartNoAxesColumn","Statistiken"],"irrigation-start-all":["Play","Alle Zonen starten"],"irrigation-stop":["Square","Bewässerung beenden"],"manual-husqvarna":["Play","Über Husqvarna starten"],"manual-husqvarna-park":["House","Über Husqvarna parken"],"blade-reset":["Scissors","Klingen gewechselt"],"height-minus":["Minus","1 mm niedriger"],"height-plus":["Plus","1 mm höher"],"plan-pause":["Pause","Bewässerung pausieren"],"plan-save-custom":["Save","Speichern"],"stop-now":["Square","Direkt beenden"],"stop-after-zone":["Droplets","Nach dieser Zone"],"confirm-cancel":["X","Abbrechen"],"stop-cancel":["X","Abbrechen"],"plan-skip":["CalendarX2"],"plan-pause-open":["Pause"],"plan-custom-open":["SlidersHorizontal"],"plan-resume":["Repeat2"],"plan-history-toggle":["History"],"activate-button":["KeyRound"]};

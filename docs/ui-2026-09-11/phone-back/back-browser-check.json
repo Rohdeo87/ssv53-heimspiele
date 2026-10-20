@@ -1,0 +1,67 @@
+{
+  "synthetic": true,
+  "networkBlocked": true,
+  "nativeAppackPhoneVerified": false,
+  "records": [
+    {
+      "width": 320,
+      "case": "hardware-style back, on-screen back, forward, no root trap",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "case": "reload restores subpage, refresh and bottom tabs",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "case": "plan substeps, Escape, statistics, no device requests",
+      "passed": true
+    },
+    {
+      "width": 320,
+      "case": "stop choice to confirmation, cancel without action",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "case": "hardware-style back, on-screen back, forward, no root trap",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "case": "reload restores subpage, refresh and bottom tabs",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "case": "plan substeps, Escape, statistics, no device requests",
+      "passed": true
+    },
+    {
+      "width": 390,
+      "case": "stop choice to confirmation, cancel without action",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "case": "hardware-style back, on-screen back, forward, no root trap",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "case": "reload restores subpage, refresh and bottom tabs",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "case": "plan substeps, Escape, statistics, no device requests",
+      "passed": true
+    },
+    {
+      "width": 768,
+      "case": "stop choice to confirmation, cancel without action",
+      "passed": true
+    }
+  ]
+}
