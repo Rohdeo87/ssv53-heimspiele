@@ -1,0 +1,16 @@
+{
+  "saved_matches": true,
+  "saved_sha256_lf": "a906681386e3e22fa017b6db5a5e4fcf8bd824ade2f400cdfc71240e7847793f",
+  "before_sha256_lf": "79395caf9dd98b6ec910d15a49cc01fbf30c6cc310f9e6c70cc25c20a05b554d",
+  "cms_last_modified_berlin": "2026-09-11 14:01",
+  "verified_at_utc": "2026-09-11T12:04:06.523Z",
+  "css_matches": true,
+  "js_matches": true,
+  "mowing_progress_in_dom": true,
+  "console_errors": [],
+  "backend_installed": false,
+  "backend_blocked_pending_explicit_approval": true,
+  "native_phone_verified": false,
+  "source_commit": "6d0e8d1ed665f011a28594d418f2e4f283d7deda",
+  "merge_commit": "2e964c799c1674e5f6b1d2e7097566857389d220"
+}

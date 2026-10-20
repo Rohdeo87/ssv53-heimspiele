@@ -1,0 +1,211 @@
+{
+  "exception_timeline": [
+    {
+      "timestamp": "2026-09-11T12:16:00Z",
+      "type": "System.Exception",
+      "outerMessage": "python exited with code 143 (0x8F)",
+      "total": 1
+    },
+    {
+      "timestamp": "2026-09-11T12:21:00Z",
+      "type": "System.Exception",
+      "outerMessage": "python exited with code 143 (0x8F)",
+      "total": 1
+    },
+    {
+      "timestamp": "2026-09-11T12:26:00Z",
+      "type": "System.Exception",
+      "outerMessage": "python exited with code 143 (0x8F)",
+      "total": 1
+    },
+    {
+      "timestamp": "2026-09-11T12:28:00Z",
+      "type": "System.Exception",
+      "outerMessage": "python exited with code 143 (0x8F)",
+      "total": 1
+    },
+    {
+      "timestamp": "2026-09-11T12:31:00Z",
+      "type": "System.Exception",
+      "outerMessage": "python exited with code 143 (0x8F)",
+      "total": 1
+    },
+    {
+      "timestamp": "2026-09-11T12:32:00Z",
+      "type": "System.Exception",
+      "outerMessage": "python exited with code 143 (0x8F)",
+      "total": 1
+    },
+    {
+      "timestamp": "2026-09-11T12:34:00Z",
+      "type": "System.Exception",
+      "outerMessage": "python exited with code 143 (0x8F)",
+      "total": 1
+    },
+    {
+      "timestamp": "2026-09-11T12:36:00Z",
+      "type": "System.Exception",
+      "outerMessage": "python exited with code 143 (0x8F)",
+      "total": 1
+    },
+    {
+      "timestamp": "2026-09-11T12:39:00Z",
+      "type": "System.Exception",
+      "outerMessage": "python exited with code 143 (0x8F)",
+      "total": 2
+    },
+    {
+      "timestamp": "2026-09-11T12:40:00Z",
+      "type": "System.Exception",
+      "outerMessage": "python exited with code 143 (0x8F)",
+      "total": 1
+    },
+    {
+      "timestamp": "2026-09-11T12:42:00Z",
+      "type": "System.Exception",
+      "outerMessage": "python exited with code 143 (0x8F)",
+      "total": 1
+    },
+    {
+      "timestamp": "2026-09-11T12:43:00Z",
+      "type": "System.Exception",
+      "outerMessage": "python exited with code 143 (0x8F)",
+      "total": 8
+    },
+    {
+      "timestamp": "2026-09-11T12:44:00Z",
+      "type": "System.Exception",
+      "outerMessage": "python exited with code 143 (0x8F)",
+      "total": 2
+    }
+  ],
+  "function_requests": [
+    {
+      "name": "ssv53_mower_timer",
+      "resultCode": "0",
+      "success": "True",
+      "total": 6
+    },
+    {
+      "name": "ssv53_occupancy_notification_timer",
+      "resultCode": "0",
+      "success": "True",
+      "total": 3
+    },
+    {
+      "name": "ssv53_platzwart_status",
+      "resultCode": "200",
+      "success": "True",
+      "total": 3
+    },
+    {
+      "name": "ssv53_platzwart_login",
+      "resultCode": "200",
+      "success": "True",
+      "total": 1
+    }
+  ],
+  "host_lifecycle": [
+    {
+      "timestamp": "2026-09-11T12:44:46.0979052Z",
+      "cloud_RoleInstance": "0--bf98770d-a2a3-43a8-a99d-11b51828bd68",
+      "message": "Stopping JobHost"
+    },
+    {
+      "timestamp": "2026-09-11T12:44:44.6095127Z",
+      "cloud_RoleInstance": "0--bf98770d-a2a3-43a8-a99d-11b51828bd68",
+      "message": "Stopping the listener 'Microsoft.Azure.WebJobs.Script.Description.FunctionGroupListenerDecorator+NoOpListener' for function 'ssv53_privacy_retention_timer'"
+    },
+    {
+      "timestamp": "2026-09-11T12:44:44.5966811Z",
+      "cloud_RoleInstance": "0--bf98770d-a2a3-43a8-a99d-11b51828bd68",
+      "message": "Stopping the listener 'Microsoft.Azure.WebJobs.Host.Listeners.SingletonListener' for function 'ssv53_occupancy_notification_timer'"
+    },
+    {
+      "timestamp": "2026-09-11T12:44:44.5966363Z",
+      "cloud_RoleInstance": "0--bf98770d-a2a3-43a8-a99d-11b51828bd68",
+      "message": "Stopping the listener 'Microsoft.Azure.WebJobs.Script.Description.FunctionGroupListenerDecorator+NoOpListener' for function 'ssv53_mower_timer'"
+    },
+    {
+      "timestamp": "2026-09-11T12:44:44.5963976Z",
+      "cloud_RoleInstance": "0--bf98770d-a2a3-43a8-a99d-11b51828bd68",
+      "message": "Stopping the listener 'Microsoft.Azure.WebJobs.Script.Description.FunctionGroupListenerDecorator+NoOpListener' for function 'ssv53_daily_safety_report_timer'"
+    },
+    {
+      "timestamp": "2026-09-11T12:44:01.4332991Z",
+      "cloud_RoleInstance": "0--a4a867d6-9f59-46ea-a343-bc7bab414686",
+      "message": "Stopping JobHost"
+    },
+    {
+      "timestamp": "2026-09-11T12:44:00.9071151Z",
+      "cloud_RoleInstance": "0--a4a867d6-9f59-46ea-a343-bc7bab414686",
+      "message": "Stopping the listener 'Microsoft.Azure.WebJobs.Script.Description.FunctionGroupListenerDecorator+NoOpListener' for function 'ssv53_privacy_retention_timer'"
+    },
+    {
+      "timestamp": "2026-09-11T12:44:00.9070872Z",
+      "cloud_RoleInstance": "0--a4a867d6-9f59-46ea-a343-bc7bab414686",
+      "message": "Stopping the listener 'Microsoft.Azure.WebJobs.Script.Description.FunctionGroupListenerDecorator+NoOpListener' for function 'ssv53_occupancy_notification_timer'"
+    },
+    {
+      "timestamp": "2026-09-11T12:44:00.9070508Z",
+      "cloud_RoleInstance": "0--a4a867d6-9f59-46ea-a343-bc7bab414686",
+      "message": "Stopping the listener 'Microsoft.Azure.WebJobs.Script.Description.FunctionGroupListenerDecorator+NoOpListener' for function 'ssv53_mower_timer'"
+    },
+    {
+      "timestamp": "2026-09-11T12:44:00.9069574Z",
+      "cloud_RoleInstance": "0--a4a867d6-9f59-46ea-a343-bc7bab414686",
+      "message": "Stopping the listener 'Microsoft.Azure.WebJobs.Script.Description.FunctionGroupListenerDecorator+NoOpListener' for function 'ssv53_daily_safety_report_timer'"
+    },
+    {
+      "timestamp": "2026-09-11T12:43:58.6380315Z",
+      "cloud_RoleInstance": "0--fe907464-3129-44fa-934a-7bca188fd693",
+      "message": "Stopping JobHost"
+    },
+    {
+      "timestamp": "2026-09-11T12:43:57.6625457Z",
+      "cloud_RoleInstance": "0--fe907464-3129-44fa-934a-7bca188fd693",
+      "message": "Stopping the listener 'Microsoft.Azure.WebJobs.Script.Description.FunctionGroupListenerDecorator+NoOpListener' for function 'ssv53_privacy_retention_timer'"
+    },
+    {
+      "timestamp": "2026-09-11T12:43:57.6625197Z",
+      "cloud_RoleInstance": "0--fe907464-3129-44fa-934a-7bca188fd693",
+      "message": "Stopping the listener 'Microsoft.Azure.WebJobs.Script.Description.FunctionGroupListenerDecorator+NoOpListener' for function 'ssv53_occupancy_notification_timer'"
+    },
+    {
+      "timestamp": "2026-09-11T12:43:57.6624822Z",
+      "cloud_RoleInstance": "0--fe907464-3129-44fa-934a-7bca188fd693",
+      "message": "Stopping the listener 'Microsoft.Azure.WebJobs.Script.Description.FunctionGroupListenerDecorator+NoOpListener' for function 'ssv53_mower_timer'"
+    },
+    {
+      "timestamp": "2026-09-11T12:43:57.6622841Z",
+      "cloud_RoleInstance": "0--fe907464-3129-44fa-934a-7bca188fd693",
+      "message": "Stopping the listener 'Microsoft.Azure.WebJobs.Script.Description.FunctionGroupListenerDecorator+NoOpListener' for function 'ssv53_daily_safety_report_timer'"
+    },
+    {
+      "timestamp": "2026-09-11T12:43:56.5071539Z",
+      "cloud_RoleInstance": "0--0cd5644e-24a6-4861-b55a-0a30650fc3a5",
+      "message": "Stopping JobHost"
+    },
+    {
+      "timestamp": "2026-09-11T12:43:56.3832832Z",
+      "cloud_RoleInstance": "0--79fbcc3a-6d5b-4bdc-9e06-de215b86f776",
+      "message": "Stopping JobHost"
+    },
+    {
+      "timestamp": "2026-09-11T12:43:55.8664815Z",
+      "cloud_RoleInstance": "0--0cd5644e-24a6-4861-b55a-0a30650fc3a5",
+      "message": "Stopping the listener 'Microsoft.Azure.WebJobs.Script.Description.FunctionGroupListenerDecorator+NoOpListener' for function 'ssv53_privacy_retention_timer'"
+    },
+    {
+      "timestamp": "2026-09-11T12:43:55.8664544Z",
+      "cloud_RoleInstance": "0--0cd5644e-24a6-4861-b55a-0a30650fc3a5",
+      "message": "Stopping the listener 'Microsoft.Azure.WebJobs.Script.Description.FunctionGroupListenerDecorator+NoOpListener' for function 'ssv53_occupancy_notification_timer'"
+    },
+    {
+      "timestamp": "2026-09-11T12:43:55.8663324Z",
+      "cloud_RoleInstance": "0--0cd5644e-24a6-4861-b55a-0a30650fc3a5",
+      "message": "Stopping the listener 'Microsoft.Azure.WebJobs.Script.Description.FunctionGroupListenerDecorator+NoOpListener' for function 'ssv53_mower_timer'"
+    }
+  ],
+  "queriedAt": "2026-09-11T12:45:34.794998+00:00"
+}
