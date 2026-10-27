@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-26T20:46:14+00:00",
+  "generated_at": "2026-10-27T06:29:44+00:00",
   "selection_mode": "club-wide venue",
   "event_timing": {
     "before_minutes": 60,
@@ -21,10 +21,10 @@
       "ssv53-festival-unclear-duration-90-20260831"
     ]
   },
-  "total": 117,
+  "total": 118,
   "included": 41,
   "review": 0,
-  "excluded": 76,
+  "excluded": 77,
   "by_calendar": {
     "Rasen": 36,
     "Kunstrasen": 5
@@ -61,9 +61,9 @@
       "review": 0
     },
     "Schönwalder SV 53 I (Fussball-5, 2016)": {
-      "total": 1,
+      "total": 2,
       "included": 1,
-      "excluded": 0,
+      "excluded": 1,
       "review": 0
     },
     "Schönwalder SV 53 II (Fussball-5, 2017)": {
@@ -123,7 +123,7 @@
     {
       "date_from": "2026-10-01",
       "date_to": "2026-12-31",
-      "competition_rows": 46
+      "competition_rows": 47
     },
     {
       "date_from": "2027-01-01",

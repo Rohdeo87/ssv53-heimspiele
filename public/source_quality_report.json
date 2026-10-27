@@ -36,7 +36,7 @@
     {
       "date_from": "2026-10-01",
       "date_to": "2026-12-31",
-      "competition_rows": 46
+      "competition_rows": 47
     },
     {
       "date_from": "2027-01-01",
@@ -81,11 +81,11 @@
       "depth": 0,
       "source_url": "https://www.fussball.de/ajax.club.matchplan/-/id/00ES8GNBL0000049VV0AG08LVUPGND5I/mode/PAGE/show-filter/false/show-venues/true/mime-type/HTML/datum-von/2026-10-01/datum-bis/2026-12-31/max/50",
       "source_scope": "all club teams; inclusion decided only by venue",
-      "competition_rows": 46,
-      "source_detail_ids": 39,
-      "parsed_matches_before_duplicate_merge": 46,
-      "parsed_matches": 46,
-      "parsed_detail_ids": 39,
+      "competition_rows": 47,
+      "source_detail_ids": 40,
+      "parsed_matches_before_duplicate_merge": 47,
+      "parsed_matches": 47,
+      "parsed_detail_ids": 40,
       "missing_detail_ids": [],
       "source_festival_groups": 0,
       "missing_festival_groups": [],

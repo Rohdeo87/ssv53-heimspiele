@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-26T20:46:14+00:00",
+  "generatedAt": "2026-10-27T06:29:44+00:00",
   "status": "ok",
   "matches": [
     {
@@ -554,7 +554,7 @@
       "teamRole": "home",
       "homeTeam": "Schönwalder SV 53",
       "awayTeam": "FC Strausberg",
-      "competition": "So, | A-Junioren | Brandenburg-Pokal",
+      "competition": "A-Junioren | Brandenburg-Pokal",
       "description": "A-Junioren · Brandenburg-Pokal",
       "status": "",
       "detailLink": "https://www.fussball.de/spiel/schoenwalder-sv-fc-strausberg/-/spiel/032AQFHU2S000000VS5489BTVU989P58",
@@ -1155,12 +1155,12 @@
   "publication": {
     "schemaVersion": 1,
     "status": "ok",
-    "sourceGeneratedAt": "2026-10-26T20:46:14+00:00",
-    "sourceDigest": "3af0462d7b9ccd23815457fc7b13feafb1b09e5e63457cc0b6f7c14dfc47882d",
+    "sourceGeneratedAt": "2026-10-27T06:29:44+00:00",
+    "sourceDigest": "1e82bcc1c62ca32ecc6096ed659366113b662571d87f490beb59d81093fe9fb9",
     "sourceCount": 41,
     "retainedCount": 0,
     "effectiveCount": 41,
     "requiredConsumer": null,
-    "effectiveDigest": "5953eb7b0ac1b373f11292d35f9606ab6284d81541efd63025bbc98229021a9d"
+    "effectiveDigest": "083edbfffbc0caa1c4fc2bdfbcb9ceb58aa203777ca5dae254b6da144caf91c1"
   }
 }

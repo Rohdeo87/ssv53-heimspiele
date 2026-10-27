@@ -1,12 +1,12 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-26T20:46:14.859122+00:00",
+  "generatedAt": "2026-10-27T06:29:44.983732+00:00",
   "status": "ok",
   "counts": {
     "before": 41,
     "after": 41,
     "added": 0,
-    "changed": 0,
+    "changed": 1,
     "removed": 0,
     "effectiveAfter": 41,
     "retained": 0,
@@ -22,19 +22,88 @@
     }
   },
   "added": [],
-  "changed": [],
+  "changed": [
+    {
+      "id": "dfb:032AQFHU2S000000VS5489BTVU989P58",
+      "label": "Schönwalder SV 53 · Schönwalder SV 53 – FC Strausberg · 01.11.2026 10:30 · Rasen",
+      "before": {
+        "id": "dfb:032AQFHU2S000000VS5489BTVU989P58",
+        "title": "Schönwalder SV 53 – FC Strausberg",
+        "start": "2026-11-01T10:30+01:00",
+        "end": "2026-11-01T12:45+01:00",
+        "occupancyStart": "2026-11-01T09:30+01:00",
+        "occupancyEnd": "2026-11-01T13:45+01:00",
+        "kickoff": "2026-11-01T10:30+01:00",
+        "matchDurationMinutes": 135,
+        "durationRule": "flb-jugendordnung-2025-12-13-a-2x45+halftime-15+cup-max-30",
+        "competitionFormat": "cup",
+        "matchType": "PO",
+        "place": "rasen",
+        "calendar": "Rasen",
+        "team": "Schönwalder SV 53",
+        "teamCategory": "A-Junioren | Brandenburg-Pokal",
+        "teamRole": "home",
+        "homeTeam": "Schönwalder SV 53",
+        "awayTeam": "FC Strausberg",
+        "competition": "So, | A-Junioren | Brandenburg-Pokal",
+        "description": "A-Junioren · Brandenburg-Pokal",
+        "status": "",
+        "detailLink": "https://www.fussball.de/spiel/schoenwalder-sv-fc-strausberg/-/spiel/032AQFHU2S000000VS5489BTVU989P58",
+        "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+        "locationSource": "fussball.de",
+        "source": "fussball.de",
+        "checksum": "a84a91c8e4773bb2688152c6786711b7b4d6b03823d8934882c9b4739b8c2b29"
+      },
+      "after": {
+        "id": "dfb:032AQFHU2S000000VS5489BTVU989P58",
+        "title": "Schönwalder SV 53 – FC Strausberg",
+        "start": "2026-11-01T10:30+01:00",
+        "end": "2026-11-01T12:45+01:00",
+        "occupancyStart": "2026-11-01T09:30+01:00",
+        "occupancyEnd": "2026-11-01T13:45+01:00",
+        "kickoff": "2026-11-01T10:30+01:00",
+        "matchDurationMinutes": 135,
+        "durationRule": "flb-jugendordnung-2025-12-13-a-2x45+halftime-15+cup-max-30",
+        "competitionFormat": "cup",
+        "matchType": "PO",
+        "place": "rasen",
+        "calendar": "Rasen",
+        "team": "Schönwalder SV 53",
+        "teamCategory": "A-Junioren | Brandenburg-Pokal",
+        "teamRole": "home",
+        "homeTeam": "Schönwalder SV 53",
+        "awayTeam": "FC Strausberg",
+        "competition": "A-Junioren | Brandenburg-Pokal",
+        "description": "A-Junioren · Brandenburg-Pokal",
+        "status": "",
+        "detailLink": "https://www.fussball.de/spiel/schoenwalder-sv-fc-strausberg/-/spiel/032AQFHU2S000000VS5489BTVU989P58",
+        "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
+        "locationSource": "fussball.de",
+        "source": "fussball.de",
+        "checksum": "a84a91c8e4773bb2688152c6786711b7b4d6b03823d8934882c9b4739b8c2b29"
+      },
+      "changes": [
+        {
+          "field": "competition",
+          "label": "Wettbewerb",
+          "before": "So, | A-Junioren | Brandenburg-Pokal",
+          "after": "A-Junioren | Brandenburg-Pokal"
+        }
+      ]
+    }
+  ],
   "removed": [],
   "retained": [],
   "released": [],
   "publication": {
     "schemaVersion": 1,
     "status": "ok",
-    "sourceGeneratedAt": "2026-10-26T20:46:14+00:00",
-    "sourceDigest": "3af0462d7b9ccd23815457fc7b13feafb1b09e5e63457cc0b6f7c14dfc47882d",
+    "sourceGeneratedAt": "2026-10-27T06:29:44+00:00",
+    "sourceDigest": "1e82bcc1c62ca32ecc6096ed659366113b662571d87f490beb59d81093fe9fb9",
     "sourceCount": 41,
     "retainedCount": 0,
     "effectiveCount": 41,
     "requiredConsumer": null,
-    "effectiveDigest": "5953eb7b0ac1b373f11292d35f9606ab6284d81541efd63025bbc98229021a9d"
+    "effectiveDigest": "083edbfffbc0caa1c4fc2bdfbcb9ceb58aa203777ca5dae254b6da144caf91c1"
   }
 }
