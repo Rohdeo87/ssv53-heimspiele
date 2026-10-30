@@ -5,7 +5,7 @@ const test = require("node:test");
 
 const repositoryRoot = path.resolve(__dirname, "..");
 const html = fs.readFileSync(
-  path.join(repositoryRoot, "appack-platzbelegungsplan-azure.html"),
+  process.env.CALENDAR_UI_SOURCE || path.join(repositoryRoot, "appack-platzbelegungsplan-azure.html"),
   "utf8"
 );
 
@@ -63,6 +63,7 @@ function createHarness(contacts) {
     "parseWorkbookContacts",
     "parseTrainerContacts",
     "parseCreatorContacts",
+    "findCreatorWorkbookContact",
     "getEventContactProfile",
     "findTrainerContacts"
   ];
@@ -72,7 +73,7 @@ function createHarness(contacts) {
     "}",
     ...functionNames.map(extractFunction),
     "function sanitizeDescription(value) { return String(value || ''); }",
-    "return { parseTrainerContacts, parseCreatorContacts, getEventContactProfile, findTrainerContacts };"
+    "return { parseTrainerContacts, parseCreatorContacts, getEventContactProfile, findTrainerContacts, findCreatorWorkbookContact };"
   ].join("\n\n");
   return new Function("state", source)(state);
 }
@@ -310,4 +311,76 @@ test("Herren-Spiel ohne Workbook-Kontakt bleibt eligible und zeigt den Leerzusta
   assert.equal(harness.getEventContactProfile(match).eligible, true);
   assert.deepEqual(harness.findTrainerContacts(match), []);
   assert.match(html, /setTrainerContactStatus\(\s*"Kein Ansprechpartner hinterlegt"/);
+});
+
+// Replay the data shape of the 30 October incident with synthetic people/IDs.
+const sharedReferenceRows = [
+  { ansName: "Alex Beispiel", ansID: "shared-profile", ansFunc: "Trainer E2",
+    ansKat: "Fussball; E2-Jugend", ansMail: "alex@example.invalid",
+    ansHandy: "+49 170 0000001", ansImg: "https://example.invalid/alex.png" },
+  { ansName: "Robin Muster", ansID: "shared-profile", ansFunc: "Trainer A",
+    ansKat: "Fussball; A-Jugend", ansMail: "robin@example.invalid",
+    ansImg: "https://example.invalid/robin.png" }
+];
+
+test("copied profile ID never merges different trainers or their contact details", () => {
+  for (const rows of [sharedReferenceRows, sharedReferenceRows.slice().reverse()]) {
+    const contacts = createHarness([]).parseTrainerContacts(rows);
+    assert.equal(contacts.length, 2);
+    const harness = createHarness(contacts);
+    const aMatch = event({source: "match", title: "Verein – Gast", team: "Verein",
+      teamCategory: "A-Junioren | Brandenburg-Pokal"});
+    const [aTrainer] = harness.findTrainerContacts(aMatch);
+    assert.equal(aTrainer.name, "Robin Muster");
+    assert.equal(aTrainer.role, "Trainer A");
+    assert.equal(aTrainer.email, "robin@example.invalid");
+    assert.equal(aTrainer.mobile, "");
+    assert.equal(aTrainer.image, "https://example.invalid/robin.png");
+    assert.deepEqual(harness.findTrainerContacts(event({source: "training", title: "E2", team: "E2"}))
+      .map(item => item.name), ["Alex Beispiel"]);
+    for (const contact of contacts) {
+      assert.equal(contact.chatId, "", "ambiguous ID must not link a chat to another person");
+      assert.equal(contact.contactRef, "");
+      assert.equal(contact.contactRefs.has("shared-profile"), false);
+    }
+  }
+});
+
+test("creator lookup does not accept an ambiguous profile reference", () => {
+  const contacts = createHarness([]).parseCreatorContacts(sharedReferenceRows);
+  const harness = createHarness(contacts);
+  assert.equal(harness.findCreatorWorkbookContact({id: "shared-profile"}), null);
+  const creator = harness.findCreatorWorkbookContact({id: "shared-profile", name: "Robin Muster"});
+  assert.equal(creator.name, "Robin Muster");
+  assert.equal(creator.role, "Trainer A");
+});
+
+test("profile conflict is detected across sports before football filtering", () => {
+  const contacts = createHarness([]).parseTrainerContacts([
+    sharedReferenceRows[1],
+    {...sharedReferenceRows[0], ansKat: "Handball; E-Jugend"}
+  ]);
+  assert.equal(contacts.length, 1);
+  assert.equal(contacts[0].name, "Robin Muster");
+  assert.equal(contacts[0].chatId, "");
+});
+
+test("legitimate multiple roles of one person still merge with a working chat", () => {
+  const contacts = createHarness([]).parseTrainerContacts([
+    sharedReferenceRows[0],
+    {...sharedReferenceRows[0], ansFunc: "Trainer A", ansKat: "Fussball; A-Jugend"}
+  ]);
+  assert.equal(contacts.length, 1);
+  assert.equal(contacts[0].role, "Trainer E2; Trainer A");
+  assert.equal(contacts[0].chatId, "shared-profile");
+  assert.deepEqual([...contacts[0].keys].sort(), ["team:a", "team:e2"]);
+});
+
+test("correct distinct profile references retain their own role and chat", () => {
+  const contacts = createHarness([]).parseTrainerContacts([
+    sharedReferenceRows[0], {...sharedReferenceRows[1], ansID: "robin-profile"}
+  ]);
+  assert.equal(contacts.length, 2);
+  assert.equal(contacts.find(c => c.name === "Robin Muster").chatId, "robin-profile");
+  assert.equal(contacts.find(c => c.name === "Alex Beispiel").role, "Trainer E2");
 });

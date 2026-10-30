@@ -3627,6 +3627,16 @@ return result;
 
 function parseWorkbookContacts(rows, requireFootballTeams) {
 const contactsByIdentity = new Map();
+const referenceNames = new Map();
+// ansID is an editable chat/profile link. A copied link must not turn two
+// different people into one contact, even across department filters.
+(Array.isArray(rows) ? rows : []).forEach(function (row) {
+const reference = getFirstContactText(row.ansID).toLowerCase();
+const name = normalizeMatchText(getFirstContactText(row.ansName));
+if (!reference || !name) return;
+if (!referenceNames.has(reference)) referenceNames.set(reference, new Set());
+referenceNames.get(reference).add(name);
+});
 
 (Array.isArray(rows) ? rows : []).forEach(function (row) {
 const categoryProfile = getContactCategoryProfile(row.ansKat);
@@ -3661,7 +3671,11 @@ if (requireFootballTeams && !teamKeys.size) return;
 const name = getFirstContactText(row.ansName);
 if (!name) return;
 
-const identity = getContactIdentity(row, name);
+const reference = getFirstContactText(row.ansID).toLowerCase();
+const conflictingReference = referenceNames.has(reference) &&
+referenceNames.get(reference).size > 1;
+const identity = getContactIdentity(row, name) +
+(conflictingReference ? ":name:" + normalizeMatchText(name) : "");
 if (!identity) return;
 
 const infoRaw = getFirstContactText(row.ansInfo);
@@ -3709,8 +3723,10 @@ contact.email = firstContactValue(contact.email, getFirstContactText(row.ansMail
 contact.instagram = firstContactValue(contact.instagram, getFirstContactText(row.ansInsta));
 contact.website = firstContactValue(contact.website, getFirstContactText(row.ansLink));
 contact.facebook = firstContactValue(contact.facebook, getFirstContactText(row.ansFace));
-contact.chatId = firstContactValue(contact.chatId, getFirstContactText(row.ansID));
-const rowContactRef = getFirstContactText(row.ansID);
+// Keep the person's own fields, but do not offer an ambiguous chat target
+// or use that reference to resolve a different person's creator card.
+const rowContactRef = conflictingReference ? "" : getFirstContactText(row.ansID);
+contact.chatId = firstContactValue(contact.chatId, rowContactRef);
 if (rowContactRef) {
 contact.contactRefs.add(rowContactRef);
 contact.contactRef = firstContactValue(contact.contactRef, rowContactRef);
