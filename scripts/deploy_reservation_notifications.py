@@ -40,7 +40,11 @@ def main():
     except RuntimeError as error:
         if 'HTTP 404' not in str(error): raise
         # Flex Consumption exposes deployment storage, not Kudu VFS.
-        site=az('functionapp','show','--resource-group',RG,'--name',APP)
+        # CLI's Site model drops functionAppConfig in some installed versions.
+        subscription=az('account','show')['id']
+        site=az('rest','--method','get','--url',
+                'https://management.azure.com/subscriptions/'+subscription+
+                '/resourceGroups/'+RG+'/providers/Microsoft.Web/sites/'+APP+'?api-version=2024-04-01')['properties']
         storage=site.get('functionAppConfig',{}).get('deployment',{}).get('storage',{})
         parsed=urlparse(storage.get('value',''))
         if not parsed.hostname or not parsed.hostname.endswith('.blob.core.windows.net'):
