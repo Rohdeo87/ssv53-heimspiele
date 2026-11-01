@@ -3,7 +3,7 @@
 Run under the repository's Azure OIDC deployment identity. No credentials or raw
 provider responses are printed. Existing production source is preserved.
 """
-import ast,atexit,base64,hashlib,json,os,re,subprocess,time,uuid,zipfile
+import ast,base64,hashlib,json,os,re,subprocess,time,zipfile
 from urllib.parse import urlparse
 from datetime import datetime,timezone
 from pathlib import Path
@@ -24,14 +24,6 @@ def az(*args, timeout=180):
         code=found.group(1) if found else 'UNCLASSIFIED'
         if 'You do not have the required permissions' in p.stderr:
             code='MISSING_BLOB_READ'
-        if args[:3]==('storage','blob','list') and 'login' in args:
-            # This read-only OIDC command accepts no secret arguments. Redact
-            # provider URLs, JWTs, identifiers and credential fields nonetheless.
-            detail=re.sub(r'https?://\S+','[URL]',p.stderr)
-            detail=re.sub(r'eyJ[A-Za-z0-9_.-]+','[TOKEN]',detail)
-            detail=re.sub(r'[0-9a-fA-F]{8}-[0-9a-fA-F-]{27,}','[ID]',detail)
-            detail=re.sub(r'(?i)((?:password|token|secret|AccountKey|SharedAccessSignature)\s*[:=]\s*)[^\s;]+',r'\1[REDACTED]',detail)
-            print('Deployment-container read diagnostic: '+detail[:1800])
         raise RuntimeError('Azure CLI operation failed: '+args[0]+' code='+code)
     return json.loads(p.stdout) if p.stdout.strip() else None
 
@@ -69,31 +61,16 @@ def main():
             blobs=az(*blob_args)
         except RuntimeError as error:
             if 'code=MISSING_BLOB_READ' not in str(error):raise
-            # The existing deployment principal gets temporary READ ONLY access
-            # to this one deployment container. Never touch the diagnostic identity.
             claims=json.loads(base64.urlsafe_b64decode(token.split('.')[1]+'==='))
-            principal=claims['oid']
             scope=('/subscriptions/'+subscription+'/resourceGroups/'+RG+
                    '/providers/Microsoft.Storage/storageAccounts/'+account+
                    '/blobServices/default/containers/'+container)
-            role_name=str(uuid.uuid4())
-            role=az('role','assignment','create','--assignee-object-id',principal,
-                    '--assignee-principal-type','ServicePrincipal',
-                    '--role','2a2b9908-6ea1-4ae2-8e65-a410df84e7d1',
-                    '--scope',scope,'--name',role_name)
-            def remove_temporary_reader():
-                try:
-                    az('role','assignment','delete','--ids',role['id'])
-                    print(json.dumps({'temporary_deployment_container_reader_removed':True}))
-                except Exception:
-                    print(json.dumps({'temporary_deployment_container_reader_removed':False,'role_assignment_id':role['id']}))
-            atexit.register(remove_temporary_reader)
-            print(json.dumps({'temporary_deployment_container_reader_created':True}))
-            for attempt in range(24):
-                try:blobs=az(*blob_args);break
-                except RuntimeError:
-                    if attempt==23:raise
-                    time.sleep(10)
+            print(json.dumps({'activation_blocked':True,
+                              'deployment_principal_object_id':claims['oid'],
+                              'deployment_client_id':claims.get('appid') or claims.get('azp'),
+                              'required_role':'Storage Blob Data Reader',
+                              'required_scope':scope}))
+            raise RuntimeError('Deployment identity needs read-only access to its deployment container; no production changes were made') from None
         candidates=[b['name'] for b in blobs if b['name'].endswith('.zip')]
         name='released-package.zip' if 'released-package.zip' in candidates else candidates[0] if len(candidates)==1 else None
         if not name: raise RuntimeError('Active package cannot be identified uniquely')
