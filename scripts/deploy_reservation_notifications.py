@@ -50,12 +50,15 @@ def main():
         if not parsed.hostname or not parsed.hostname.endswith('.blob.core.windows.net'):
             raise RuntimeError('Deployment package location unavailable')
         account=parsed.hostname.split('.')[0];container=parsed.path.strip('/')
-        blobs=az('storage','blob','list','--account-name',account,'--container-name',container,'--auth-mode','login')
+        # Use the same management-authorized storage access as ZIP deployment.
+        # Azure CLI resolves the account credential internally; it is never printed
+        # or persisted. No roles or identities are added or changed.
+        blobs=az('storage','blob','list','--account-name',account,'--container-name',container,'--auth-mode','key')
         candidates=[b['name'] for b in blobs if b['name'].endswith('.zip')]
         name='released-package.zip' if 'released-package.zip' in candidates else candidates[0] if len(candidates)==1 else None
         if not name: raise RuntimeError('Active package cannot be identified uniquely')
         package=Path('/tmp/ssv53-active-package.zip')
-        az('storage','blob','download','--account-name',account,'--container-name',container,'--name',name,'--auth-mode','login','--file',str(package),'--overwrite',timeout=300)
+        az('storage','blob','download','--account-name',account,'--container-name',container,'--name',name,'--auth-mode','key','--file',str(package),'--overwrite',timeout=300)
         with zipfile.ZipFile(package) as archive:
             original=archive.read('function_app.py');active_mail=archive.read('order_mail.py')
         etag=None
