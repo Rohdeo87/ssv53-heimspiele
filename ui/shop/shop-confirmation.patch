@@ -1,0 +1,9 @@
+--- Shop.tpl
++++ Shop.tpl
+@@ -1391,5 +1391,5 @@
+         '</strong> wurde gespeichert.'
+       );
+-      $('#modal1 .successSub').text('Wir melden uns, sobald es Neuigkeiten zur Ausgabe gibt.');
++      $('#modal1 .successSub').text('Deine Eingangsbestätigung folgt per E-Mail. Die Geschäftsstelle wird automatisch benachrichtigt.');
+       $('#successOrdersButton').show();
+       const $successModal = $('#modal1');
