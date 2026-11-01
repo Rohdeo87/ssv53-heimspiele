@@ -3,7 +3,7 @@
 Run under the repository's Azure OIDC deployment identity. No credentials or raw
 provider responses are printed. Existing production source is preserved.
 """
-import ast,hashlib,json,os,subprocess,time,zipfile
+import ast,hashlib,json,os,re,subprocess,time,zipfile
 from urllib.parse import urlparse
 from datetime import datetime,timezone
 from pathlib import Path
@@ -18,7 +18,11 @@ MARKER='# SSV53 reservation notifications registration'
 
 def az(*args, timeout=180):
     p=subprocess.run(['az',*args,'--output','json'],capture_output=True,text=True,timeout=timeout)
-    if p.returncode:raise RuntimeError('Azure CLI operation failed: '+args[0])
+    if p.returncode:
+        # Provider error codes only, never raw CLI output or credential values.
+        found=re.search(r'ErrorCode[:=]\s*([A-Za-z0-9_.-]+)',p.stderr) or re.search(r'ERROR:\s*\(([A-Za-z0-9_.-]+)\)',p.stderr)
+        code=found.group(1) if found else 'UNCLASSIFIED'
+        raise RuntimeError('Azure CLI operation failed: '+args[0]+' code='+code)
     return json.loads(p.stdout) if p.stdout.strip() else None
 
 
