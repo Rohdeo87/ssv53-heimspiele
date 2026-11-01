@@ -13,6 +13,7 @@ REQUIRED_FILES = (
     "function_app.py",
     "host.json",
     "order_mail.py",
+    "reservation_notifications.py",
     "occupancy_notifications.py",
     "platzwart_console.py",
     "occupancy/__init__.py",

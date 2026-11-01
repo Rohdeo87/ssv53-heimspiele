@@ -2203,3 +2203,8 @@ def ssv53_order_mail(req: func.HttpRequest) -> func.HttpResponse:
             },
             status_code=500,
         )
+
+
+# SSV53 reservation notifications registration
+from reservation_notifications import notification_blueprint
+app.register_functions(notification_blueprint)
