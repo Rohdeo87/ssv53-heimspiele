@@ -118,6 +118,7 @@ def build_message(settings, data, channel, office):
     message['Reply-To'] = data['email'] if internal else settings.from_address
     details = _plain_order_details(data['items'], data['totalCents'])
     if internal:
+        details = details.replace('Deine Reservierung:', 'Vorgemerkte Artikel:', 1)
         intro = ('Eine neue T-Shirt-Vormerkung wurde gespeichert.\n'
                  + 'Reservierung: ' + data['orderId'] + '\n'
                  + 'Name: ' + data['name'] + '\nE-Mail: ' + data['email'] + '\n')
@@ -132,12 +133,14 @@ def build_message(settings, data, channel, office):
                  'Den aktuellen Stand findest du in der SSV53-App unter '
                  '„Sonstiges → Meine Reservierungen“.\n\nViele Grüße\nSchönwalder SV 1953 e.V.')
     message.set_content(intro + '\n' + details + '\n' + outro)
+    total = data['totalCents']
+    total_html = '' if total is None else '<p><strong>Gesamtsumme: ' + str(total // 100) + ',' + f'{total % 100:02d}' + ' €</strong></p>'
     body = ('<!doctype html><html lang="de"><meta charset="utf-8"><body style="margin:0;background:#f2f4f6;font-family:Arial,sans-serif;color:#263241">'
             '<main style="max-width:620px;margin:20px auto;background:white;padding:24px;border-radius:14px">'
             '<h1 style="font-size:22px;color:#285ea7">' + html.escape(str(message['Subject'])) + '</h1>'
             '<p style="white-space:pre-line;line-height:1.5">' + html.escape(intro) + '</p>'
             '<table style="width:100%;border-collapse:collapse">' + _product_rows_html(data['items']) + '</table>'
-            '<p style="white-space:pre-line;line-height:1.5">' + html.escape(details + '\n' + outro) + '</p></main></body></html>')
+            + total_html + '<p style="white-space:pre-line;line-height:1.5">' + html.escape(outro) + '</p></main></body></html>')
     message.add_alternative(body, subtype='html')
     return message
 
