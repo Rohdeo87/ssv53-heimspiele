@@ -22,6 +22,14 @@ def az(*args, timeout=180):
         # Provider error codes only, never raw CLI output or credential values.
         found=re.search(r'ErrorCode[:=]\s*([A-Za-z0-9_.-]+)',p.stderr) or re.search(r'ERROR:\s*\(([A-Za-z0-9_.-]+)\)',p.stderr)
         code=found.group(1) if found else 'UNCLASSIFIED'
+        if args[:3]==('storage','blob','list') and 'login' in args:
+            # This read-only OIDC command accepts no secret arguments. Redact
+            # provider URLs, JWTs, identifiers and credential fields nonetheless.
+            detail=re.sub(r'https?://\S+','[URL]',p.stderr)
+            detail=re.sub(r'eyJ[A-Za-z0-9_.-]+','[TOKEN]',detail)
+            detail=re.sub(r'[0-9a-fA-F]{8}-[0-9a-fA-F-]{27,}','[ID]',detail)
+            detail=re.sub(r'(?i)((?:password|token|secret|AccountKey|SharedAccessSignature)\s*[:=]\s*)[^\s;]+',r'\1[REDACTED]',detail)
+            print('Deployment-container read diagnostic: '+detail[:1800])
         raise RuntimeError('Azure CLI operation failed: '+args[0]+' code='+code)
     return json.loads(p.stdout) if p.stdout.strip() else None
 
