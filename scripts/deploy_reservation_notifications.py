@@ -3,7 +3,8 @@
 Run under the repository's Azure OIDC deployment identity. No credentials or raw
 provider responses are printed. Existing production source is preserved.
 """
-import ast,hashlib,json,os,subprocess,time
+import ast,hashlib,json,os,subprocess,time,zipfile
+from urllib.parse import urlparse
 from datetime import datetime,timezone
 from pathlib import Path
 import requests
@@ -15,8 +16,8 @@ ROOT=Path(__file__).resolve().parents[1]
 MARKER='# SSV53 reservation notifications registration'
 
 
-def az(*args):
-    p=subprocess.run(['az',*args,'--output','json'],capture_output=True,text=True,timeout=180)
+def az(*args, timeout=180):
+    p=subprocess.run(['az',*args,'--output','json'],capture_output=True,text=True,timeout=timeout)
     if p.returncode:raise RuntimeError('Azure CLI operation failed: '+args[0])
     return json.loads(p.stdout) if p.stdout.strip() else None
 
@@ -32,8 +33,29 @@ def main():
         r=session.put(SCM+'/api/vfs/site/wwwroot/'+name,data=body,headers={'If-Match':etag,'Content-Type':'application/octet-stream'},timeout=90,allow_redirects=False)
         if r.status_code not in (200,201,204):raise RuntimeError('Scoped source write failed: '+name+' HTTP '+str(r.status_code))
         return r.headers.get('ETag','*')
-    original,etag=read('function_app.py')
-    active_mail,_=read('order_mail.py')
+    package = None
+    try:
+        original,etag=read('function_app.py')
+        active_mail,_=read('order_mail.py')
+    except RuntimeError as error:
+        if 'HTTP 404' not in str(error): raise
+        # Flex Consumption exposes deployment storage, not Kudu VFS.
+        site=az('functionapp','show','--resource-group',RG,'--name',APP)
+        storage=site.get('functionAppConfig',{}).get('deployment',{}).get('storage',{})
+        parsed=urlparse(storage.get('value',''))
+        if not parsed.hostname or not parsed.hostname.endswith('.blob.core.windows.net'):
+            raise RuntimeError('Deployment package location unavailable')
+        account=parsed.hostname.split('.')[0];container=parsed.path.strip('/')
+        blobs=az('storage','blob','list','--account-name',account,'--container-name',container,'--auth-mode','login')
+        candidates=[b['name'] for b in blobs if b['name'].endswith('.zip')]
+        name='released-package.zip' if 'released-package.zip' in candidates else candidates[0] if len(candidates)==1 else None
+        if not name: raise RuntimeError('Active package cannot be identified uniquely')
+        package=Path('/tmp/ssv53-active-package.zip')
+        az('storage','blob','download','--account-name',account,'--container-name',container,'--name',name,'--auth-mode','login','--file',str(package),'--overwrite',timeout=300)
+        with zipfile.ZipFile(package) as archive:
+            original=archive.read('function_app.py');active_mail=archive.read('order_mail.py')
+        etag=None
+        print(json.dumps({'active_package_read':True,'source':'flex-deployment-storage'}))
     names={n.name for n in ast.parse(active_mail).body if isinstance(n,(ast.FunctionDef,ast.ClassDef))}
     required={'OrderMailSettings','OrderMailStore','_validate_ready_request','_plain_order_details','_product_rows_html','_open_authenticated_smtp'}
     if not required<=names:raise RuntimeError('Active mail service does not match required interface')
@@ -42,8 +64,25 @@ def main():
     registration='\n\n'+MARKER+'\nfrom reservation_notifications import notification_blueprint\napp.register_functions(notification_blueprint)\n'
     updated=original if MARKER.encode() in original else original+registration.encode()
     ast.parse(updated)
-    write('reservation_notifications.py',module,'*')
-    new_etag=write('function_app.py',updated,etag)
+    patched_package=None
+    if package:
+        patched_package=Path('/tmp/ssv53-reservation-notifications.zip')
+        replacements={'function_app.py':updated,'reservation_notifications.py':module}
+        with zipfile.ZipFile(package) as before, zipfile.ZipFile(patched_package,'w',zipfile.ZIP_DEFLATED) as after:
+            for info in before.infolist():
+                if info.filename not in replacements:
+                    after.writestr(info,before.read(info.filename))
+            for name,content in replacements.items():after.writestr(name,content)
+        # Assert byte-for-byte preservation of every unrelated package entry.
+        with zipfile.ZipFile(package) as before, zipfile.ZipFile(patched_package) as after:
+            for name in before.namelist():
+                if name not in replacements and before.read(name)!=after.read(name):
+                    raise RuntimeError('Unrelated production file changed')
+        az('functionapp','config','appsettings','set','--resource-group',RG,'--name',APP,'--settings','SSV53_RESERVATION_NOTIFICATIONS_ENABLED=false')
+        az('functionapp','deployment','source','config-zip','--resource-group',RG,'--name',APP,'--src',str(patched_package),'--build-remote','false','--timeout','900',timeout=960)
+    else:
+        write('reservation_notifications.py',module,'*')
+        write('function_app.py',updated,etag)
     try:
         # Config values are fixed non-secret feature settings only; pickup setting is unchanged.
         # Install with sending disabled, then verify SMTP using the existing no-send check.
@@ -78,10 +117,13 @@ def main():
     except Exception:
         # Disable first; do not undo any unrelated concurrent deployment.
         az('functionapp','config','appsettings','set','--resource-group',RG,'--name',APP,'--settings','SSV53_RESERVATION_NOTIFICATIONS_ENABLED=false')
-        current,current_etag=read('function_app.py')
-        if current==updated:
-            write('function_app.py',original,current_etag)
-            az('functionapp','restart','--resource-group',RG,'--name',APP)
+        if package:
+            az('functionapp','deployment','source','config-zip','--resource-group',RG,'--name',APP,'--src',str(package),'--build-remote','false','--timeout','900',timeout=960)
+        else:
+            current,current_etag=read('function_app.py')
+            if current==updated:
+                write('function_app.py',original,current_etag)
+                az('functionapp','restart','--resource-group',RG,'--name',APP)
         raise
 
 if __name__=='__main__':
