@@ -1,62 +1,60 @@
-# Noch erforderliche Azure-Freigabe
+# Aktivierungsstand: T-Shirt-Vormerkungen
 
-Stand: 01.11.2026. Die beiden automatischen Benachrichtigungen sind implementiert
-und isoliert getestet, aber noch nicht produktiv aktiviert. Auch die vorbereiteten
-Appack-Texte und die neue Versandanzeige sind noch nicht veröffentlicht.
+Stand: **02.11.2026, 15:20 Uhr Europe/Berlin**.
 
-## Blockade
+## Automatischer Mailversand ist live
 
-Der bestehende GitHub-Bereitstellungszugang darf das aktive Azure-Paket nicht lesen.
-Azure hat auch die Vergabe eines auf den Paketcontainer beschränkten Leserechts mit
-`AuthorizationFailed` abgelehnt. Es wurde kein neues Zugriffsrecht angelegt.
-Die Bereitstellung hat vor Änderungen an produktivem Code oder Einstellungen gestoppt.
+Aktiviert am 02.11.2026 um **15:19:14 Uhr Europe/Berlin**
+(`2026-11-02T14:19:14.892621+00:00`). Neue gespeicherte Vormerkungen erhalten:
 
-Erforderlich ist **Storage Blob Data Reader** für genau diesen Paketcontainer,
-zugewiesen an die vorhandene Bereitstellungsidentität:
+- eine Eingangsbestätigung an die in der Vormerkung gespeicherte Kundenadresse;
+- eine getrennte Meldung an **info@ssv53.de**, mit Artikeln und Verwaltungslink.
 
-- Objekt-ID: `ddd70731-d7e9-4674-83f9-a92270a9c28d`
-- Storagekonto: `ssv53platzpflegeprodq7kb`
-- Container: `app-package-q7kbw54s`
-- Ressourcengruppe: `rg-ssv53-platzpflege-prod`
+Der Timer prüft minütlich. Die vorhandene Abhol-Mail bleibt eine getrennte
+Verwaltungsaktion; ihr Code und ihre Aktivierung wurden nicht geändert.
 
-Ein Azure-Administrator mit Berechtigung zur Rollenzuweisung kann in Azure Cloud
-Shell (Bash) folgenden Befehl ausführen. Er enthält keine Zugangsdaten und erteilt
-nur Lesezugriff auf den genannten Paketcontainer:
+**Beide bisherigen Vormerkungen werden nicht nachträglich angeschrieben.**
+Die Statusroute wurde für beide live geprüft: `enabled=true`, `applicable=false`.
 
-```bash
-az role assignment create \
-  --assignee-object-id ddd70731-d7e9-4674-83f9-a92270a9c28d \
-  --assignee-principal-type ServicePrincipal \
-  --role "Storage Blob Data Reader" \
-  --scope "/subscriptions/e0ebcbdf-04e4-4096-8355-bae1164563da/resourceGroups/rg-ssv53-platzpflege-prod/providers/Microsoft.Storage/storageAccounts/ssv53platzpflegeprodq7kb/blobServices/default/containers/app-package-q7kbw54s"
-```
+Erfolgreiche Veröffentlichung:
+https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/41460651610
 
-Die Diagnoseidentität dieser Chat-Umgebung benötigt diese Rolle nicht und wird
-nicht geändert. Auch ein privates SMTP-Passwort wird hierfür nicht benötigt.
+Maschinenlesbarer Nachweis: [LIVE-NACHWEIS-2026-11-02.json](LIVE-NACHWEIS-2026-11-02.json).
 
-## Danach noch auszuführen
+## Geprüft
 
-1. Bereitstellung auf `feature/azure-mower-migration` erneut starten:
-   Workflow `SSV53_Order_Mail_GoLive_V1.yml`, `confirmation=SSV53-RESERVATION-NOTIFICATIONS`,
-   `appack_page_installed=SERVER-FIRST`.
-2. Erfolgreichen SMTP-Check ohne Mailversand und Ausschluss alter Vormerkungen prüfen.
-   Erst danach aktiviert der Helfer die neuen Benachrichtigungen mit aktuellem Stichtag.
-3. In Appack `ui/shop/shop-confirmation.patch` auf `Shop.tpl` anwenden und
-   `ui/shop/reservation-status.js` als zusätzliches Script am Ende von
+- 43 gezielte Python-Tests und 18 Untertests erfolgreich, einschließlich
+  Empfänger, Teilfehler, Doppelversand, Altvorgänge und Erhalt fremder Einstellungen.
+- Produktiver SMTP-Check mit Authentifizierung und NOOP erfolgreich;
+  keine Testmail und keine Testvormerkung erzeugt.
+- Neue Statusroute und Timer im laufenden Azure-Dienst registriert.
+- Automatischer, aktivierter Timerlauf am 02.11.2026 um 15:20 Uhr nachgewiesen:
+  keine Scan-, Datensatz- oder Versandfehler; keine E-Mails für alte Vorgänge.
+- Alle nicht betroffenen Paketdateien bytegleich erhalten; `order_mail.py` unverändert.
+- Die vom Nutzer um 14:52 Uhr vergebene Rolle „Storage Blob Data Reader“ funktioniert.
+  Die reine Diagnoseidentität wurde nicht verändert.
+
+Der Bereitstellungshelfer verwendet die Flex-Site-APIs, ermittelt versionierte
+Pakete über die aktive Bereitstellung und setzt für die zwei ergänzten/geänderten
+Quelldateien lesbare Linux-Dateirechte. Frühere Fehlversuche wurden vor Aktivierung
+gestoppt beziehungsweise auf das vorherige Paket zurückgerollt.
+
+## Appack-Anzeigen noch offen
+
+Der serverseitige Versand funktioniert unabhängig von diesen Oberflächenänderungen.
+Für ihre Veröffentlichung ist hier kein authentifizierter Appack-CMS-Zugang
+konfiguriert. Der ausgelieferte Verwaltungsquelltext wurde lesend geprüft und
+enthält die neue Versandanzeige noch nicht.
+
+1. In `Shop.tpl` die einzelne Textänderung aus
+   [shop-confirmation.patch](shop-confirmation.patch) übernehmen.
+2. [reservation-status.js](reservation-status.js) in einem zusätzlichen
+   `<script>…</script>`-Block nach dem bestehenden Verwaltungsscript in
    `Bestellverwaltung.tpl` einfügen. Vorhandenen Inhalt und Zugangskonfiguration erhalten.
-4. Live prüfen, dass Besteller- und Geschäftsstellenstatus getrennt erscheinen.
+3. Speichern/veröffentlichen und die getrennte Anzeige für Besteller und
+   Geschäftsstelle prüfen. „Versandstatus aktualisieren“ löst nur eine Leseabfrage aus.
 
-## Bereits geprüft
-
-- 30 Python-Tests und 14 Untertests erfolgreich; simuliertes SMTP, keine echten Mails.
-- Beide bestehenden Appack-Vormerkungen passen zum serverseitigen Datenformat.
-- Getrennte Statusanzeigen, Teilfehler, Aktualisierung nur per GET und erneutes
-  Rendern der Bestellverwaltung im Browsertest erfolgreich.
-- Beide HTML-Mailvorlagen bei 320 px ohne horizontalen Überlauf geprüft.
-- Produktiver SMTP-Check: Anmeldung erfolgreich; vorhandene Abholmails aktiviert.
-  Dieser Check nutzt nur Authentifizierung und NOOP, ohne eine Mail zu versenden.
-- Neuer Live-Endpunkt liefert noch HTTP 404: nicht bereitgestellt.
-- Appack-Verwaltungsquelltext unverändert; keine vorhandene Vormerkung angeschrieben.
-
-Nachweis der Azure-Blockade:
-https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/41349397316
+Es wurde keine neue reale Bestellung zur Versandprobe aufgegeben. `sent` bezeichnet
+weiterhin die Annahme durch SMTP; der tatsächliche Postfacheingang ist damit nicht
+belegt. Einzelheiten zu Wiederholungen und unklaren SMTP-Ergebnissen stehen in
+[README.md](README.md).

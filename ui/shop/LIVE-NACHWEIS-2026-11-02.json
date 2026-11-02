@@ -1,0 +1,28 @@
+{
+  "activated_at_utc": "2026-11-02T14:19:14.892621+00:00",
+  "activated_at_berlin": "2026-11-02T15:19:14.892621+01:00",
+  "workflow_run": "https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/41460651610",
+  "deployed_source_commit": "09cfd64",
+  "customer_confirmation_enabled": true,
+  "office_notification_recipient": "info@ssv53.de",
+  "smtp_check_without_sending_mail": true,
+  "pre_activation_reservations_checked": 2,
+  "all_pre_activation_reservations_excluded": true,
+  "automatic_scan_evidence": {
+    "latest_utc": "2026-11-02T14:20:00.2869001Z",
+    "enabled_scans": 1,
+    "scan_failures": 0,
+    "record_failures": 0,
+    "accepted_emails": 0,
+    "mail_failures": 0
+  },
+  "tests": {
+    "passed": 43,
+    "subtests_passed": 18
+  },
+  "preserved_order_mail_sha256": "2cbcea6f772098af828c5267aefb1a62e650f9cf1dba68d7b3d0a242a7f5d0a7",
+  "appack_status_display_published": false,
+  "appack_confirmation_text_published": false,
+  "appack_publication_blocker": "No authenticated Appack CMS access configured in this environment.",
+  "mail_delivery_limit": "SMTP authentication and automatic scan verified; no real test reservation or test email created."
+}
