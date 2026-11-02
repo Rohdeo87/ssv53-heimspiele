@@ -96,3 +96,32 @@ class FlexPublishTests(TestCase):
             with self.assertRaisesRegex(RuntimeError, 'HTTP 409'):
                 deploy.deploy_flex(session, package)
         session.get.assert_not_called()
+
+
+class ExistingMailKeyTests(TestCase):
+    def test_indexing_delay_is_retried_without_creating_a_new_key(self):
+        session = Mock()
+        session.post.side_effect = [response(404), response(503),
+                                   response(body={'appack-order-admin': 'synthetic-key'})]
+        with patch.object(deploy.time, 'sleep'), patch('builtins.print') as output:
+            self.assertEqual(deploy.existing_mail_key(session, 'https://management.azure.com/site'),
+                             'synthetic-key')
+        self.assertEqual(session.post.call_count, 3)
+        output.assert_not_called()
+        for call in session.post.call_args_list:
+            self.assertIn('/functions/ssv53_order_mail/listkeys?', call.args[0])
+            self.assertFalse(call.kwargs['allow_redirects'])
+
+    def test_missing_credential_fails_before_deployment_instead_of_creating_one(self):
+        session = Mock()
+        session.post.return_value = response(404)
+        with patch.object(deploy.time, 'sleep'), self.assertRaises(RuntimeError):
+            deploy.existing_mail_key(session, 'https://management.azure.com/site')
+        self.assertEqual(session.post.call_count, 24)
+
+    def test_authorization_error_is_not_retried(self):
+        session = Mock()
+        session.post.return_value = response(403)
+        with self.assertRaisesRegex(RuntimeError, 'HTTP 403'):
+            deploy.existing_mail_key(session, 'https://management.azure.com/site')
+        self.assertEqual(session.post.call_count, 1)

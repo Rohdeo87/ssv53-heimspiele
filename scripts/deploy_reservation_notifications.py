@@ -53,6 +53,23 @@ def feature_settings(session, site_url, changes):
     raise RuntimeError('Reservation notification settings did not become effective')
 
 
+def existing_mail_key(session, site_url):
+    """Read the existing function key before restarting the app; never log it."""
+    for _ in range(24):
+        response=session.post(site_url+'/functions/ssv53_order_mail/listkeys?api-version='+API_VERSION,
+                              timeout=30,allow_redirects=False)
+        if response.status_code==200:
+            keys=response.json()
+            keys=keys.get('properties',keys)
+            key=keys.get('appack-order-admin') or keys.get('default')
+            if key:
+                return key
+        elif response.status_code not in (404,503):
+            raise RuntimeError('Existing mail function credential unavailable HTTP '+str(response.status_code))
+        time.sleep(5)
+    raise RuntimeError('Existing mail function credential did not become available')
+
+
 def deploy_flex(session, package):
     """Use the same OAuth publish API as Azure CLI, preserving built dependencies."""
     with package.open('rb') as source:
@@ -147,6 +164,10 @@ def main():
     names={n.name for n in ast.parse(active_mail).body if isinstance(n,(ast.FunctionDef,ast.ClassDef))}
     required={'OrderMailSettings','OrderMailStore','_validate_ready_request','_plain_order_details','_product_rows_html','_open_authenticated_smtp'}
     if not required<=names:raise RuntimeError('Active mail service does not match required interface')
+    # The ARM function-key endpoint is transiently absent while the host indexes
+    # functions after a restart. Obtain the unchanged credential before deployment.
+    key=existing_mail_key(session,site_url)
+    print(json.dumps({'existing_mail_credential_available':True}),flush=True)
     # Never replace the active application's order_mail.py or control code.
     module=(ROOT/'reservation_notifications.py').read_bytes();ast.parse(module)
     registration='\n\n'+MARKER+'\nfrom reservation_notifications import notification_blueprint\napp.register_functions(notification_blueprint)\n'
@@ -176,11 +197,8 @@ def main():
             write('reservation_notifications.py',module,'*')
             write('function_app.py',updated,etag)
         arm(session,site_url,'POST','/restart')
-        keys=arm(session,site_url,'POST','/functions/ssv53_order_mail/listkeys').json()
-        key=keys.get('appack-order-admin') or keys.get('default')
-        if not key:raise RuntimeError('Existing mail function credential unavailable')
         smtp_ok=False
-        for _ in range(12):
+        for _ in range(24):
             try:
                 r=requests.post('https://'+APP+'.azurewebsites.net/api/order-mail',headers={'x-functions-key':key},json={'action':'check'},timeout=45)
                 if r.status_code==200 and r.json().get('ok') is True:smtp_ok=True;break
