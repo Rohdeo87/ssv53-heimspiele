@@ -1,5 +1,7 @@
 """Offline checks for preserving the live Flex app during the mail rollout."""
 import importlib.util
+import stat
+import zipfile
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import TestCase
@@ -140,3 +142,29 @@ class ActivePackageTests(TestCase):
         with patch('builtins.print'), self.assertRaises(RuntimeError):
             deploy.active_package_name(session, [{'name': 'released-package.zip'},
                 {'name': 'new-version.zip'}])
+
+
+class PackagePermissionsTests(TestCase):
+    def test_worker_can_read_patched_sources_and_unrelated_files_are_preserved(self):
+        with TemporaryDirectory() as folder:
+            original = Path(folder) / 'original.zip'
+            patched = Path(folder) / 'patched.zip'
+            with zipfile.ZipFile(original, 'w') as archive:
+                archive.writestr('function_app.py', b'original-main')
+                archive.writestr('order_mail.py', b'existing-mail')
+                archive.writestr('mower/config.json', b'existing-device-configuration')
+                archive.writestr('.python_packages/dependency.py', b'existing-dependency')
+            replacements = {'function_app.py': b'original-main-plus-registration',
+                            'reservation_notifications.py': b'new-module'}
+            deploy.patch_package(original, patched, replacements)
+            with zipfile.ZipFile(original) as before, zipfile.ZipFile(patched) as after:
+                for name, content in replacements.items():
+                    self.assertEqual(after.read(name), content)
+                    mode = after.getinfo(name).external_attr >> 16
+                    self.assertTrue(stat.S_ISREG(mode))
+                    self.assertEqual(stat.S_IMODE(mode), 0o644)
+                for name in before.namelist():
+                    if name not in replacements:
+                        self.assertEqual(after.read(name), before.read(name))
+                        self.assertEqual(after.getinfo(name).external_attr,
+                                         before.getinfo(name).external_attr)

@@ -3,7 +3,7 @@
 Run under the repository's Azure OIDC deployment identity. No credentials or raw
 provider responses are printed. Existing production source is preserved.
 """
-import ast,base64,hashlib,json,os,re,subprocess,time,zipfile
+import ast,base64,hashlib,json,os,re,stat,subprocess,time,zipfile
 from urllib.parse import urlparse
 from datetime import datetime,timezone
 from pathlib import Path
@@ -121,6 +121,25 @@ def active_package_name(session, blobs):
     raise RuntimeError('Active package cannot be identified uniquely')
 
 
+def patch_package(package, output, replacements):
+    with zipfile.ZipFile(package) as before, zipfile.ZipFile(output,'w',zipfile.ZIP_DEFLATED) as after:
+        for info in before.infolist():
+            if info.filename not in replacements:
+                after.writestr(info,before.read(info.filename))
+        for name,content in replacements.items():
+            # writestr(name, ...) defaults to 0600. The Linux Functions worker
+            # needs to read these files from the deployment's mounted package.
+            info=zipfile.ZipInfo(name)
+            info.create_system=3
+            info.compress_type=zipfile.ZIP_DEFLATED
+            info.external_attr=(stat.S_IFREG|0o644)<<16
+            after.writestr(info,content)
+    with zipfile.ZipFile(package) as before, zipfile.ZipFile(output) as after:
+        for name in before.namelist():
+            if name not in replacements and before.read(name)!=after.read(name):
+                raise RuntimeError('Unrelated production file changed')
+
+
 def az(*args, timeout=180):
     p=subprocess.run(['az',*args,'--output','json'],capture_output=True,text=True,timeout=timeout)
     if p.returncode:
@@ -199,16 +218,7 @@ def main():
     if package:
         patched_package=Path('/tmp/ssv53-reservation-notifications.zip')
         replacements={'function_app.py':updated,'reservation_notifications.py':module}
-        with zipfile.ZipFile(package) as before, zipfile.ZipFile(patched_package,'w',zipfile.ZIP_DEFLATED) as after:
-            for info in before.infolist():
-                if info.filename not in replacements:
-                    after.writestr(info,before.read(info.filename))
-            for name,content in replacements.items():after.writestr(name,content)
-        # Assert byte-for-byte preservation of every unrelated package entry.
-        with zipfile.ZipFile(package) as before, zipfile.ZipFile(patched_package) as after:
-            for name in before.namelist():
-                if name not in replacements and before.read(name)!=after.read(name):
-                    raise RuntimeError('Unrelated production file changed')
+        patch_package(package,patched_package,replacements)
     try:
         # Config values are fixed non-secret feature settings only; pickup setting is unchanged.
         # Install with sending disabled, then verify SMTP using the existing no-send check.
