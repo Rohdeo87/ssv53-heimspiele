@@ -25,5 +25,7 @@
   "appack_confirmation_text_published": true,
   "mail_delivery_limit": "SMTP authentication and automatic scan verified; no real test reservation or test email created.",
   "appack_ui_verified_at_utc": "2026-11-02T15:17:23.825807+00:00",
-  "appack_ui_proof": "APPACK-LIVE-NACHWEIS-2026-11-02.json"
+  "appack_ui_proof": "APPACK-LIVE-NACHWEIS-2026-11-02.json",
+  "customer_mail_template_version": "2026-11-02-first-name-office",
+  "customer_mail_template_proof": "CUSTOMER-MAIL-TEMPLATES-2026-11-02.json"
 }

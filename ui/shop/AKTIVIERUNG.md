@@ -30,7 +30,8 @@ Maschinenlesbarer Nachweis: [LIVE-NACHWEIS-2026-11-02.json](LIVE-NACHWEIS-2026-1
 - Neue Statusroute und Timer im laufenden Azure-Dienst registriert.
 - Automatischer, aktivierter Timerlauf am 02.11.2026 um 15:20 Uhr nachgewiesen:
   keine Scan-, Datensatz- oder Versandfehler; keine E-Mails für alte Vorgänge.
-- Alle nicht betroffenen Paketdateien bytegleich erhalten; `order_mail.py` unverändert.
+- Bei der Erstaktivierung blieben alle nicht betroffenen Paketdateien bytegleich,
+  einschließlich `order_mail.py`. Die spätere Mailvorlagenänderung ist unten getrennt belegt.
 - Die vom Nutzer um 14:52 Uhr vergebene Rolle „Storage Blob Data Reader“ funktioniert.
   Die reine Diagnoseidentität wurde nicht verändert.
 
@@ -68,3 +69,31 @@ Es wurde keine neue reale Bestellung zur Versandprobe aufgegeben. `sent` bezeich
 weiterhin die Annahme durch SMTP; der tatsächliche Postfacheingang ist damit nicht
 belegt. Einzelheiten zu Wiederholungen und unklaren SMTP-Ergebnissen stehen in
 [README.md](README.md).
+
+## Gemeinsame Kundenmail-Vorlagen live aktualisiert
+
+Reservierungs- und Abholbestätigung verwenden denselben tablebasierten Aufbau
+mit Wappen, Statusfeld, Produktfotos und Gesamtsumme. Die Anrede berücksichtigt
+„Vorname Nachname“ und „Nachname, Vorname“. Der Hinweis zur Terminvereinbarung
+verweist über beschriftete Kontakticons auf die Geschäftsstelle; E-Mail-Adresse,
+Mobilnummer und WhatsApp wurden aus der bestehenden Geschäftsstellenseite
+übernommen. Die Icons sind als MIME-CID-PNG eingebettet, ohne Icon-Schrift
+oder neue externe Bildquelle. Die interne Meldung an die Geschäftsstelle behält
+den vollständigen Namen als Kontaktdatum.
+
+Der neue Bereitstellungsweg `SSV53-CUSTOMER-MAIL-TEMPLATES` /
+`PRESERVE-ACTIVATION` aktualisiert nur die beiden Mailmodule und drei Icons
+im aktiven Paket. Er prüft die bekannte Ausgangsversion, erhält alle anderen
+Paketdateien bytegleich und schreibt keine Anwendungseinstellungen oder
+Versandclaims. Die laufende neue Version und lesbaren PNG-Dateien wurden
+über den SMTP-Check ohne Mailversand bestätigt. Der ursprüngliche Stichtag
+und beide Mail-Schalter sind unverändert; eine historische Vormerkung bleibt
+auch nach der Aktualisierung vom Nachversand ausgeschlossen.
+
+56 gezielte Tests mit 35 Untertests bestanden. Browserprüfungen beider Vorlagen
+bei 320, 390 und 768 Pixeln zeigen keinen horizontalen Überlauf. Die Vorschauen
+verwenden ausschließlich synthetische Daten; keine Testmail oder Testvormerkung
+wurde erzeugt. Bereits versendete Mails werden nicht nachträglich ersetzt.
+
+[Veröffentlichung](https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/41475176836) ·
+[Nachweis](CUSTOMER-MAIL-TEMPLATES-2026-11-02.json).
