@@ -41,7 +41,7 @@ APP_BG = "#F2F4F6"
 APP_MUTED = "#718096"
 APP_BORDER = "#E3E8ED"
 APP_LOGO_URL = "https://cdn.appack.de/ssv53/images/Icon_Verein.png"
-MAIL_TEMPLATE_VERSION = "2026-11-02-first-name-office"
+MAIL_TEMPLATE_VERSION = "2026-11-02-contact-buttons"
 
 PRODUCT_IMAGES = {
     ("damen", "blau"): "https://cdn.appack.de/ssv53/images/Damen_blau.jpeg",
@@ -806,10 +806,6 @@ def _pickup_contacts_html() -> str:
     return (
         '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" '
         f'style="margin-top:10px;border-collapse:collapse;"><tr>{cells}</tr></table>'
-        '<div style="margin-top:9px;font-size:13px;line-height:1.6;word-break:break-word;">'
-        f'<a href="mailto:info@ssv53.de" style="color:{APP_BLUE};">info@ssv53.de</a><br>'
-        f'<a href="tel:+4915567740811" style="color:{APP_BLUE};">015567 740811</a>'
-        '</div>'
     )
 
 

@@ -22,8 +22,8 @@ from scripts.deploy_reservation_notifications import (
 from order_mail import MAIL_TEMPLATE_VERSION
 
 BASELINE_SHA256 = {
-    'order_mail.py': '2cbcea6f772098af828c5267aefb1a62e650f9cf1dba68d7b3d0a242a7f5d0a7',
-    'reservation_notifications.py': '8bfc9fcda97de69b735f28c49315b2f9c9c10ebab72a29c3b7bbb39ece507848',
+    'order_mail.py': 'a6f0f36854e4a80fd7c385d70bd04ec7c3d48666d639101c5b61bb3c8c6b7d48',
+    'reservation_notifications.py': '55b40c064d95ef37c2baf3e9c16f57fe9684edf81c9ee941c0b407c2ef243cac',
 }
 RELEASE_FILES = tuple(BASELINE_SHA256) + tuple(
     f'mail_assets/contact-{icon}.png' for icon in ('mail', 'whatsapp', 'phone'))
