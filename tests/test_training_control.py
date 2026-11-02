@@ -949,7 +949,19 @@ def test_admin_initialization_route_binding_and_function_count():
     import function_app
 
     functions = function_app.app.get_functions()
-    assert len(functions) == 16
+    expected_functions = {
+        "ssv53_mower_timer", "ssv53_irrigation_recover_failed",
+        "ssv53_occupancy", "ssv53_occupancy_admin",
+        "ssv53_occupancy_notification_timer", "ssv53_order_mail",
+        "ssv53_platzwart_enroll", "ssv53_platzwart_login",
+        "ssv53_platzwart_status", "ssv53_platzwart_action",
+        "ssv53_privacy_retention_timer", "ssv53_daily_safety_report_timer",
+        "ssv53_recover_unsent_start", "ssv53_trainer_occupancies",
+        "ssv53_training_cancellations", "ssv53_training_control_initialize",
+        "reservation_notification_timer", "reservation_notification_status",
+    }
+    assert len(functions) == len(expected_functions)
+    assert {item.get_function_name() for item in functions} == expected_functions
     route = next(
         item
         for item in functions
