@@ -1,0 +1,30 @@
+{
+  "shop": {
+    "template": "Shop.tpl",
+    "source_before_sha256": "f1dab86759f4ec77dd724759d18c25f5a2e2fde4e89d27699e967d4d59446fb8",
+    "source_after_sha256": "9bf1873eef444b7b5a3f0e9583465ebee54c30dee05ca037e14da15e2fe91a6f",
+    "cms_readback_verified": true,
+    "only_confirmation_text_changed": true,
+    "render_id": "6a820255a92f6390296fc6b6",
+    "render_delivery_verified": true
+  },
+  "admin": {
+    "template": "Bestellverwaltung.tpl",
+    "source_before_sha256": "48a34eeff21452ecc9aecb75011086b980e34e3bc2a2a740424c3a8360b4f3a7",
+    "source_after_sha256": "388c3b74fe5a0a5d6ca34c515a07041faba61801508d8769ee93650189795015",
+    "cms_readback_verified": true,
+    "original_content_byte_preserved": true,
+    "render_id": "6a8419f77b82ad5810e20858",
+    "live_order_cards": 2,
+    "live_status_boxes": 2,
+    "old_reservations_excluded": 2,
+    "refresh_method": "GET",
+    "refresh_http": 200,
+    "mail_endpoint_calls": 0,
+    "synthetic_distinct_channel_status_test": true,
+    "render_delivery_verified": true
+  },
+  "credentials_or_session_saved": false,
+  "new_reservations_created": false,
+  "verified_at_utc": "2026-11-02T15:17:23.825807+00:00"
+}

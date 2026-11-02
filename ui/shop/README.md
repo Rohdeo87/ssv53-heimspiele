@@ -1,7 +1,7 @@
 # T-Shirt-Vormerkungen: automatische Benachrichtigungen
 
 Produktiver Mailversand seit **02.11.2026, 15:19 Uhr Europe/Berlin** aktiv.
-Die Appack-Anzeigen sind noch nicht eingebaut. Prüfungen und verbleibende Schritte:
+Shop-Hinweis und Versandanzeige sind ebenfalls im Appack-CMS eingebaut und live geprüft. Nachweise:
 [AKTIVIERUNG.md](AKTIVIERUNG.md).
 
 `reservation_notifications.py` prüft minütlich die gespeicherten Vormerkungen

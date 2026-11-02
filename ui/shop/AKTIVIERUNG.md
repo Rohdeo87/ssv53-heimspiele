@@ -1,6 +1,6 @@
 # Aktivierungsstand: T-Shirt-Vormerkungen
 
-Stand: **02.11.2026, 15:20 Uhr Europe/Berlin**.
+Stand: **02.11.2026**. Serverversand und beide Appack-Ergänzungen sind live geprüft.
 
 ## Automatischer Mailversand ist live
 
@@ -39,20 +39,30 @@ Pakete über die aktive Bereitstellung und setzt für die zwei ergänzten/geänd
 Quelldateien lesbare Linux-Dateirechte. Frühere Fehlversuche wurden vor Aktivierung
 gestoppt beziehungsweise auf das vorherige Paket zurückgerollt.
 
-## Appack-Anzeigen noch offen
+## Appack-Anzeigen ebenfalls live
 
-Der serverseitige Versand funktioniert unabhängig von diesen Oberflächenänderungen.
-Für ihre Veröffentlichung ist hier kein authentifizierter Appack-CMS-Zugang
-konfiguriert. Der ausgelieferte Verwaltungsquelltext wurde lesend geprüft und
-enthält die neue Versandanzeige noch nicht.
+Beide Vorlagen wurden am 02.11.2026 über die bestätigte Appack-Anmeldung
+bearbeitet, gespeichert, nach vollständigem CMS-Neuladen zurückgelesen und am
+separaten Render-Endpunkt geprüft:
 
-1. In `Shop.tpl` die einzelne Textänderung aus
-   [shop-confirmation.patch](shop-confirmation.patch) übernehmen.
-2. [reservation-status.js](reservation-status.js) in einem zusätzlichen
-   `<script>…</script>`-Block nach dem bestehenden Verwaltungsscript in
-   `Bestellverwaltung.tpl` einfügen. Vorhandenen Inhalt und Zugangskonfiguration erhalten.
-3. Speichern/veröffentlichen und die getrennte Anzeige für Besteller und
-   Geschäftsstelle prüfen. „Versandstatus aktualisieren“ löst nur eine Leseabfrage aus.
+- `Shop.tpl`: Die einzelne Bestätigungszeile kündigt die Eingangsbestätigung
+  und die automatische Information der Geschäftsstelle an. Der sonstige
+  Quelltext bleibt unverändert.
+- `Bestellverwaltung.tpl`: Das zusätzliche Script aus
+  [reservation-status.js](reservation-status.js) zeigt die Versandstände für
+  Besteller und Geschäftsstelle getrennt. Der bestehende Quelltext einschließlich
+  Abholaktionen und Zugangskonfiguration bleibt bytegleich erhalten; nur die
+  neuen Scriptzeilen wurden vom CMS-Editor auf CRLF-Zeilenenden normalisiert.
+
+Liveprüfung mit beiden vorhandenen Vorgängen: zwei Bestellkarten, zwei
+Versandanzeigen und jeweils der Hinweis, dass kein automatischer Nachversand
+erfolgt. „Versandstatus aktualisieren“ erzeugt genau eine zusätzliche GET-Abfrage
+(HTTP 200); kein Aufruf des Mail-Endpunkts. Die getrennten Kanalzustände wurden
+zusätzlich in einer isolierten Browseransicht mit synthetischen Daten geprüft,
+ohne eine Vormerkung anzulegen oder eine Mail zu versenden.
+
+Nachweis mit Quelltext-Hashes, ohne Vorlageninhalt, Zugangsdaten oder Cookies:
+[APPACK-LIVE-NACHWEIS-2026-11-02.json](APPACK-LIVE-NACHWEIS-2026-11-02.json).
 
 Es wurde keine neue reale Bestellung zur Versandprobe aufgegeben. `sent` bezeichnet
 weiterhin die Annahme durch SMTP; der tatsächliche Postfacheingang ist damit nicht

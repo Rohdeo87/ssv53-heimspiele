@@ -21,8 +21,9 @@
     "subtests_passed": 18
   },
   "preserved_order_mail_sha256": "2cbcea6f772098af828c5267aefb1a62e650f9cf1dba68d7b3d0a242a7f5d0a7",
-  "appack_status_display_published": false,
-  "appack_confirmation_text_published": false,
-  "appack_publication_blocker": "No authenticated Appack CMS access configured in this environment.",
-  "mail_delivery_limit": "SMTP authentication and automatic scan verified; no real test reservation or test email created."
+  "appack_status_display_published": true,
+  "appack_confirmation_text_published": true,
+  "mail_delivery_limit": "SMTP authentication and automatic scan verified; no real test reservation or test email created.",
+  "appack_ui_verified_at_utc": "2026-11-02T15:17:23.825807+00:00",
+  "appack_ui_proof": "APPACK-LIVE-NACHWEIS-2026-11-02.json"
 }
