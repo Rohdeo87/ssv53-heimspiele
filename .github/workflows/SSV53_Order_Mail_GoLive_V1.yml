@@ -18,7 +18,7 @@ permissions:
 
 jobs:
   enable:
-    if: inputs.confirmation != 'SSV53-RESERVATION-NOTIFICATIONS'
+    if: inputs.confirmation == 'SSV53-ORDER-MAIL-GO-LIVE'
     name: Produktiven Abhol-Mailversand freigeben
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -169,3 +169,35 @@ jobs:
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
       - name: Nur Mailmodul und Registrierung im aktiven Stand ergänzen
         run: python scripts/deploy_reservation_notifications.py
+
+  customer_mail_templates:
+    if: inputs.confirmation == 'SSV53-CUSTOMER-MAIL-TEMPLATES'
+    name: Kundenmails mit gemeinsamem Layout und Geschäftsstelle aktualisieren
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: ssv53-reservation-notifications
+      cancel-in-progress: false
+    steps:
+      - name: Auftrag und Ziel prüfen
+        env:
+          REF_NAME: ${{ github.ref_name }}
+          APPACK_CONFIRMATION: ${{ inputs.appack_page_installed }}
+        run: |
+          test "$REF_NAME" = "feature/azure-mower-migration"
+          test "$APPACK_CONFIRMATION" = "PRESERVE-ACTIVATION"
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Mailvorlagen, Versandverhalten und Paketbestand testen
+        run: |
+          python -m pip install -r requirements-test.txt
+          python -m pytest -q tests/test_customer_mail_layout.py tests/test_customer_mail_deploy.py tests/test_reservation_notifications.py tests/test_reservation_notifications_deploy.py tests/test_order_mail.py tests/test_order_mail_details.py tests/test_azure_package.py tests/test_full_failsafe_package.py tests/test_full_mower_package.py tests/test_park_only_package.py
+      - uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_BOOTSTRAP_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Nur Mailrenderer und Icons im aktiven Paket ersetzen
+        run: python scripts/deploy_customer_mail_templates.py

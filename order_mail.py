@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
 from email.utils import formataddr
+from pathlib import Path
 from typing import Any, Mapping
 
 from azure.core import MatchConditions
@@ -40,6 +41,7 @@ APP_BG = "#F2F4F6"
 APP_MUTED = "#718096"
 APP_BORDER = "#E3E8ED"
 APP_LOGO_URL = "https://cdn.appack.de/ssv53/images/Icon_Verein.png"
+MAIL_TEMPLATE_VERSION = "2026-11-02-first-name-office"
 
 PRODUCT_IMAGES = {
     ("damen", "blau"): "https://cdn.appack.de/ssv53/images/Damen_blau.jpeg",
@@ -462,6 +464,8 @@ def check_smtp_connection(
         "mailEnabled": settings.enabled,
         "smtpHost": settings.smtp_host,
         "smtpPort": settings.smtp_port,
+        "mailTemplateVersion": MAIL_TEMPLATE_VERSION,
+        "mailTemplateAssetsReady": _mail_assets_ready(),
     }
 
 
@@ -701,7 +705,7 @@ def _plain_order_details(items: list[dict[str, Any]], total_cents: int | None) -
     return "\n".join(lines) + "\n"
 
 
-def _product_rows_html(items: list[dict[str, Any]]) -> str:
+def _product_rows_html(items: list[dict[str, Any]], *, compact: bool = False) -> str:
     rows: list[str] = []
     for item in items:
         safe_variant = html.escape(item["variant"])
@@ -722,6 +726,16 @@ def _product_rows_html(items: list[dict[str, Any]]) -> str:
                 f'text-align:center;line-height:84px;color:#718096;font-size:12px;">SSV53</div>'
             )
 
+        inline_total = (
+            '<div style="margin-top:8px;font-size:16px;font-weight:700;color:#111827;">'
+            + _euro(item['lineTotalCents']) + '</div>' if compact else ''
+        )
+        amount_cell = '' if compact else f'''
+                <td width="96" valign="middle" align="right"
+                    style="padding:14px 14px 12px 6px;font-size:16px;
+                           font-weight:700;color:#111827;white-space:nowrap;">
+                  {_euro(item['lineTotalCents'])}
+                </td>'''
         rows.append(
             f"""
             <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
@@ -741,12 +755,9 @@ def _product_rows_html(items: list[dict[str, Any]]) -> str:
                   <div style="margin-top:8px;font-size:13px;color:{APP_MUTED};">
                     {item['qty']} × {_euro(item['unitPriceCents'])}
                   </div>
+                  {inline_total}
                 </td>
-                <td width="96" valign="middle" align="right"
-                    style="padding:14px 14px 12px 6px;font-size:16px;
-                           font-weight:700;color:#111827;white-space:nowrap;">
-                  {_euro(item['lineTotalCents'])}
-                </td>
+                {amount_cell}
               </tr>
             </table>
             """
@@ -754,7 +765,55 @@ def _product_rows_html(items: list[dict[str, Any]]) -> str:
     return "".join(rows)
 
 
-def _build_ready_message(
+def _mail_assets_ready() -> bool:
+    try:
+        return all((Path(__file__).with_name("mail_assets") / f"contact-{icon}.png")
+                   .read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
+                   for icon in ("mail", "whatsapp", "phone"))
+    except OSError:
+        return False
+
+
+def _first_name(name: str) -> str:
+    """Support both Appack 'surname, given names' and 'given name surname'."""
+    cleaned = re.sub(r"\s+", " ", str(name or "")).strip()
+    if not cleaned or cleaned == "SSV53-Mitglied":
+        return ""
+    if "," in cleaned:
+        return cleaned.split(",", 1)[1].split(",", 1)[0].strip()
+    words = cleaned.split()
+    while words and words[0].casefold() in {"herr", "herrn", "frau", "dr.", "prof."}:
+        words.pop(0)
+    return words[0] if words else ""
+
+
+def _pickup_contacts_html() -> str:
+    # These public office channels are fixed; no recipient data enters the URLs.
+    links = (
+        ("mail", "E-Mail", "mailto:info@ssv53.de"),
+        ("whatsapp", "WhatsApp", "https://wa.me/4915567740811"),
+        ("phone", "Telefon", "tel:+4915567740811"),
+    )
+    cells = "".join(
+        f'<td width="33%" align="center" style="padding:4px 2px;">'
+        f'<a href="{url}" style="display:block;padding:8px 2px;color:{APP_BLUE};'
+        'font-size:13px;font-weight:700;text-decoration:none;">'
+        f'<img src="cid:ssv53-contact-{key}" width="32" height="32" alt="" '
+        'style="display:block;width:32px;height:32px;border:0;margin:0 auto 7px auto;">'
+        f'{label}</a></td>'
+        for key, label, url in links
+    )
+    return (
+        '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" '
+        f'style="margin-top:10px;border-collapse:collapse;"><tr>{cells}</tr></table>'
+        '<div style="margin-top:9px;font-size:13px;line-height:1.6;word-break:break-word;">'
+        f'<a href="mailto:info@ssv53.de" style="color:{APP_BLUE};">info@ssv53.de</a><br>'
+        f'<a href="tel:+4915567740811" style="color:{APP_BLUE};">015567 740811</a>'
+        '</div>'
+    )
+
+
+def _build_customer_message(
     *,
     settings: OrderMailSettings,
     order_id: str,
@@ -762,23 +821,44 @@ def _build_ready_message(
     name: str,
     items: list[dict[str, Any]],
     total_cents: int | None,
+    kind: str,
 ) -> EmailMessage:
-    subject = "Deine SSV53-Reservierung ist zur Ausgabe bereit"
+    if kind not in {"ready", "reservation"}:
+        raise ValueError("Unknown customer mail kind")
+    ready = kind == "ready"
+    subject = ("Deine SSV53-Reservierung ist zur Ausgabe bereit" if ready
+               else "Deine T-Shirt-Vormerkung beim SSV53")
+    heading = ("Deine Reservierung ist zur Ausgabe bereit" if ready
+               else "Deine T-Shirt-Vormerkung ist eingegangen")
+    badge = "AUSGABEBEREIT" if ready else "VORGEMERKT"
+    introduction = ("deine Reservierung ist ab sofort zur Ausgabe bereit." if ready else
+        "deine unverbindliche T-Shirt-Vormerkung wurde gespeichert. "
+        "Das ist deine Eingangsbestätigung, noch keine Abholbenachrichtigung. "
+        "Sobald dein Shirt zur Ausgabe bereit ist, erhältst du eine weitere E-Mail.")
+    pickup_notice = ("Bitte vereinbare für die Abholung einen Termin mit unserer Geschäftsstelle." if ready else
+        "Sobald dein Shirt zur Ausgabe bereit ist, kannst du mit unserer Geschäftsstelle "
+        "einen Termin zur Abholung vereinbaren.")
+    first_name = _first_name(name)
+    greeting = "Hallo" + (" " + first_name if first_name else "") + ","
 
     details_plain = _plain_order_details(items, total_cents)
     plain = (
-        f"Hallo {name},\n\n"
-        f"deine Reservierung {order_id} ist ab sofort zur Ausgabe bereit.\n"
+        f"{greeting}\n\n"
+        f"{introduction}\nReservierungsnummer: {order_id}\n"
         f"{details_plain}\n"
+        f"Abholung nach Terminvereinbarung\n{pickup_notice}\n"
+        "E-Mail: info@ssv53.de\n"
+        "WhatsApp: https://wa.me/4915567740811\n"
+        "Telefon: 015567 740811 (tel:+4915567740811)\n\n"
         "Den aktuellen Status deiner Reservierung findest du in der SSV53-App "
         "unter „Sonstiges → Meine Reservierungen“.\n\n"
         "Viele Grüße\n"
         "Schönwalder SV 1953 e.V.\n"
     )
 
-    safe_name = html.escape(name)
+    greeting_html = "Hallo" + (" <strong>" + html.escape(first_name) + "</strong>" if first_name else "") + ","
     safe_order_id = html.escape(order_id)
-    product_rows = _product_rows_html(items)
+    product_rows = _product_rows_html(items, compact=True)
 
     details_section = ""
     if items:
@@ -811,6 +891,8 @@ def _build_ready_message(
     html_body = f"""\
 <!doctype html>
 <html lang="de">
+  <!-- Contact icons: Font Awesome Free 6.7.2 by Fonticons, Inc., CC BY 4.0.
+       https://fontawesome.com/license/free -->
   <body style="margin:0;padding:0;background:{APP_BG};font-family:Arial,Helvetica,sans-serif;
                color:#111827;-webkit-text-size-adjust:100%;">
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
@@ -829,7 +911,7 @@ def _build_ready_message(
             <tr>
               <td align="center" style="padding:4px 24px 0 24px;">
                 <div style="font-size:25px;line-height:1.25;font-weight:800;color:#111111;">
-                  Deine Reservierung ist zur Ausgabe bereit
+                  {heading}
                 </div>
                 <div style="margin-top:8px;font-size:14px;line-height:1.5;color:#555555;">
                   Schönwalder SV 1953 e.V.
@@ -841,10 +923,10 @@ def _build_ready_message(
             <tr>
               <td style="padding:22px 24px 28px 24px;">
                 <div style="font-size:16px;line-height:1.55;color:#111827;">
-                  Hallo <strong>{safe_name}</strong>,
+                  {greeting_html}
                 </div>
                 <div style="margin-top:9px;font-size:15px;line-height:1.6;color:#374151;">
-                  deine Reservierung ist ab sofort zur Ausgabe bereit.
+                  {introduction}
                 </div>
 
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
@@ -859,16 +941,27 @@ def _build_ready_message(
                                   font-weight:800;color:{APP_DARK_BLUE};">
                         {safe_order_id}
                       </div>
-                    </td>
-                    <td align="right" valign="middle" style="padding:13px 15px;">
+                      <div style="margin-top:10px;">
                       <span style="display:inline-block;padding:7px 10px;border-radius:999px;
                                    background:{APP_BLUE};color:#FFFFFF;font-size:12px;
-                                   font-weight:800;">AUSGABEBEREIT</span>
+                                   font-weight:800;">{badge}</span>
+                      </div>
                     </td>
                   </tr>
                 </table>
 
                 {details_section}
+
+                <div style="margin-top:24px;padding:16px;border:1px solid {APP_BORDER};
+                            border-radius:14px;background:#F8FAFD;">
+                  <div style="font-size:16px;font-weight:800;color:{APP_DARK_BLUE};">
+                    Abholung nach Terminvereinbarung
+                  </div>
+                  <div style="margin-top:8px;font-size:14px;line-height:1.6;color:#374151;">
+                    {pickup_notice}
+                  </div>
+                  {_pickup_contacts_html()}
+                </div>
 
                 <div style="margin-top:22px;font-size:14px;line-height:1.6;color:#555555;">
                   Den aktuellen Status findest du jederzeit in der SSV53-App unter
@@ -901,7 +994,19 @@ def _build_ready_message(
     message["Reply-To"] = settings.from_address
     message.set_content(plain)
     message.add_alternative(html_body, subtype="html")
+    html_part = message.get_payload()[-1]
+    for icon in ("mail", "whatsapp", "phone"):
+        html_part.add_related(
+            (Path(__file__).with_name("mail_assets") / f"contact-{icon}.png").read_bytes(),
+            maintype="image", subtype="png", cid=f"<ssv53-contact-{icon}>",
+            disposition="inline", filename=f"contact-{icon}.png",
+        )
     return message
+
+
+def _build_ready_message(*, settings, order_id, recipient, name, items, total_cents) -> EmailMessage:
+    return _build_customer_message(settings=settings, order_id=order_id, recipient=recipient,
+        name=name, items=items, total_cents=total_cents, kind="ready")
 
 
 def send_order_ready_mail(

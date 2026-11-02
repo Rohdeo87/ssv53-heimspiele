@@ -23,6 +23,7 @@ from order_mail import (
     ORDER_ID_PATTERN, EMAIL_PATTERN, OrderMailError, OrderMailSettings, OrderMailStore,
     PARTITION_KEY, _validate_ready_request, _plain_order_details, _product_rows_html,
     _open_authenticated_smtp,
+    _build_customer_message,
 )
 import html
 
@@ -109,6 +110,10 @@ def claim_id(channel, order_id):
 
 
 def build_message(settings, data, channel, office):
+    if channel == 'customer':
+        return _build_customer_message(settings=settings, order_id=data['orderId'],
+            recipient=data['email'], name=data['name'], items=data['items'],
+            total_cents=data['totalCents'], kind='reservation')
     message = EmailMessage()
     internal = channel == 'office'
     message['Subject'] = ('Neue T-Shirt-Vormerkung ' + data['orderId'] if internal
