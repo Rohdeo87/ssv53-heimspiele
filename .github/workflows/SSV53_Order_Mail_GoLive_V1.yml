@@ -160,7 +160,7 @@ jobs:
       - name: Abhängigkeiten und isolierte Mailtests
         run: |
           python -m pip install -r requirements-test.txt
-          python -m pytest -q tests/test_reservation_notifications.py tests/test_order_mail.py tests/test_order_mail_details.py tests/test_azure_package.py tests/test_full_failsafe_package.py
+          python -m pytest -q tests/test_reservation_notifications.py tests/test_reservation_notifications_deploy.py tests/test_order_mail.py tests/test_order_mail_details.py tests/test_azure_package.py tests/test_full_failsafe_package.py
       - name: Mit vorhandener Azure-Deployment-Identität anmelden
         uses: azure/login@v3
         with:

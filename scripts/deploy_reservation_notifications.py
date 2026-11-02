@@ -14,6 +14,70 @@ RG='rg-ssv53-platzpflege-prod'
 SCM='https://'+APP+'.scm.azurewebsites.net'
 ROOT=Path(__file__).resolve().parents[1]
 MARKER='# SSV53 reservation notifications registration'
+API_VERSION='2024-04-01'
+FEATURE_SETTINGS={
+    'SSV53_RESERVATION_NOTIFICATIONS_ENABLED',
+    'SSV53_RESERVATION_NOTIFICATIONS_FROM_UTC',
+    'SSV53_RESERVATION_OFFICE_EMAIL',
+}
+
+
+def arm(session, site_url, method, path, **kwargs):
+    """Use the supported site API without CLI runtime/slot probes on Flex."""
+    response=session.request(method,site_url+path+'?api-version='+API_VERSION,
+                             timeout=90,allow_redirects=False,**kwargs)
+    if response.status_code not in (200,201,202,204):
+        # Responses may contain settings or keys: never include their body.
+        raise RuntimeError('Azure site API failed: '+method+' '+path+' HTTP '+str(response.status_code))
+    return response
+
+
+def feature_settings(session, site_url, changes):
+    if not changes or not set(changes)<=FEATURE_SETTINGS:
+        raise ValueError('Only reservation notification settings may be changed')
+    response=arm(session,site_url,'POST','/config/appsettings/list')
+    values=response.json().get('properties')
+    if not isinstance(values,dict):
+        raise RuntimeError('Application settings are unavailable')
+    # ARM replaces the settings dictionary. Preserve every other value in memory;
+    # do not save or print credentials, SMTP settings or device configuration.
+    updated=dict(values);updated.update(changes)
+    headers={'If-Match':response.headers['ETag']} if response.headers.get('ETag') else {}
+    arm(session,site_url,'PUT','/config/appsettings',json={'properties':updated},headers=headers)
+    for _ in range(12):
+        actual=arm(session,site_url,'POST','/config/appsettings/list').json().get('properties',{})
+        if all(actual.get(k)==v for k,v in changes.items()):
+            print(json.dumps({'feature_settings_verified':sorted(changes)}),flush=True)
+            return
+        time.sleep(5)
+    raise RuntimeError('Reservation notification settings did not become effective')
+
+
+def deploy_flex(session, package):
+    """Use the same OAuth publish API as Azure CLI, preserving built dependencies."""
+    with package.open('rb') as source:
+        response=session.post(SCM+'/api/publish',params={'RemoteBuild':'false','Deployer':'ssv53-reservation-notifications'},
+            data=source,headers={'Content-Type':'application/zip','Cache-Control':'no-cache'},
+            timeout=180,allow_redirects=False)
+    if response.status_code!=202:
+        raise RuntimeError('Flex package publish failed HTTP '+str(response.status_code))
+    print(json.dumps({'flex_package_accepted':True}),flush=True)
+    # Flex uses status 4 for successful publication. Do not treat an HTTP 202 or
+    # a temporarily missing status endpoint as evidence of a healthy rollout.
+    for _ in range(150):
+        result=session.get(SCM+'/api/deployments/latest',timeout=30,allow_redirects=False)
+        if result.status_code in (200,202):
+            try:status=result.json().get('status')
+            except ValueError:status=None
+            if status==4:
+                print(json.dumps({'flex_package_published':True}),flush=True)
+                return
+            if status in (-1,3,5,6):
+                raise RuntimeError('Flex package deployment failed status '+str(status))
+        elif result.status_code!=404:
+            raise RuntimeError('Flex deployment status unavailable HTTP '+str(result.status_code))
+        time.sleep(5)
+    raise RuntimeError('Flex deployment did not report successful publication')
 
 
 def az(*args, timeout=180):
@@ -30,6 +94,9 @@ def az(*args, timeout=180):
 
 def main():
     token=az('account','get-access-token','--resource','https://management.azure.com')['accessToken']
+    subscription=az('account','show')['id']
+    site_url=('https://management.azure.com/subscriptions/'+subscription+
+              '/resourceGroups/'+RG+'/providers/Microsoft.Web/sites/'+APP)
     session=requests.Session();session.headers.update(Authorization='Bearer '+token)
     def read(name):
         r=session.get(SCM+'/api/vfs/site/wwwroot/'+name,timeout=60,allow_redirects=False)
@@ -47,10 +114,7 @@ def main():
         if 'HTTP 404' not in str(error): raise
         # Flex Consumption exposes deployment storage, not Kudu VFS.
         # CLI's Site model drops functionAppConfig in some installed versions.
-        subscription=az('account','show')['id']
-        site=az('rest','--method','get','--url',
-                'https://management.azure.com/subscriptions/'+subscription+
-                '/resourceGroups/'+RG+'/providers/Microsoft.Web/sites/'+APP+'?api-version=2024-04-01')['properties']
+        site=arm(session,site_url,'GET','').json()['properties']
         storage=site.get('functionAppConfig',{}).get('deployment',{}).get('storage',{})
         parsed=urlparse(storage.get('value',''))
         if not parsed.hostname or not parsed.hostname.endswith('.blob.core.windows.net'):
@@ -79,7 +143,7 @@ def main():
         with zipfile.ZipFile(package) as archive:
             original=archive.read('function_app.py');active_mail=archive.read('order_mail.py')
         etag=None
-        print(json.dumps({'active_package_read':True,'source':'flex-deployment-storage'}))
+        print(json.dumps({'active_package_read':True,'source':'flex-deployment-storage'}),flush=True)
     names={n.name for n in ast.parse(active_mail).body if isinstance(n,(ast.FunctionDef,ast.ClassDef))}
     required={'OrderMailSettings','OrderMailStore','_validate_ready_request','_plain_order_details','_product_rows_html','_open_authenticated_smtp'}
     if not required<=names:raise RuntimeError('Active mail service does not match required interface')
@@ -102,18 +166,17 @@ def main():
             for name in before.namelist():
                 if name not in replacements and before.read(name)!=after.read(name):
                     raise RuntimeError('Unrelated production file changed')
-        az('functionapp','config','appsettings','set','--resource-group',RG,'--name',APP,'--settings','SSV53_RESERVATION_NOTIFICATIONS_ENABLED=false')
-        az('functionapp','deployment','source','config-zip','--resource-group',RG,'--name',APP,'--src',str(patched_package),'--build-remote','false','--timeout','900',timeout=960)
-    else:
-        write('reservation_notifications.py',module,'*')
-        write('function_app.py',updated,etag)
     try:
         # Config values are fixed non-secret feature settings only; pickup setting is unchanged.
         # Install with sending disabled, then verify SMTP using the existing no-send check.
-        az('functionapp','config','appsettings','set','--resource-group',RG,'--name',APP,'--settings',
-           'SSV53_RESERVATION_NOTIFICATIONS_ENABLED=false')
-        az('functionapp','restart','--resource-group',RG,'--name',APP)
-        keys=az('functionapp','function','keys','list','--resource-group',RG,'--name',APP,'--function-name','ssv53_order_mail')
+        feature_settings(session,site_url,{'SSV53_RESERVATION_NOTIFICATIONS_ENABLED':'false'})
+        if patched_package:
+            deploy_flex(session,patched_package)
+        else:
+            write('reservation_notifications.py',module,'*')
+            write('function_app.py',updated,etag)
+        arm(session,site_url,'POST','/restart')
+        keys=arm(session,site_url,'POST','/functions/ssv53_order_mail/listkeys').json()
         key=keys.get('appack-order-admin') or keys.get('default')
         if not key:raise RuntimeError('Existing mail function credential unavailable')
         smtp_ok=False
@@ -125,10 +188,10 @@ def main():
             time.sleep(5)
         if not smtp_ok:raise RuntimeError('SMTP no-send verification failed; notifications remain disabled')
         cutoff=datetime.now(timezone.utc).isoformat()
-        az('functionapp','config','appsettings','set','--resource-group',RG,'--name',APP,'--settings',
-           'SSV53_RESERVATION_OFFICE_EMAIL=info@ssv53.de',
-           'SSV53_RESERVATION_NOTIFICATIONS_FROM_UTC='+cutoff,
-           'SSV53_RESERVATION_NOTIFICATIONS_ENABLED=true')
+        feature_settings(session,site_url,{
+           'SSV53_RESERVATION_OFFICE_EMAIL':'info@ssv53.de',
+           'SSV53_RESERVATION_NOTIFICATIONS_FROM_UTC':cutoff,
+           'SSV53_RESERVATION_NOTIFICATIONS_ENABLED':'true'})
         verified=False
         for _ in range(18):
             try:
@@ -140,14 +203,14 @@ def main():
         print(json.dumps({'deployed':True,'smtp_check_without_mail':True,'old_order_excluded':True,'enabled_from_utc':cutoff,'office':'info@ssv53.de','preserved_order_mail_sha256':hashlib.sha256(active_mail).hexdigest(),'changed_source_files':['reservation_notifications.py','function_app.py (registration only)']}))
     except Exception:
         # Disable first; do not undo any unrelated concurrent deployment.
-        az('functionapp','config','appsettings','set','--resource-group',RG,'--name',APP,'--settings','SSV53_RESERVATION_NOTIFICATIONS_ENABLED=false')
+        feature_settings(session,site_url,{'SSV53_RESERVATION_NOTIFICATIONS_ENABLED':'false'})
         if package:
-            az('functionapp','deployment','source','config-zip','--resource-group',RG,'--name',APP,'--src',str(package),'--build-remote','false','--timeout','900',timeout=960)
+            deploy_flex(session,package)
         else:
             current,current_etag=read('function_app.py')
             if current==updated:
                 write('function_app.py',original,current_etag)
-                az('functionapp','restart','--resource-group',RG,'--name',APP)
+                arm(session,site_url,'POST','/restart')
         raise
 
 if __name__=='__main__':
