@@ -7,7 +7,9 @@ Shop-Hinweis und Versandanzeige sind ebenfalls im Appack-CMS eingebaut und live 
 Reservierungs- und Abholbestätigung verwenden seit der Vorlagenaktualisierung am
 02.11.2026 denselben Aufbau mit Vornamen-Anrede und Geschäftsstelle-Kontaktbereich
 für die Terminvereinbarung. E-Mail-, WhatsApp- und Telefonicons sind als Inline-PNGs
-eingebettet; Klartext und beschriftete Links funktionieren auch ohne Bildanzeige.
+eingebettet. Der HTML-Kontaktbereich zeigt ausschließlich die drei beschrifteten
+Buttons, ohne erneut ausgeschriebene E-Mail-Adresse oder Telefonnummer.
+Die Klartextalternative bleibt auch ohne HTML bedienbar.
 [Release-Nachweis](CUSTOMER-MAIL-TEMPLATES-2026-11-02.json).
 
 `reservation_notifications.py` prüft minütlich die gespeicherten Vormerkungen

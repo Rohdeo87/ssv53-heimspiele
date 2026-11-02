@@ -97,3 +97,7 @@ wurde erzeugt. Bereits versendete Mails werden nicht nachträglich ersetzt.
 
 [Veröffentlichung](https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/41475176836) ·
 [Nachweis](CUSTOMER-MAIL-TEMPLATES-2026-11-02.json).
+
+Feinanpassung am 02.11.2026 ebenfalls live: Der Kontaktbereich beider HTML-Mails
+zeigt nur die drei klickbaren Buttons, ohne zusätzliche ausgeschriebene Adresse
+oder Telefonnummer. [Release-Nachweis](CUSTOMER-MAIL-BUTTONS-2026-11-02.json).

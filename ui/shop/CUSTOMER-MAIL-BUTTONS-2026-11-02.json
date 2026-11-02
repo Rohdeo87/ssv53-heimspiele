@@ -1,0 +1,29 @@
+{
+  "deployed": true,
+  "template_version": "2026-11-02-contact-buttons",
+  "smtp_check_without_mail": true,
+  "template_icons_readable_in_runtime": true,
+  "activation_cutoff_preserved": true,
+  "mail_switches_preserved": true,
+  "delivery_claims_untouched": true,
+  "function_app_sha256_preserved": "1912376fcb5c71f31cda36dc786683794ef03b75658f5eceaf331460e4f3c9b6",
+  "changed_files": [
+    "order_mail.py",
+    "reservation_notifications.py",
+    "mail_assets/contact-mail.png",
+    "mail_assets/contact-whatsapp.png",
+    "mail_assets/contact-phone.png"
+  ],
+  "workflow_run": "https://github.com/Rohdeo87/ssv53-heimspiele/actions/runs/41477060453",
+  "source_commit": "cc193c6",
+  "verified_at_utc": "2026-11-02T16:02:02.744594+00:00",
+  "html_contact_buttons": [
+    "E-Mail",
+    "WhatsApp",
+    "Telefon"
+  ],
+  "repeated_address_or_phone_in_html": false,
+  "tests_passed": 56,
+  "subtests_passed": 35,
+  "test_mail_sent": false
+}
