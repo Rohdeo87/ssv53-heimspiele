@@ -97,6 +97,30 @@ def deploy_flex(session, package):
     raise RuntimeError('Flex deployment did not report successful publication')
 
 
+def active_package_name(session, blobs):
+    candidates=[b['name'] for b in blobs if b['name'].endswith('.zip')]
+    # OneDeploy creates versioned blobs on each publication (also on rollback).
+    # Match the successful deployment ID rather than selecting the newest blob.
+    response=session.get(SCM+'/api/deployments/latest',timeout=30,allow_redirects=False)
+    if response.status_code==200:
+        deployment=response.json()
+        deployment_id=str(deployment.get('id') or '')
+        if deployment.get('status')==4 and deployment.get('active') is not False:
+            matches=[name for name in candidates if name in (deployment_id,deployment_id+'.zip')]
+            if len(matches)==1:
+                return matches[0]
+        print(json.dumps({'package_selection':{
+            'zip_names':candidates,
+            'deployment_fields':sorted(deployment),
+            'deployment_id':deployment_id,
+            'deployment_status':deployment.get('status'),
+            'deployment_active':deployment.get('active'),
+        }}),flush=True)
+    if len(candidates)==1:
+        return candidates[0]
+    raise RuntimeError('Active package cannot be identified uniquely')
+
+
 def az(*args, timeout=180):
     p=subprocess.run(['az',*args,'--output','json'],capture_output=True,text=True,timeout=timeout)
     if p.returncode:
@@ -152,9 +176,7 @@ def main():
                               'required_role':'Storage Blob Data Reader',
                               'required_scope':scope}))
             raise RuntimeError('Deployment identity needs read-only access to its deployment container; no production changes were made') from None
-        candidates=[b['name'] for b in blobs if b['name'].endswith('.zip')]
-        name='released-package.zip' if 'released-package.zip' in candidates else candidates[0] if len(candidates)==1 else None
-        if not name: raise RuntimeError('Active package cannot be identified uniquely')
+        name=active_package_name(session,blobs)
         package=Path('/tmp/ssv53-active-package.zip')
         az('storage','blob','download','--account-name',account,'--container-name',container,'--name',name,'--auth-mode','login','--file',str(package),'--overwrite',timeout=300)
         with zipfile.ZipFile(package) as archive:

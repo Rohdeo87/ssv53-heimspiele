@@ -125,3 +125,18 @@ class ExistingMailKeyTests(TestCase):
         with self.assertRaisesRegex(RuntimeError, 'HTTP 403'):
             deploy.existing_mail_key(session, 'https://management.azure.com/site')
         self.assertEqual(session.post.call_count, 1)
+
+
+class ActivePackageTests(TestCase):
+    def test_active_deployment_id_selects_matching_blob_among_versions(self):
+        session = Mock()
+        session.get.return_value = response(body={'id': 'rollback-version', 'status': 4, 'active': True})
+        self.assertEqual(deploy.active_package_name(session, [{'name': 'old-version.zip'},
+            {'name': 'rollback-version.zip'}]), 'rollback-version.zip')
+
+    def test_multiple_packages_without_proven_active_version_are_rejected(self):
+        session = Mock()
+        session.get.return_value = response(body={'id': 'unknown', 'status': 4})
+        with patch('builtins.print'), self.assertRaises(RuntimeError):
+            deploy.active_package_name(session, [{'name': 'released-package.zip'},
+                {'name': 'new-version.zip'}])
