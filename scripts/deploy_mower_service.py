@@ -23,7 +23,7 @@ import requests
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from scripts.deploy_reservation_notifications import (
-    APP, RG, SCM, active_package_name, arm, az, deploy_flex, existing_mail_key, patch_package,
+    APP, RG, SCM, active_package_name, arm, az, existing_mail_key, patch_package,
 )
 from scripts.deploy_customer_mail_templates import verify_smtp
 
@@ -151,63 +151,68 @@ def all_settings(session, site_url):
     return values
 
 
+def deployment_state():
+    with tempfile.TemporaryDirectory(prefix='ssv53-flex-state-') as folder:
+        filename = Path(folder) / 'state.json'
+        az('storage', 'blob', 'download', '--account-name', 'ssv53platzpflegeprodq7kb',
+           '--container-name', 'app-package-q7kbw54s', '--auth-mode', 'login',
+           '--name', 'kudu-state.json', '--file', str(filename), '--overwrite')
+        return json.loads(filename.read_text())
+
+
+def active_from_state(state, candidates):
+    active = state.get('ActiveDeploymentId')
+    record = state.get('Deployments', {}).get(active, {})
+    if (not isinstance(active, str) or record.get('Id') != active
+            or record.get('Status') != 4 or record.get('Complete') is not True):
+        raise RuntimeError('Flex active deployment is not a completed successful publication')
+    name = active + '.zip'
+    if name not in candidates or record.get('UploadedPackageName') not in (active, name):
+        raise RuntimeError('Flex active deployment does not match its stored package')
+    latest = state.get('LatestDeploymentId')
+    if latest != active and state.get('Deployments', {}).get(latest, {}).get('Complete') is False:
+        raise RuntimeError('Another Flex deployment is in progress')
+    return name
+
+
 def select_active(session, blobs, site_url):
-    # Flex also keeps a durable deployment-state record in its private
-    # package container. Inspect only its shape and exact package references;
-    # never print provider URLs, settings or arbitrary string values.
+    candidates = {blob['name'] for blob in blobs if blob['name'].endswith('.zip')}
     if any(blob['name'] == 'kudu-state.json' for blob in blobs):
-        with tempfile.TemporaryDirectory(prefix='ssv53-flex-state-') as folder:
-            filename = Path(folder) / 'state.json'
-            az('storage', 'blob', 'download', '--account-name', 'ssv53platzpflegeprodq7kb',
-               '--container-name', 'app-package-q7kbw54s', '--auth-mode', 'login',
-               '--name', 'kudu-state.json', '--file', str(filename), '--overwrite')
-            state = json.loads(filename.read_text())
-        candidates = {blob['name'] for blob in blobs if blob['name'].endswith('.zip')}
-        summary = []
-
-        def visit(value, path='root'):
-            if isinstance(value, dict):
-                for key, item in value.items():
-                    visit(item, path + '.' + str(key))
-            elif isinstance(value, list):
-                for index, item in enumerate(value[:20]):
-                    visit(item, path + '[' + str(index) + ']')
-            else:
-                entry = {'path': path, 'type': type(value).__name__}
-                if isinstance(value, str):
-                    matches = [name for name in candidates if value in (name, name[:-4]) or urlparse(value).path.endswith('/' + name)]
-                    if matches:
-                        entry['package_references'] = matches
-                    elif value.upper() in {'SUCCEEDED', 'SUCCESS', 'SUCCESSFUL', 'FAILED', 'ACTIVE', 'COMPLETE'}:
-                        entry['status'] = value
-                elif type(value) in (int, bool):
-                    entry['value'] = value
-                summary.append(entry)
-
-        visit(state)
-        print(json.dumps({'flex_deployment_state': summary}), flush=True)
-    # The Flex publishing host can cold-start independently of the running
-    # timer host. Retry only read operations and expose no provider bodies.
+        name = active_from_state(deployment_state(), candidates)
+        print(json.dumps({'active_package_verified_from_flex_state': name}), flush=True)
+        return name
+    # Older hosts expose the same completed-publication identity via SCM.
     for attempt in range(6):
         response = session.get(SCM + '/api/deployments/latest', timeout=45, allow_redirects=False)
-        print(json.dumps({'deployment_host_status': response.status_code, 'attempt': attempt + 1}), flush=True)
         if response.status_code == 200:
             return active_package_name(session, blobs)
         if response.status_code not in (404, 429, 502, 503, 504):
             break
         time.sleep(5)
-    print(json.dumps({'package_candidates': [blob['name'] for blob in blobs if blob['name'].endswith('.zip')],
-                     'other_blob_names': [blob['name'] for blob in blobs if not blob['name'].endswith('.zip')][:15]}), flush=True)
-    response = session.get(site_url + '/deployments?api-version=2024-04-01', timeout=45, allow_redirects=False)
-    safe = {'arm_deployments_status': response.status_code}
-    if response.status_code == 200:
-        try:
-            safe['deployments'] = [{key: item.get('properties', {}).get(key) for key in ('id', 'status', 'active', 'start_time', 'end_time')}
-                                   for item in response.json().get('value', [])[:5]]
-        except ValueError:
-            safe['arm_response_is_json'] = False
-    print(json.dumps(safe), flush=True)
     raise RuntimeError('Active package identity could not be verified; no production changes made')
+
+
+def publish_verified_package(session, package, previous_name):
+    with package.open('rb') as source:
+        response = session.post(SCM + '/api/publish',
+            params={'RemoteBuild': 'false', 'Deployer': 'ssv53-mower-service'}, data=source,
+            headers={'Content-Type': 'application/zip', 'Cache-Control': 'no-cache'},
+            timeout=180, allow_redirects=False)
+    if response.status_code != 202:
+        raise RuntimeError('Flex package publish failed HTTP ' + str(response.status_code))
+    print(json.dumps({'flex_package_accepted': True}), flush=True)
+    for _ in range(150):
+        state = deployment_state()
+        latest = state.get('LatestDeploymentId')
+        record = state.get('Deployments', {}).get(latest, {})
+        if latest and latest + '.zip' != previous_name:
+            if record.get('Status') in (-1, 3, 5, 6):
+                raise RuntimeError('Flex deployment failed; active package was not overwritten by a fallback')
+            if record.get('Status') == 4 and record.get('Complete') is True and state.get('ActiveDeploymentId') == latest:
+                print(json.dumps({'flex_package_published': True, 'deployment_id': latest}), flush=True)
+                return
+        time.sleep(5)
+    raise RuntimeError('Flex publication did not report a completed successful deployment')
 
 
 def health_without_action(session):
@@ -266,12 +271,12 @@ def main():
         health = requests.Session()
         verify_smtp(health, key, require_new_template=True)
         health_without_action(health)
-        if active_package_name(session, blobs) != active or all_settings(session, site_url) != settings:
+        if select_active(session, blobs, site_url) != active or all_settings(session, site_url) != settings:
             raise RuntimeError('Production deployment or configuration changed during preparation')
-        deploy_flex(session, patched)
+        publish_verified_package(session, patched, active)
         # Re-read the exact successful package; never use newest-blob guessing.
         blobs = az('storage', 'blob', 'list', *blob_args)
-        published = active_package_name(session, blobs)
+        published = select_active(session, blobs, site_url)
         readback = folder / 'readback.zip'
         az('storage', 'blob', 'download', *blob_args, '--name', published, '--file', str(readback), '--overwrite', timeout=300)
         with zipfile.ZipFile(patched) as expected, zipfile.ZipFile(readback) as actual:

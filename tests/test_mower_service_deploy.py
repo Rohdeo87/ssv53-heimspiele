@@ -85,3 +85,17 @@ def test_entrypoint_forwarding_is_idempotent_and_rejects_ambiguous_handlers():
         release.patch_entrypoint(ENTRYPOINT + ENTRYPOINT)
     with pytest.raises(RuntimeError):
         release.patch_entrypoint(updated.replace(b'body.get("mowerService")', b'body.get("otherPayload")'))
+
+
+def test_private_flex_pointer_selects_active_successful_package_not_newest_candidate():
+    state = {'ActiveDeploymentId': 'active', 'LatestDeploymentId': 'failed-newer',
+             'Deployments': {'active': {'Id': 'active', 'Status': 4, 'Complete': True, 'UploadedPackageName': 'active.zip'},
+                             'failed-newer': {'Id': 'failed-newer', 'Status': 3, 'Complete': True}}}
+    assert release.active_from_state(state, {'active.zip', 'failed-newer.zip'}) == 'active.zip'
+    state['Deployments']['failed-newer']['Complete'] = False
+    with pytest.raises(RuntimeError, match='in progress'):
+        release.active_from_state(state, {'active.zip', 'failed-newer.zip'})
+    state['LatestDeploymentId'] = 'active'
+    state['Deployments']['active']['Status'] = 3
+    with pytest.raises(RuntimeError, match='not a completed successful'):
+        release.active_from_state(state, {'active.zip'})

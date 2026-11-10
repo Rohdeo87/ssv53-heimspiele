@@ -77,3 +77,27 @@ def merge_reviewed_delta(base, reviewed, active):
              for label, value in [('base', base), ('reviewed', reviewed), ('active', active), ('merged', merged)]}
     proof.update(reviewed_edits=len(ours), independent_edits_preserved=len(theirs), overlap_resolved_automatically=False)
     return merged, proof
+
+
+VISIBILITY_WRAPPER = '''
+    // Preserve the independently maintained live visibility policy.
+    var mowerServicePreviousVisibility=pfVisibility;
+    pfVisibility=function(s){var result=mowerServicePreviousVisibility(s);if(mowerServiceView(s).active){result.height=false;result.manualStart=false;result.manualPark=false;result.manualResume=false;result.husqvarnaStart=false;result.husqvarnaPark=false}return result};
+'''
+
+
+def merge_service_ui(base, reviewed, active):
+    # The live template has a newer visibility policy. Preserve its function
+    # exactly and apply the reviewed service restriction to its return value.
+    guard = 'height:!mowerServiceView(s).active&&m.cuttingHeightSupported===true'
+    if reviewed.count(guard) != 1:
+        raise CmsMergeConflict('Reviewed visibility guard cannot be identified uniquely')
+    adjusted = reviewed.replace(guard, 'height:m.cuttingHeightSupported===true', 1)
+    merged, proof = merge_reviewed_delta(base, adjusted, active)
+    anchor = '    if(!isPlatzwart(profileJSON))'
+    if merged.count(anchor) != 1:
+        raise CmsMergeConflict('Live UI installation anchor cannot be identified uniquely')
+    merged = merged.replace(anchor, VISIBILITY_WRAPPER + anchor, 1)
+    proof.update(live_visibility_policy_preserved=True,
+                 delivered_sha256=hashlib.sha256(merged.encode()).hexdigest())
+    return merged, proof

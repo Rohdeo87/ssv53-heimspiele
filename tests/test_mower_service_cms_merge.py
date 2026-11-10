@@ -1,6 +1,6 @@
 import pytest
 
-from scripts.merge_mower_service_cms import CmsMergeConflict, merge_reviewed_delta
+from scripts.merge_mower_service_cms import CmsMergeConflict, merge_reviewed_delta, merge_service_ui
 
 
 def test_independent_control_and_menu_changes_are_both_preserved():
@@ -22,3 +22,14 @@ def test_conflicting_device_policy_is_never_overwritten():
 def test_same_reviewed_delta_is_idempotent_and_normalizes_line_endings():
     merged, _ = merge_reviewed_delta('a\r\nb\r\n', 'a\nb\nc\n', 'a\r\nb\r\nc\r\n')
     assert merged == 'a\nb\nc\n'
+
+
+def test_newer_live_visibility_policy_is_preserved_with_separate_service_restriction():
+    base = 'function pfVisibility(s){return {height:m.cuttingHeightSupported===true}}\n    if(!isPlatzwart(profileJSON))return;\n'
+    reviewed = base.replace('height:m.', 'height:!mowerServiceView(s).active&&m.')
+    active = base.replace('height:m.cuttingHeightSupported===true', 'height:newLivePolicy(s),independent:true')
+    merged, proof = merge_service_ui(base, reviewed, active)
+    assert 'function pfVisibility(s){return {height:newLivePolicy(s),independent:true}}' in merged
+    assert 'mowerServicePreviousVisibility(s)' in merged
+    assert 'result.height=false' in merged
+    assert proof['live_visibility_policy_preserved'] is True
