@@ -11,12 +11,14 @@ from datetime import datetime, timezone
 import hashlib
 import json
 from pathlib import Path, PurePosixPath
+import shutil
 import subprocess
 import sys
 import tempfile
 import time
 from urllib.parse import urlparse
 import zipfile
+import xml.etree.ElementTree as ET
 
 import requests
 
@@ -26,6 +28,7 @@ from scripts.deploy_reservation_notifications import (
     APP, RG, SCM, active_package_name, arm, az, existing_mail_key, patch_package,
 )
 from scripts.deploy_customer_mail_templates import verify_smtp
+from scripts.merge_mower_service_cms import merge_reviewed_delta
 
 BASELINE = json.loads((ROOT / 'scripts/mower_service_release_baseline.json').read_text())
 RELEASE_FILES = tuple(BASELINE['files'])
@@ -105,8 +108,18 @@ def prepare_release(original, patched, root=ROOT):
             target = replacements[name]
             known = current == target or (expected is None and current is None) or (
                 current is not None and digest(current) == expected)
+            reconciliation = None
+            if not known and current is not None and digest(current) == BASELINE.get('independent_active_sha256', {}).get(name):
+                baseline = subprocess.run(['git', 'show', BASELINE['baseline_commit'] + ':' + name],
+                    cwd=root, capture_output=True, timeout=30)
+                if baseline.returncode or digest(baseline.stdout) != expected:
+                    raise RuntimeError('Reviewed baseline source unavailable: ' + name)
+                merged, reconciliation = merge_reviewed_delta(baseline.stdout.decode(), target.decode(), current.decode())
+                target = replacements[name] = merged.encode()
+                known = True
             checks.append({'path': name, 'active_sha256': digest(current) if current is not None else None,
-                           'target_sha256': digest(target), 'baseline_matches': known})
+                           'target_sha256': digest(target), 'baseline_matches': known,
+                           'independent_source_preserved': reconciliation})
             if not known:
                 raise RuntimeError('Independent active source change requires reconciliation: ' + name)
             ast.parse(target, filename=name)
@@ -114,6 +127,47 @@ def prepare_release(original, patched, root=ROOT):
         replacements['package-manifest.json'] = updated_manifest(archive, replacements)
     patch_package(original, patched, replacements)
     return checks, replacements
+
+
+def _test_snapshot(package, folder, *, include_service_tests):
+    shutil.copytree(ROOT, folder, ignore=shutil.ignore_patterns(
+        '.git', '.venv', '__pycache__', '.pytest_cache', 'node_modules', '.env'))
+    with zipfile.ZipFile(package) as archive:
+        for name in archive.namelist():
+            if (name.endswith('.py') and ('/' not in name or name.startswith(('mower/', 'occupancy/')))
+                    and '__pycache__' not in name):
+                path = folder / name
+                if not path.resolve().is_relative_to(folder.resolve()):
+                    raise RuntimeError('Unsafe active source member')
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(archive.read(name))
+    report = folder / 'test-results.xml'
+    command = [sys.executable, '-m', 'pytest', '-q', '--tb=no', '--junitxml=' + str(report)]
+    if not include_service_tests:
+        command.append('--ignore=tests/test_mower_service_mode.py')
+    result = subprocess.run(command, cwd=folder, capture_output=True, text=True, timeout=300)
+    if not report.exists():
+        raise RuntimeError('Active-source test report could not be produced; output withheld')
+    suites = ET.parse(report).getroot()
+    failures = sorted(test.attrib.get('classname', '') + '::' + test.attrib.get('name', '')
+                      for test in suites.iter('testcase') if test.find('failure') is not None or test.find('error') is not None)
+    summary = {'exit_code': result.returncode, 'test_cases': sum(1 for _ in suites.iter('testcase')),
+               'service_test_cases': sum(1 for test in suites.iter('testcase')
+                   if test.attrib.get('classname', '').endswith('test_mower_service_mode')),
+               'failed_cases': failures}
+    return summary
+
+
+def verify_active_regressions(original, patched, folder):
+    before = _test_snapshot(original, folder / 'baseline-tests', include_service_tests=False)
+    after = _test_snapshot(patched, folder / 'release-tests', include_service_tests=True)
+    new_failures = sorted(set(after['failed_cases']) - set(before['failed_cases']))
+    proof = {'before': before, 'after': after, 'new_failures': new_failures}
+    print(json.dumps({'active_source_regression_tests': proof}), flush=True)
+    if (new_failures or before['exit_code'] not in (0, 1) or after['exit_code'] not in (0, 1)
+            or after['service_test_cases'] < 42 or (after['exit_code'] != 0 and not after['failed_cases'])):
+        raise RuntimeError('Merged active-source tests found new failures; no deployment performed')
+    return proof
 
 
 def inspect_sources(original, root=ROOT):
@@ -262,7 +316,10 @@ def main():
             return
         if settings.get('CONTROL_MODE') != 'FULL_FAILSAFE':
             raise RuntimeError('Active control mode requires a separately verified service integration')
-        prepare_release(original, patched)
+        source_checks, _ = prepare_release(original, patched)
+        proof['reconciled_sources'] = source_checks
+        proof['active_source_regression_tests'] = verify_active_regressions(original, patched, folder)
+        args.proof.write_text(json.dumps(proof, indent=2) + '\n')
         before_functions = verify_import(original, folder / 'before')
         after_functions = verify_import(patched, folder / 'after')
         if before_functions != after_functions:

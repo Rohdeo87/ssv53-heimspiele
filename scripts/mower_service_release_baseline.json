@@ -17,5 +17,14 @@
     "mower/start_recovery.py": "2a4228c1914bab42ae131330eda4ec8c45cf0144cd97422e0dd859606106d5db",
     "mower/state.py": "c7dd4086e377e90d8eda1929e8d4b19e77abe7ba944856546f4e5fc2f19c0956",
     "mower/service_mode.py": null
+  },
+  "independent_active_sha256": {
+    "platzwart_console.py": "a67cd37122db07c46d75fe24f2e3f500585042fbf443b1f99dda23731ac06d33",
+    "mower/device_send_guard.py": "23420902219e5287ca12f8116a362a26f7fbf0b0ae99285f0ee5a179bf599e5d",
+    "mower/full_failsafe.py": "6f317a9eb6fca4ae6ec771c1a4f10f922b3811dc91760b145a4e0372c0539b63",
+    "mower/manual_control_api.py": "725c8705f378b8a56b9ce6bd0e9b39c907849520572d46113a70794f6fd192d9",
+    "mower/start_dispatch_guard.py": "081b6b5260ddb44794a3881b17874ade3e3252e77b7759016c5602a6b819c62f",
+    "mower/start_recovery.py": "96f9a4c1257ba39c408383944a1261f361ad7a8e1a2cdce496f257c5acb955fd",
+    "mower/state.py": "dc02b846eb822ddc808f77ad4a00c25ed6c94547d88dfd2b566f51e00e2ddd41"
   }
 }

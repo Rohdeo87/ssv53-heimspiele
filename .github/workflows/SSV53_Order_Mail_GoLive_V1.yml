@@ -219,6 +219,8 @@ jobs:
           test "$REF_NAME" = "feature/azure-mower-migration"
           test "$PRESERVE_CONFIRMATION" = "PRESERVE-LIVE-STATE"
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
