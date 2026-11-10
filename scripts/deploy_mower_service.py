@@ -10,6 +10,7 @@ import ast
 from datetime import datetime, timezone
 import hashlib
 import json
+import os
 from pathlib import Path, PurePosixPath
 import shutil
 import subprocess
@@ -129,7 +130,7 @@ def prepare_release(original, patched, root=ROOT):
     return checks, replacements
 
 
-def _test_snapshot(package, folder, *, include_service_tests):
+def _test_snapshot(package, folder, *, include_service_tests, dependency_root):
     shutil.copytree(ROOT, folder, ignore=shutil.ignore_patterns(
         '.git', '.venv', '__pycache__', '.pytest_cache', 'node_modules', '.env'))
     with zipfile.ZipFile(package) as archive:
@@ -145,7 +146,10 @@ def _test_snapshot(package, folder, *, include_service_tests):
     command = [sys.executable, '-m', 'pytest', '-q', '--tb=no', '--junitxml=' + str(report)]
     if not include_service_tests:
         command.append('--ignore=tests/test_mower_service_mode.py')
-    result = subprocess.run(command, cwd=folder, capture_output=True, text=True, timeout=300)
+    environment = os.environ.copy()
+    environment['PYTHONPATH'] = str(folder) + os.pathsep + str(dependency_root)
+    environment['PYTHONDONTWRITEBYTECODE'] = '1'
+    result = subprocess.run(command, cwd=folder, env=environment, capture_output=True, text=True, timeout=300)
     if not report.exists():
         raise RuntimeError('Active-source test report could not be produced; output withheld')
     suites = ET.parse(report).getroot()
@@ -159,8 +163,9 @@ def _test_snapshot(package, folder, *, include_service_tests):
 
 
 def verify_active_regressions(original, patched, folder):
-    before = _test_snapshot(original, folder / 'baseline-tests', include_service_tests=False)
-    after = _test_snapshot(patched, folder / 'release-tests', include_service_tests=True)
+    dependencies = folder / 'before' / '.python_packages/lib/site-packages'
+    before = _test_snapshot(original, folder / 'baseline-tests', include_service_tests=False, dependency_root=dependencies)
+    after = _test_snapshot(patched, folder / 'release-tests', include_service_tests=True, dependency_root=dependencies)
     new_failures = sorted(set(after['failed_cases']) - set(before['failed_cases']))
     proof = {'before': before, 'after': after, 'new_failures': new_failures}
     print(json.dumps({'active_source_regression_tests': proof}), flush=True)
@@ -318,12 +323,12 @@ def main():
             raise RuntimeError('Active control mode requires a separately verified service integration')
         source_checks, _ = prepare_release(original, patched)
         proof['reconciled_sources'] = source_checks
-        proof['active_source_regression_tests'] = verify_active_regressions(original, patched, folder)
-        args.proof.write_text(json.dumps(proof, indent=2) + '\n')
         before_functions = verify_import(original, folder / 'before')
         after_functions = verify_import(patched, folder / 'after')
         if before_functions != after_functions:
             raise RuntimeError('The release changes unrelated function registrations')
+        proof['active_source_regression_tests'] = verify_active_regressions(original, patched, folder)
+        args.proof.write_text(json.dumps(proof, indent=2) + '\n')
         key = existing_mail_key(session, site_url)
         health = requests.Session()
         verify_smtp(health, key, require_new_template=True)
