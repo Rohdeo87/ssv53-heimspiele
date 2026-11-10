@@ -127,6 +127,10 @@ def evaluate_command_gate(
             "Wartungsmodus ist aktiv; Steuerbefehle sind gesperrt.",
         )
 
+    if state.mower_service_active:
+        return CommandGateDecision(False, "MOWER_SERVICE_ACTIVE",
+                                   "Der Mäher ist wegen Wartung / Winterpause außer Betrieb.")
+
     if intent.normalized_action == "START" and state.mower_start_pending_since_utc:
         return CommandGateDecision(
             False,

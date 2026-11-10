@@ -7,6 +7,7 @@ import json
 import importlib
 import secrets
 import threading
+from time import monotonic
 import urllib.parse
 import urllib.request
 from copy import deepcopy
@@ -37,6 +38,10 @@ from mower.cutting_height import (
 from mower.runtime import ControlMode, CycleResult, RuntimeSettings
 from mower.state import AutomationState
 from mower.state_store import AzureTableStateStore, StateConflictError
+from mower.service_mode import (
+    MOWER_ACTIONS, MowerServiceError, change_service_mode,
+    public_payload as mower_service_payload, validate_request as validate_service_request,
+)
 from mower.safety import occupancy_override_allowed
 from mower.irrigation_schedule import (
     IrrigationOperatingWindowError,
@@ -81,6 +86,7 @@ ALLOWED_ACTIONS = frozenset(
         "RESET_BLADE_USAGE",
         "MANUAL_CONTROL",
         "SET_WINTER_TRAINING",
+        "SET_MOWER_SERVICE",
         *SCHEDULE_ACTIONS,
     }
 )
@@ -822,6 +828,8 @@ def _coordination_payload(details, state, current_plan, environment, now_utc, da
     def add(code, label, condition, until=None):
         blockers.append({"code": code, "label": label, "resolution": condition, "until": until})
 
+    if state.mower_service_active:
+        add("MOWER_SERVICE_ACTIVE", "Mäher außer Betrieb", "Bewusste Wiederinbetriebnahme durch den Platzwart mit frischen, fehlerfreien Mäherdaten.")
     if state.maintenance_mode or state.last_decision_code == "OPERATOR_PARK_HOLD" or (state.automation_park_source == "operator" and not state.automation_restart_allowed):
         add("MANUAL_STOP", "Manuelle Stoppsperre", "Ausdrückliche Freigabe durch den Platzwart und erneute Sicherheitsprüfung.")
     if state.mower_start_pending_since_utc is not None:
@@ -1336,6 +1344,13 @@ def _action_status(settings, state, mower, *, state_available, controls_availabl
                  "reason": "AVAILABLE" if controls_available and _runtime_device_controls_enabled(settings) else "AUTOMATION_LOCKED"}
         for action in ALLOWED_ACTIONS if action != "SET_WINTER_TRAINING"
     }
+    for action in MOWER_ACTIONS:
+        if state.mower_service_active and action in capabilities:
+            capabilities[action] = {"available": False, "reason": "MOWER_SERVICE_ACTIVE"}
+    capabilities["SET_MOWER_SERVICE"] = {
+        "available": state_available and settings.control_mode is ControlMode.FULL_FAILSAFE,
+        "reason": "AVAILABLE" if state_available and settings.control_mode is ControlMode.FULL_FAILSAFE else "STATE_UNAVAILABLE",
+    }
     commands = module.operator_commands_payload(state) if module else {}
     if settings.control_mode is not ControlMode.OPERATOR_ONLY:
         return capabilities, commands
@@ -1449,7 +1464,16 @@ def live_status(environment: Mapping[str, str], now_utc: datetime, *,
         stale_config = isinstance(exc, RuntimeError) and (
             "Keine frische, validierte Laufzeitkonfiguration verfügbar" in str(exc)
         )
-        if stale_config:
+        if state_available and state.mower_service_active:
+            # Expected mower absence must not erase the persistent latch.
+            # Missing water/plan data still disables device controls.
+            result = CycleResult(2, now_utc.isoformat(), "platzwart-service-status",
+                settings.control_mode.value, False, "MOWER_SERVICE_ACTIVE", False,
+                "Mäher außer Betrieb. Aktuelle Anlagen- und Belegungsdaten fehlen.",
+                {"mower": {}, "hydrawise": {}, "current_plan": {}})
+            data_quality = {"code": "IRRIGATION_STATUS_UNAVAILABLE", "displayOnly": True,
+                            "message": "Aktuelle Anlagen- und Belegungsdaten fehlen. Bitte aktualisieren und die Bewässerung prüfen."}
+        elif stale_config:
             # Packaged fallback only explains the display; it never authorizes a start.
             display_environment = dict(environment)
             display_environment["SSV53_DYNAMIC_CONFIG_ENABLED"] = "false"
@@ -1632,6 +1656,7 @@ def live_status(environment: Mapping[str, str], now_utc: datetime, *,
         "actionCapabilities": action_capabilities,
         "operatorCommands": operator_commands,
         "manualControl": manual_control,
+        "mowerService": mower_service_payload(state, available=state_available and settings.control_mode is ControlMode.FULL_FAILSAFE),
         "dataQuality": data_quality,
         "overall": {
             "code": state.last_decision_code if controls_available else data_quality["code"],
@@ -1753,6 +1778,7 @@ def unavailable_live_status(now_utc: datetime) -> dict[str, Any]:
             "safeWindows": [],
         },
         "automation": {},
+        "mowerService": mower_service_payload(AutomationState(), available=False),
         "trainingControl": {
             "available": False,
             "active": None,
@@ -1785,6 +1811,7 @@ def request_action(
     training_revision: str | None = None,
     client_contract_version: int | None = None,
     manual_control: Mapping[str, Any] | None = None,
+    mower_service: Mapping[str, Any] | None = None,
     state_store_factory=AzureTableStateStore.from_environment,
 ) -> dict[str, Any]:
     normalized = action.strip().upper()
@@ -1820,6 +1847,39 @@ def request_action(
         if len(parts) != 2 or not occupancy_override_allowed({"source": parts[-1]}):
             raise PlatzwartError("OCCUPANCY_OVERRIDE_FORBIDDEN", "Verbindliche oder unbekannte Platzsperren können nicht übersteuert werden.", 409)
     manual_settings = RuntimeSettings.from_mapping(environment)
+    if normalized == "SET_MOWER_SERVICE":
+        if manual_settings.control_mode is not ControlMode.FULL_FAILSAFE:
+            raise PlatzwartError("MOWER_SERVICE_UNAVAILABLE", "Der Wartungsschalter ist in dieser Steuerungsart nicht verfügbar.", 409)
+        if any(value is not None for value in (zone, run_seconds, cutting_height_mm, irrigation_schedule,
+                                                winter_training_enabled, training_revision, manual_control)):
+            raise PlatzwartError("MOWER_SERVICE_INVALID", "Bitte nur den Wartungsschalter bestätigen.")
+        try:
+            validate_service_request(mower_service)
+            store = state_store_factory(environment)
+            service_state = store.load()
+            mower = {}
+            service_now = now_utc
+            if mower_service["enabled"] is False and service_state.mower_service_request_id != request_id:
+                read_started = monotonic()
+                try:
+                    snapshot = run_read_only_cycle(now_utc=now_utc, settings=manual_settings,
+                        environment=environment, past_due=False, source="platzwart-service-return",
+                        persist_observations=False)
+                    mower = snapshot.details.get("mower") or {}
+                    service_now = now_utc + timedelta(seconds=max(0, monotonic() - read_started))
+                except Exception as exc:
+                    raise MowerServiceError("MOWER_SERVICE_RETURN_UNSAFE", "Frische Mäherdaten fehlen. Der Wartungsschalter bleibt eingeschaltet.") from exc
+            updated = change_service_mode(store=store, state=service_state, payload=mower_service,
+                request_id=request_id, now_utc=service_now, mower=mower, environment=environment)
+        except MowerServiceError as exc:
+            raise PlatzwartError(exc.code, str(exc), 409) from exc
+        except StateConflictError as exc:
+            raise PlatzwartError("MOWER_SERVICE_CHANGED", "Der Zustand hat sich geändert. Bitte aktualisieren.", 409) from exc
+        ConsoleTableStore.from_environment(environment).audit(now_utc, normalized, "ACCEPTED", request_id)
+        return {"accepted": True, "requestId": request_id, "status": "APPLIED",
+                "mowerService": mower_service_payload(updated)}
+    if mower_service is not None:
+        raise PlatzwartError("MOWER_SERVICE_INVALID", "Wartungsangaben gehören nur zum Wartungsschalter.")
     if manual_settings.enable_manual_sessions and manual_settings.control_mode is ControlMode.FULL_FAILSAFE:
         if normalized == "PARK_MOWER":
             # Older cached templates must retain a working protective PARK.
@@ -1972,6 +2032,8 @@ def request_action(
         raise PlatzwartError("AUTOMATION_LOCKED", "Die sichere Automatik ist nicht vollständig freigegeben.", 409)
     store = AzureTableStateStore.from_environment(environment)
     original = store.load()
+    if original.mower_service_active and normalized in MOWER_ACTIONS:
+        raise PlatzwartError("MOWER_SERVICE_ACTIVE", "Der Mäher ist außer Betrieb. Bitte zuerst die Wiederinbetriebnahme bestätigen.", 409)
     if original.operator_request_id == request_id:
         return {"accepted": True, "requestId": request_id, "status": original.operator_request_status}
     if original.operator_request_status == "PENDING":

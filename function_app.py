@@ -971,6 +971,7 @@ def ssv53_platzwart_action(req: func.HttpRequest) -> func.HttpResponse:
             cutting_height_mm=body.get("cuttingHeightMm"),
             client_contract_version=body.get("clientContractVersion"),
             manual_control=body.get("manualControl"),
+            mower_service=body.get("mowerService"),
             occupancy_override_key=str(body.get("occupancyOverrideKey") or ""),
             irrigation_schedule=(
                 body.get("schedule")

@@ -141,6 +141,8 @@ def run_park_only_cycle(
 
     store = state_store_factory(environment)
     state = store.load()
+    from mower.service_mode import fence_mower_sender
+    park_sender = fence_mower_sender(park_sender, store, state.mower_service_revision)
     cycle_state = _record_cycle_state(state=state, result=result, now_utc=now_utc)
 
     decision = _as_dict(details.get("decision"))

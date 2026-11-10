@@ -57,6 +57,7 @@ REQUIRED_FILES = (
     "mower/planner.py",
     "mower/runtime.py",
     "mower/safety.py",
+    "mower/service_mode.py",
     "mower/state.py",
     "mower/state_store.py",
     "mower/weather.py",

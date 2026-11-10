@@ -225,6 +225,8 @@ def prepare_start_dispatch(
                 raise StartDispatchBlocked(str(permission.get("code") or "MANUAL_SESSION_INVALID"))
         if current.maintenance_mode:
             raise StartDispatchBlocked("MAINTENANCE_MODE")
+        if current.mower_service_active:
+            raise StartDispatchBlocked("MOWER_SERVICE_ACTIVE")
         if (
             current.operator_request_status == "PENDING"
             and str(current.operator_request_action or "").strip().upper()

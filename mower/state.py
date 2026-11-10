@@ -47,6 +47,12 @@ def _normalize_bool(value: Any, *, default: bool = False) -> bool:
     return value
 
 
+def _normalize_service_revision(value: Any) -> int:
+    if type(value) is not int or value < 0:
+        raise ValueError("Wartungsschalter-Stand muss eine nichtnegative Ganzzahl sein.")
+    return value
+
+
 def _require_utc_iso(value: str | None, field_name: str) -> str | None:
     if value is None:
         return None
@@ -112,6 +118,13 @@ class AutomationState:
     last_command_fingerprint: str | None = None
     last_command_utc: str | None = None
     maintenance_mode: bool = False
+    # Mower-only service latch; never grants irrigation clearance.
+    mower_service_active: bool = False
+    mower_service_reason: str | None = None
+    mower_service_since_utc: str | None = None
+    mower_service_changed_utc: str | None = None
+    mower_service_revision: int = 0
+    mower_service_request_id: str | None = None
     operator_request_id: str | None = None
     operator_request_action: str | None = None
     operator_requested_utc: str | None = None
@@ -477,6 +490,14 @@ class AutomationState:
                 "last_command_utc",
             ),
             maintenance_mode=bool(values.get("maintenance_mode", False)),
+            mower_service_active=_normalize_bool(values.get("mower_service_active")),
+            mower_service_reason=_normalize_optional_text(values.get("mower_service_reason")),
+            mower_service_since_utc=_require_utc_iso(
+                _normalize_optional_text(values.get("mower_service_since_utc")), "mower_service_since_utc"),
+            mower_service_changed_utc=_require_utc_iso(
+                _normalize_optional_text(values.get("mower_service_changed_utc")), "mower_service_changed_utc"),
+            mower_service_revision=_normalize_service_revision(values.get("mower_service_revision", 0)),
+            mower_service_request_id=_normalize_optional_text(values.get("mower_service_request_id")),
             operator_request_id=_normalize_optional_text(values.get("operator_request_id")),
             operator_request_action=_normalize_optional_text(values.get("operator_request_action")),
             operator_requested_utc=_require_utc_iso(

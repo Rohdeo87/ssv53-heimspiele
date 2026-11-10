@@ -244,6 +244,8 @@ def queue_operator_action(
     elif guard_key is not None:
         raise OperatorControlError("ACTION_UNAVAILABLE")
     state = store.load()
+    if state.mower_service_active:
+        raise OperatorControlError("MOWER_SERVICE_ACTIVE")
     entries = _load_journal(state)
     for entry in entries:
         if entry["request_id"] == request_id:
@@ -628,6 +630,10 @@ def run_operator_cycle(
         result = CycleResult(2, now.isoformat(), source, ControlMode.OPERATOR_ONLY.value, bool(past_due), "OPERATOR_READ_FALLBACK", False, "OPERATOR_READ_FALLBACK", {"mower": mower, "safety": {"read_only": True, "command_sent": False}})
     store = state_store_factory(environment)
     state = store.load()
+    if state.mower_service_active:
+        return replace(result, control_mode=ControlMode.OPERATOR_ONLY.value,
+                       command_sent=False, decision_code="MOWER_SERVICE_ACTIVE",
+                       message="Mäher wegen Wartung / Winterpause außer Betrieb.")
     entries = _load_journal(state)
     # Expire never-dispatched requests. A reservation can reflect a lost
     # response, so it remains confirmable from a later fresh observation.
@@ -780,6 +786,8 @@ def run_operator_cycle(
     def before_send() -> None:
         nonlocal transport_started
         latest = store.load()
+        if latest.mower_service_active:
+            raise OperatorControlError("MOWER_SERVICE_ACTIVE")
         latest_entries = _load_journal(latest)
         live = next((item for item in latest_entries if item["request_id"] == entry["request_id"]), None)
         if live is None or live.get("status") != "RESERVED" or live.get("reserved_at") != reserved_at:

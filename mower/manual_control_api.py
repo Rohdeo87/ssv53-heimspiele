@@ -91,6 +91,7 @@ def manual_context(state, details: Mapping[str, Any], environment, now_utc):
     forbidden = forbidden or inputs.get("matches_found") is not True or inputs.get("fallback_used") is not False
     forbidden = forbidden or not all(key in plan for key in ("blocked_now", "parking_block", "mowing_window_now"))
     confirmation = {
+        "service_revision": state.mower_service_revision,
         "block_keys": sorted(keys), "dry_until_utc": dry_until.isoformat() if drying else None,
         "water_conflict_id": conflict.get("id") if conflict.get("required") else None,
         "mower_id": target, "epoch": session["epoch"] if session else 0,
@@ -160,10 +161,16 @@ def manual_context(state, details: Mapping[str, Any], environment, now_utc):
             "waterConflictId": conflict.get("id") if conflict.get("required") else None,
         },
     }
+    if state.mower_service_active:
+        public.update(canStart=False, canPark=False, canResume=False,
+                      status="OUT_OF_SERVICE", title="Mäher außer Betrieb",
+                      message="Wartung / Winterpause ist eingeschaltet. Zurück in den Betrieb nur über den Wartungsschalter.")
     return public, confirmation, conflict
 
 
 def request_manual_control(*, store, state, details, environment, now_utc, request_id, payload):
+    if state.mower_service_active:
+        raise ManualControlError("MOWER_SERVICE_ACTIVE", "Der Mäher ist außer Betrieb. Bitte zuerst die Wiederinbetriebnahme bestätigen.")
     if not isinstance(payload, Mapping):
         raise ManualControlError("MANUAL_CONFIRMATION_REQUIRED", "Bitte die manuelle Bedienung bestätigen.")
     allowed = {"operation", "source", "contextToken", "approveOccupancy", "approveDrying", "waterChoice", "sessionId"}

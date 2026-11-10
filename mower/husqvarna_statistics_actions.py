@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Callable
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -13,6 +13,7 @@ def reset_cutting_blade_usage_time(
     mower_id: str,
     *,
     timeout: int = 30,
+    before_send: Callable[[], None] | None = None,
 ) -> dict[str, Any]:
     """Resets only Husqvarna's blade-usage counter after blade replacement."""
 
@@ -35,6 +36,8 @@ def reset_cutting_blade_usage_time(
             "User-Agent": USER_AGENT,
         },
     )
+    if before_send is not None:
+        before_send()
     try:
         with urlopen(request, timeout=timeout) as response:  # noqa: S310
             body = response.read().decode("utf-8").strip()

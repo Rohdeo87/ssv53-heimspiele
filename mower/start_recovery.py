@@ -335,6 +335,8 @@ def _eligibility_reasons(
         reasons.append("AUTOMATION_RESTART_ALREADY_ALLOWED")
     if state.maintenance_mode:
         reasons.append("MAINTENANCE_MODE")
+    if state.mower_service_active:
+        reasons.append("MOWER_SERVICE_ACTIVE")
     if state.last_decision_code != "MOWER_START_OUTCOME_UNCONFIRMED":
         reasons.append("UNKNOWN_START_DECISION_MISSING")
     if not manual_ok:

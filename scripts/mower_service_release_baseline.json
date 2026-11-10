@@ -1,0 +1,21 @@
+{
+  "baseline_commit": "c15964838bc82b0bb2523aaeaca434eadfe02815",
+  "files": {
+    "platzwart_console.py": "762781316388a828e0abedd516d399e9029a7ead94b01fefe335a31ccbc51829",
+    "mower/coordination_execution.py": "a051e64790700c9163763008056263c7b55c2a1ec530d3adf73e83ae15a76772",
+    "mower/coordination_shadow.py": "ed50e5bafe20e84ded5dcf55e75cc0b2ae81b05a3c6efaf724fce040fe0635e4",
+    "mower/device_send_guard.py": "129b298bf8cf821a100064d0e0bebfeaa92bb8cd5fe5292ab1bf52881b910074",
+    "mower/full_failsafe.py": "58394763ed1219a2c4df93706a44a72fe494f3be55d0cd9001e927188626ffd5",
+    "mower/full_mower.py": "c04c819b9caa49368a69b029093f712ffdbd107ee284267211204f592b69179f",
+    "mower/husqvarna_statistics_actions.py": "ab3f3ac22a25b4789727c2ced1a7622270a505f4b443c5dba7b29aa3483cc70a",
+    "mower/input_failure_guard.py": "c396cb4b3cf172b87b8e6cd912dc12789739635e699fd5c84fb3ddffbb23ba2d",
+    "mower/manual_control_api.py": "51cce83e3f77c13194c4379409e48619db16c6a467f3331b73a94fc1d9a63170",
+    "mower/operator_controls.py": "39718ecb635c6d2cb5e3ccd81a7a03a976921250554ddba77825a5209be95544",
+    "mower/park_only.py": "fafcdb7eaa5993513687d4a4ba4d7dc6b57f2341ad2a485db6d176f22b148039",
+    "mower/safety.py": "f532fd51a745b72707019acce8ce4ada0c943d30ed29f3cfecad6a4935109631",
+    "mower/start_dispatch_guard.py": "fe0c4fd3f92bf1405c601f6525ab8655568299965a09e713739161b6ac9fd2c9",
+    "mower/start_recovery.py": "2a4228c1914bab42ae131330eda4ec8c45cf0144cd97422e0dd859606106d5db",
+    "mower/state.py": "c7dd4086e377e90d8eda1929e8d4b19e77abe7ba944856546f4e5fc2f19c0956",
+    "mower/service_mode.py": null
+  }
+}

@@ -77,6 +77,7 @@ def _reservation_owned(state: Any, *, reserved: Any, fingerprint: str) -> bool:
         and state.automation_park_source == "input_unavailable"
         and not state.automation_restart_allowed
         and not state.maintenance_mode
+        and not state.mower_service_active
         and state.mower_start_pending_since_utc is None
     )
 

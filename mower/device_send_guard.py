@@ -168,6 +168,8 @@ def dispatch_device_send(
     """
     if kind not in KINDS or not target or not intent_key or not callable(before_send_check):
         raise DeviceSendBlocked("DEVICE_SEND_INPUT_INVALID", state=original)
+    if kind in {"PARK", "HEIGHT"} and state.mower_service_active:
+        raise DeviceSendBlocked("MOWER_SERVICE_ACTIVE", state=original)
     now = _utc(now_utc)
     deadline = min(_utc(deadline_utc) if deadline_utc else now + timedelta(seconds=120),
                    now + timedelta(seconds=120))
@@ -212,6 +214,8 @@ def dispatch_device_send(
             raise DeviceSendBlocked("DEVICE_SEND_CALLBACK_REUSED", state=reserved,
                                     transport_started=transport_started)
         latest = store.load()
+        if kind in {"PARK", "HEIGHT"} and latest.mower_service_active:
+            raise DeviceSendBlocked("MOWER_SERVICE_ACTIVE", state=latest)
         at = _utc(clock())  # Take time after the potentially slow state read.
         records = load_device_send_journal(latest)
         current = next((e for e in records if e["id"] == reservation_id), None)

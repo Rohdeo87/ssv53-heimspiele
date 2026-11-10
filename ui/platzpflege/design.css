@@ -117,3 +117,7 @@ body.pflege-design{background:#f3f6fa;color:#172c42;font-family:Arial,Helvetica,
 .pflege-design #plan-history-toggle{display:flex;gap:12px;align-items:center;min-height:60px;text-align:left}
 .pflege-design #plan-history-toggle .pf-symbol{width:28px;height:28px;background:transparent;color:inherit}
 @media(max-width:360px){.pflege-design .shell{padding:10px 12px}.pflege-design .pf-home-actions>.btn{font-size:15px}.pflege-design .dialog-actions{grid-template-columns:1fr}.pflege-design .profile-row{flex-wrap:wrap}.pflege-design .plan-step-head{flex-wrap:wrap}.pflege-design .zone-controls{flex-direction:column}.pflege-design dialog h2{font-size:20px}}
+
+.pflege-design #mower-service-card label{display:block;margin:16px 0 6px;font-size:14px;color:#5e6e88}
+.pflege-design #mower-service-reason{display:block;width:100%;min-height:44px;padding:10px 12px;border:1px solid #d9e2ee;border-radius:12px;background:#fff;color:#20334a;font:inherit;opacity:1}
+.pflege-design #mower-service-card .training-note{font-size:14px;line-height:1.5}

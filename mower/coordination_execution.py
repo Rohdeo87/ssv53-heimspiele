@@ -147,7 +147,7 @@ def reserve(
     """Durably consume a need/source-plan pair.  Callers must CAS-save it."""
     outcome: dict[str, Any] = {"accepted": False, "reason": None, "draft": None}
     try:
-        if state.maintenance_mode or state.operator_request_status == "PENDING":
+        if state.maintenance_mode or state.mower_service_active or state.operator_request_status == "PENDING":
             raise ValueError("MANUAL_OR_MAINTENANCE_ACTIVE")
         if state.irrigation_phase is not None or state.irrigation_schedule_override_json:
             raise ValueError("IRRIGATION_TRANSACTION_ACTIVE")
@@ -204,7 +204,7 @@ def consume_request(
         saved = request(state)
         if saved is None:
             return state, None, "COORDINATION_REQUEST_MISSING"
-        if state.maintenance_mode or state.operator_request_status == "PENDING":
+        if state.maintenance_mode or state.mower_service_active or state.operator_request_status == "PENDING":
             raise ValueError("MANUAL_OR_MAINTENANCE_ACTIVE")
         if state.irrigation_phase is not None or state.irrigation_schedule_override_json:
             raise ValueError("IRRIGATION_TRANSACTION_ACTIVE")

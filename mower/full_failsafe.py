@@ -1577,6 +1577,7 @@ def _state_details(state: AutomationState, *, persisted: bool, error: str | None
     return {
         "revision": state.revision,
         "maintenance_mode": state.maintenance_mode,
+        "mower_service_active": state.mower_service_active,
         "persisted": persisted,
         "error": error,
         "parked_by_automation": state.parked_by_automation,
@@ -2221,6 +2222,10 @@ def run_full_failsafe_cycle(
 
     store = state_store_factory(environment)
     original = store.load()
+    from mower.service_mode import fence_mower_sender
+    park_sender = fence_mower_sender(park_sender, store, original.mower_service_revision)
+    cutting_height_sender = fence_mower_sender(cutting_height_sender, store, original.mower_service_revision)
+    blade_usage_reset_sender = fence_mower_sender(blade_usage_reset_sender, store, original.mower_service_revision)
     previous_activity = str(original.last_mower_activity or "").upper()
     state = _cycle_state(original, result, now)
     if settings.enable_manual_sessions:
@@ -2257,7 +2262,7 @@ def run_full_failsafe_cycle(
         "code": "MANUAL_SESSIONS_DISABLED",
         "dry_override": False,
     }
-    if settings.enable_manual_sessions:
+    if settings.enable_manual_sessions and not state.mower_service_active:
         try:
             manual_session = load_manual_session(state)
         except ManualSessionError:
@@ -4063,7 +4068,8 @@ def run_full_failsafe_cycle(
         _as_dict(details.get("hydrawise")).get("safety")
     )
     height_cycle_is_clear = (
-        not parking_block
+        not state.mower_service_active
+        and not parking_block
         and not blocked_now
         and state.irrigation_phase is None
         and str(decision.get("hypothetical_command") or "").upper() != "PARK"
@@ -4072,7 +4078,8 @@ def run_full_failsafe_cycle(
         and hydra_safety_for_height.get("clear_now") is True
     )
     blade_reset_cycle_is_clear = (
-        state.irrigation_phase is None
+        not state.mower_service_active
+        and state.irrigation_phase is None
         and (
             height_cycle_is_clear
             or activity in PARKED_ACTIVITIES
@@ -4680,7 +4687,8 @@ def run_full_failsafe_cycle(
         )
     )
     automation_park_lost = (
-        state.parked_by_automation
+        not state.mower_service_active
+        and state.parked_by_automation
         and park_guard_required
         and activity in PARKABLE_ACTIVITIES
     )
@@ -4719,7 +4727,7 @@ def run_full_failsafe_cycle(
             message="Der frische Parkbefehl erhält kurz Zeit für die Statusübernahme; der Platz bleibt gesperrt.",
         )
 
-    if wants_park:
+    if wants_park and not state.mower_service_active:
         park_source = (
             ("operator" if operator_action == "PARK_MOWER" else "")
             or block_source
@@ -7130,6 +7138,15 @@ def run_full_failsafe_cycle(
                     else "Zone ist bestätigt beendet; die nächste Planzone wird vorbereitet."
                 ),
             )
+
+    # Water observation and stop handling above remain active. The service
+    # latch never invents a physical park or bypasses water-start clearance.
+    if state.mower_service_active:
+        return _persist_result(
+            store=store, original=original, state=state, result=result,
+            details=details, settings=settings, decision_code="MOWER_SERVICE_ACTIVE",
+            message="Mäher außer Betrieb: Wartung / Winterpause. Keine Mäherbefehle; Bewässerungsschutz bleibt aktiv.",
+        )
 
     if effective_blocked_now or effective_parking_block:
         return _persist_result(

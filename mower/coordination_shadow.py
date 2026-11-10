@@ -70,7 +70,7 @@ def capture_planning_inputs(*, now_utc: datetime, blocks, runtime_inputs,
         "source_manifest_etag": runtime_inputs.manifest_etag,
         "occupancy": occupancy,
         "state_available": state is not None,
-        "manual_stop": (state is None or state.maintenance_mode
+        "manual_stop": (state is None or state.maintenance_mode or getattr(state, "mower_service_active", False)
                         or getattr(state, "last_decision_code", None) == "OPERATOR_PARK_HOLD"
                         or (getattr(state, "parked_by_automation", False)
                             and not getattr(state, "automation_restart_allowed", False))),
@@ -119,7 +119,7 @@ def compare_charging_window(*, cycle: Mapping[str, Any], need: Mapping[str, Any]
         if captured.get("manual_stop") is not False:
             blockers.append("MANUAL_STOP_OR_UNKNOWN")
         runtime_state = details.get("automation_state") or {}
-        if (runtime_state.get("maintenance_mode") is True or cycle.get("decision_code") == "OPERATOR_PARK_HOLD"
+        if (runtime_state.get("maintenance_mode") is True or runtime_state.get("mower_service_active") is True or cycle.get("decision_code") == "OPERATOR_PARK_HOLD"
                 or ("operator" in str(runtime_state.get("automation_park_source") or "").split("+")
                     and runtime_state.get("automation_restart_allowed") is not True)):
             blockers.append("MANUAL_STOP")
