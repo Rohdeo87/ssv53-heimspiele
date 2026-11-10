@@ -136,11 +136,17 @@ def _test_snapshot(package, folder, *, include_service_tests, dependency_root):
         '.git', '.venv', '__pycache__', '.pytest_cache', 'node_modules', '.env'))
     with zipfile.ZipFile(package) as archive:
         for name in archive.namelist():
-            if (name.endswith('.py') and ('/' not in name or name.startswith(('mower/', 'occupancy/')))
-                    and '__pycache__' not in name):
-                path = folder / name
-                if not path.resolve().is_relative_to(folder.resolve()):
-                    raise RuntimeError('Unsafe active source member')
+            # Exercise the complete deployed application, including support
+            # modules and data files outside mower/occupancy. Keep only the
+            # review harness from the checkout, never from the live package.
+            if PurePosixPath(name).parts[0] in {'tests', 'scripts', '.github', '.git'} or '__pycache__' in name:
+                continue
+            path = folder / name
+            if not path.resolve().is_relative_to(folder.resolve()):
+                raise RuntimeError('Unsafe active source member')
+            if name.endswith('/'):
+                path.mkdir(parents=True, exist_ok=True)
+            else:
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_bytes(archive.read(name))
     report = folder / 'test-results.xml'
