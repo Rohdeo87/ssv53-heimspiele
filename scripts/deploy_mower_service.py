@@ -329,6 +329,23 @@ def main():
                  'steps': {name: {'status': step.get('Status'), 'tries': step.get('TryCount'),
                                   'has_error': bool(step.get('ErrorMessage'))}
                            for name, step in record.get('Steps', {}).items()}}
+        candidates = az('storage', 'blob', 'list', '--account-name', 'ssv53platzpflegeprodq7kb',
+                        '--container-name', 'app-package-q7kbw54s', '--auth-mode', 'login')
+        proof['package_candidates'] = []
+        with tempfile.TemporaryDirectory(prefix='ssv53-flex-readback-') as folder:
+            for blob in candidates:
+                if not blob['name'].endswith('.zip'):
+                    continue
+                path = Path(folder) / 'candidate.zip'
+                az('storage', 'blob', 'download', '--account-name', 'ssv53platzpflegeprodq7kb',
+                   '--container-name', 'app-package-q7kbw54s', '--auth-mode', 'login',
+                   '--name', blob['name'], '--file', str(path), '--overwrite', timeout=300)
+                with zipfile.ZipFile(path) as archive:
+                    names = set(archive.namelist())
+                    proof['package_candidates'].append({'name': blob['name'], 'source_hashes': {
+                        name: digest(archive.read(name)) if name in names else None
+                        for name in ('function_app.py', 'package-manifest.json', 'mower/state.py',
+                                     'mower/full_failsafe.py', 'platzwart_console.py', 'mower/service_mode.py')}})
         args.proof.write_text(json.dumps(proof, indent=2) + '\n')
         print(json.dumps(proof), flush=True)
         return
