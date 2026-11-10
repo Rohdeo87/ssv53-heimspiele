@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 import hashlib
 import json
 import os
+import re
 from pathlib import Path, PurePosixPath
 import shutil
 import subprocess
@@ -155,10 +156,30 @@ def _test_snapshot(package, folder, *, include_service_tests, dependency_root):
     suites = ET.parse(report).getroot()
     failures = sorted(test.attrib.get('classname', '') + '::' + test.attrib.get('name', '')
                       for test in suites.iter('testcase') if test.find('failure') is not None or test.find('error') is not None)
+    collection_errors = []
+    for test in suites.iter('testcase'):
+        error = test.find('error')
+        if error is None:
+            continue
+        text = error.text or ''
+        entry = {'test': test.attrib.get('name', '')}
+        for kind, pattern in (
+            ('missing_module', r"ModuleNotFoundError: No module named ['\"]([A-Za-z0-9_.]+)['\"]"),
+            ('missing_symbol', r"ImportError: cannot import name ['\"]([A-Za-z0-9_]+)['\"]"),
+            ('missing_attribute', r"AttributeError: module ['\"][A-Za-z0-9_.]+['\"] has no attribute ['\"]([A-Za-z0-9_]+)['\"]"),
+        ):
+            match = re.search(pattern, text)
+            if match:
+                entry.update(kind=kind, identifier=match.group(1))
+                break
+        else:
+            classes = re.findall(r'^([A-Za-z]+Error):', text, re.M)
+            entry['kind'] = classes[-1] if classes else 'collection_error'
+        collection_errors.append(entry)
     summary = {'exit_code': result.returncode, 'test_cases': sum(1 for _ in suites.iter('testcase')),
                'service_test_cases': sum(1 for test in suites.iter('testcase')
                    if test.attrib.get('classname', '').endswith('test_mower_service_mode')),
-               'failed_cases': failures}
+               'failed_cases': failures, 'collection_errors': collection_errors}
     return summary
 
 
