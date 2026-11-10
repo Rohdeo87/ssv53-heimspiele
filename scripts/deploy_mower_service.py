@@ -14,6 +14,7 @@ from pathlib import Path, PurePosixPath
 import subprocess
 import sys
 import tempfile
+import time
 from urllib.parse import urlparse
 import zipfile
 
@@ -150,6 +151,28 @@ def all_settings(session, site_url):
     return values
 
 
+def select_active(session, blobs, site_url):
+    # The Flex publishing host can cold-start independently of the running
+    # timer host. Retry only read operations and expose no provider bodies.
+    for attempt in range(6):
+        response = session.get(SCM + '/api/deployments/latest', timeout=45, allow_redirects=False)
+        print(json.dumps({'deployment_host_status': response.status_code, 'attempt': attempt + 1}), flush=True)
+        if response.status_code == 200:
+            return active_package_name(session, blobs)
+        if response.status_code not in (404, 429, 502, 503, 504):
+            break
+        time.sleep(5)
+    print(json.dumps({'package_candidates': [blob['name'] for blob in blobs if blob['name'].endswith('.zip')],
+                     'other_blob_names': [blob['name'] for blob in blobs if not blob['name'].endswith('.zip')][:15]}), flush=True)
+    response = session.get(site_url + '/deployments?api-version=2024-04-01', timeout=45, allow_redirects=False)
+    safe = {'arm_deployments_status': response.status_code}
+    if response.status_code == 200:
+        safe['deployments'] = [{key: item.get('properties', {}).get(key) for key in ('id', 'status', 'active', 'start_time', 'end_time')}
+                               for item in response.json().get('value', [])[:5]]
+    print(json.dumps(safe), flush=True)
+    raise RuntimeError('Active package identity could not be verified; no production changes made')
+
+
 def health_without_action(session):
     host = 'https://' + APP + '.azurewebsites.net/api'
     response = session.get(host + '/occupancy', timeout=45, allow_redirects=False)
@@ -180,7 +203,7 @@ def main():
     account, container = parsed.hostname.split('.')[0], parsed.path.strip('/')
     blob_args = ('--account-name', account, '--container-name', container, '--auth-mode', 'login')
     blobs = az('storage', 'blob', 'list', *blob_args)
-    active = active_package_name(session, blobs)
+    active = select_active(session, blobs, site_url)
     with tempfile.TemporaryDirectory(prefix='ssv53-mower-service-') as folder:
         folder = Path(folder)
         original, patched = folder / 'active.zip', folder / 'release.zip'
