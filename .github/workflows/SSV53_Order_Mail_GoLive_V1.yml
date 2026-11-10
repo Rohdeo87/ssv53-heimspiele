@@ -203,12 +203,12 @@ jobs:
         run: python scripts/deploy_customer_mail_templates.py
 
   mower_service:
-    if: inputs.confirmation == 'SSV53-MOWER-SERVICE-INSPECT' || inputs.confirmation == 'SSV53-MOWER-SERVICE-RELEASE'
+    if: inputs.confirmation == 'SSV53-MOWER-SERVICE-INSPECT' || inputs.confirmation == 'SSV53-MOWER-SERVICE-RELEASE' || inputs.confirmation == 'SSV53-MOWER-SERVICE-STATE'
     name: Mäher-Wartung im bestehenden Live-Paket prüfen oder ergänzen
     runs-on: ubuntu-latest
     timeout-minutes: 25
     concurrency:
-      group: ssv53-reservation-notifications
+      group: ${{ inputs.confirmation == 'SSV53-MOWER-SERVICE-STATE' && 'ssv53-mower-service-state-read' || 'ssv53-reservation-notifications' }}
       cancel-in-progress: false
     steps:
       - name: Ziel und Umfang prüfen
@@ -243,6 +243,8 @@ jobs:
         run: |
           if [ "$RELEASE_KIND" = "SSV53-MOWER-SERVICE-RELEASE" ]; then
             python scripts/deploy_mower_service.py --deploy --proof "$RUNNER_TEMP/mower-service-proof.json"
+          elif [ "$RELEASE_KIND" = "SSV53-MOWER-SERVICE-STATE" ]; then
+            python scripts/deploy_mower_service.py --state-only --proof "$RUNNER_TEMP/mower-service-proof.json"
           else
             python scripts/deploy_mower_service.py --proof "$RUNNER_TEMP/mower-service-proof.json"
           fi

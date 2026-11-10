@@ -314,10 +314,24 @@ def health_without_action(session):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--deploy', action='store_true')
+    parser.add_argument('--state-only', action='store_true')
     parser.add_argument('--proof', type=Path, required=True)
     args = parser.parse_args()
     if az('account', 'show')['id'] != SUBSCRIPTION:
         raise RuntimeError('Unexpected subscription')
+    if args.state_only:
+        state = deployment_state()
+        latest = state.get('LatestDeploymentId')
+        record = state.get('Deployments', {}).get(latest, {})
+        proof = {'read_only': True, 'active_id': state.get('ActiveDeploymentId'), 'latest_id': latest,
+                 'status': record.get('Status'), 'complete': record.get('Complete'),
+                 'latest_step': record.get('LatestDeploymentStep'),
+                 'steps': {name: {'status': step.get('Status'), 'tries': step.get('TryCount'),
+                                  'has_error': bool(step.get('ErrorMessage'))}
+                           for name, step in record.get('Steps', {}).items()}}
+        args.proof.write_text(json.dumps(proof, indent=2) + '\n')
+        print(json.dumps(proof), flush=True)
+        return
     token = az('account', 'get-access-token', '--resource', 'https://management.azure.com')['accessToken']
     session = requests.Session()
     session.headers.update(Authorization='Bearer ' + token)
