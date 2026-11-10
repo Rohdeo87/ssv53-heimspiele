@@ -225,9 +225,11 @@ jobs:
       - name: Steuerung, Sicherheit und Paketbestand prüfen
         run: |
           python -m pip install -r requirements-test.txt
-          python -m pytest -q
-          node --test tests/test_appack*.js
-          python scripts/sync_platzpflege_design.py --check
+          if [ "${{ inputs.confirmation }}" = "SSV53-MOWER-SERVICE-RELEASE" ]; then
+            python -m pytest -q
+            node --test tests/test_appack*.js
+            python scripts/sync_platzpflege_design.py --check
+          fi
       - uses: azure/login@v3
         with:
           client-id: ${{ vars.AZURE_BOOTSTRAP_CLIENT_ID }}

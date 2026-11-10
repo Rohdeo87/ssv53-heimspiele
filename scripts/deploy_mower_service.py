@@ -152,6 +152,40 @@ def all_settings(session, site_url):
 
 
 def select_active(session, blobs, site_url):
+    # Flex also keeps a durable deployment-state record in its private
+    # package container. Inspect only its shape and exact package references;
+    # never print provider URLs, settings or arbitrary string values.
+    if any(blob['name'] == 'kudu-state.json' for blob in blobs):
+        with tempfile.TemporaryDirectory(prefix='ssv53-flex-state-') as folder:
+            filename = Path(folder) / 'state.json'
+            az('storage', 'blob', 'download', '--account-name', 'ssv53platzpflegeprodq7kb',
+               '--container-name', 'app-package-q7kbw54s', '--auth-mode', 'login',
+               '--name', 'kudu-state.json', '--file', str(filename), '--overwrite')
+            state = json.loads(filename.read_text())
+        candidates = {blob['name'] for blob in blobs if blob['name'].endswith('.zip')}
+        summary = []
+
+        def visit(value, path='root'):
+            if isinstance(value, dict):
+                for key, item in value.items():
+                    visit(item, path + '.' + str(key))
+            elif isinstance(value, list):
+                for index, item in enumerate(value[:20]):
+                    visit(item, path + '[' + str(index) + ']')
+            else:
+                entry = {'path': path, 'type': type(value).__name__}
+                if isinstance(value, str):
+                    matches = [name for name in candidates if value in (name, name[:-4]) or urlparse(value).path.endswith('/' + name)]
+                    if matches:
+                        entry['package_references'] = matches
+                    elif value.upper() in {'SUCCEEDED', 'SUCCESS', 'SUCCESSFUL', 'FAILED', 'ACTIVE', 'COMPLETE'}:
+                        entry['status'] = value
+                elif type(value) in (int, bool):
+                    entry['value'] = value
+                summary.append(entry)
+
+        visit(state)
+        print(json.dumps({'flex_deployment_state': summary}), flush=True)
     # The Flex publishing host can cold-start independently of the running
     # timer host. Retry only read operations and expose no provider bodies.
     for attempt in range(6):
@@ -167,8 +201,11 @@ def select_active(session, blobs, site_url):
     response = session.get(site_url + '/deployments?api-version=2024-04-01', timeout=45, allow_redirects=False)
     safe = {'arm_deployments_status': response.status_code}
     if response.status_code == 200:
-        safe['deployments'] = [{key: item.get('properties', {}).get(key) for key in ('id', 'status', 'active', 'start_time', 'end_time')}
-                               for item in response.json().get('value', [])[:5]]
+        try:
+            safe['deployments'] = [{key: item.get('properties', {}).get(key) for key in ('id', 'status', 'active', 'start_time', 'end_time')}
+                                   for item in response.json().get('value', [])[:5]]
+        except ValueError:
+            safe['arm_response_is_json'] = False
     print(json.dumps(safe), flush=True)
     raise RuntimeError('Active package identity could not be verified; no production changes made')
 
