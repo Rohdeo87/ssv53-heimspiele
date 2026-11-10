@@ -203,7 +203,7 @@ jobs:
         run: python scripts/deploy_customer_mail_templates.py
 
   mower_service:
-    if: inputs.confirmation == 'SSV53-MOWER-SERVICE-INSPECT' || inputs.confirmation == 'SSV53-MOWER-SERVICE-RELEASE' || inputs.confirmation == 'SSV53-MOWER-SERVICE-STATE'
+    if: inputs.confirmation == 'SSV53-MOWER-SERVICE-INSPECT' || inputs.confirmation == 'SSV53-MOWER-SERVICE-RELEASE' || inputs.confirmation == 'SSV53-MOWER-SERVICE-STATE' || inputs.confirmation == 'SSV53-MOWER-SERVICE-VERIFY'
     name: Mäher-Wartung im bestehenden Live-Paket prüfen oder ergänzen
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -231,6 +231,10 @@ jobs:
             python -m pytest -q
             node --test tests/test_appack*.js
             python scripts/sync_platzpflege_design.py --check
+          elif [ "${{ inputs.confirmation }}" = "SSV53-MOWER-SERVICE-VERIFY" ]; then
+            python -m pytest -q tests/test_mower_service_deploy.py tests/test_mower_service_cms_merge.py tests/test_mower_service_mode.py
+            node --test tests/test_appack*.js
+            python scripts/sync_platzpflege_design.py --check
           fi
       - uses: azure/login@v3
         with:
@@ -245,6 +249,8 @@ jobs:
             python scripts/deploy_mower_service.py --deploy --proof "$RUNNER_TEMP/mower-service-proof.json"
           elif [ "$RELEASE_KIND" = "SSV53-MOWER-SERVICE-STATE" ]; then
             python scripts/deploy_mower_service.py --state-only --proof "$RUNNER_TEMP/mower-service-proof.json"
+          elif [ "$RELEASE_KIND" = "SSV53-MOWER-SERVICE-VERIFY" ]; then
+            python scripts/deploy_mower_service.py --verify-installed --proof "$RUNNER_TEMP/mower-service-proof.json"
           else
             python scripts/deploy_mower_service.py --proof "$RUNNER_TEMP/mower-service-proof.json"
           fi

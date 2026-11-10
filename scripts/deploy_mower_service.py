@@ -311,10 +311,72 @@ def health_without_action(session):
         raise RuntimeError('Platzwart authentication boundary verification failed')
 
 
+def verify_installed_release(session, site_url, blobs, output):
+    """Read-only completion when Flex's durable pointer lags the live worker.
+
+    Bind an explicit stored package to independently observed worker source
+    AND manifest hashes. Reconstruct the reviewed release and compare every
+    installed byte, retaining the completed active-source regression proof.
+    """
+    confirmed = json.loads((ROOT / 'scripts/mower_service_runtime_proof.json').read_text())
+    at = datetime.fromisoformat(confirmed['runtime_observed_utc'].replace('Z', '+00:00'))
+    if not -30 <= (datetime.now(timezone.utc) - at).total_seconds() <= 3600:
+        raise RuntimeError('Fresh independently observed runtime proof is required')
+    if confirmed.get('runtime_manifest_verified') is not True:
+        raise RuntimeError('The running worker has not verified its source manifest')
+    tests = confirmed['tests']
+    if tests['new_failures'] or tests['after']['service_test_cases'] < 42:
+        raise RuntimeError('The prepared active-source regression proof is incomplete')
+    for name, expected in confirmed['canonical_source_sha256'].items():
+        if name not in RELEASE_FILES or digest((ROOT / name).read_bytes()) != expected:
+            raise RuntimeError('Reviewed application source changed since the live regression tests')
+    candidates = {blob['name'] for blob in blobs if blob['name'].endswith('.zip')}
+    if not {confirmed['baseline_package'], confirmed['confirmed_package']} <= candidates:
+        raise RuntimeError('The runtime-confirmed package or its predecessor is unavailable')
+    before_settings = all_settings(session, site_url)
+    with tempfile.TemporaryDirectory(prefix='ssv53-service-completion-') as folder:
+        folder = Path(folder)
+        original, installed, expected = folder / 'original.zip', folder / 'installed.zip', folder / 'expected.zip'
+        for name, destination in ((confirmed['baseline_package'], original), (confirmed['confirmed_package'], installed)):
+            az('storage', 'blob', 'download', '--account-name', 'ssv53platzpflegeprodq7kb',
+               '--container-name', 'app-package-q7kbw54s', '--auth-mode', 'login',
+               '--name', name, '--file', str(destination), '--overwrite', timeout=300)
+        checks, _ = prepare_release(original, expected)
+        if {entry['path']: entry['target_sha256'] for entry in checks} != confirmed['target_source_sha256']:
+            raise RuntimeError('The reconstructed source differs from the tested live-source merge')
+        with zipfile.ZipFile(expected) as wanted, zipfile.ZipFile(installed) as actual:
+            if (set(wanted.namelist()) != set(actual.namelist())
+                    or any(wanted.read(name) != actual.read(name) for name in wanted.namelist())):
+                raise RuntimeError('Installed package differs from the exact reviewed release')
+            if (digest(actual.read('function_app.py')) != confirmed['runtime_entrypoint_sha256']
+                    or digest(actual.read('package-manifest.json')) != confirmed['runtime_manifest_sha256']):
+                raise RuntimeError('Stored package does not match the independently observed running worker')
+        before_functions = verify_import(original, folder / 'before')
+        after_functions = verify_import(installed, folder / 'after')
+        if before_functions != after_functions:
+            raise RuntimeError('Installed release changed unrelated function registrations')
+        key = existing_mail_key(session, site_url)
+        health = requests.Session()
+        verify_smtp(health, key, require_new_template=True)
+        health_without_action(health)
+        if all_settings(session, site_url) != before_settings:
+            raise RuntimeError('Application configuration changed during verification')
+        proof = {**confirmed, 'deployed': True, 'verified_at_utc': datetime.now(timezone.utc).isoformat(),
+                 'verification_only_no_deployment': True, 'unrelated_package_bytes_preserved': True,
+                 'all_installed_package_bytes_match_reviewed_release': True,
+                 'functions_preserved': after_functions, 'smtp_authenticated_without_mail': True,
+                 'calendar_and_authentication_verified': True, 'settings_written': False,
+                 'settings_stable_during_verification': True, 'device_actions_invoked': False,
+                 'service_activated': False, 'flex_metadata_pointer_stale': True}
+        output.write_text(json.dumps(proof, indent=2) + '\n')
+        print(json.dumps(proof), flush=True)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--deploy', action='store_true')
     parser.add_argument('--state-only', action='store_true')
+    parser.add_argument('--verify-installed', action='store_true')
     parser.add_argument('--proof', type=Path, required=True)
     args = parser.parse_args()
     if az('account', 'show')['id'] != SUBSCRIPTION:
@@ -362,6 +424,9 @@ def main():
     account, container = parsed.hostname.split('.')[0], parsed.path.strip('/')
     blob_args = ('--account-name', account, '--container-name', container, '--auth-mode', 'login')
     blobs = az('storage', 'blob', 'list', *blob_args)
+    if args.verify_installed:
+        verify_installed_release(session, site_url, blobs, args.proof)
+        return
     active = select_active(session, blobs, site_url)
     with tempfile.TemporaryDirectory(prefix='ssv53-mower-service-') as folder:
         folder = Path(folder)
