@@ -1,0 +1,31 @@
+{
+  "base_sha256": "a906681386e3e22fa017b6db5a5e4fcf8bd824ade2f400cdfc71240e7847793f",
+  "reviewed_sha256": "cc0dbca240473608f6c8ea90399912561863939f8fa3fa46f762139294c92c88",
+  "active_sha256": "5c640112cc8f1af738c687423dc8a8950a985a3684fb5bfbb608c335f93409b9",
+  "merged_sha256": "814d3b0a76d39992a3801e1d85d0b3a304aa945c60992899be72f106bd181c5c",
+  "reviewed_edits": 17,
+  "independent_edits_preserved": 405,
+  "overlap_resolved_automatically": false,
+  "live_visibility_policy_preserved": true,
+  "delivered_sha256": "536d494d5ccaeefdc7de09817bee55ccf7cea1ab51ab671776f2663c766f820c",
+  "template_id": "6a86ab6c4b3c829dd60de9b7",
+  "navigation": [
+    "Sonstiges",
+    "Mähroboter",
+    "Wartung"
+  ],
+  "mobile_widths_tested": [
+    320,
+    390
+  ],
+  "synthetic_on_off_posts_verified": true,
+  "synthetic_cancel_without_post_verified": true,
+  "javascript_errors": 0,
+  "published": true,
+  "saved_source_readback_verified": true,
+  "readback_sha256": "fdfe77f03d0226cfd6f26904418ae3aca9fd378671d07431269ebc60f8db10ea",
+  "runtime_release_run": 42844491495,
+  "prototype_only": false,
+  "public_render_verified": true,
+  "public_render_http_status": 200
+}

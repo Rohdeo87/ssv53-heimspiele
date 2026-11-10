@@ -265,6 +265,11 @@ def select_active(session, blobs, site_url):
     candidates = {blob['name'] for blob in blobs if blob['name'].endswith('.zip')}
     if any(blob['name'] == 'kudu-state.json' for blob in blobs):
         name = active_from_state(deployment_state(), candidates)
+        runtime_proof = ROOT / 'scripts/mower_service_runtime_proof.json'
+        if runtime_proof.exists():
+            confirmed = json.loads(runtime_proof.read_text()).get('confirmed_package')
+            if confirmed and confirmed != name:
+                raise RuntimeError('Flex metadata points to an older package than the verified worker; refresh runtime proof before any new deployment')
         print(json.dumps({'active_package_verified_from_flex_state': name}), flush=True)
         return name
     # Older hosts expose the same completed-publication identity via SCM.

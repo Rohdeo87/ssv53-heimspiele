@@ -1,0 +1,57 @@
+{
+  "cycles": [
+    {
+      "TimeGenerated": "2026-11-10T15:29:02.879472Z",
+      "runtime_entrypoint_sha256": "4fe4556d98495586e18774d1923ac223ffc85e430c7c1f9cab1b04d16b8d4bf8",
+      "runtime_manifest_sha256": "97474cdc5fff6f29a3c8bedb26f71b091d45f4c034ceab8056f70cde8db77845",
+      "manifest_verified": true,
+      "control_mode": "FULL_FAILSAFE",
+      "decision": "CONTINUOUS_MOWING_ACTIVE",
+      "service_field_present": true,
+      "service_active": false,
+      "connected": true,
+      "mower_state": "IN_OPERATION",
+      "activity": "MOWING"
+    },
+    {
+      "TimeGenerated": "2026-11-10T15:28:02.665954Z",
+      "runtime_entrypoint_sha256": "4fe4556d98495586e18774d1923ac223ffc85e430c7c1f9cab1b04d16b8d4bf8",
+      "runtime_manifest_sha256": "97474cdc5fff6f29a3c8bedb26f71b091d45f4c034ceab8056f70cde8db77845",
+      "manifest_verified": true,
+      "control_mode": "FULL_FAILSAFE",
+      "decision": "CONTINUOUS_MOWING_ACTIVE",
+      "service_field_present": true,
+      "service_active": false,
+      "connected": true,
+      "mower_state": "IN_OPERATION",
+      "activity": "MOWING"
+    },
+    {
+      "TimeGenerated": "2026-11-10T15:27:02.9680441Z",
+      "runtime_entrypoint_sha256": "4fe4556d98495586e18774d1923ac223ffc85e430c7c1f9cab1b04d16b8d4bf8",
+      "runtime_manifest_sha256": "97474cdc5fff6f29a3c8bedb26f71b091d45f4c034ceab8056f70cde8db77845",
+      "manifest_verified": true,
+      "control_mode": "FULL_FAILSAFE",
+      "decision": "CONTINUOUS_MOWING_ACTIVE",
+      "service_field_present": true,
+      "service_active": false,
+      "connected": true,
+      "mower_state": "IN_OPERATION",
+      "activity": "MOWING"
+    }
+  ],
+  "state": {
+    "revision": 135599,
+    "maintenance_mode": false,
+    "mower_service_active": false,
+    "mower_service_reason": null,
+    "mower_service_revision": 0,
+    "last_cycle_started_utc": "2026-11-10T15:29:00.009216+00:00",
+    "last_success_utc": "2026-11-10T15:29:00.009216+00:00",
+    "last_decision_code": "CONTINUOUS_MOWING_ACTIVE",
+    "irrigation_phase": null,
+    "mower_start_pending_since_utc": null,
+    "operator_request_action": "SET_CUTTING_HEIGHT",
+    "operator_request_status": "COMPLETED"
+  }
+}
