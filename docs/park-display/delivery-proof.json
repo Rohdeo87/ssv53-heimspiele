@@ -1,0 +1,20 @@
+{
+  "published": true,
+  "template_id": "6a86ab6c4b3c829dd60de9b7",
+  "source_before_sha256": "536d494d5ccaeefdc7de09817bee55ccf7cea1ab51ab671776f2663c766f820c",
+  "source_after_sha256": "d205478d6402d39db233b6153323fee50a7c5fe8a3438d260b562ecf2d671c44",
+  "existing_template_preserved": true,
+  "display_only": true,
+  "backend_changed": false,
+  "automation_release_requested": false,
+  "device_commands_sent": false,
+  "public_render_http_status": 200,
+  "cms_source_readback_verified": true,
+  "javascript_tests_passed": 210,
+  "mobile_widths_tested": [
+    390,
+    320
+  ],
+  "synthetic_preview_action_posts": 0,
+  "synthetic_preview_errors": []
+}

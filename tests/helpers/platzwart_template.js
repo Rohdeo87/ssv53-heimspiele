@@ -22,7 +22,8 @@ const viewFunctions = [
 ];
 
 function viewModel() {
-  return new Function(`var EVENT_TIME_ZONE="Europe/Berlin";\n${viewFunctions.map(sourceOf).join("\n")}\nreturn {${viewFunctions.join(",")}};`)();
+  const parkDisplay = fs.readFileSync(path.join(__dirname, "../../ui/platzpflege/park-display.js"), "utf8");
+  return new Function(`var EVENT_TIME_ZONE="Europe/Berlin";\n${viewFunctions.map(sourceOf).join("\n")}\n${sourceOf("manualControlView")}\n${parkDisplay}\nreturn {${viewFunctions.join(",")},manualParkPositionDisplay};`)();
 }
 
 function snapshot() {

@@ -1,0 +1,25 @@
+{
+  "observed_at": "2026-11-11T07:07:00.001665+00:00",
+  "mower": {
+    "activity": "PARKED_IN_CS",
+    "mower_state": "RESTRICTED",
+    "mode": "MAIN_AREA",
+    "connected": true,
+    "error_code": 0,
+    "battery": 100,
+    "status_timestamp_ms": 1794380469004
+  },
+  "park_position_confirmed_at": "2026-11-10T17:10:00.008534+00:00",
+  "park_observations": 838,
+  "manual_session": {
+    "kind": "PARK",
+    "status": "ACTIVE",
+    "source": "APP",
+    "created_at_utc": "2026-11-10T17:04:34.969728+00:00",
+    "ended_at_utc": null
+  },
+  "automation_restart_allowed": false,
+  "park_command_status": "COMPLETED",
+  "last_park_send_status": "SENT_UNCONFIRMED",
+  "mower_service_active": false
+}

@@ -12,6 +12,7 @@ def sync(*, check=False):
     html = template.read_text(encoding="utf-8")
     css = (UI / "design.css").read_text(encoding="utf-8")
     js = (UI / "design.js").read_text(encoding="utf-8")
+    js += "\n" + (UI / "park-display.js").read_text(encoding="utf-8")
     icons = json.loads((UI / "icons.json").read_text(encoding="utf-8"))
     js = js.replace("__PF_ICON_DATA__", json.dumps(icons, separators=(",", ":")))
     license_text = (UI / "LICENSE-lucide.txt").read_text(encoding="utf-8")
