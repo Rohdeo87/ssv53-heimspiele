@@ -433,12 +433,12 @@
   "publication": {
     "schemaVersion": 1,
     "status": "ok",
-    "sourceGeneratedAt": "2026-11-16T11:46:32+00:00",
-    "sourceDigest": "34342aa76c6a93cec5f3f63fc66b0afbf64dc49de2e04ffda24e08cfc041c2a3",
+    "sourceGeneratedAt": "2026-11-16T22:23:37+00:00",
+    "sourceDigest": "e2f11849ab0fe904f7ef8e70bdb5175f1d3c9108f895991a5293fed50e873c56",
     "sourceCount": 41,
     "retainedCount": 0,
     "effectiveCount": 41,
     "requiredConsumer": null,
-    "effectiveDigest": "083edbfffbc0caa1c4fc2bdfbcb9ceb58aa203777ca5dae254b6da144caf91c1"
+    "effectiveDigest": "05a3dd857986e9cbd4c1a1e36a85d2d969ec329a9078017ffc48ba0013d27a41"
   }
 }
