@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-20T13:09:06+00:00",
+  "generated_at": "2026-11-20T21:21:54+00:00",
   "selection_mode": "club-wide venue",
   "event_timing": {
     "before_minutes": 60,
@@ -22,11 +22,11 @@
     ]
   },
   "total": 118,
-  "included": 41,
+  "included": 42,
   "review": 0,
-  "excluded": 77,
+  "excluded": 76,
   "by_calendar": {
-    "Rasen": 36,
+    "Rasen": 37,
     "Kunstrasen": 5
   },
   "by_team": {
@@ -80,8 +80,8 @@
     },
     "Spielgemeinschaft Schönwalde-Perwenitz-Paaren": {
       "total": 36,
-      "included": 4,
-      "excluded": 32,
+      "included": 5,
+      "excluded": 31,
       "review": 0
     }
   },
@@ -128,7 +128,7 @@
     {
       "date_from": "2027-01-01",
       "date_to": "2027-03-31",
-      "competition_rows": 12
+      "competition_rows": 13
     },
     {
       "date_from": "2027-04-01",
@@ -139,12 +139,12 @@
   "publication": {
     "schemaVersion": 1,
     "status": "ok",
-    "sourceGeneratedAt": "2026-11-20T13:09:06+00:00",
-    "sourceDigest": "0b345e3aed9343f57ca8e19beb55b6b5a26b562821d0acb894c35100ae0c9adb",
-    "sourceCount": 41,
+    "sourceGeneratedAt": "2026-11-20T21:21:54+00:00",
+    "sourceDigest": "033bf8b1518a4613bf51fa5b6334d5b610b605332653b87d2feb8f250682b327",
+    "sourceCount": 42,
     "retainedCount": 0,
-    "effectiveCount": 41,
+    "effectiveCount": 42,
     "requiredConsumer": null,
-    "effectiveDigest": "05a3dd857986e9cbd4c1a1e36a85d2d969ec329a9078017ffc48ba0013d27a41"
+    "effectiveDigest": "74419c048b5e53a1db82cad97d7ebfe01fe2e8d29ab1c9dc9fd4b77043823f9f"
   }
 }

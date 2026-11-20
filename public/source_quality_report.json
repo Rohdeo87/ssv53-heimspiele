@@ -3,7 +3,7 @@
   "errors": [],
   "invalid_included": [],
   "by_calendar": {
-    "Rasen": 36,
+    "Rasen": 37,
     "Kunstrasen": 5
   },
   "event_timing": {
@@ -41,7 +41,7 @@
     {
       "date_from": "2027-01-01",
       "date_to": "2027-03-31",
-      "competition_rows": 12
+      "competition_rows": 13
     },
     {
       "date_from": "2027-04-01",
@@ -106,11 +106,11 @@
       "depth": 0,
       "source_url": "https://www.fussball.de/ajax.club.matchplan/-/id/00ES8GNBL0000049VV0AG08LVUPGND5I/mode/PAGE/show-filter/false/show-venues/true/mime-type/HTML/datum-von/2027-01-01/datum-bis/2027-03-31/max/50",
       "source_scope": "all club teams; inclusion decided only by venue",
-      "competition_rows": 12,
-      "source_detail_ids": 9,
-      "parsed_matches_before_duplicate_merge": 12,
-      "parsed_matches": 12,
-      "parsed_detail_ids": 9,
+      "competition_rows": 13,
+      "source_detail_ids": 10,
+      "parsed_matches_before_duplicate_merge": 13,
+      "parsed_matches": 13,
+      "parsed_detail_ids": 10,
       "missing_detail_ids": [],
       "source_festival_groups": 0,
       "missing_festival_groups": [],
@@ -158,6 +158,7 @@
       "031DB8NS8C000000VS5489BUVUR5FS5A",
       "031DB8NSCO000000VS5489BUVUR5FS5A",
       "031DP96C58000000VS5489BUVUR5FS5A",
+      "031DP96D60000000VS5489BUVUR5FS5A",
       "031DP96F8G000000VS5489BUVUR5FS5A",
       "031HB5B99O000000VS5489BTVVG7L386",
       "031HB5B9C8000000VS5489BTVVG7L386",
@@ -258,6 +259,24 @@
           "resolved": true
         },
         "merged_external_id": "031DP96C58000000VS5489BUVUR5FS5A"
+      },
+      {
+        "detail_id": "031DP96D60000000VS5489BUVUR5FS5A",
+        "occurrences": 2,
+        "conflicts": {},
+        "resolved": true,
+        "resolution_attempt": {
+          "method": "explicit_postponement_chain",
+          "relocations": [
+            {
+              "from": "2026-11-15T14:00+01:00",
+              "to": "2027-02-14T14:00+01:00"
+            }
+          ],
+          "selected_kickoff": "2027-02-14T14:00+01:00",
+          "resolved": true
+        },
+        "merged_external_id": "031DP96D60000000VS5489BUVUR5FS5A"
       },
       {
         "detail_id": "031DP96F8G000000VS5489BUVUR5FS5A",
