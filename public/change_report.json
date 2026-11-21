@@ -1,11 +1,11 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-20T21:21:55.156924+00:00",
+  "generatedAt": "2026-11-21T11:26:12.809145+00:00",
   "status": "ok",
   "counts": {
-    "before": 41,
+    "before": 42,
     "after": 42,
-    "added": 1,
+    "added": 0,
     "changed": 0,
     "removed": 0,
     "effectiveAfter": 42,
@@ -21,36 +21,7 @@
       "confirmed": true
     }
   },
-  "added": [
-    {
-      "id": "dfb:031DP96D60000000VS5489BUVUR5FS5A",
-      "title": "Spielgemeinschaft Schönwalde-Perwenitz-Paaren – FC Borussia Brandenburg II",
-      "start": "2027-02-14T14:00+01:00",
-      "end": "2027-02-14T15:45+01:00",
-      "occupancyStart": "2027-02-14T13:00+01:00",
-      "occupancyEnd": "2027-02-14T16:45+01:00",
-      "kickoff": "2027-02-14T14:00+01:00",
-      "matchDurationMinutes": 105,
-      "durationRule": "dfb-regel-7-herren-2x45+halftime-15",
-      "competitionFormat": "league",
-      "matchType": "ME",
-      "place": "rasen",
-      "calendar": "Rasen",
-      "team": "Spielgemeinschaft Schönwalde-Perwenitz-Paaren",
-      "teamCategory": "Herren | Kreisliga",
-      "teamRole": "home",
-      "homeTeam": "Spielgemeinschaft Schönwalde-Perwenitz-Paaren",
-      "awayTeam": "FC Borussia Brandenburg II",
-      "competition": "So, | Herren | Kreisliga",
-      "description": "Herren · Kreisliga",
-      "status": "",
-      "detailLink": "https://www.fussball.de/spiel/spielgemeinschaft-schoenwalde-perwenitz-paaren-fc-borussia-brandenburg-ii/-/spiel/031DP96D60000000VS5489BUVUR5FS5A",
-      "location": "Rasenplatz, Sportplatz Schönwalde Strandbad, Platz 1, Kurmärkische Str. 2, 14621 Schönwalde-Glien",
-      "locationSource": "fussball.de",
-      "source": "fussball.de",
-      "checksum": "1914ca879f4daa734391cda505531a34032d83c66bd2ca6d9b4826bdc94cab6f"
-    }
-  ],
+  "added": [],
   "changed": [],
   "removed": [],
   "retained": [],
@@ -58,8 +29,8 @@
   "publication": {
     "schemaVersion": 1,
     "status": "ok",
-    "sourceGeneratedAt": "2026-11-20T21:21:54+00:00",
-    "sourceDigest": "033bf8b1518a4613bf51fa5b6334d5b610b605332653b87d2feb8f250682b327",
+    "sourceGeneratedAt": "2026-11-21T11:26:12+00:00",
+    "sourceDigest": "afab12df0b3b0434cc1e880798c602b975ea655e3669bfb94121d60b73449209",
     "sourceCount": 42,
     "retainedCount": 0,
     "effectiveCount": 42,
