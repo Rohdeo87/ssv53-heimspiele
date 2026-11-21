@@ -1842,6 +1842,57 @@ font-weight: 500;
 html.ssv-large-text #booking-controls {grid-template-areas: "view" "place";grid-template-columns: minmax(0, 1fr);}
 html.ssv-large-text #booking-controls.ssv-season-choice {grid-template-areas: "season" "view" "place";}
 /* End SSV53 calendar polish. */
+
+/* Both season plans use the calendar grid, event palette and gestures above. */
+#booking-controls .ssv-control-group--view .ssv-segmented-control {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) repeat(2, 44px);
+  align-items: center;
+}
+#booking-controls .ssv-control-group--view .ssv-segment-button { min-width: 0 !important; }
+.season-circle {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--brand);
+  cursor: pointer;
+}
+.season-circle[aria-pressed="true"] { background: var(--brand); border-color: var(--brand); color: white; }
+.season-circle:disabled { opacity: .55; cursor: default; }
+.season-circle > svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+.valid-badge {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  display: grid;
+  place-items: center;
+  width: 19px;
+  height: 19px;
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  background: #187346;
+  color: white;
+  pointer-events: none;
+}
+.valid-badge svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.training-season-preview { --fc-today-bg-color: transparent; }
+.valid-badge[hidden], .training-season-preview #calendar-today-button { display: none !important; }
+.training-season-preview #calendar-navigation {
+  grid-template-areas: "previous date next";
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+}
+@media (min-width: 700px) {
+  #booking-controls:not(.ssv-season-choice) { grid-template-columns: minmax(0, 1.5fr) minmax(16rem, 1fr); }
+}
+@media (pointer: fine) {
+  .training-season-preview .fc-timegrid-body { cursor: grab; user-select: none; }
+  .training-season-preview .fc-timegrid-body:active { cursor: grabbing; }
+}
 </style>
 
 <script>
@@ -1934,11 +1985,54 @@ const TODAY_AFTERNOON_SCROLL_TIME = "14:00:00";
 const SLOT_DURATION_MINUTES = 30;
 const DEFAULT_SLOT_ROW_HEIGHT = 17;
 const ABSOLUTE_MIN_SLOT_ROW_HEIGHT = 6;
-const MAX_SLOT_ROW_HEIGHT = 34;
+const MAX_SLOT_ROW_HEIGHT = 48;
 
 const WINTER_RESOURCE_IDS = ["kunstrasen"];
 const SUMMER_RESOURCE_IDS = ["rasen", "kunstrasen"];
 
+
+const TRAINING_PLAN_SOURCE = {
+  sha256: "404c8cf47a111e6882b2bc4b3e8c9500a0a56a2511bb3b0d8566c93643ebc889",
+  plans: {
+    Sommer: [
+      {"id": "som-ras-e1-di", "weekday": "Dienstag", "start": "17:00", "end": "18:30", "team": "E1", "resource_id": "rasen", "area": "vorne & hinten"},
+      {"id": "som-ras-a-di", "weekday": "Dienstag", "start": "18:30", "end": "20:00", "team": "A", "resource_id": "rasen", "area": "vorne & hinten"},
+      {"id": "som-ras-c-mi", "weekday": "Mittwoch", "start": "17:30", "end": "19:00", "team": "C", "resource_id": "rasen", "area": "vorne & hinten"},
+      {"id": "som-ras-e1-do", "weekday": "Donnerstag", "start": "17:00", "end": "18:30", "team": "E1", "resource_id": "rasen", "area": "vorne & hinten"},
+      {"id": "som-ras-a-do", "weekday": "Donnerstag", "start": "18:30", "end": "20:00", "team": "A", "resource_id": "rasen", "area": "vorne & hinten"},
+      {"id": "som-ras-c-fr", "weekday": "Freitag", "start": "17:00", "end": "18:30", "team": "C", "resource_id": "rasen", "area": "vorne & hinten"},
+      {"id": "som-kr-e2-mo", "weekday": "Montag", "start": "16:45", "end": "18:15", "team": "E2", "resource_id": "kunstrasen", "area": "vorne & hinten"},
+      {"id": "som-kr-ue40-mo", "weekday": "Montag", "start": "19:30", "end": "21:00", "team": "Ü40 / Freizeit", "resource_id": "rasen", "area": "vorne & hinten"},
+      {"id": "som-kr-g-di", "weekday": "Dienstag", "start": "16:30", "end": "17:30", "team": "G", "resource_id": "kunstrasen", "area": "vorne"},
+      {"id": "som-kr-f-di", "weekday": "Dienstag", "start": "16:45", "end": "18:15", "team": "F", "resource_id": "kunstrasen", "area": "hinten"},
+      {"id": "som-kr-minis-mi", "weekday": "Mittwoch", "start": "15:45", "end": "16:45", "team": "Minis", "resource_id": "kunstrasen", "area": "vorne & hinten"},
+      {"id": "som-kr-d-mi", "weekday": "Mittwoch", "start": "18:00", "end": "19:30", "team": "D", "resource_id": "kunstrasen", "area": "vorne & hinten"},
+      {"id": "som-kr-ue50-mi", "weekday": "Mittwoch", "start": "19:30", "end": "21:00", "team": "Ü50", "resource_id": "kunstrasen", "area": "vorne & hinten"},
+      {"id": "som-kr-f-do", "weekday": "Donnerstag", "start": "16:45", "end": "18:15", "team": "F", "resource_id": "kunstrasen", "area": "vorne & hinten"},
+      {"id": "som-kr-e2-fr", "weekday": "Freitag", "start": "15:30", "end": "17:00", "team": "E2", "resource_id": "kunstrasen", "area": "vorne & hinten"},
+      {"id": "som-kr-d-fr", "weekday": "Freitag", "start": "18:00", "end": "19:30", "team": "D", "resource_id": "kunstrasen", "area": "vorne & hinten"}
+    ],
+    Winter: [
+      {"id": "win-kr-e2-mo", "weekday": "Montag", "start": "17:00", "end": "18:30", "team": "E2", "resource_id": "kunstrasen", "area": "vorne & hinten"},
+      {"id": "win-kr-ue40-mo", "weekday": "Montag", "start": "19:30", "end": "21:00", "team": "Ü40 / Freizeit", "resource_id": "kunstrasen", "area": "vorne & hinten"},
+      {"id": "win-kr-g-di", "weekday": "Dienstag", "start": "16:30", "end": "17:30", "team": "G", "resource_id": "kunstrasen", "area": "vorne"},
+      {"id": "win-kr-f-di", "weekday": "Dienstag", "start": "16:45", "end": "18:15", "team": "F", "resource_id": "kunstrasen", "area": "hinten"},
+      {"id": "win-kr-e1-di-1", "weekday": "Dienstag", "start": "17:30", "end": "18:15", "team": "E1", "resource_id": "kunstrasen", "area": "vorne"},
+      {"id": "win-kr-e1-di-2", "weekday": "Dienstag", "start": "18:15", "end": "19:00", "team": "E1", "resource_id": "kunstrasen", "area": "vorne & hinten"},
+      {"id": "win-kr-a-di", "weekday": "Dienstag", "start": "19:00", "end": "20:30", "team": "A", "resource_id": "kunstrasen", "area": "vorne & hinten"},
+      {"id": "win-kr-minis-mi", "weekday": "Mittwoch", "start": "15:45", "end": "16:45", "team": "Minis", "resource_id": "kunstrasen", "area": "vorne & hinten"},
+      {"id": "win-kr-c-mi", "weekday": "Mittwoch", "start": "16:45", "end": "18:15", "team": "C", "resource_id": "kunstrasen", "area": "vorne & hinten"},
+      {"id": "win-kr-d-mi", "weekday": "Mittwoch", "start": "18:15", "end": "19:45", "team": "D", "resource_id": "kunstrasen", "area": "vorne & hinten"},
+      {"id": "win-kr-ue50-mi", "weekday": "Mittwoch", "start": "19:45", "end": "21:15", "team": "Ü50", "resource_id": "kunstrasen", "area": "vorne & hinten"},
+      {"id": "win-kr-f-do", "weekday": "Donnerstag", "start": "16:45", "end": "18:15", "team": "F", "resource_id": "kunstrasen", "area": "vorne"},
+      {"id": "win-kr-e1-do", "weekday": "Donnerstag", "start": "17:00", "end": "18:30", "team": "E1", "resource_id": "kunstrasen", "area": "hinten"},
+      {"id": "win-kr-a-do", "weekday": "Donnerstag", "start": "18:30", "end": "20:00", "team": "A", "resource_id": "kunstrasen", "area": "vorne & hinten"},
+      {"id": "win-kr-e2-fr", "weekday": "Freitag", "start": "15:30", "end": "17:00", "team": "E2", "resource_id": "kunstrasen", "area": "vorne & hinten"},
+      {"id": "win-kr-c-fr", "weekday": "Freitag", "start": "17:00", "end": "18:30", "team": "C", "resource_id": "kunstrasen", "area": "vorne & hinten"},
+      {"id": "win-kr-d-fr", "weekday": "Freitag", "start": "18:30", "end": "20:00", "team": "D", "resource_id": "kunstrasen", "area": "vorne & hinten"}
+    ]
+  }
+};
 
 const SHOW_WEEKENDS = true;
 
@@ -2071,6 +2165,8 @@ calendarReadOnly: true,
 calendarLoading: false,
 calendarLoadPromise: null,
 calendarLoadKey: "",
+verifiedPlanSeason: null,
+planPreview: null,
 settings: DEFAULT_SETTINGS,
 module: DEFAULT_SETTINGS.module,
 calendars: {},
@@ -2126,6 +2222,7 @@ currentCreator: getCurrentAppackCreator(profileJSON)
 
 const elements = {
 controls: document.getElementById("booking-controls"),
+planButtons: Array.from(document.querySelectorAll("[data-plan-season]")),
 seasonButtons: Array.from(document.querySelectorAll("[data-season]")),
 viewButtons: Array.from(document.querySelectorAll("[data-calendar-view]")),
 placeFilters: document.getElementById("place-filters"),
@@ -2361,11 +2458,18 @@ Math.max(scroller.scrollTop + viewportY, 0),
 contentHeight
 );
 
-return {
-viewportY: viewportY,
-contentY: contentY,
-contentRatio: contentY / contentHeight
-};
+const anchor = {viewportY: viewportY, contentRatio: contentY / contentHeight};
+const y = rect.top + viewportY;
+const rows = scroller.querySelectorAll(".fc-timegrid-slots tr");
+for (let index = 0; index < rows.length; index++) {
+  const bounds = rows[index].getBoundingClientRect();
+  if (y >= bounds.top && y < bounds.bottom) {
+    anchor.slot = index;
+    anchor.fraction = (y - bounds.top) / bounds.height;
+    break;
+  }
+}
+return anchor;
 }
 
 function updateZoomAnchorViewport(anchor, clientY) {
@@ -2389,8 +2493,15 @@ const maxScroll = Math.max(
 scroller.scrollHeight - scroller.clientHeight,
 0
 );
-const target = anchor.contentRatio * scroller.scrollHeight -
-anchor.viewportY;
+let target = anchor.contentRatio * scroller.scrollHeight - anchor.viewportY;
+if (Number.isInteger(anchor.slot)) {
+  const row = scroller.querySelectorAll(".fc-timegrid-slots tr")[anchor.slot];
+  if (row) {
+    const bounds = row.getBoundingClientRect();
+    target = scroller.scrollTop + bounds.top - scroller.getBoundingClientRect().top +
+      bounds.height * anchor.fraction - anchor.viewportY;
+  }
+}
 scroller.scrollTop = Math.min(Math.max(target, 0), maxScroll);
 }
 
@@ -2532,6 +2643,9 @@ const refreshView = currentView === 'resourceTimeGridWeek'
 ? 'resourceTimeGridWeekZoomRefresh'
 : 'resourceTimeGridDayZoomRefresh';
 const currentDate = new Date(state.calendar.getDate());
+const scene = state.planPreview;
+const horizontal = getWeekHorizontalScroller();
+const left = horizontal ? horizontal.scrollLeft : 0;
 state.zoomGeometryRefreshInProgress = true;
 
 
@@ -2548,7 +2662,10 @@ state.calendar.rerenderEvents();
 restoreZoomAnchor(anchor);
 applyGridWidth();
 window.requestAnimationFrame(function () {
+if (scene !== state.planPreview) return;
 restoreZoomAnchor(anchor);
+const scroller = getWeekHorizontalScroller();
+if (scroller) scroller.scrollLeft = left;
 syncWeekSwipeEdge();
 if (typeof onComplete === 'function') onComplete();
 });
@@ -2585,7 +2702,9 @@ nextValue + 'px'
 );
 storageSet(storageKey('slot-row-height'), String(nextValue));
 
+const scene = state.planPreview;
 window.requestAnimationFrame(function () {
+if (scene !== state.planPreview) return;
 forceTimeGridGeometryRefresh(anchor, function () {
 revealCommittedZoom();
 });
@@ -2595,6 +2714,7 @@ revealCommittedZoom();
 function renderSynchronizedZoom() {
 state.zoomFrame = 0;
 if (!state.calendar) return;
+const scene = state.planPreview;
 
 const nextValue = clampSlotRowHeight(state.pendingSlotRowHeight);
 const anchor = getZoomAnchor(state.pendingZoomAnchorY);
@@ -2624,10 +2744,12 @@ window.cancelAnimationFrame(state.zoomRestoreFrame);
 }
 state.zoomRestoreFrame = window.requestAnimationFrame(function () {
 state.zoomRestoreFrame = 0;
+if (scene !== state.planPreview) return;
 restoreZoomAnchor(anchor);
 applyGridWidth();
 
 window.requestAnimationFrame(function () {
+if (scene !== state.planPreview) return;
 if (typeof state.calendar.rerenderEvents === "function") {
 state.calendar.rerenderEvents();
 }
@@ -2685,6 +2807,10 @@ return state.activeSeason === "Winter"
 
 
 function getVisibleCalendarIds() {
+if (state.planPreview) {
+  const resources = new Set(TRAINING_PLAN_SOURCE.plans[state.planPreview.season].map(function (row) { return row.resource_id; }));
+  return SUMMER_RESOURCE_IDS.filter(function (id) { return resources.has(id); });
+}
 return Array.from(new Set(
 getAllowedCalendarIds().concat(
 Array.from(state.matchResourceIds || [])
@@ -4566,6 +4692,186 @@ button.setAttribute("aria-pressed", isActive ? "true" : "false");
 });
 }
 
+// The live season comes from the occupancy service. Browsing its counterpart
+// changes only this calendar's displayed range and events.
+function verifiedPlanSeason(training) {
+  const season = sharedTrainingSeason({training_calendar: training});
+  return season && training.fail_closed !== true && training.display_only !== true &&
+    training.calendar_sha256 === TRAINING_PLAN_SOURCE.sha256 ? season : null;
+}
+
+function updatePlanButtons() {
+  const selected = state.planPreview ? state.planPreview.season : state.verifiedPlanSeason;
+  elements.planButtons.forEach(function (button) {
+    const season = button.dataset.planSeason;
+    const current = season === state.verifiedPlanSeason;
+    button.disabled = !state.verifiedPlanSeason;
+    button.setAttribute("aria-pressed", String(season === selected));
+    button.setAttribute("aria-label", season + "plan" + (button.disabled ? " – derzeit nicht verfügbar" :
+      current ? " – aktuell gültig" : " – Vorschau"));
+    button.title = button.getAttribute("aria-label");
+    button.querySelector(".valid-badge").hidden = !current;
+  });
+}
+
+function trainingPlanEvents(start, end) {
+  const events = [];
+  const patterns = TRAINING_PLAN_SOURCE.plans[state.planPreview.season];
+  const weekday = new Intl.DateTimeFormat("de-DE", {weekday: "long"});
+  for (let day = startOfCalendarDay(start); day < end; day = shiftCalendarDays(day, 1)) {
+    const name = weekday.format(day);
+    for (const pattern of patterns) {
+      if (pattern.weekday !== name) continue;
+      const place = state.calendars[pattern.resource_id];
+      const from = new Date(day);
+      const to = new Date(day);
+      from.setHours(0, timeTextToMinutes(pattern.start));
+      to.setHours(0, timeTextToMinutes(pattern.end));
+      events.push({
+        id: ["plan", state.planPreview.season, pattern.id, formatApiDate(day)].join(":"),
+        resourceId: place.id, calendarId: place.id, title: pattern.team,
+        start: from, end: to, color: place.color, textColor: place.textColor,
+        extendedProps: {
+          calendarId: place.id, eventKind: "plan-preview", team: pattern.team,
+          description: "<p>" + escapeHtml(state.planPreview.season + "plan · Regelmäßiges Training") +
+            "</p><p>" + escapeHtml([place.title, pattern.area].filter(Boolean).join(" · ")) + "</p>"
+        }
+      });
+    }
+  }
+  return events;
+}
+
+function selectTrainingPlan(season) {
+  if (!state.calendar || !state.verifiedPlanSeason || !TRAINING_PLAN_SOURCE.plans[season]) return;
+  const previous = state.planPreview;
+  if (season === (previous ? previous.season : state.verifiedPlanSeason)) return;
+
+  const calendar = state.calendar;
+  const weekScroller = getWeekHorizontalScroller();
+  const view = normalizeCalendarViewType(calendar.view.type);
+  window.cancelAnimationFrame(state.zoomFrame);
+  window.cancelAnimationFrame(state.zoomRestoreFrame);
+  window.cancelAnimationFrame(state.zoomGeometryRefreshFrame);
+  state.zoomFrame = 0;
+  state.zoomRestoreFrame = 0;
+  state.zoomGeometryRefreshFrame = 0;
+  state.pendingZoomPersist = false;
+  state.zoomGeometryRefreshInProgress = false;
+  elements.calendar.classList.remove("is-zoom-committing");
+  removeZoomSnapshot(true);
+  const monday = startOfCalendarDay(calendar.getDate());
+  monday.setDate(monday.getDate() - (monday.getDay() + 6) % 7);
+  state.planPreview = previous ? null : {
+    season: season, monday: monday, checkId: 0, liveDate: calendar.getDate(), liveView: view, liveFilter: state.activeCalendarId,
+    liveRange: getCurrentRange(), liveAnchor: getZoomAnchor(), liveLeft: weekScroller ? weekScroller.scrollLeft : 0
+  };
+  const preview = state.planPreview;
+  state.activeCalendarId = previous ? previous.liveFilter : state.activeCalendarId;
+  if (preview) {
+    const places = getVisibleCalendarIds();
+    if (!places.includes(state.activeCalendarId)) state.activeCalendarId = places.length === 1 ? places[0] : "all";
+  }
+  state.rangeKey = "";
+  state.pendingWeekLanding = preview ? "start" : "";
+  document.body.classList.toggle("training-season-preview", Boolean(preview));
+  setCalendarReadOnly(true);
+  updateTrainerOccupancyAvailability();
+  updatePlanButtons();
+  updateResources();
+  renderPlaceFilters();
+  // The preview has weekdays, never dated fixtures or a live 'now' indicator.
+  calendar.batchRendering(function () {
+    calendar.setOption("resources", state.resources);
+    calendar.setOption("nowIndicator", !preview);
+    calendar.setOption("dayHeaderContent", preview ? function (info) {
+      return info.date.toLocaleDateString("de-DE", {weekday: "short"});
+    } : undefined);
+    calendar.changeView(previous ? previous.liveView : view, previous ? previous.liveDate : preview.monday);
+  });
+  // FullCalendar can keep its date range when only the data source changed.
+  if (!state.rangeKey) loadCurrentRange(false);
+  if (state.currentDateInfo) updateDateNavigation(state.currentDateInfo);
+  window.requestAnimationFrame(function () {
+    if (state.planPreview !== preview) return;
+    applyGridWidth();
+    if (preview) {
+      calendar.scrollToTime(TODAY_AFTERNOON_SCROLL_TIME);
+      schedulePendingWeekLanding();
+    } else {
+      restoreZoomAnchor(previous.liveAnchor);
+      const scroller = getWeekHorizontalScroller();
+      if (scroller) scroller.scrollLeft = previous.liveLeft;
+    }
+    syncWeekSwipeEdge();
+  });
+}
+
+async function recheckPreviewOnResume() {
+  const preview = state.planPreview;
+  const requestId = ++preview.checkId;
+  let season = null;
+  try {
+    const payload = await fetchOccupancyPayload(preview.liveRange.start, preview.liveRange.end);
+    season = verifiedPlanSeason(payload.training_calendar);
+  } catch (error) { /* Restore the live calendar and its normal recovery UI below. */ }
+  if (state.planPreview !== preview || requestId !== preview.checkId) return;
+  if (season !== state.verifiedPlanSeason) selectTrainingPlan(state.verifiedPlanSeason);
+}
+
+function updatePlanNavigation(info) {
+  const day = normalizeCalendarViewType(info.view.type) === "resourceTimeGridDay";
+  if (day) state.planPreview.day = startOfCalendarDay(info.start);
+  elements.currentDatePrimary.textContent = day ?
+    new Intl.DateTimeFormat("de-DE", {weekday: "long"}).format(info.start) : "Trainingswoche";
+  elements.currentDateSecondary.textContent = state.planPreview.season + "plan · Vorschau";
+  elements.currentDateButton.setAttribute("aria-label", "Zum Montag der Trainingswoche");
+  elements.previousDateButton.setAttribute("aria-label", day ? "Vorheriger Tag" : "Vorherige Spalten");
+  elements.nextDateButton.setAttribute("aria-label", day ? "Nächster Tag" : "Weitere Spalten");
+  elements.previousDateButton.disabled = false;
+  elements.nextDateButton.disabled = false;
+}
+
+// Desktop equivalents of the touch gestures. Ordinary wheel scrolling stays native.
+function bindPlanMouseControls() {
+  const surface = elements.calendar;
+  let drag = null;
+  surface.addEventListener("wheel", function (event) {
+    if (!state.planPreview || !event.ctrlKey) return;
+    event.preventDefault();
+    const current = state.zoomFrame ? state.pendingSlotRowHeight : state.slotRowHeight;
+    const pixels = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? surface.clientHeight : 1);
+    applySlotRowHeight(current * Math.exp(-pixels * 0.005), true, event.clientY);
+  }, {passive: false});
+  surface.addEventListener("pointerdown", function (event) {
+    if (!state.planPreview || event.pointerType !== "mouse" || event.button !== 0) return;
+    const vertical = getVerticalCalendarScroller();
+    const horizontal = getWeekHorizontalScroller();
+    drag = {preview: state.planPreview, id: event.pointerId, x: event.clientX, y: event.clientY,
+      vertical: vertical, horizontal: horizontal, top: vertical ? vertical.scrollTop : 0,
+      left: horizontal ? horizontal.scrollLeft : 0, moving: false};
+  });
+  surface.addEventListener("pointermove", function (event) {
+    if (!drag || drag.id !== event.pointerId) return;
+    if (drag.preview !== state.planPreview || !event.buttons) { drag = null; return; }
+    const dx = event.clientX - drag.x;
+    const dy = event.clientY - drag.y;
+    if (!drag.moving && Math.hypot(dx, dy) < 5) return;
+    if (!drag.moving) surface.setPointerCapture(event.pointerId);
+    drag.moving = true;
+    event.preventDefault();
+    if (drag.vertical) drag.vertical.scrollTop = drag.top - dy;
+    if (drag.horizontal) drag.horizontal.scrollLeft = drag.left - dx;
+  });
+  function finishDrag() {
+    if (drag && drag.moving) state.suppressClickUntil = Date.now() + 200;
+    drag = null;
+  }
+  surface.addEventListener("pointerup", finishDrag);
+  surface.addEventListener("pointercancel", finishDrag);
+  surface.addEventListener("lostpointercapture", finishDrag);
+}
+
 function updateSeasonButtons() {
 updateButtonGroup(state.activeSeason ? elements.seasonButtons : [], "data-season", state.activeSeason);
 }
@@ -5210,12 +5516,12 @@ return event.calendarId === state.activeCalendarId;
 });
 
 state.calendar.batchRendering(function () {
-state.calendar.removeAllEvents();
-state.calendar.addEventSource(filteredEvents);
+state.calendar.getEventSources().forEach(function (source) { source.remove(); });
+if (filteredEvents.length) state.calendar.addEventSource(filteredEvents);
 });
 
 if (filteredEvents.length === 0) {
-setStatus("empty", getRangeEmptyMessage(), false);
+setStatus("empty", state.planPreview ? "Für diese Auswahl ist kein regelmäßiges Training eingetragen." : getRangeEmptyMessage(), false);
 } else {
 setStatus(null);
 }
@@ -5330,7 +5636,7 @@ elements.popupDescription.innerHTML = sanitizePopupDescription((refreshed.extend
 renderTrainingCancellationAction(missing ? null : event);
 renderTrainerOccupancyDeleteAction(missing ? null : event);
 renderTrainerOccupancyMoveAction(missing ? null : event);
-if ((state.calendarReadOnly && (state.canManageTrainings || state.canManageTrainingCancellations)) || missing) {
+if ((!state.planPreview && state.calendarReadOnly && (state.canManageTrainings || state.canManageTrainingCancellations)) || missing) {
 elements.trainingCancellationStatus.textContent = missing
 ? "Dieser Termin wurde inzwischen geändert. Bitte die aktuellen Termine im Kalender auswählen."
 : calendarEditingAvailabilityMessage();
@@ -5380,6 +5686,10 @@ setStatus("warning", "Aktualisierung gerade nicht möglich. Stand: " + stamp + "
 }
 
 function loadRangeEvents(rangeStart, rangeEnd, forceRefresh) {
+if (state.planPreview) {
+  renderEvents(trainingPlanEvents(rangeStart, rangeEnd));
+  return Promise.resolve();
+}
 const key = [+rangeStart, +rangeEnd, state.activeSeason].join("|");
 if (!forceRefresh && state.calendarLoadPromise && state.calendarLoadKey === key) {
 return state.calendarLoadPromise;
@@ -5415,6 +5725,7 @@ async function loadRangeEventsRequest(rangeStart, rangeEnd) {
 const token = ++state.fetchToken;
 state.calendarLoading = true;
 setCalendarReadOnly(true);
+if (typeof window.dispatchEvent === "function" && typeof window.CustomEvent === "function") window.dispatchEvent(new window.CustomEvent("ssv-training-plan-data", {detail: null}));
 const snapshot = findCalendarSnapshot(rangeStart, rangeEnd);
 let displayedSnapshot = false;
 if (snapshot) {
@@ -5430,6 +5741,7 @@ const payload = await fetchOccupancyPayload(rangeStart, rangeEnd);
 if (token !== state.fetchToken) return;
 renderCalendarPayload(payload, rangeStart, rangeEnd);
 const training = payload.training_calendar || {};
+if (typeof window.dispatchEvent === "function" && typeof window.CustomEvent === "function") window.dispatchEvent(new window.CustomEvent("ssv-training-plan-data", {detail: training}));
 const complete = payload.match_source_fresh !== false && payload.match_source_fallback !== true && training.display_only !== true && training.partial !== true &&
 training.fail_closed !== true && (payload.training_cancellations || {}).available !== false &&
 (payload.special_occupancy || {}).available !== false;
@@ -5471,7 +5783,7 @@ return loadRangeEvents(range.start, range.end, Boolean(forceRefresh));
 }
 
 function applyFiltersAndReload() {
-ensureActiveCalendarSelection();
+if (!state.planPreview) ensureActiveCalendarSelection();
 updateResources();
 renderPlaceFilters();
 
@@ -5490,7 +5802,7 @@ const allowed = getVisibleCalendarIds();
 if (calendarId !== "all" && !allowed.includes(calendarId)) return;
 
 state.activeCalendarId = calendarId;
-storageSet(storageKey("calendar:" + state.activeSeason), calendarId);
+if (!state.planPreview) storageSet(storageKey("calendar:" + state.activeSeason), calendarId);
 applyFiltersAndReload();
 }
 
@@ -5512,7 +5824,7 @@ return;
 }
 
 state.activeView = viewName;
-storageSet(storageKey("view"), viewName);
+if (!state.planPreview) storageSet(storageKey("view"), viewName);
 updateViewButtons();
 
 if (
@@ -5520,7 +5832,8 @@ state.calendar &&
 normalizeCalendarViewType(state.calendar.view.type) !== viewName
 ) {
 state.rangeKey = "";
-state.calendar.changeView(viewName);
+const preview = state.planPreview;
+state.calendar.changeView(viewName, preview ? (preview.day || preview.monday) : undefined);
 }
 }
 
@@ -5603,6 +5916,12 @@ end: event && event.end || null
 
 function focusTodayInCurrentView() {
 if (!state.calendar) return;
+if (state.planPreview) {
+  state.pendingWeekLanding = state.activeView === "resourceTimeGridWeek" ? "start" : "";
+  state.calendar.gotoDate(state.planPreview.monday);
+  schedulePendingWeekLanding();
+  return;
+}
 
 const today = new Date();
 state.activeView = normalizeCalendarViewType(state.calendar.view.type);
@@ -5744,6 +6063,12 @@ function updateDateNavigation(info) {
 if (!info || !info.view) return;
 
 state.currentDateInfo = info;
+if (state.planPreview) {
+  updatePlanNavigation(info);
+  return;
+}
+elements.previousDateButton.disabled = false;
+elements.nextDateButton.disabled = false;
 const isDayView = normalizeCalendarViewType(info.view.type) ===
 "resourceTimeGridDay";
 const start = new Date(info.start);
@@ -5788,6 +6113,12 @@ function navigateCalendar(direction, source) {
 if (!state.calendar) return;
 const isWeek = state.activeView === "resourceTimeGridWeek";
 
+if (state.planPreview && isWeek) {
+  const scroller = getWeekHorizontalScroller();
+  if (scroller) scroller.scrollLeft += direction * Math.max(116, scroller.clientWidth - 56);
+  syncWeekSwipeEdge();
+  return;
+}
 if (isWeek) {
 
 state.pendingWeekLanding = direction < 0 ? "end" : "start";
@@ -5945,6 +6276,10 @@ return null;
 
 const scroller = getWeekHorizontalScroller();
 const edges = getWeekScrollEdges(scroller);
+if (state.planPreview) {
+  elements.previousDateButton.disabled = edges.atStart || !scroller;
+  elements.nextDateButton.disabled = edges.atEnd || !scroller;
+}
 let edge = "none";
 if (edges.atStart && edges.atEnd) edge = "both";
 else if (edges.atStart) edge = "start";
@@ -6166,6 +6501,7 @@ finishSwipeAnimation(surface);
 
 function commitSwipe(surface, direction) {
 if (!surface || !state.calendar) return;
+const scene = state.planPreview;
 
 const width = Math.max(elements.calendar.clientWidth, window.innerWidth, 1);
 const outgoingX = direction > 0 ? -width : width;
@@ -6180,6 +6516,7 @@ surface.style.transform = "translate3d(" + outgoingX + "px,0,0)";
 
 window.clearTimeout(state.swipeAnimationTimer);
 state.swipeAnimationTimer = window.setTimeout(function () {
+if (scene !== state.planPreview) { finishSwipeAnimation(surface); return; }
 clearSurface(surface);
 navigateCalendar(direction, "swipe");
 
@@ -6354,7 +6691,7 @@ const outwardAtStart = current.weekAtStart && deltaX > 0;
 const outwardAtEnd = current.weekAtEnd && deltaX < 0;
 const outward = outwardAtStart || outwardAtEnd;
 const weekThreshold = Math.max(38, Math.min(64, width * 0.14));
-const shouldChangeWeek = !cancelled && outward && isHorizontal && (
+const shouldChangeWeek = !state.planPreview && !cancelled && outward && isHorizontal && (
 Math.abs(deltaX) >= weekThreshold ||
 (Math.abs(deltaX) >= 22 && velocity >= 0.36)
 );
@@ -6572,6 +6909,7 @@ resources: state.resources,
 events: [],
 eventDataTransform: enforceOccupancyGeometry,
 eventMinHeight: 22,
+slotEventOverlap: false,
 eventShortHeight: 24,
 eventDisplay: "block",
 progressiveEventRendering: true,
@@ -6583,7 +6921,7 @@ if (state.activeView !== "resourceTimeGridWeek") {
 state.pendingWeekLanding = "";
 }
 
-if (!state.zoomGeometryRefreshInProgress) {
+if (!state.planPreview && !state.zoomGeometryRefreshInProgress) {
 storageSet(storageKey("view"), state.activeView);
 }
 updateViewButtons();
@@ -7114,7 +7452,7 @@ description: ""
 }
 
 function updateTrainerOccupancyAvailability() {
-elements.trainerAddOccupancy.hidden = !state.canCreateTrainerOccupancies;
+elements.trainerAddOccupancy.hidden = Boolean(state.planPreview) || !state.canCreateTrainerOccupancies;
 }
 
 function clubDateTimeValue(date) {
@@ -7155,7 +7493,7 @@ new Date(start.getTime() + Math.max(duration, 5 * 60 * 1000))
 
 function openTrainerOccupancyDialog() {
 if (
-!state.canCreateTrainerOccupancies
+state.planPreview || !state.canCreateTrainerOccupancies
 ) return;
 const form = elements.trainerOccupancyForm;
 state.trainerOccupancyMoveEvent = null;
@@ -7342,6 +7680,13 @@ updateResources();
 }
 
 function bindInterface() {
+window.addEventListener("ssv-training-plan-data", function (event) {
+  state.verifiedPlanSeason = verifiedPlanSeason(event.detail);
+  updatePlanButtons();
+});
+elements.planButtons.forEach(function (button) {
+  button.addEventListener("click", function () { selectTrainingPlan(button.dataset.planSeason); });
+});
 elements.actionConfirmationCancel.addEventListener("click", function () {
 finishActionConfirmation(false);
 });
@@ -7439,6 +7784,7 @@ renderTrainerContactsForEvent(state.currentDialogEvent);
 
 bindPinchZoom();
 bindSwipeNavigation();
+bindPlanMouseControls();
 
 elements.closeDialogTop.addEventListener("click", closeEventDetails);
 elements.trainingCancellationAction.addEventListener(
@@ -7487,7 +7833,8 @@ syncCalendarViewport();
 
 document.addEventListener("visibilitychange", function () {
 if (!document.hidden && state.calendar) {
-loadCurrentRange(false);
+if (state.planPreview) recheckPreviewOnResume();
+else loadCurrentRange(false);
 }
 });
 }
@@ -7600,6 +7947,16 @@ aria-pressed="false">
 </svg>
 </span>
 <span class="ssv-button-label">Woche</span>
+</button>
+<button type="button" class="season-circle" data-plan-season="Sommer"
+  aria-label="Sommertraining" aria-pressed="false" disabled>
+  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg>
+  <span class="valid-badge" hidden aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M3 8 6.5 11.5 13 4.5"/></svg></span>
+</button>
+<button type="button" class="season-circle" data-plan-season="Winter"
+  aria-label="Wintertraining" aria-pressed="false" disabled>
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v20M3.5 7l17 10M3.5 17l17-10M9 4l3 3 3-3M9 20l3-3 3 3M4 10l4-1-1-4M20 14l-4 1 1 4M4 14l4 1-1 4M20 10l-4-1 1-4"/></svg>
+  <span class="valid-badge" hidden aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M3 8 6.5 11.5 13 4.5"/></svg></span>
 </button>
 </div>
 </div>
