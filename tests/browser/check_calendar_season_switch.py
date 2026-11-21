@@ -131,6 +131,29 @@ def check(browser, source, scheduler, width, height, active):
     page = context.new_page()
     page.set_default_timeout(7000)
     page.clock.install(time=datetime.fromisoformat("2026-11-18T12:00:00+01:00"))
+    # November with no history, a stale live hint, and a legacy preference respectively.
+    opening_season = "Winter" if width == 390 else "Sommer"
+    if width == 320:
+        page.add_init_script("localStorage.setItem('ssv53:Platzbelegung:last-live-season','Sommer')")
+    if width >= 700:
+        page.add_init_script("localStorage.setItem('ssv53:Platzbelegung:season','Sommer')")
+    page.add_init_script("""(() => {
+      window.readPlanMarker = () => Array.from(document.querySelectorAll('[data-plan-season][aria-pressed="true"]'),
+        b => [b.dataset.planSeason, getComputedStyle(b).backgroundColor, getComputedStyle(b).opacity]);
+      document.addEventListener("readystatechange", () => {
+        if (document.readyState === "interactive") window.openingPlanMarker = window.readPlanMarker();
+      });
+      window.holdNextPlanRead = true;
+      const fetchNormally = window.fetch.bind(window);
+      window.fetch = async (...args) => {
+        if (window.holdNextPlanRead && new URL(args[0], location.href).pathname === "/api/occupancy") {
+          window.holdNextPlanRead = false;
+          await new Promise(resolve => { window.releasePlanRead = resolve; });
+          delete window.releasePlanRead;
+        }
+        return fetchNormally(...args);
+      };
+    })()""")
     calls, writes, errors = [], [], []
     page.on("pageerror", lambda error: errors.append(str(error)))
 
@@ -165,9 +188,19 @@ def check(browser, source, scheduler, width, height, active):
         page.wait_for_function("()=>!document.querySelector('[data-plan-season]').disabled")
         frames(page)
 
+    def assert_loading_marker(season):
+        page.wait_for_function("typeof window.releasePlanRead === 'function'")
+        expected = [[season, "rgb(40, 94, 167)", "1"]]
+        assert page.evaluate("window.readPlanMarker()") == expected
+        assert switch(season).is_disabled() and not switch(season).locator(".valid-badge").is_visible()
+        page.evaluate("window.releasePlanRead()")
+
     try:
         page.goto("https://plan.invalid/")
+        assert page.evaluate("window.openingPlanMarker") == [[opening_season, "rgb(40, 94, 167)", "1"]]
+        assert_loading_marker(opening_season)
         ready()
+        assert page.evaluate("localStorage.getItem('ssv53:Platzbelegung:last-live-season')") == active
         if width == 320:
             page.locator(DAY).click()
             ready()
@@ -218,7 +251,9 @@ def check(browser, source, scheduler, width, height, active):
         assert not page.locator("#training-cancellation-action").is_visible()
         page.locator("#close-dialog-top").click()
         assert len(calls) == live_calls
+        page.evaluate("window.holdNextPlanRead = true")
         switch(active).click()
+        assert_loading_marker(active)
         ready()
         assert date_label.text_content() == date_before and add.is_visible()
         assert page.locator(f'[data-calendar-view="{view_before}"]').get_attribute("aria-pressed") == "true"
