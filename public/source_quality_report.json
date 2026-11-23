@@ -180,10 +180,10 @@
           "relocations": [
             {
               "from": "2026-11-16T19:30+01:00",
-              "to": "2026-11-18T19:30+01:00"
+              "to": "2026-11-25T19:30+01:00"
             }
           ],
-          "selected_kickoff": "2026-11-18T19:30+01:00",
+          "selected_kickoff": "2026-11-25T19:30+01:00",
           "resolved": true
         },
         "merged_external_id": "031DB8NRSG000000VS5489BUVUR5FS5A"

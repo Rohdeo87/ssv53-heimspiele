@@ -180,10 +180,10 @@
           "relocations": [
             {
               "from": "2026-11-16T19:30+01:00",
-              "to": "2026-11-18T19:30+01:00"
+              "to": "2026-11-25T19:30+01:00"
             }
           ],
-          "selected_kickoff": "2026-11-18T19:30+01:00",
+          "selected_kickoff": "2026-11-25T19:30+01:00",
           "resolved": true
         },
         "merged_external_id": "031DB8NRSG000000VS5489BUVUR5FS5A"
@@ -471,8 +471,8 @@
   "publication": {
     "schemaVersion": 1,
     "status": "ok",
-    "sourceGeneratedAt": "2026-11-22T21:57:10+00:00",
-    "sourceDigest": "bbc32b4414ebf39f72c9f16ebdb748c016bea89271e9086fa7e3ad49fe1ca476",
+    "sourceGeneratedAt": "2026-11-23T13:07:52+00:00",
+    "sourceDigest": "40dc3d4c641d2d7d4b28784d20c93ce9a1edc40c4e9c92132970d1f7a1b619df",
     "sourceCount": 42,
     "retainedCount": 0,
     "effectiveCount": 42,
