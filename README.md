@@ -1,5 +1,17 @@
 # SSV53 – FUSSBALL.DE-Platzbelegung PoC Version 12.3
 
+## Betrieb der bestehenden Appack-App
+
+| Aufgabe | Quellstand und Einstieg |
+| --- | --- |
+| Heimspiele und Platzbelegung | Der [Spielimport](.github/workflows/update-matches.yml) pflegt auf `main` die Daten unter [public/](public/), darunter `rasen.ics`, `kunstrasen.ics` und `summary.json`. Bei einem gesperrten Import den letzten freigegebenen Datenstand erhalten. |
+| Kalender und Wiederanlauf | Die [automatische Kalenderprüfung](.github/workflows/SSV53_Runtime_Config_Auto_Dispatch.yml) prüft die Frische der Spielquelle und den veröffentlichten Kalender. Bei Bedarf ruft sie den Rollout ausdrücklich auf `feature/azure-mower-migration` auf. |
+| Platzpflege, Bewässerung und Wartung | Die Azure-Funktionen, Appack-Oberflächen und zugehörigen Tests liegen auf dem [Betriebszweig](https://github.com/Rohdeo87/ssv53-heimspiele/tree/feature/azure-mower-migration). Die Anleitungen und Freigaben dort gehören zum Betriebsstand. Ein Gerätebefehl ist für eine lesende Funktionsprüfung entbehrlich. |
+| Shop und Bestellmails | [Betriebsanleitung und Freigaben](https://github.com/Rohdeo87/ssv53-heimspiele/blob/feature/azure-mower-migration/ui/shop/AKTIVIERUNG.md). Vor einem erneuten Go-Live den fehlgeschlagenen Schritt, den Zugriff auf das aktive Paket, dessen erwartete Ausgangsversion und den vorhandenen Wiederherstellungsstand prüfen. Mailvorlagen mit synthetischen Daten prüfen. |
+| Historische Einmal-Installer | Bei der Appack-Bestellverwaltung blieb V3 NoPreflight, beim ursprünglichen PARK_ONLY-Installer V4 als jüngste erfolgreiche Ausführung verfügbar. Die vorherigen manuellen Varianten liegen im Verlauf und können bei einem begründeten Wiederherstellungsfall unter Actions erneut aktiviert werden. Vor einem Aufruf Ziel, Paketstand und Freigabe einzeln prüfen. |
+
+Die verantwortlichen Vereinsadministratoren pflegen GitHub, Appack und Azure getrennt. Vor dem Entfernen oder Umbenennen eines Zweigs die offenen PR-Ziele und die in den Workflows fest hinterlegten Referenzen prüfen. Ein Git-Commit dokumentiert den Quellstand. Die tatsächliche Version in Appack beziehungsweise Azure ist separat zu bestätigen.
+
 Version 12.3 ist der stabile Stand nach Version 12.2. Sie ergänzt den vereinsweiten, platzbasierten Abruf um einen mobilen Änderungsbericht, zusätzlichen Veröffentlichungsschutz und automatische GitHub-Issue-Benachrichtigungen. Abrufgrenzen, Terminauflösung, Platzregeln und 60-Minuten-Puffer aus Version 12.2 bleiben unverändert.
 
 ## Neu in Version 12.3
